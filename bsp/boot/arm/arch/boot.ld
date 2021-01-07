@@ -8,6 +8,7 @@ SECTIONS {
 	. = CONFIG_LOADER_TEXT ;
 
 	.text . : {
+		*(.start)
 		*(.text)
 	}
 	. = ALIGN(4);
