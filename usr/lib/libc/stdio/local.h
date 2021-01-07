@@ -49,12 +49,12 @@ fpos_t __sseek(FILE*, fpos_t, int);
 int __sclose(FILE*);
 void __sinit(void);
 void _cleanup(void);
-void (*__cleanup)(void);
+extern void (*__cleanup)(void);
 void __smakebuf(FILE*);
 int _fwalk(int (*)(FILE*));
 int __swsetup(FILE*);
 int __sflags(const char*, int*);
-int __sdidinit;
+extern int __sdidinit;
 __END_DECLS
 
 /*
