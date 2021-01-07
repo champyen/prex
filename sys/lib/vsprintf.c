@@ -35,8 +35,7 @@
 
 #define isdigit(c) ((u_int)((c) - '0') < 10)
 
-static u_long
-divide(long* n, int base)
+static u_long divide(long* n, int base)
 {
     u_long res;
 
@@ -45,8 +44,7 @@ divide(long* n, int base)
     return res;
 }
 
-static int
-atoi(const char** s)
+static int atoi(const char** s)
 {
     int i = 0;
     while (isdigit((int)**s))

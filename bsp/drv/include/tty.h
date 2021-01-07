@@ -44,7 +44,8 @@
 #define TTYQ_SIZE MAX_INPUT
 #define TTYQ_HIWAT (TTYQ_SIZE - 10)
 
-struct tty_queue {
+struct tty_queue
+{
     char tq_buf[TTYQ_SIZE];
     int tq_head;
     int tq_tail;
@@ -54,22 +55,23 @@ struct tty_queue {
 /*
  * Per-tty structure.
  */
-struct tty {
-    struct tty_queue t_rawq; /* raw input queue */
-    struct tty_queue t_canq; /* canonical queue */
-    struct tty_queue t_outq; /* ouput queue */
-    struct termios t_termios; /* termios state */
-    struct winsize t_winsize; /* window size */
-    struct event t_input; /* event for input data ready */
-    struct event t_output; /* event for output completion */
+struct tty
+{
+    struct tty_queue t_rawq;      /* raw input queue */
+    struct tty_queue t_canq;      /* canonical queue */
+    struct tty_queue t_outq;      /* ouput queue */
+    struct termios t_termios;     /* termios state */
+    struct winsize t_winsize;     /* window size */
+    struct event t_input;         /* event for input data ready */
+    struct event t_output;        /* event for output completion */
     void (*t_oproc)(struct tty*); /* routine to start output */
-    device_t t_dev; /* device */
-    int t_state; /* driver state */
-    int t_column; /* tty output column */
-    pid_t t_pgid; /* foreground process group. */
-    task_t t_sigtask; /* task to dispatch the tty signal */
-    int t_signo; /* pending signal# */
-    struct dpc t_dpc; /* dpc for tty */
+    device_t t_dev;               /* device */
+    int t_state;                  /* driver state */
+    int t_column;                 /* tty output column */
+    pid_t t_pgid;                 /* foreground process group. */
+    task_t t_sigtask;             /* task to dispatch the tty signal */
+    int t_signo;                  /* pending signal# */
+    struct dpc t_dpc;             /* dpc for tty */
 };
 
 #define t_iflag t_termios.c_iflag
@@ -81,11 +83,11 @@ struct tty {
 #define t_ospeed t_termios.c_ospeed
 
 /* These flags are kept in t_state. */
-#define TS_ASLEEP 0x00001 /* Process waiting for tty. */
-#define TS_BUSY 0x00004 /* Draining output. */
+#define TS_ASLEEP 0x00001  /* Process waiting for tty. */
+#define TS_BUSY 0x00004    /* Draining output. */
 #define TS_TIMEOUT 0x00100 /* Wait for output char processing. */
-#define TS_TTSTOP 0x00200 /* Output paused. */
-#define TS_ISIG 0x00400 /* Input is interrupted by signal. */
+#define TS_TTSTOP 0x00200  /* Output paused. */
+#define TS_ISIG 0x00400    /* Input is interrupted by signal. */
 
 __BEGIN_DECLS
 int tty_read(struct tty*, char*, size_t*);

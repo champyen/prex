@@ -64,8 +64,8 @@ void driver_probe(void)
                 dp->flags |= DS_ALIVE;
         } else {
             /*
-			 * No probe method. Mark it alive.
-			 */
+             * No probe method. Mark it alive.
+             */
             dp->flags |= DS_ALIVE;
         }
     }
@@ -107,8 +107,8 @@ void driver_shutdown(void)
         if (dp == NULL)
             break;
         /*
-		 * Process only active drivers.
-		 */
+         * Process only active drivers.
+         */
         if (dp->flags & DS_ACTIVE) {
             DPRINTF(("Unloading %s\n", dp->name));
             if (dp->unload != NULL)
@@ -129,9 +129,8 @@ void driver_dump(void)
 
     for (i = 0; i < NDRIVERS; i++) {
         dp = driver_table[i];
-        printf(" %08lx %08lx %08lx %08lx %08lx %s\n",
-            (long)dp->probe, (long)dp->init, (long)dp->unload,
-            (long)dp->devops, (long)dp->flags, dp->name);
+        printf(" %08lx %08lx %08lx %08lx %08lx %s\n", (long)dp->probe, (long)dp->init, (long)dp->unload,
+               (long)dp->devops, (long)dp->flags, dp->name);
     }
 }
 #endif

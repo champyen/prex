@@ -41,33 +41,34 @@
 /*
  * Task struct
  */
-struct task {
-    struct list link; /* linkage on task list in system */
+struct task
+{
+    struct list link;       /* linkage on task list in system */
     char name[MAXTASKNAME]; /* task name */
-    task_t parent; /* parent task */
-    vm_map_t map; /* address space description */
-    int suscnt; /* suspend count */
-    int flags; /* flags defined below */
-    cap_t capability; /* security permission flag */
-    struct timer alarm; /* timer for alarm exception */
-    void (*handler)(int); /* pointer to exception handler */
-    struct list threads; /* list of threads */
-    struct list objects; /* IPC objects owned by this task */
-    struct list mutexes; /* mutexes owned by this task */
-    struct list conds; /* cv owned by this task */
-    struct list sems; /* semaphores owned by this task */
-    int nthreads; /* number of threads */
-    int nobjects; /* number of IPC objects */
-    int nsyncs; /* number of syncronizer objects */
+    task_t parent;          /* parent task */
+    vm_map_t map;           /* address space description */
+    int suscnt;             /* suspend count */
+    int flags;              /* flags defined below */
+    cap_t capability;       /* security permission flag */
+    struct timer alarm;     /* timer for alarm exception */
+    void (*handler)(int);   /* pointer to exception handler */
+    struct list threads;    /* list of threads */
+    struct list objects;    /* IPC objects owned by this task */
+    struct list mutexes;    /* mutexes owned by this task */
+    struct list conds;      /* cv owned by this task */
+    struct list sems;       /* semaphores owned by this task */
+    int nthreads;           /* number of threads */
+    int nobjects;           /* number of IPC objects */
+    int nsyncs;             /* number of syncronizer objects */
 };
 
 #define curtask (curthread->task)
 
 /* flags */
 #define TF_SYSTEM 0x00000001 /* kernel task (kern_task) */
-#define TF_TRACE 0x00000002 /* process system call tracing active */
+#define TF_TRACE 0x00000002  /* process system call tracing active */
 #define TF_PROFIL 0x00000004 /* has started profiling */
-#define TF_AUDIT 0x00000008 /* audit mode */
+#define TF_AUDIT 0x00000008  /* audit mode */
 
 /* default flags */
 #ifdef CONFIG_AUDIT
@@ -77,9 +78,9 @@ struct task {
 #endif
 
 /* vm option for task_create(). */
-#define VM_NEW 0 /* create new memory map */
+#define VM_NEW 0   /* create new memory map */
 #define VM_SHARE 1 /* share parent's memory map */
-#define VM_COPY 2 /* duplicate parent's memory map */
+#define VM_COPY 2  /* duplicate parent's memory map */
 
 __BEGIN_DECLS
 int task_create(task_t, int, task_t*);

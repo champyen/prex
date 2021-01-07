@@ -37,14 +37,15 @@
 /*
  * Device object
  */
-struct device {
-    struct device* next; /* linkage on list of all devices */
+struct device
+{
+    struct device* next;   /* linkage on list of all devices */
     struct driver* driver; /* pointer to the driver object */
     char name[MAXDEVNAME]; /* name of device */
-    int flags; /* D_* flags defined above */
-    int active; /* device has not been destroyed */
-    int refcnt; /* reference count */
-    void* private; /* private storage */
+    int flags;             /* D_* flags defined above */
+    int active;            /* device has not been destroyed */
+    int refcnt;            /* reference count */
+    void* private;         /* private storage */
 };
 
 __BEGIN_DECLS

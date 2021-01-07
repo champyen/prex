@@ -92,10 +92,8 @@ int main(int argc, char* argv[])
     return 0;
 }
 
-static void
-usage()
+static void usage()
 {
-    (void)fprintf(stderr,
-        "usage: nice [ -n increment ] utility [ argument ...]\n");
+    (void)fprintf(stderr, "usage: nice [ -n increment ] utility [ argument ...]\n");
     exit(1);
 }

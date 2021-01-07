@@ -91,8 +91,7 @@ int main(int argc, char* argv[])
     exit(rval);
 }
 
-static void
-do_cat(int rfd)
+static void do_cat(int rfd)
 {
     int nr, nw, off, wfd;
     struct stat sbuf;

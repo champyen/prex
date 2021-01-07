@@ -45,8 +45,8 @@
 #define DPRINTF(a) dprintf a
 #define ASSERT(e) dassert(e)
 #else
-#define DPRINTF(a) \
-    do {           \
+#define DPRINTF(a)                                                                                                     \
+    do {                                                                                                               \
     } while (0)
 #define ASSERT(e)
 #endif
@@ -55,34 +55,34 @@
 #define malloc(s) malloc_r(s)
 #define free(p) free_r(p)
 #else
-#define mutex_init(m) \
-    do {              \
+#define mutex_init(m)                                                                                                  \
+    do {                                                                                                               \
     } while (0)
-#define mutex_destroy(m) \
-    do {                 \
+#define mutex_destroy(m)                                                                                               \
+    do {                                                                                                               \
     } while (0)
-#define mutex_lock(m) \
-    do {              \
+#define mutex_lock(m)                                                                                                  \
+    do {                                                                                                               \
     } while (0)
-#define mutex_unlock(m) \
-    do {                \
+#define mutex_unlock(m)                                                                                                \
+    do {                                                                                                               \
     } while (0)
-#define mutex_trylock(m) \
-    do {                 \
+#define mutex_trylock(m)                                                                                               \
+    do {                                                                                                               \
     } while (0)
 #endif
 
-#define SEC_SIZE 512 /* sector size */
+#define SEC_SIZE 512         /* sector size */
 #define SEC_INVAL 0xffffffff /* invalid sector */
 
 /*
  * Pre-defined cluster number
  */
-#define CL_ROOT 0 /* cluster 0 means the root directory */
-#define CL_FREE 0 /* cluster 0 also means the free cluster */
-#define CL_FIRST 2 /* first legal cluster */
+#define CL_ROOT 0          /* cluster 0 means the root directory */
+#define CL_FREE 0          /* cluster 0 also means the free cluster */
+#define CL_FIRST 2         /* first legal cluster */
 #define CL_LAST 0xfffffff5 /* last legal cluster */
-#define CL_EOF 0xffffffff /* EOF cluster */
+#define CL_EOF 0xffffffff  /* EOF cluster */
 
 #define EOF_MASK 0xfffffff8 /* mask of eof */
 
@@ -96,7 +96,8 @@
 /*
  * BIOS parameter block
  */
-struct fat_bpb {
+struct fat_bpb
+{
     uint16_t jmp_instruction;
     uint8_t nop_instruction;
     uint8_t oem_id[8];
@@ -123,7 +124,8 @@ struct fat_bpb {
 /*
  * FAT directory entry
  */
-struct fat_dirent {
+struct fat_dirent
+{
     uint8_t name[11];
     uint8_t attr;
     uint8_t reserve[10];
@@ -163,22 +165,23 @@ struct fat_dirent {
 /*
  * Mount data
  */
-struct fatfsmount {
-    int fat_type; /* 12 or 16 */
-    u_long root_start; /* start sector for root directory */
-    u_long fat_start; /* start sector for fat entries */
-    u_long data_start; /* start sector for data */
-    u_long fat_eof; /* id of end cluster */
-    u_long sec_per_cl; /* sectors per cluster */
+struct fatfsmount
+{
+    int fat_type;        /* 12 or 16 */
+    u_long root_start;   /* start sector for root directory */
+    u_long fat_start;    /* start sector for fat entries */
+    u_long data_start;   /* start sector for data */
+    u_long fat_eof;      /* id of end cluster */
+    u_long sec_per_cl;   /* sectors per cluster */
     u_long cluster_size; /* cluster size */
     u_long last_cluster; /* last cluser */
-    u_long fat_mask; /* mask for cluster# */
-    u_long free_scan; /* start cluster# to free search */
-    vnode_t root_vnode; /* vnode for root */
-    char* io_buf; /* local data buffer */
-    char* fat_buf; /* buffer for fat entry */
-    char* dir_buf; /* buffer for directory entry */
-    dev_t dev; /* mounted device */
+    u_long fat_mask;     /* mask for cluster# */
+    u_long free_scan;    /* start cluster# to free search */
+    vnode_t root_vnode;  /* vnode for root */
+    char* io_buf;        /* local data buffer */
+    char* fat_buf;       /* buffer for fat entry */
+    char* dir_buf;       /* buffer for directory entry */
+    dev_t dev;           /* mounted device */
 #if CONFIG_FS_THREADS > 1
     mutex_t lock; /* file system lock */
 #endif
@@ -187,31 +190,29 @@ struct fatfsmount {
 #define FAT12(fat) ((fat)->fat_type == 12)
 #define FAT16(fat) ((fat)->fat_type == 16)
 
-#define IS_EOFCL(fat, cl) \
-    (((cl)&EOF_MASK) == ((fat)->fat_mask & EOF_MASK))
+#define IS_EOFCL(fat, cl) (((cl)&EOF_MASK) == ((fat)->fat_mask & EOF_MASK))
 
 /*
  * File/directory node
  */
-struct fatfs_node {
+struct fatfs_node
+{
     struct fat_dirent dirent; /* copy of directory entry */
-    u_long sector; /* sector# for directory entry */
-    u_long offset; /* offset of directory entry in sector */
+    u_long sector;            /* sector# for directory entry */
+    u_long offset;            /* offset of directory entry in sector */
 };
 
 extern struct vnops fatfs_vnops;
 
 /* Macro to convert cluster# to logical sector# */
-#define cl_to_sec(fat, cl) \
-    (fat->data_start + (cl - 2) * fat->sec_per_cl)
+#define cl_to_sec(fat, cl) (fat->data_start + (cl - 2) * fat->sec_per_cl)
 
 __BEGIN_DECLS
 int fat_next_cluster(struct fatfsmount* fmp, u_long cl, u_long* next);
 int fat_set_cluster(struct fatfsmount* fmp, u_long cl, u_long next);
 int fat_alloc_cluster(struct fatfsmount* fmp, u_long scan_start, u_long* free);
 int fat_free_clusters(struct fatfsmount* fmp, u_long start);
-int fat_seek_cluster(struct fatfsmount* fmp, u_long start, u_long offset,
-    u_long* cl);
+int fat_seek_cluster(struct fatfsmount* fmp, u_long start, u_long offset, u_long* cl);
 int fat_expand_file(struct fatfsmount* fmp, u_long cl, int size);
 int fat_expand_dir(struct fatfsmount* fmp, u_long cl, u_long* new_cl);
 

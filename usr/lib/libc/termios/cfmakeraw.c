@@ -36,8 +36,7 @@
  * Make a pre-existing termios structure into "raw" mode: character-at-a-time
  * mode with no characters interpreted, 8-bit data path.
  */
-void
-    cfmakeraw(t) struct termios* t;
+void cfmakeraw(t) struct termios* t;
 {
 
     t->c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXON);

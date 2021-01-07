@@ -39,19 +39,20 @@
 /*
  * Time-out element.
  */
-struct timer {
-    struct list link; /* linkage on timer chain */
-    int state; /* timer state */
-    u_long expire; /* expiration time, in ticks */
-    u_long interval; /* time interval */
+struct timer
+{
+    struct list link;    /* linkage on timer chain */
+    int state;           /* timer state */
+    u_long expire;       /* expiration time, in ticks */
+    u_long interval;     /* time interval */
     void (*func)(void*); /* function to call */
-    void* arg; /* function argument */
-    struct event event; /* event for this timer */
+    void* arg;           /* function argument */
+    struct event event;  /* event for this timer */
 };
 
 /* state for timer */
 #define TM_ACTIVE 0x54616321 /* magic# 'Tac!' */
-#define TM_STOP 0x54737421 /* magic# 'Tst!' */
+#define TM_STOP 0x54737421   /* magic# 'Tst!' */
 
 /*
  * Macro to compare two timer counts.
@@ -66,8 +67,7 @@ struct timer {
 /*
  * Macro to get the next element on timer list.
  */
-#define timer_next(head) \
-    (list_entry(list_first(head), struct timer, link))
+#define timer_next(head) (list_entry(list_first(head), struct timer, link))
 
 __BEGIN_DECLS
 void timer_callout(struct timer*, u_long, void (*)(void*), void*);

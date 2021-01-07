@@ -36,10 +36,7 @@
 /*
  * Compare strings.
  */
-int
-    strcmp(s1, s2)
-        const char *s1,
-    *s2;
+int strcmp(s1, s2) const char *s1, *s2;
 {
     while (*s1 == *s2++)
         if (*s1++ == 0)

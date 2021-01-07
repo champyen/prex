@@ -58,8 +58,7 @@ int main(int argc, char* argv[])
     exit(0);
 }
 
-static void
-usage(void)
+static void usage(void)
 {
 
     fprintf(stderr, "usage: sleep seconds\n");

@@ -69,7 +69,7 @@ volatile int irq_level;
 /*
  * Interrupt mapping table
  */
-static int ipl_table[NIRQS]; /* Vector -> level */
+static int ipl_table[NIRQS];       /* Vector -> level */
 static uint16_t mask_table[NIPLS]; /* Level -> mask */
 
 /*
@@ -91,9 +91,9 @@ void interrupt_unmask(int vector, int level)
     ipl_table[vector] = level;
 
     /*
-	 * Unmask target interrupt for all
-	 * lower interrupt levels.
-	 */
+     * Unmask target interrupt for all
+     * lower interrupt levels.
+     */
     for (i = 0; i < level; i++)
         mask_table[i] |= unmask;
     update_mask();
@@ -172,9 +172,9 @@ retry:
     interrupt_dispatch(vector);
 
     /*
-	 * Multiple interrupts can be fired in case of GBA.
-	 * So, we have to check the interrupt status, again.
-	 */
+     * Multiple interrupts can be fired in case of GBA.
+     * So, we have to check the interrupt status, again.
+     */
     bits = ICU_IF;
     if (bits & IRQ_VALID)
         goto retry;
@@ -201,12 +201,12 @@ void interrupt_init(void)
     ICU_IME = IRQ_OFF;
 
     /*
-	 * Since GBA has its own interrupt vector in ROM area,
-	 * we can not modify it. Instead, the GBA BIOS will
-	 * call the user's interrupt hook routine placed in
-	 * the address in 0x3007ffc.
-	 */
+     * Since GBA has its own interrupt vector in ROM area,
+     * we can not modify it. Instead, the GBA BIOS will
+     * call the user's interrupt hook routine placed in
+     * the address in 0x3007ffc.
+     */
     IRQ_VECTOR = (uint32_t)interrupt_entry; /* Interrupt hook address */
-    ICU_IE = 0; /* Mask all interrupts */
+    ICU_IE = 0;                             /* Mask all interrupts */
     ICU_IME = IRQ_ON;
 }

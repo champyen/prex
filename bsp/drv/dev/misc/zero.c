@@ -59,8 +59,7 @@ struct driver zero_driver = {
 /*
  * Reading from this device will just fill the buffer with zero.
  */
-static int
-zero_read(device_t dev, char* buf, size_t* nbyte, int blkno)
+static int zero_read(device_t dev, char* buf, size_t* nbyte, int blkno)
 {
     void* p;
 
@@ -75,15 +74,13 @@ zero_read(device_t dev, char* buf, size_t* nbyte, int blkno)
 /*
  * Writing data to this device is ignored.
  */
-static int
-zero_write(device_t dev, char* buf, size_t* nbyte, int blkno)
+static int zero_write(device_t dev, char* buf, size_t* nbyte, int blkno)
 {
 
     return 0;
 }
 
-static int
-zero_init(struct driver* self)
+static int zero_init(struct driver* self)
 {
 
     device_create(self, "zero", D_CHR);

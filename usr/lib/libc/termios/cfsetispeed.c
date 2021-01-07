@@ -34,8 +34,7 @@
 #include <termios.h>
 #include <unistd.h>
 
-int
-    cfsetispeed(t, speed) struct termios* t;
+int cfsetispeed(t, speed) struct termios* t;
 speed_t speed;
 {
 

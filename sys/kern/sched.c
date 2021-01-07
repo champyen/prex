@@ -90,16 +90,15 @@
 #include <hal.h>
 
 static struct queue runq[NPRI]; /* run queues */
-static struct queue wakeq; /* queue for waking threads */
-static struct queue dpcq; /* DPC queue */
-static struct event dpc_event; /* event for DPC */
-static int maxpri; /* highest priority in runq */
+static struct queue wakeq;      /* queue for waking threads */
+static struct queue dpcq;       /* DPC queue */
+static struct event dpc_event;  /* event for DPC */
+static int maxpri;              /* highest priority in runq */
 
 /*
  * Search for highest-priority runnable thread.
  */
-static int
-runq_getbest(void)
+static int runq_getbest(void)
 {
     int pri;
 
@@ -114,8 +113,7 @@ runq_getbest(void)
  * The rescheduling flag is set if the priority is beter
  * than the currently running thread.
  */
-static void
-runq_enqueue(thread_t t)
+static void runq_enqueue(thread_t t)
 {
 
     enqueue(&runq[t->priority], &t->sched_link);
@@ -129,8 +127,7 @@ runq_enqueue(thread_t t)
  * Insert a thread to the head of the run queue.
  * We assume this routine is called while thread switching.
  */
-static void
-runq_insert(thread_t t)
+static void runq_insert(thread_t t)
 {
 
     queue_insert(&runq[t->priority], &t->sched_link);
@@ -142,8 +139,7 @@ runq_insert(thread_t t)
  * Pick up and remove the highest-priority thread
  * from the run queue.
  */
-static thread_t
-runq_dequeue(void)
+static thread_t runq_dequeue(void)
 {
     queue_t q;
     thread_t t;
@@ -159,8 +155,7 @@ runq_dequeue(void)
 /*
  * Remove the specified thread from the run queue.
  */
-static void
-runq_remove(thread_t t)
+static void runq_remove(thread_t t)
 {
 
     queue_remove(&t->sched_link);
@@ -170,16 +165,15 @@ runq_remove(thread_t t)
 /*
  * Wake up all threads in the wake queue.
  */
-static void
-wakeq_flush(void)
+static void wakeq_flush(void)
 {
     queue_t q;
     thread_t t;
 
     while (!queue_empty(&wakeq)) {
         /*
-		 * Set a thread runnable.
-		 */
+         * Set a thread runnable.
+         */
         q = dequeue(&wakeq);
         t = queue_entry(q, struct thread, sched_link);
         t->slpevt = NULL;
@@ -194,8 +188,7 @@ wakeq_flush(void)
  * Put a thread on the wake queue. This thread will be moved
  * to the run queue later in wakeq_flush().
  */
-static void
-sched_setrun(thread_t t)
+static void sched_setrun(thread_t t)
 {
 
     enqueue(&wakeq, &t->sched_link);
@@ -211,14 +204,13 @@ sched_setrun(thread_t t)
  * threads. For other scheduling reason, the current thread is
  * inserted into the tail of the run queue.
  */
-static void
-sched_swtch(void)
+static void sched_swtch(void)
 {
     thread_t prev, next;
 
     /*
-	 * Put the current thread on the run queue.
-	 */
+     * Put the current thread on the run queue.
+     */
     prev = curthread;
     if (prev->state == TS_RUN) {
         if (prev->priority > maxpri)
@@ -229,18 +221,18 @@ sched_swtch(void)
     prev->resched = 0;
 
     /*
-	 * Select the thread to run the CPU next.
-	 * If it's same with previous one, return.
-	 */
+     * Select the thread to run the CPU next.
+     * If it's same with previous one, return.
+     */
     next = runq_dequeue();
     if (next == prev)
         return;
     curthread = next;
 
     /*
-	 * Switch to the new thread.
-	 * You are expected to understand this..
-	 */
+     * Switch to the new thread.
+     * You are expected to understand this..
+     */
     if (prev->task != next->task)
         vm_switch(next->task->map);
     context_switch(&prev->ctx, &next->ctx);
@@ -251,8 +243,7 @@ sched_swtch(void)
  *
  * Wake up the thread which is sleeping in sched_tsleep().
  */
-static void
-sleep_timeout(void* arg)
+static void sleep_timeout(void* arg)
 {
     thread_t t = (thread_t)arg;
 
@@ -274,18 +265,17 @@ int sched_tsleep(struct event* evt, u_long msec)
     s = splhigh();
 
     /*
-	 * Put the current thread on the sleep queue.
-	 */
+     * Put the current thread on the sleep queue.
+     */
     curthread->slpevt = evt;
     curthread->state |= TS_SLEEP;
     enqueue(&evt->sleepq, &curthread->sched_link);
 
     /*
-	 * Program timer to wake us up at timeout.
-	 */
+     * Program timer to wake us up at timeout.
+     */
     if (msec != 0) {
-        timer_callout(&curthread->timeout, msec,
-            &sleep_timeout, curthread);
+        timer_callout(&curthread->timeout, msec, &sleep_timeout, curthread);
     }
 
     wakeq_flush();
@@ -329,8 +319,7 @@ void sched_wakeup(struct event* evt)
  * threads. This routine returns the thread ID of the
  * woken thread, or NULL if no threads are sleeping.
  */
-thread_t
-sched_wakeone(struct event* evt)
+thread_t sched_wakeone(struct event* evt)
 {
     queue_t head, q;
     thread_t top, t = NULL;
@@ -341,9 +330,9 @@ sched_wakeone(struct event* evt)
     head = &evt->sleepq;
     if (!queue_empty(head)) {
         /*
-		 * Select the highet priority thread in
-		 * the sleep queue, and wake it up.
-		 */
+         * Select the highet priority thread in
+         * the sleep queue, and wake it up.
+         */
         q = queue_first(head);
         top = queue_entry(q, struct thread, sched_link);
         while (!queue_end(head, q)) {
@@ -440,16 +429,16 @@ void sched_tick(void)
 
     if (curthread->state != TS_EXIT) {
         /*
-		 * Bill time to current thread.
-		 */
+         * Bill time to current thread.
+         */
         curthread->time++;
 
         if (curthread->policy == SCHED_RR) {
             if (--curthread->timeleft <= 0) {
                 /*
-				 * The quantum is up.
-				 * Give the thread another.
-				 */
+                 * The quantum is up.
+                 * Give the thread another.
+                 */
                 curthread->timeleft += QUANTUM;
                 curthread->resched = 1;
             }
@@ -479,11 +468,11 @@ void sched_stop(thread_t t)
 
     if (t == curthread) {
         /*
-		 * If specified thread is a current thread,
-		 * the scheduling lock count is force set
-		 * to 1 to ensure the thread switching in
-		 * the next sched_unlock().
-		 */
+         * If specified thread is a current thread,
+         * the scheduling lock count is force set
+         * to 1 to ensure the thread switching in
+         * the next sched_unlock().
+         */
         curthread->locks = 1;
         curthread->resched = 1;
     } else {
@@ -529,17 +518,17 @@ void sched_unlock(void)
         wakeq_flush();
         while (curthread->resched) {
             /*
-			 * Kick scheduler.
-			 */
+             * Kick scheduler.
+             */
             sched_swtch();
 
             /*
-			 * Now we run pending interrupts which fired
-			 * during the thread switch. So, we can catch
-			 * the rescheduling request from such ISRs.
-			 * Otherwise, the reschedule may be deferred
-			 * until _next_ sched_unlock() call.
-			 */
+             * Now we run pending interrupts which fired
+             * during the thread switch. So, we can catch
+             * the rescheduling request from such ISRs.
+             * Otherwise, the reschedule may be deferred
+             * until _next_ sched_unlock() call.
+             */
             splx(s);
             s = splhigh();
             wakeq_flush();
@@ -572,9 +561,9 @@ void sched_setpri(thread_t t, int basepri, int pri)
 
     if (t == curthread) {
         /*
-		 * If we change the current thread's priority,
-		 * rescheduling may be happened.
-		 */
+         * If we change the current thread's priority,
+         * rescheduling may be happened.
+         */
         t->priority = pri;
         maxpri = runq_getbest();
         if (pri != maxpri)
@@ -582,10 +571,10 @@ void sched_setpri(thread_t t, int basepri, int pri)
     } else {
         if (t->state == TS_RUN) {
             /*
-			 * Update the thread priority and adjust
-			 * the run queue position for new priority.
-			 * The rescheduling flag may be set.
-			 */
+             * Update the thread priority and adjust
+             * the run queue position for new priority.
+             * The rescheduling flag may be set.
+             */
             runq_remove(t);
             t->priority = pri;
             runq_enqueue(t);
@@ -661,8 +650,7 @@ void sched_dpc(struct dpc* dpc, void (*fn)(void*), void* arg)
  *  - Scheduler is unlocked.
  *  - The scheduling priority is PRI_DPC.
  */
-static void
-dpc_thread(void* dummy)
+static void dpc_thread(void* dummy)
 {
     queue_t q;
     struct dpc* dpc;
@@ -671,8 +659,8 @@ dpc_thread(void* dummy)
 
     for (;;) {
         /*
-		 * Wait until next DPC request.
-		 */
+         * Wait until next DPC request.
+         */
         sched_sleep(&dpc_event);
 
         while (!queue_empty(&dpcq)) {
@@ -681,8 +669,8 @@ dpc_thread(void* dummy)
             dpc->state = DPC_FREE;
 
             /*
-			 * Call DPC routine.
-			 */
+             * Call DPC routine.
+             */
             spl0();
             (*dpc->func)(dpc->arg);
             splhigh();

@@ -35,7 +35,8 @@
 /*
  * Video interface
  */
-struct wscons_video_ops {
+struct wscons_video_ops
+{
     void (*cursor)(void* aux, int row, int col);
     void (*putc)(void* aux, int row, int col, int ch);
     void (*copyrows)(void* aux, int srcrow, int dstrow, int nrows);
@@ -47,7 +48,8 @@ struct wscons_video_ops {
 /*
  * Keyboard interface
  */
-struct wscons_kbd_ops {
+struct wscons_kbd_ops
+{
     int (*getc)(void* aux);
     void (*set_poll)(void* aux, int on);
 };

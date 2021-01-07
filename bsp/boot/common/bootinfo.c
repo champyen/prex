@@ -42,19 +42,16 @@
 struct bootinfo* const bootinfo = (struct bootinfo*)kvtop(BOOTINFO);
 
 #if defined(DEBUG) && defined(DEBUG_BOOTINFO)
-static void
-print_module(struct module* m)
+static void print_module(struct module* m)
 {
 
-    printf("%lx %lx %x %lx %lx %x %x %x %s\n",
-        m->entry, m->phys, m->size,
-        m->text, m->data, m->textsz,
-        m->datasz, m->bsssz, m->name);
+    printf("%lx %lx %x %lx %lx %x %x %x %s\n", m->entry, m->phys, m->size, m->text, m->data, m->textsz, m->datasz,
+           m->bsssz, m->name);
 }
 
 void dump_bootinfo(void)
 {
-    static const char strtype[][9] = { "", "USABLE", "MEMHOLE", "RESERVED", "BOOTDISK" };
+    static const char strtype[][9] = {"", "USABLE", "MEMHOLE", "RESERVED", "BOOTDISK"};
     struct module* m;
     struct bootinfo* bi = bootinfo;
     int i;
@@ -64,16 +61,12 @@ void dump_bootinfo(void)
     printf("nr_rams=%d\n", bi->nr_rams);
     for (i = 0; i < bi->nr_rams; i++) {
         if (bi->ram[i].type != 0) {
-            printf("ram[%d]:  base=%lx size=%x type=%s\n", i,
-                bi->ram[i].base,
-                bi->ram[i].size,
-                strtype[bi->ram[i].type]);
+            printf("ram[%d]:  base=%lx size=%x type=%s\n", i, bi->ram[i].base, bi->ram[i].size,
+                   strtype[bi->ram[i].type]);
         }
     }
 
-    printf("bootdisk: base=%lx size=%x\n",
-        bi->bootdisk.base,
-        bi->bootdisk.size);
+    printf("bootdisk: base=%lx size=%x\n", bi->bootdisk.base, bi->bootdisk.size);
 
     printf("entry    phys     size     text     data     textsz   datasz   bsssz    module\n");
     printf("-------- -------- -------- -------- -------- -------- -------- -------- ------\n");

@@ -92,8 +92,8 @@ pid_t vfork(void)
     sts = setjmp(__fork_env);
     if (sts == 0) {
         /*
-		 * Create new task
-		 */
+         * Create new task
+         */
         if ((error = task_create(task_self(), VM_SHARE, &tsk)) != 0) {
             errno = error;
             return -1;
@@ -104,46 +104,46 @@ pid_t vfork(void)
             return -1;
         }
         /*
-		 * Notify to file system server
-		 */
+         * Notify to file system server
+         */
         m.hdr.code = FS_FORK;
         m.data[0] = tsk; /* child task */
         if (__posix_call(__fs_obj, &m, sizeof(m), 1) != 0)
             return -1;
 
         /*
-		 * Notify to process server
-		 */
+         * Notify to process server
+         */
         m.hdr.code = PS_FORK;
         m.data[0] = tsk; /* child task */
-        m.data[1] = 1; /* fork type */
+        m.data[1] = 1;   /* fork type */
         if (__posix_call(__proc_obj, &m, sizeof(m), 1) != 0)
             return -1;
         __child_pid = m.data[0];
 
         /*
-		 * Start child task.
-		 *
-		 * TODO:
-		 * In order to synchronize the execution, we change
-		 * the child's priority to lower value. This ugly hack
-		 * will be replaced by some other methods...
-		 */
+         * Start child task.
+         *
+         * TODO:
+         * In order to synchronize the execution, we change
+         * the child's priority to lower value. This ugly hack
+         * will be replaced by some other methods...
+         */
         thread_load(t, __child_entry, NULL);
         thread_getpri(t, &pri);
         thread_setpri(t, pri + 1);
         thread_resume(t);
 
         /*
-		 * Suspend until child process calls exec() or exit()
-		 */
+         * Suspend until child process calls exec() or exit()
+         */
         __parent_thread = thread_self();
         task_suspend(task_self());
 
     } else if (sts == 1) {
         /*
-		 * Child task
-		 */
+         * Child task
+         */
         thread_load(__parent_thread, __parent_entry, NULL);
         t = thread_self();
         thread_getpri(t, &pri);
@@ -159,16 +159,14 @@ pid_t vfork(void)
     return __child_pid;
 }
 
-static void
-__parent_entry(void)
+static void __parent_entry(void)
 {
 
     longjmp(__fork_env, 2);
     /* NOTREACHED */
 }
 
-static void
-__child_entry(void)
+static void __child_entry(void)
 {
 
     longjmp(__fork_env, 1);

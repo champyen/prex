@@ -44,10 +44,7 @@
  * ANSI is written such that the original file gets closed if at
  * all possible, no matter what.
  */
-FILE *
-    freopen(file, mode, fp)
-        const char *file,
-    *mode;
+FILE *freopen(file, mode, fp) const char *file, *mode;
 FILE* fp;
 {
     int f;
@@ -62,13 +59,13 @@ FILE* fp;
         __sinit();
 
     /*
-	 * There are actually programs that depend on being able to "freopen"
-	 * descriptors that weren't originally open.  Keep this from breaking.
-	 * Remember whether the stream was open to begin with, and which file
-	 * descriptor (if any) was associated with it.  If it was attached to
-	 * a descriptor, defer closing it; freopen("/dev/stdin", "r", stdin)
-	 * should work.  This is unnecessary if it was not a Unix file.
-	 */
+     * There are actually programs that depend on being able to "freopen"
+     * descriptors that weren't originally open.  Keep this from breaking.
+     * Remember whether the stream was open to begin with, and which file
+     * descriptor (if any) was associated with it.  If it was attached to
+     * a descriptor, defer closing it; freopen("/dev/stdin", "r", stdin)
+     * should work.  This is unnecessary if it was not a Unix file.
+     */
     if (fp->_flags == 0) {
         fp->_flags = __SEOF; /* hold on to it */
         isopen = 0;
@@ -98,10 +95,10 @@ FILE* fp;
     sverrno = errno;
 
     /*
-	 * Finish closing fp.  Even if the open succeeded above, we cannot
-	 * keep fp->_base: it may be the wrong size.  This loses the effect
-	 * of any setbuffer calls, but stdio has always done this before.
-	 */
+     * Finish closing fp.  Even if the open succeeded above, we cannot
+     * keep fp->_base: it may be the wrong size.  This loses the effect
+     * of any setbuffer calls, but stdio has always done this before.
+     */
     if (isopen)
         (void)__sclose(fp);
     if (fp->_flags & __SMBF)
@@ -115,17 +112,17 @@ FILE* fp;
         FREEUB(fp);
     fp->_ub._size = 0;
 
-    if (f < 0) { /* did not get it after all */
-        fp->_flags = 0; /* set it free */
+    if (f < 0) {         /* did not get it after all */
+        fp->_flags = 0;  /* set it free */
         errno = sverrno; /* restore in case _close clobbered */
         return (NULL);
     }
 
     /*
-	 * If reopening something that was open before on a real file, try
-	 * to maintain the descriptor.  Various C library routines (perror)
-	 * assume stderr is always fd STDERR_FILENO, even if being freopen'd.
-	 */
+     * If reopening something that was open before on a real file, try
+     * to maintain the descriptor.  Various C library routines (perror)
+     * assume stderr is always fd STDERR_FILENO, even if being freopen'd.
+     */
     if (wantfd >= 0 && f != wantfd) {
         if (dup2(f, wantfd) >= 0) {
             (void)close(f);

@@ -305,8 +305,7 @@ int sys_fstat(file_t fp, struct stat* st)
 /*
  * Return 0 if directory is empty
  */
-static int
-check_dir_empty(char* path)
+static int check_dir_empty(char* path)
 {
     int error;
     file_t fp;

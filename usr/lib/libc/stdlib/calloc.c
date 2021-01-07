@@ -30,9 +30,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-void*
-    calloc(num, size)
-        size_t num;
+void* calloc(num, size) size_t num;
 size_t size;
 {
     void* p;

@@ -78,22 +78,22 @@ static int devfs_lookup(vnode_t, char*, vnode_t);
  * vnode operations
  */
 struct vnops devfs_vnops = {
-    devfs_open, /* open */
-    devfs_close, /* close */
-    devfs_read, /* read */
-    devfs_write, /* write */
-    devfs_seek, /* seek */
-    devfs_ioctl, /* ioctl */
-    devfs_fsync, /* fsync */
-    devfs_readdir, /* readdir */
-    devfs_lookup, /* lookup */
-    devfs_create, /* create */
-    devfs_remove, /* remove */
-    devfs_rename, /* remame */
-    devfs_mkdir, /* mkdir */
-    devfs_rmdir, /* rmdir */
-    devfs_getattr, /* getattr */
-    devfs_setattr, /* setattr */
+    devfs_open,     /* open */
+    devfs_close,    /* close */
+    devfs_read,     /* read */
+    devfs_write,    /* write */
+    devfs_seek,     /* seek */
+    devfs_ioctl,    /* ioctl */
+    devfs_fsync,    /* fsync */
+    devfs_readdir,  /* readdir */
+    devfs_lookup,   /* lookup */
+    devfs_create,   /* create */
+    devfs_remove,   /* remove */
+    devfs_rename,   /* remame */
+    devfs_mkdir,    /* mkdir */
+    devfs_rmdir,    /* rmdir */
+    devfs_getattr,  /* getattr */
+    devfs_setattr,  /* setattr */
     devfs_inactive, /* inactive */
     devfs_truncate, /* truncate */
 };
@@ -102,16 +102,15 @@ struct vnops devfs_vnops = {
  * File system operations
  */
 struct vfsops devfs_vfsops = {
-    devfs_mount, /* mount */
+    devfs_mount,   /* mount */
     devfs_unmount, /* unmount */
-    devfs_sync, /* sync */
-    devfs_vget, /* vget */
-    devfs_statfs, /* statfs */
-    &devfs_vnops, /* vnops */
+    devfs_sync,    /* sync */
+    devfs_vget,    /* vget */
+    devfs_statfs,  /* statfs */
+    &devfs_vnops,  /* vnops */
 };
 
-static int
-devfs_open(vnode_t vp, int flags)
+static int devfs_open(vnode_t vp, int flags)
 {
     char* path;
     device_t dev;
@@ -131,16 +130,14 @@ devfs_open(vnode_t vp, int flags)
         path++;
     error = device_open(path, flags & DO_RWMASK, &dev);
     if (error) {
-        DPRINTF(("devfs_open: can not open device = %s error=%d\n",
-            path, error));
+        DPRINTF(("devfs_open: can not open device = %s error=%d\n", path, error));
         return error;
     }
     vp->v_data = (void*)dev; /* Store private data */
     return 0;
 }
 
-static int
-devfs_close(vnode_t vp, file_t fp)
+static int devfs_close(vnode_t vp, file_t fp)
 {
 
     DPRINTF(("devfs_close: fp=%x\n", fp));
@@ -151,8 +148,7 @@ devfs_close(vnode_t vp, file_t fp)
     return device_close((device_t)vp->v_data);
 }
 
-static int
-devfs_read(vnode_t vp, file_t fp, void* buf, size_t size, size_t* result)
+static int devfs_read(vnode_t vp, file_t fp, void* buf, size_t size, size_t* result)
 {
     int error;
     size_t len;
@@ -164,8 +160,7 @@ devfs_read(vnode_t vp, file_t fp, void* buf, size_t size, size_t* result)
     return error;
 }
 
-static int
-devfs_write(vnode_t vp, file_t fp, void* buf, size_t size, size_t* result)
+static int devfs_write(vnode_t vp, file_t fp, void* buf, size_t size, size_t* result)
 {
     int error;
     size_t len;
@@ -178,8 +173,7 @@ devfs_write(vnode_t vp, file_t fp, void* buf, size_t size, size_t* result)
     return error;
 }
 
-static int
-devfs_ioctl(vnode_t vp, file_t fp, u_long cmd, void* arg)
+static int devfs_ioctl(vnode_t vp, file_t fp, u_long cmd, void* arg)
 {
     int error;
 
@@ -188,8 +182,7 @@ devfs_ioctl(vnode_t vp, file_t fp, u_long cmd, void* arg)
     return error;
 }
 
-static int
-devfs_lookup(vnode_t dvp, char* name, vnode_t vp)
+static int devfs_lookup(vnode_t dvp, char* name, vnode_t vp)
 {
     struct devinfo info;
     int error, i;
@@ -224,8 +217,7 @@ devfs_lookup(vnode_t dvp, char* name, vnode_t vp)
 /*
  * @vp: vnode of the directory.
  */
-static int
-devfs_readdir(vnode_t vp, file_t fp, struct dirent* dir)
+static int devfs_readdir(vnode_t vp, file_t fp, struct dirent* dir)
 {
     struct devinfo info;
     int error, i;

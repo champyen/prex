@@ -47,14 +47,14 @@ static void printentry(char* name, struct stat* sp);
 static int do_ls(char* path);
 
 /* Flags */
-#define LSF_DOT 0x01 /* List files begining with . */
-#define LSF_LONG 0x02 /* Long format */
+#define LSF_DOT 0x01    /* List files begining with . */
+#define LSF_LONG 0x02   /* Long format */
 #define LSF_SINGLE 0x04 /* Single column */
-#define LSF_TYPE 0x08 /* Add /(dir) and @(symlink) with file name */
-#define LSF_ALL 0x10 /* List hidden files */
+#define LSF_TYPE 0x08   /* Add /(dir) and @(symlink) with file name */
+#define LSF_ALL 0x10    /* List hidden files */
 
 #define LSF_RECURSIVE 0x20 /* List Subdirectory */
-#define LSF_TIMESORT 0x40 /* Sort by time */
+#define LSF_TIMESORT 0x40  /* Sort by time */
 
 #define DEFAULT_WIDTH 80
 
@@ -122,8 +122,7 @@ int main(int argc, char* argv[])
     return 0;
 }
 
-static void
-printtype(u_int mode)
+static void printtype(u_int mode)
 {
     char type;
 
@@ -155,8 +154,7 @@ printtype(u_int mode)
 }
 
 /* We don't use strmode() to save code. */
-static void
-printmode(u_int mode)
+static void printmode(u_int mode)
 {
 
     if (mode & S_IRUSR)
@@ -173,8 +171,7 @@ printmode(u_int mode)
         putchar('-');
 }
 
-static void
-printentry(char* name, struct stat* sp)
+static void printentry(char* name, struct stat* sp)
 {
     int color;
     int dot = 0;
@@ -249,8 +246,7 @@ printentry(char* name, struct stat* sp)
     }
 }
 
-static int
-do_ls(char* path)
+static int do_ls(char* path)
 {
     struct stat st;
     int nr_file = 0;

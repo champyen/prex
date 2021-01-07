@@ -34,8 +34,7 @@
 
 #undef putchar
 
-int
-    putchar(c) int c;
+int putchar(c) int c;
 {
     return (putc(c, stdout));
 }

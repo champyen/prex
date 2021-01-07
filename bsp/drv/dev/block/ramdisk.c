@@ -44,10 +44,11 @@
 /* Block size */
 #define BSIZE 512
 
-struct ramdisk_softc {
+struct ramdisk_softc
+{
     device_t dev; /* device object */
-    char* addr; /* base address of image */
-    size_t size; /* image size */
+    char* addr;   /* base address of image */
+    size_t size;  /* image size */
 };
 
 static int ramdisk_read(device_t, char*, size_t*, int);
@@ -74,16 +75,14 @@ struct driver ramdisk_driver = {
     /* shutdown */ NULL,
 };
 
-static int
-ramdisk_read(device_t dev, char* buf, size_t* nbyte, int blkno)
+static int ramdisk_read(device_t dev, char* buf, size_t* nbyte, int blkno)
 {
     struct ramdisk_softc* sc = device_private(dev);
     int offset = blkno * BSIZE;
     void* kbuf;
     size_t nr_read;
 
-    DPRINTF(("ramdisk_read: buf=%x nbyte=%d blkno=%x\n",
-        buf, *nbyte, blkno));
+    DPRINTF(("ramdisk_read: buf=%x nbyte=%d blkno=%x\n", buf, *nbyte, blkno));
 
     /* Check overrun */
     if (offset > (int)sc->size) {
@@ -105,16 +104,14 @@ ramdisk_read(device_t dev, char* buf, size_t* nbyte, int blkno)
     return 0;
 }
 
-static int
-ramdisk_write(device_t dev, char* buf, size_t* nbyte, int blkno)
+static int ramdisk_write(device_t dev, char* buf, size_t* nbyte, int blkno)
 {
     struct ramdisk_softc* sc = device_private(dev);
     int offset = blkno * BSIZE;
     void* kbuf;
     size_t nr_write;
 
-    DPRINTF(("ramdisk_write: buf=%x nbyte=%d blkno=%x\n",
-        buf, *nbyte, blkno));
+    DPRINTF(("ramdisk_write: buf=%x nbyte=%d blkno=%x\n", buf, *nbyte, blkno));
 
     /* Check overrun */
     if (offset > (int)sc->size)
@@ -133,8 +130,7 @@ ramdisk_write(device_t dev, char* buf, size_t* nbyte, int blkno)
     return 0;
 }
 
-static int
-ramdisk_probe(struct driver* self)
+static int ramdisk_probe(struct driver* self)
 {
     struct bootinfo* bi;
     struct physmem* phys;
@@ -150,8 +146,7 @@ ramdisk_probe(struct driver* self)
     return 0;
 }
 
-static int
-ramdisk_init(struct driver* self)
+static int ramdisk_init(struct driver* self)
 {
     struct ramdisk_softc* sc;
     struct bootinfo* bi;
@@ -169,8 +164,7 @@ ramdisk_init(struct driver* self)
     sc->size = (size_t)phys->size;
 
 #ifdef DEBUG
-    printf("RAM disk at 0x%08x (%dK bytes)\n",
-        (u_int)sc->addr, sc->size / 1024);
+    printf("RAM disk at 0x%08x (%dK bytes)\n", (u_int)sc->addr, sc->size / 1024);
 #endif
     return 0;
 }

@@ -35,8 +35,7 @@
 #include <string.h>
 #include <errno.h>
 
-int mount(const char* dev, const char* dir, const char* fs, int flags,
-    const void* data)
+int mount(const char* dev, const char* dir, const char* fs, int flags, const void* data)
 {
     struct mount_msg m;
 

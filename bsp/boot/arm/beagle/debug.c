@@ -54,11 +54,11 @@
 #define LCR_BKSE 0x80 /* Bank select enable        */
 
 #define FCR_FIFO_EN 0x01 /* Fifo enable               */
-#define FCR_RXSR 0x02 /* Receiver soft reset       */
-#define FCR_TXSR 0x04 /* Transmitter soft reset    */
+#define FCR_RXSR 0x02    /* Receiver soft reset       */
+#define FCR_TXSR 0x04    /* Transmitter soft reset    */
 
-#define LCRVAL LCR_8N1 /* 8 data, 1 stop, no parity */
-#define MCRVAL (MCR_DTR | MCR_RTS) /* RTS/DTR                   */
+#define LCRVAL LCR_8N1                             /* 8 data, 1 stop, no parity */
+#define MCRVAL (MCR_DTR | MCR_RTS)                 /* RTS/DTR                   */
 #define FCRVAL (FCR_FIFO_EN | FCR_RXSR | FCR_TXSR) /* Clear & enable FIFOs      */
 
 /*

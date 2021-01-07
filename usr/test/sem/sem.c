@@ -43,13 +43,13 @@ int main(int argc, char* argv[])
     printf("Semaphore test program\n");
 
     /*
-	 * Test initialize
-	 */
+     * Test initialize
+     */
     sem_init(&sem, 3);
 
     /*
-	 * Test wait
-	 */
+     * Test wait
+     */
     error = sem_getvalue(&sem, &val);
     printf("Semaphore value=%d\n", val);
 
@@ -87,15 +87,15 @@ int main(int argc, char* argv[])
 		panic("wait error");
 #endif
     /*
-	 * trywait must be error.
-	 */
+     * trywait must be error.
+     */
     printf("4e) Try to wait semahore\n");
     error = sem_trywait(&sem);
     printf("Try wait error=%d\n", error);
 
     /*
-	 * Test post
-	 */
+     * Test post
+     */
     printf("5) Post semahore\n");
     error = sem_post(&sem);
     if (error)

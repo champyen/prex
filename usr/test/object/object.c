@@ -44,8 +44,8 @@ int main(int argc, char* argv[])
     printf("test for object security\n");
 
     /*
-	 * Try to make normal object.
-	 */
+     * Try to make normal object.
+     */
     error = object_create("test", &obj);
     if (error)
         panic("Failed to create an object.\n");
@@ -55,15 +55,15 @@ int main(int argc, char* argv[])
         panic("Failed to destroy an object.\n");
 
     /*
-	 * We can not use an object name that started with '!'.
-	 */
+     * We can not use an object name that started with '!'.
+     */
     error = object_create("!test", &obj);
     if (error == 0)
         panic("Oops! We could create protected object!");
 
     /*
-	 * Find process object and destroy it!
-	 */
+     * Find process object and destroy it!
+     */
     error = object_lookup("!proc", &obj);
     if (error)
         panic("Could not find a process object!");

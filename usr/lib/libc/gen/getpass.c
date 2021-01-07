@@ -46,17 +46,17 @@ char* getpass(const char* prompt)
     static char buf[PASSWORD_LEN + 2];
 
     /*
-	 * read and write to /dev/tty if possible; else read from
-	 * stdin and write to stderr.
-	 */
+     * read and write to /dev/tty if possible; else read from
+     * stdin and write to stderr.
+     */
     if ((outfp = fp = fopen(_PATH_TTY, "w+")) == NULL) {
         outfp = stderr;
         fp = stdin;
     }
     /*
-	 * note - blocking signals isn't necessarily the
-	 * right thing, but we leave it for now.
-	 */
+     * note - blocking signals isn't necessarily the
+     * right thing, but we leave it for now.
+     */
     omask = sigblock(sigmask(SIGINT) | sigmask(SIGTSTP));
     (void)tcgetattr(fileno(fp), &term);
     if ((echo = (term.c_lflag & ECHO)) != 0) {

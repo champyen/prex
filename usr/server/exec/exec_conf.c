@@ -48,8 +48,8 @@ extern int script_load(struct exec*);
  * File format loaders.
  */
 struct exec_loader loader_table[] = {
-    { "elf", elf_init, elf_probe, elf_load },
-    { "script", script_init, script_probe, script_load },
+    {"elf", elf_init, elf_probe, elf_load},
+    {"script", script_init, script_probe, script_load},
 };
 
 const int nloader = (int)(sizeof(loader_table) / sizeof(loader_table[0]));

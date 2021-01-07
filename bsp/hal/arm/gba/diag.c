@@ -57,8 +57,7 @@ static u_short* vram = VRAM_MAP;
 static int pos_x;
 static int pos_y;
 
-static void
-screen_scroll_up(void)
+static void screen_scroll_up(void)
 {
     int i;
 
@@ -68,8 +67,7 @@ screen_scroll_up(void)
         vram[VSCR_COLS * (SCR_ROWS - 1) + i] = ' ';
 }
 
-static void
-screen_newline(void)
+static void screen_newline(void)
 {
 
     pos_x = 0;
@@ -80,8 +78,7 @@ screen_newline(void)
     }
 }
 
-static void
-screen_putc(char c)
+static void screen_putc(char c)
 {
 
     switch (c) {
@@ -112,8 +109,7 @@ screen_putc(char c)
 /*
  * Init font
  */
-static void
-screen_init_font(void)
+static void screen_init_font(void)
 {
     int i, row, col, bit, val = 0;
     u_short* tile = VRAM_TILE;
@@ -135,19 +131,18 @@ screen_init_font(void)
 /*
  * Init screen
  */
-static void
-screen_init_screen(void)
+static void screen_init_screen(void)
 {
     u_short* pal = BG_PALETTE;
 
     /* Initialize palette */
-    pal[0] = 0; /* Transparent */
-    pal[1] = RGB(0, 0, 0); /* Black */
+    pal[0] = 0;               /* Transparent */
+    pal[1] = RGB(0, 0, 0);    /* Black */
     pal[2] = RGB(31, 31, 31); /* White */
 
     /* Setup video */
     REG_DISPCNT = 0x0100; /* Mode0, BG0 */
-    REG_BG0CNT = 0x1080; /* Size0, 256color */
+    REG_BG0CNT = 0x1080;  /* Size0, 256color */
 }
 
 void diag_puts(char* buf)

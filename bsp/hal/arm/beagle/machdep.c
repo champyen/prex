@@ -51,35 +51,34 @@
  */
 struct mmumap mmumap_table[] = {
     /*
-	 * Q1 : 
-	 *	Boot ROM			(112 KB)
-	 *	SRAM				( 64 KB)
-	 *	L4 Interconnects	( 17 MB)
-	 * 	SGX					( 64 KB)
-	 *	L4 Emulation		(  8 MB)
-	 *	IVA2.2 SS			( 48 MB)
-	 *	L3 control regs		( 16 MB)
-	 *	SMS, SRDC, GPMC
-	 *	  control regs		( 48 MB)
-	 */
-    { 0xa0000000, 0x40000000, 0x0001C000, VMT_ROM },
-    { 0xa0200000, 0x40200000, 0x00010000, VMT_RAM },
-    { 0xa8000000, 0x48000000, 0x01100000, VMT_IO },
-    { 0xb0000000, 0x50000000, 0x00010000, VMT_IO },
-    { 0xb4000000, 0x54000000, 0x00800000, VMT_IO },
-    { 0xbC000000, 0x5C000000, 0x03000000, VMT_IO },
-    { 0xc8000000, 0x68000000, 0x01000000, VMT_IO },
-    { 0xcC000000, 0x6C000000, 0x03000000, VMT_IO },
+     * Q1 :
+     *	Boot ROM			(112 KB)
+     *	SRAM				( 64 KB)
+     *	L4 Interconnects	( 17 MB)
+     * 	SGX					( 64 KB)
+     *	L4 Emulation		(  8 MB)
+     *	IVA2.2 SS			( 48 MB)
+     *	L3 control regs		( 16 MB)
+     *	SMS, SRDC, GPMC
+     *	  control regs		( 48 MB)
+     */
+    {0xa0000000, 0x40000000, 0x0001C000, VMT_ROM},
+    {0xa0200000, 0x40200000, 0x00010000, VMT_RAM},
+    {0xa8000000, 0x48000000, 0x01100000, VMT_IO},
+    {0xb0000000, 0x50000000, 0x00010000, VMT_IO},
+    {0xb4000000, 0x54000000, 0x00800000, VMT_IO},
+    {0xbC000000, 0x5C000000, 0x03000000, VMT_IO},
+    {0xc8000000, 0x68000000, 0x01000000, VMT_IO},
+    {0xcC000000, 0x6C000000, 0x03000000, VMT_IO},
 
     /*
-	 * Q2: SDRAM (512 MB)
-	 * Although Q2 is 1 GB in size we only map 512 MB
-	 * as this is the max ram size on the Beagle Board
-	 */
-    { 0x80000000, 0x80000000, 0x20000000, VMT_RAM },
+     * Q2: SDRAM (512 MB)
+     * Although Q2 is 1 GB in size we only map 512 MB
+     * as this is the max ram size on the Beagle Board
+     */
+    {0x80000000, 0x80000000, 0x20000000, VMT_RAM},
 
-    { 0, 0, 0, 0 }
-};
+    {0, 0, 0, 0}};
 #endif
 
 /*
@@ -137,26 +136,26 @@ void machine_startup(void)
 {
 
     /*
-	 * Initialize CPU and basic hardware.
-	 */
+     * Initialize CPU and basic hardware.
+     */
     cpu_init();
     cache_init();
 
     /*
-	 * Reserve system pages.
-	 */
+     * Reserve system pages.
+     */
     page_reserve(kvtop(SYSPAGE), SYSPAGESZ);
 
     /*
-	 * Setup vector page.
-	 */
+     * Setup vector page.
+     */
     vector_copy((vaddr_t)ptokv(CONFIG_ARM_VECTORS));
     set_vbar((vaddr_t)ptokv(CONFIG_ARM_VECTORS));
 
 #ifdef CONFIG_MMU
     /*
-	 * Initialize MMU
-	 */
+     * Initialize MMU
+     */
     mmu_init(mmumap_table);
 #endif
 }

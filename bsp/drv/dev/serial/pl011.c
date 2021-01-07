@@ -75,12 +75,12 @@
 
 /* Line control register (High) */
 #define LCRH_WLEN8 0x60 /* 8 bits */
-#define LCRH_FEN 0x10 /* Enable FIFO */
+#define LCRH_FEN 0x10   /* Enable FIFO */
 
 /* Control register */
 #define CR_UARTEN 0x0001 /* UART enable */
-#define CR_TXE 0x0100 /* Transmit enable */
-#define CR_RXE 0x0200 /* Receive enable */
+#define CR_TXE 0x0100    /* Transmit enable */
+#define CR_RXE 0x0200    /* Receive enable */
 
 /* Interrupt mask set/clear register */
 #define IMSC_RX 0x10 /* Receive interrupt mask */
@@ -114,8 +114,7 @@ static struct serial_ops pl011_ops = {
 
 static struct serial_port pl011_port;
 
-static void
-pl011_xmt_char(struct serial_port* sp, char c)
+static void pl011_xmt_char(struct serial_port* sp, char c)
 {
 
     while (bus_read_32(UART_FR) & FR_TXFF)
@@ -123,8 +122,7 @@ pl011_xmt_char(struct serial_port* sp, char c)
     bus_write_32(UART_DR, (uint32_t)c);
 }
 
-static char
-pl011_rcv_char(struct serial_port* sp)
+static char pl011_rcv_char(struct serial_port* sp)
 {
     char c;
 
@@ -134,21 +132,19 @@ pl011_rcv_char(struct serial_port* sp)
     return c;
 }
 
-static void
-pl011_set_poll(struct serial_port* sp, int on)
+static void pl011_set_poll(struct serial_port* sp, int on)
 {
 
     if (on) {
         /*
-		 * Disable interrupt for polling mode.
-		 */
+         * Disable interrupt for polling mode.
+         */
         bus_write_32(UART_IMSC, 0);
     } else
         bus_write_32(UART_IMSC, (IMSC_RX | IMSC_TX));
 }
 
-static int
-pl011_isr(void* arg)
+static int pl011_isr(void* arg)
 {
     struct serial_port* sp = arg;
     int c;
@@ -158,8 +154,8 @@ pl011_isr(void* arg)
 
     if (mis & MIS_RX) {
         /*
-		 * Receive interrupt
-		 */
+         * Receive interrupt
+         */
         while (bus_read_32(UART_FR) & FR_RXFE)
             ;
         do {
@@ -172,8 +168,8 @@ pl011_isr(void* arg)
     }
     if (mis & MIS_TX) {
         /*
-		 * Transmit interrupt
-		 */
+         * Transmit interrupt
+         */
         serial_xmt_done(sp);
 
         /* Clear interrupt status */
@@ -182,19 +178,18 @@ pl011_isr(void* arg)
     return 0;
 }
 
-static void
-pl011_start(struct serial_port* sp)
+static void pl011_start(struct serial_port* sp)
 {
     uint32_t divider, remainder, fraction;
 
-    bus_write_32(UART_CR, 0); /* Disable everything */
+    bus_write_32(UART_CR, 0);       /* Disable everything */
     bus_write_32(UART_ICR, 0x07ff); /* Clear all interrupt status */
 
     /*
-	 * Set baud rate:
-	 * IBRD = UART_CLK / (16 * BAUD_RATE)
-	 * FBRD = ROUND((64 * MOD(UART_CLK,(16 * BAUD_RATE))) / (16 * BAUD_RATE))
-	 */
+     * Set baud rate:
+     * IBRD = UART_CLK / (16 * BAUD_RATE)
+     * FBRD = ROUND((64 * MOD(UART_CLK,(16 * BAUD_RATE))) / (16 * BAUD_RATE))
+     */
     divider = UART_CLK / (16 * BAUD_RATE);
     remainder = UART_CLK % (16 * BAUD_RATE);
     fraction = (8 * remainder / BAUD_RATE) >> 1;
@@ -215,16 +210,14 @@ pl011_start(struct serial_port* sp)
     bus_write_32(UART_IMSC, (IMSC_RX | IMSC_TX));
 }
 
-static void
-pl011_stop(struct serial_port* sp)
+static void pl011_stop(struct serial_port* sp)
 {
 
     bus_write_32(UART_IMSC, 0); /* Disable all interrupts */
-    bus_write_32(UART_CR, 0); /* Disable everything */
+    bus_write_32(UART_CR, 0);   /* Disable everything */
 }
 
-static int
-pl011_init(struct driver* self)
+static int pl011_init(struct driver* self)
 {
 
     serial_attach(&pl011_ops, &pl011_port);

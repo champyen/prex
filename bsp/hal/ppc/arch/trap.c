@@ -48,21 +48,21 @@
  * Trap name.
  */
 static const char* const trap_name[] = {
-    "", /*  0 */
-    "System reset", /*  1 */
-    "Machine check", /*  2 */
-    "DSI", /*  3 */
-    "ISI", /*  4 */
-    "External interrupt", /*  5 */
-    "Alignment", /*  6 */
-    "Program", /*  7 */
+    "",                           /*  0 */
+    "System reset",               /*  1 */
+    "Machine check",              /*  2 */
+    "DSI",                        /*  3 */
+    "ISI",                        /*  4 */
+    "External interrupt",         /*  5 */
+    "Alignment",                  /*  6 */
+    "Program",                    /*  7 */
     "Floating point unavailable", /*  8 */
-    "Decrementer", /*  9 */
-    "Reserved", /*  a */
-    "Reserved", /*  b */
-    "System call", /*  c */
-    "Trace", /*  d */
-    "Floating point assist", /*  e */
+    "Decrementer",                /*  9 */
+    "Reserved",                   /*  a */
+    "Reserved",                   /*  b */
+    "System call",                /*  c */
+    "Trace",                      /*  d */
+    "Floating point assist",      /*  e */
 };
 #define MAXTRAP (sizeof(trap_name) / sizeof(void*) - 1)
 #endif /* DEBUG */
@@ -73,21 +73,19 @@ static const char* const trap_name[] = {
  * independent exception code.
  */
 static const int exception_map[] = {
-    SIGILL,
-    SIGILL,
-    SIGSEGV, /* machine check */
-    SIGSEGV, /* address error (store) */
-    SIGBUS, /* instruction bus error */
-    SIGINT, /* external interrupt */
-    SIGBUS, /* alingment */
-    SIGTRAP, /* breakpoint trap */
-    SIGFPE, /* fpu unavail */
-    SIGALRM, /* decrementer */
-    SIGILL, /* reserved */
-    SIGILL, /* reserved */
-    SIGCHLD, /* syscall */
-    SIGTRAP, /* debug trap */
-    SIGFPE, /* fp assist */
+    SIGILL,  SIGILL, SIGSEGV, /* machine check */
+    SIGSEGV,                  /* address error (store) */
+    SIGBUS,                   /* instruction bus error */
+    SIGINT,                   /* external interrupt */
+    SIGBUS,                   /* alingment */
+    SIGTRAP,                  /* breakpoint trap */
+    SIGFPE,                   /* fpu unavail */
+    SIGALRM,                  /* decrementer */
+    SIGILL,                   /* reserved */
+    SIGILL,                   /* reserved */
+    SIGCHLD,                  /* syscall */
+    SIGTRAP,                  /* debug trap */
+    SIGFPE,                   /* fp assist */
 };
 
 /*
@@ -119,22 +117,21 @@ void trap_dump(struct cpu_regs* r)
 {
 
     printf("Trap frame %x\n", r);
-    printf(" r0  %08x r1  %08x r2  %08x r3  %08x r4  %08x r5  %08x\n",
-        r->gr[0], r->gr[1], r->gr[2], r->gr[3], r->gr[4], r->gr[5]);
-    printf(" r6  %08x r7  %08x r8  %08x r9  %08x r10 %08x r11 %08x\n",
-        r->gr[6], r->gr[7], r->gr[8], r->gr[9], r->gr[10], r->gr[11]);
-    printf(" r12 %08x r13 %08x r14 %08x r15 %08x r16 %08x r17 %08x\n",
-        r->gr[12], r->gr[13], r->gr[14], r->gr[15], r->gr[16], r->gr[17]);
-    printf(" r18 %08x r19 %08x r20 %08x r21 %08x r22 %08x r23 %08x\n",
-        r->gr[18], r->gr[19], r->gr[20], r->gr[21], r->gr[22], r->gr[23]);
-    printf(" r24 %08x r25 %08x r26 %08x r27 %08x r28 %08x r29 %08x\n",
-        r->gr[24], r->gr[25], r->gr[26], r->gr[27], r->gr[28], r->gr[29]);
-    printf(" r30 %08x r31 %08x lr  %08x cr  %08x xer %08x ctr %08x\n",
-        r->gr[30], r->gr[31], r->lr, r->cr, r->xer, r->ctr);
+    printf(" r0  %08x r1  %08x r2  %08x r3  %08x r4  %08x r5  %08x\n", r->gr[0], r->gr[1], r->gr[2], r->gr[3], r->gr[4],
+           r->gr[5]);
+    printf(" r6  %08x r7  %08x r8  %08x r9  %08x r10 %08x r11 %08x\n", r->gr[6], r->gr[7], r->gr[8], r->gr[9],
+           r->gr[10], r->gr[11]);
+    printf(" r12 %08x r13 %08x r14 %08x r15 %08x r16 %08x r17 %08x\n", r->gr[12], r->gr[13], r->gr[14], r->gr[15],
+           r->gr[16], r->gr[17]);
+    printf(" r18 %08x r19 %08x r20 %08x r21 %08x r22 %08x r23 %08x\n", r->gr[18], r->gr[19], r->gr[20], r->gr[21],
+           r->gr[22], r->gr[23]);
+    printf(" r24 %08x r25 %08x r26 %08x r27 %08x r28 %08x r29 %08x\n", r->gr[24], r->gr[25], r->gr[26], r->gr[27],
+           r->gr[28], r->gr[29]);
+    printf(" r30 %08x r31 %08x lr  %08x cr  %08x xer %08x ctr %08x\n", r->gr[30], r->gr[31], r->lr, r->cr, r->xer,
+           r->ctr);
     printf(" srr0 %08x srr1 %08x\n", r->srr0, r->srr1);
 
-    printf(" >> interrupt is %s\n",
-        (r->srr1 & MSR_EE) ? "enabled" : "disabled");
+    printf(" >> interrupt is %s\n", (r->srr1 & MSR_EE) ? "enabled" : "disabled");
 
     printf(" >> task=%s\n", curtask->name);
 }

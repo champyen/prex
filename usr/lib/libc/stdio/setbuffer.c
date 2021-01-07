@@ -32,9 +32,7 @@
 
 #include <stdio.h>
 
-void
-    setbuffer(fp, buf, size)
-        FILE* fp;
+void setbuffer(fp, buf, size) FILE* fp;
 char* buf;
 int size;
 {
@@ -45,9 +43,7 @@ int size;
 /*
  * set line buffering
  */
-int
-    setlinebuf(fp)
-        FILE* fp;
+int setlinebuf(fp) FILE* fp;
 {
 
     return (setvbuf(fp, (char*)NULL, _IOLBF, (size_t)0));

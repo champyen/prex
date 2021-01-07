@@ -39,11 +39,11 @@
  * Power management
  */
 #define DEVCTL_PM_POWERDOWN _DEVC('P', 0) /* power down */
-#define DEVCTL_PM_POWERUP _DEVC('P', 1) /* power up */
+#define DEVCTL_PM_POWERUP _DEVC('P', 1)   /* power up */
 #define DEVCTL_PM_CHGPOLICY _DEVC('P', 2) /* change power policy */
-#define DEVCTL_PM_LCDOFF _DEVC('P', 3) /* lcd off */
-#define DEVCTL_PM_LCDON _DEVC('P', 4) /* lcd on */
-#define DEVCTL_PM_CHGFREQ _DEVC('P', 5) /* change cpu frequency */
+#define DEVCTL_PM_LCDOFF _DEVC('P', 3)    /* lcd off */
+#define DEVCTL_PM_LCDON _DEVC('P', 4)     /* lcd on */
+#define DEVCTL_PM_CHGFREQ _DEVC('P', 5)   /* change cpu frequency */
 
 /*
  * Plug and play
@@ -58,6 +58,6 @@
  */
 #define DEVCTL_DBG_DEVSTAT _DEVC('D', 0) /* dump device state */
 #define DEVCTL_DBG_ENTERKD _DEVC('D', 1) /* entering kernel debugger */
-#define DEVCTL_DBG_EXITKD _DEVC('D', 2) /* eixt kernel debugger */
+#define DEVCTL_DBG_EXITKD _DEVC('D', 2)  /* eixt kernel debugger */
 
 #endif /* !_DEVCTL_H */

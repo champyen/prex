@@ -37,9 +37,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-int
-    remove(file)
-        const char* file;
+int remove(file) const char* file;
 {
     struct stat sb;
 
@@ -47,9 +45,9 @@ int
         return (-1);
 
     /*
-	 * The file system may prohibit using unlink(2) on directories,
-	 * so always use rmdir(2) in that case.
-	 */
+     * The file system may prohibit using unlink(2) on directories,
+     * so always use rmdir(2) in that case.
+     */
     if (S_ISDIR(sb.st_mode))
         return (rmdir(file));
     else

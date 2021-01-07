@@ -38,8 +38,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-static void
-usage(void)
+static void usage(void)
 {
 
     fprintf(stderr, "usage: debug [object]\n");

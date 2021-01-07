@@ -90,8 +90,8 @@ int mmu_map(pgd_t pgd, paddr_t pa, vaddr_t va, size_t size, int type)
     size = trunc_page(size);
 
     /*
-	 * Set page flag
-	 */
+     * Set page flag
+     */
     switch (type) {
     case PG_UNMAP:
         pte_flag = 0;
@@ -117,8 +117,8 @@ int mmu_map(pgd_t pgd, paddr_t pa, vaddr_t va, size_t size, int type)
         panic("mmu_map");
     }
     /*
-	 * Map all pages
-	 */
+     * Map all pages
+     */
     while (size > 0) {
         if (pte_present(pgd, va)) {
             /* Page table already exists for the address */
@@ -185,8 +185,7 @@ void mmu_terminate(pgd_t pgd)
     for (i = 0; i < PAGE_DIR(KERNBASE); i++) {
         pte = (pte_t)pgd[i];
         if (pte != 0)
-            page_free((paddr_t)((paddr_t)pte & PTE_ADDRESS),
-                PAGE_SIZE);
+            page_free((paddr_t)((paddr_t)pte & PTE_ADDRESS), PAGE_SIZE);
     }
     /* Release page directory */
     page_free(kvtop(pgd), PAGE_SIZE);
@@ -212,8 +211,7 @@ void mmu_switch(pgd_t pgd)
  * This routine checks if the virtual area actually exist.
  * It returns 0 if at least one page is not mapped.
  */
-paddr_t
-mmu_extract(pgd_t pgd, vaddr_t va, size_t size)
+paddr_t mmu_extract(pgd_t pgd, vaddr_t va, size_t size)
 {
     pte_t pte;
     vaddr_t start, end, pg;
@@ -269,8 +267,7 @@ void mmu_init(struct mmumap* mmumap_table)
             break;
         }
 
-        if (mmu_map(boot_pgd, map->phys, map->virt,
-                (size_t)map->size, map_type))
+        if (mmu_map(boot_pgd, map->phys, map->virt, (size_t)map->size, map_type))
             panic("mmu_init");
     }
 }

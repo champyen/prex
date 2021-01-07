@@ -41,35 +41,35 @@
 /*
  * Flags used during conversion.
  */
-#define LONG 0x01 /* l: long or double */
-#define LONGDBL 0x02 /* L: long double; unimplemented */
-#define SHORT 0x04 /* h: short */
+#define LONG 0x01     /* l: long or double */
+#define LONGDBL 0x02  /* L: long double; unimplemented */
+#define SHORT 0x04    /* h: short */
 #define SUPPRESS 0x08 /* suppress assignment */
-#define POINTER 0x10 /* weird %p pointer (`fake hex') */
-#define NOSKIP 0x20 /* do not skip blanks */
+#define POINTER 0x10  /* weird %p pointer (`fake hex') */
+#define NOSKIP 0x20   /* do not skip blanks */
 
 /*
  * The following are used in numeric conversions only:
  * SIGNOK, NDIGITS, DPTOK, and EXPOK are for floating point;
  * SIGNOK, NDIGITS, PFXOK, and NZDIGITS are for integral.
  */
-#define SIGNOK 0x40 /* +/- is (still) legal */
+#define SIGNOK 0x40  /* +/- is (still) legal */
 #define NDIGITS 0x80 /* no digits detected */
 
 #define DPTOK 0x100 /* (float) decimal point is still legal */
 #define EXPOK 0x200 /* (float) exponent (e+3, etc) still legal */
 
-#define PFXOK 0x100 /* 0x prefix is (still) legal */
+#define PFXOK 0x100    /* 0x prefix is (still) legal */
 #define NZDIGITS 0x200 /* no zero digits detected */
 
 /*
  * Conversion types.
  */
-#define CT_CHAR 0 /* %c conversion */
-#define CT_CCL 1 /* %[...] conversion */
+#define CT_CHAR 0   /* %c conversion */
+#define CT_CCL 1    /* %[...] conversion */
 #define CT_STRING 2 /* %s conversion */
-#define CT_INT 3 /* integer, i.e., strtol or strtoul */
-#define CT_FLOAT 4 /* floating, i.e., strtod */
+#define CT_INT 3    /* integer, i.e., strtol or strtoul */
+#define CT_FLOAT 4  /* floating, i.e., strtod */
 
 #define u_char unsigned char
 #define u_long unsigned long
@@ -79,29 +79,27 @@ static u_char* __sccl(char*, u_char*);
 /*
  * vfscanf
  */
-int
-    __svfscanf(fp, fmt0, ap)
-        FILE* fp;
+int __svfscanf(fp, fmt0, ap) FILE* fp;
 char const* fmt0;
 va_list ap;
 {
     u_char* fmt = (u_char*)fmt0;
-    int c; /* character from format, or conversion */
-    size_t width; /* field width, or 0 */
-    char* p; /* points into all kinds of strings */
-    int n; /* handy integer */
-    int flags; /* flags as defined above */
-    char* p0; /* saves original value of p when necessary */
+    int c;         /* character from format, or conversion */
+    size_t width;  /* field width, or 0 */
+    char* p;       /* points into all kinds of strings */
+    int n;         /* handy integer */
+    int flags;     /* flags as defined above */
+    char* p0;      /* saves original value of p when necessary */
     int nassigned; /* number of fields assigned */
-    int nread; /* number of characters consumed from fp */
-    int base; /* base argument to strtol/strtoul */
+    int nread;     /* number of characters consumed from fp */
+    int base;      /* base argument to strtol/strtoul */
     u_long (*ccfn)(const char*, char**, int);
     /* conversion function (strtol/strtoul) */
     char ccltab[256]; /* character class table for %[...] */
-    char buf[BUF]; /* buffer for numeric conversions */
+    char buf[BUF];    /* buffer for numeric conversions */
 
     /* `basefix' is used to avoid `if' tests in the integer scanner */
-    static short basefix[17] = { 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
+    static short basefix[17] = {10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
 
     nassigned = 0;
     nread = 0;
@@ -126,9 +124,9 @@ va_list ap;
         width = 0;
         flags = 0;
         /*
-		 * switch on the format.  continue if done;
-		 * break once format type is derived.
-		 */
+         * switch on the format.  continue if done;
+         * break once format type is derived.
+         */
     again:
         c = *fmt++;
         switch (c) {
@@ -169,12 +167,12 @@ va_list ap;
             goto again;
 
         /*
-		 * Conversions.
-		 * Those marked `compat' are for 4.[123]BSD compatibility.
-		 *
-		 * (According to ANSI, E and X formats are supposed
-		 * to the same as e and x.  Sorry about that.)
-		 */
+         * Conversions.
+         * Those marked `compat' are for 4.[123]BSD compatibility.
+         *
+         * (According to ANSI, E and X formats are supposed
+         * to the same as e and x.  Sorry about that.)
+         */
         case 'D': /* compat */
             flags |= LONG;
             /* FALLTHROUGH */
@@ -249,8 +247,8 @@ va_list ap;
             continue;
 
         /*
-		 * Disgusting backwards compatibility hacks.	XXX
-		 */
+         * Disgusting backwards compatibility hacks.	XXX
+         */
         case '\0': /* compat */
             return (EOF);
 
@@ -264,15 +262,15 @@ va_list ap;
         }
 
         /*
-		 * We have a conversion that requires input.
-		 */
+         * We have a conversion that requires input.
+         */
         if (fp->_r <= 0 && __srefill(fp))
             goto input_failure;
 
         /*
-		 * Consume leading white space, except for formats
-		 * that suppress this.
-		 */
+         * Consume leading white space, except for formats
+         * that suppress this.
+         */
         if ((flags & NOSKIP) == 0) {
             while (isspace(*fp->_p)) {
                 nread++;
@@ -282,15 +280,15 @@ va_list ap;
                     goto input_failure;
             }
             /*
-			 * Note that there is at least one character in
-			 * the buffer, so conversions that do not set NOSKIP
-			 * ca no longer result in an input failure.
-			 */
+             * Note that there is at least one character in
+             * the buffer, so conversions that do not set NOSKIP
+             * ca no longer result in an input failure.
+             */
         }
 
         /*
-		 * Do the conversion.
-		 */
+         * Do the conversion.
+         */
         switch (c) {
 
         case CT_CHAR:
@@ -318,8 +316,7 @@ va_list ap;
                 }
                 nread += sum;
             } else {
-                size_t r = fread((void*)va_arg(ap, char*), 1,
-                    width, fp);
+                size_t r = fread((void*)va_arg(ap, char*), 1, width, fp);
 
                 if (r == 0)
                     goto input_failure;
@@ -414,23 +411,23 @@ va_list ap;
             for (p = buf; width; width--) {
                 c = *fp->_p;
                 /*
-				 * Switch on the character; `goto ok'
-				 * if we accept it as a part of number.
-				 */
+                 * Switch on the character; `goto ok'
+                 * if we accept it as a part of number.
+                 */
                 switch (c) {
 
                 /*
-				 * The digit 0 is always legal, but is
-				 * special.  For %i conversions, if no
-				 * digits (zero or nonzero) have been
-				 * scanned (only signs), we will have
-				 * base==0.  In that case, we should set
-				 * it to 8 and enable 0x prefixing.
-				 * Also, if we have not scanned zero digits
-				 * before this, do not turn off prefixing
-				 * (someone else will turn it off if we
-				 * have scanned any nonzero digits).
-				 */
+                 * The digit 0 is always legal, but is
+                 * special.  For %i conversions, if no
+                 * digits (zero or nonzero) have been
+                 * scanned (only signs), we will have
+                 * base==0.  In that case, we should set
+                 * it to 8 and enable 0x prefixing.
+                 * Also, if we have not scanned zero digits
+                 * before this, do not turn off prefixing
+                 * (someone else will turn it off if we
+                 * have scanned any nonzero digits).
+                 */
                 case '0':
                     if (base == 0) {
                         base = 8;
@@ -503,14 +500,14 @@ va_list ap;
                 }
 
                 /*
-				 * If we got here, c is not a legal character
-				 * for a number.  Stop accumulating digits.
-				 */
+                 * If we got here, c is not a legal character
+                 * for a number.  Stop accumulating digits.
+                 */
                 break;
             ok:
                 /*
-				 * c is legal: store it and look at the next.
-				 */
+                 * c is legal: store it and look at the next.
+                 */
                 *p++ = c;
                 if (--fp->_r > 0)
                     fp->_p++;
@@ -518,11 +515,11 @@ va_list ap;
                     break; /* EOF */
             }
             /*
-			 * If we had only a sign, it is no good; push
-			 * back the sign.  If the number ends in `x',
-			 * it was [sign] '0' 'x', so push back the x
-			 * and treat it as [sign] '0'.
-			 */
+             * If we had only a sign, it is no good; push
+             * back the sign.  If the number ends in `x',
+             * it was [sign] '0' 'x', so push back the x
+             * and treat it as [sign] '0'.
+             */
             if (flags & NDIGITS) {
                 if (p > buf)
                     (void)ungetc(*(u_char*)--p, fp);
@@ -564,8 +561,7 @@ match_failure:
  * closing `]'.  The table has a 1 wherever characters should be
  * considered part of the scanset.
  */
-static u_char*
-    __sccl(tab, fmt) char* tab;
+static u_char* __sccl(tab, fmt) char* tab;
 u_char* fmt;
 {
     int c, n, v;
@@ -573,7 +569,7 @@ u_char* fmt;
     /* first `clear' the whole table */
     c = *fmt++; /* first char hat => negated scanset */
     if (c == '^') {
-        v = 1; /* default => accept */
+        v = 1;      /* default => accept */
         c = *fmt++; /* get new first char */
     } else
         v = 0; /* default => reject */
@@ -584,12 +580,12 @@ u_char* fmt;
         return (fmt - 1); /* format ended before closing ] */
 
     /*
-	 * Now set the entries corresponding to the actual scanset
-	 * to the opposite of the above.
-	 *
-	 * The first character may be ']' (or '-') without being special;
-	 * the last character may be '-'.
-	 */
+     * Now set the entries corresponding to the actual scanset
+     * to the opposite of the above.
+     *
+     * The first character may be ']' (or '-') without being special;
+     * the last character may be '-'.
+     */
     v = 1 - v;
     for (;;) {
         tab[c] = v; /* take character c */
@@ -602,23 +598,23 @@ u_char* fmt;
 
         case '-':
             /*
-			 * A scanset of the form
-			 *	[01+-]
-			 * is defined as `the digit 0, the digit 1,
-			 * the character +, the character -', but
-			 * the effect of a scanset such as
-			 *	[a-zA-Z0-9]
-			 * is implementation defined.  The V7 Unix
-			 * scanf treats `a-z' as `the letters a through
-			 * z', but treats `a-a' as `the letter a, the
-			 * character -, and the letter a'.
-			 *
-			 * For compatibility, the `-' is not considerd
-			 * to define a range if the character following
-			 * it is either a close bracket (required by ANSI)
-			 * or is not numerically greater than the character
-			 * we just stored in the table (c).
-			 */
+             * A scanset of the form
+             *	[01+-]
+             * is defined as `the digit 0, the digit 1,
+             * the character +, the character -', but
+             * the effect of a scanset such as
+             *	[a-zA-Z0-9]
+             * is implementation defined.  The V7 Unix
+             * scanf treats `a-z' as `the letters a through
+             * z', but treats `a-a' as `the letter a, the
+             * character -, and the letter a'.
+             *
+             * For compatibility, the `-' is not considerd
+             * to define a range if the character following
+             * it is either a close bracket (required by ANSI)
+             * or is not numerically greater than the character
+             * we just stored in the table (c).
+             */
             n = *fmt;
             if (n == ']' || n < c) {
                 c = '-';
@@ -630,10 +626,10 @@ u_char* fmt;
             } while (c < n);
 #if 1 /* XXX another disgusting compatibility hack */
             /*
-			 * Alas, the V7 Unix scanf also treats formats
-			 * such as [a-c-e] as `the letters a through e'.
-			 * This too is permitted by the standard....
-			 */
+             * Alas, the V7 Unix scanf also treats formats
+             * such as [a-c-e] as `the letters a through e'.
+             * This too is permitted by the standard....
+             */
             goto doswitch;
 #else
             c = *fmt++;

@@ -33,50 +33,17 @@
 #include <string.h>
 
 static const char* afmt[] = {
-    "Sun",
-    "Mon",
-    "Tue",
-    "Wed",
-    "Thu",
-    "Fri",
-    "Sat",
+    "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat",
 };
 static const char* Afmt[] = {
-    "Sunday",
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
+    "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
 };
 static const char* bfmt[] = {
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 };
 static const char* Bfmt[] = {
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
+    "January", "February", "March",     "April",   "May",      "June",
+    "July",    "August",   "September", "October", "November", "December",
 };
 
 static size_t gsize;
@@ -86,8 +53,7 @@ static int _conv(int, int, int);
 static int _secs(const struct tm*);
 static size_t _fmt(const char*, const struct tm*);
 
-size_t
-    strftime(s, maxsize, format, t) char* s;
+size_t strftime(s, maxsize, format, t) char* s;
 size_t maxsize;
 const char* format;
 const struct tm* t;
@@ -103,9 +69,7 @@ const struct tm* t;
     return (0);
 }
 
-static size_t
-    _fmt(format, t)
-        const char* format;
+static size_t _fmt(format, t) const char* format;
 const struct tm* t;
 {
     for (; *format; ++format) {
@@ -221,14 +185,11 @@ const struct tm* t;
                     return (0);
                 continue;
             case 'U':
-                if (!_conv((t->tm_yday + 7 - t->tm_wday) / 7,
-                        2, '0'))
+                if (!_conv((t->tm_yday + 7 - t->tm_wday) / 7, 2, '0'))
                     return (0);
                 continue;
             case 'W':
-                if (!_conv((t->tm_yday + 7 - (t->tm_wday ? (t->tm_wday - 1) : 6))
-                            / 7,
-                        2, '0'))
+                if (!_conv((t->tm_yday + 7 - (t->tm_wday ? (t->tm_wday - 1) : 6)) / 7, 2, '0'))
                     return (0);
                 continue;
             case 'w':
@@ -240,9 +201,7 @@ const struct tm* t;
                     return (0);
                 continue;
             case 'y':
-                if (!_conv((t->tm_year + TM_YEAR_BASE)
-                            % 100,
-                        2, '0'))
+                if (!_conv((t->tm_year + TM_YEAR_BASE) % 100, 2, '0'))
                     return (0);
                 continue;
             case 'Y':
@@ -250,17 +209,17 @@ const struct tm* t;
                     return (0);
                 continue;
                 /*
-			case 'Z':
-				if (!t->tm_zone || !_add(t->tm_zone))
-					return(0);
-				continue;
+            case 'Z':
+                if (!t->tm_zone || !_add(t->tm_zone))
+                    return(0);
+                continue;
 */
             case '%':
             /*
-			 * X311J/88-090 (4.12.3.5): if conversion char is
-			 * undefined, behavior is undefined.  Print out the
-			 * character itself as printf(3) does.
-			 */
+             * X311J/88-090 (4.12.3.5): if conversion char is
+             * undefined, behavior is undefined.  Print out the
+             * character itself as printf(3) does.
+             */
             default:
                 break;
             }
@@ -271,9 +230,7 @@ const struct tm* t;
     return (gsize);
 }
 
-static int
-    _secs(t)
-        const struct tm* t;
+static int _secs(t) const struct tm* t;
 {
     static char buf[15];
     time_t s;
@@ -288,9 +245,7 @@ static int
     return (_add(++p));
 }
 
-static int
-    _conv(n, digits, pad) int n,
-    digits, pad;
+static int _conv(n, digits, pad) int n, digits, pad;
 {
     static char buf[10];
     char* p;
@@ -302,9 +257,7 @@ static int
     return (_add(++p));
 }
 
-static int
-    _add(str)
-        const char* str;
+static int _add(str) const char* str;
 {
     for (;; ++pt, --gsize) {
         if (!gsize)

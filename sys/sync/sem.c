@@ -61,8 +61,8 @@ int sem_init(sem_t* sp, u_int value)
     sem_t s;
 
     /*
-	 * A couple of quick sanity checks.
-	 */
+     * A couple of quick sanity checks.
+     */
     if (self->nsyncs >= MAXSYNCS)
         return EAGAIN;
     if (value > MAXSEMVAL)
@@ -71,15 +71,15 @@ int sem_init(sem_t* sp, u_int value)
         return EFAULT;
 
     /*
-	 * An application can call sem_init() to reset the
-	 * value of existing semaphore. So, we have to check
-	 * whether the semaphore is already allocated.
-	 */
+     * An application can call sem_init() to reset the
+     * value of existing semaphore. So, we have to check
+     * whether the semaphore is already allocated.
+     */
     sched_lock();
     if (s && sem_valid(s)) {
         /*
-		 * Semaphore already exists.
-		 */
+         * Semaphore already exists.
+         */
         if (s->owner != self) {
             sched_unlock();
             return EINVAL;
@@ -92,8 +92,8 @@ int sem_init(sem_t* sp, u_int value)
 
     } else {
         /*
-		 * Create new semaphore.
-		 */
+         * Create new semaphore.
+         */
         if ((s = kmem_alloc(sizeof(struct sem))) == NULL) {
             sched_unlock();
             return ENOSPC;
@@ -179,10 +179,10 @@ int sem_wait(sem_t* sp, u_long timeout)
             break;
         }
         /*
-		 * We have to check the semaphore value again
-		 * because another thread may run and acquire
-		 * the semaphore before us.
-		 */
+         * We have to check the semaphore value again
+         * because another thread may run and acquire
+         * the semaphore before us.
+         */
     }
     if (!error)
         s->value--;
@@ -265,8 +265,7 @@ int sem_getvalue(sem_t* sp, u_int* value)
 /*
  * Take out a reference on a semaphore.
  */
-static void
-sem_reference(sem_t s)
+static void sem_reference(sem_t s)
 {
 
     s->refcnt++;
@@ -276,8 +275,7 @@ sem_reference(sem_t s)
  * Release a reference on a semaphore.  If this is the last
  * reference, the semaphore data structure is deallocated.
  */
-static void
-sem_release(sem_t s)
+static void sem_release(sem_t s)
 {
     sem_t* sp;
 
@@ -308,8 +306,7 @@ void sem_cleanup(task_t task)
     }
 }
 
-static int
-sem_valid(sem_t s)
+static int sem_valid(sem_t s)
 {
     sem_t tmp;
 
@@ -325,8 +322,7 @@ sem_valid(sem_t s)
  *
  * It also checks whether the passed semaphore is valid.
  */
-static int
-sem_copyin(sem_t* usp, sem_t* ksp)
+static int sem_copyin(sem_t* usp, sem_t* ksp)
 {
     sem_t s;
 

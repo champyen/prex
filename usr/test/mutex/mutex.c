@@ -44,13 +44,13 @@ int main(int argc, char* argv[])
     printf("Mutex test program\n");
 
     /*
-	 * Initialize only B
-	 */
+     * Initialize only B
+     */
     mutex_init(&mtx_B);
 
     /*
-	 * Lock test
-	 */
+     * Lock test
+     */
     error = mutex_lock(&mtx_A);
     printf("1) Lock mutex A: error=%d\n", error);
 
@@ -62,8 +62,8 @@ int main(int argc, char* argv[])
     printf("3e) Lock mutex C: error=%d\n", error);
 
     /*
-	 * Unlock test
-	 */
+     * Unlock test
+     */
     error = mutex_unlock(&mtx_A);
     printf("4) Unlock mutex A: error=%d\n", error);
 
@@ -79,8 +79,8 @@ int main(int argc, char* argv[])
     printf("7e) Unlock mutex B: error=%d\n", error);
 
     /*
-	 * Destoroy mutex.
-	 */
+     * Destoroy mutex.
+     */
     mutex_destroy(&mtx_B);
 
     /* Error: Mutex B is destoroyed. */
@@ -88,8 +88,8 @@ int main(int argc, char* argv[])
     printf("8e) Lock mutex B: error=%d\n", error);
 
     /*
-	 * Double lock test
-	 */
+     * Double lock test
+     */
     error = mutex_lock(&mtx_A);
     printf("9) Lock mutex A: error=%d\n", error);
 

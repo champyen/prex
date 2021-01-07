@@ -30,8 +30,7 @@
 #include <time.h>
 #include <tzfile.h>
 
-time_t
-mktime(struct tm* tmp)
+time_t mktime(struct tm* tmp)
 {
     unsigned int days, year;
     time_t time;
@@ -42,7 +41,6 @@ mktime(struct tm* tmp)
 
     days += tmp->tm_yday;
 
-    time = (((days * 24 + tmp->tm_hour) * 60) + tmp->tm_min) * 60
-        + tmp->tm_sec;
+    time = (((days * 24 + tmp->tm_hour) * 60) + tmp->tm_min) * 60 + tmp->tm_sec;
     return time;
 }

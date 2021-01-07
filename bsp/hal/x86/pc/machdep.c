@@ -49,12 +49,11 @@
  */
 static struct mmumap mmumap_table[] = {
     /*
-	 * RAM
-	 */
-    { 0x80000000, 0x00000000, AUTOSIZE, VMT_RAM },
+     * RAM
+     */
+    {0x80000000, 0x00000000, AUTOSIZE, VMT_RAM},
 
-    { 0, 0, 0, 0 }
-};
+    {0, 0, 0, 0}};
 #endif
 
 /*
@@ -69,21 +68,20 @@ void machine_idle(void)
 /*
  * Cause an i386 machine reset.
  */
-static void
-machine_reset(void)
+static void machine_reset(void)
 {
     int i;
 
     /*
-	 * Try to do keyboard reset.
-	 */
+     * Try to do keyboard reset.
+     */
     outb(0x64, 0xfe);
     for (i = 0; i < 10000; i++)
         outb(0x80, 0);
 
     /*
-	 * Do cpu reset.
-	 */
+     * Do cpu reset.
+     */
     cpu_reset();
 
     /* NOTREACHED */
@@ -140,26 +138,26 @@ void machine_startup(void)
 #endif
 
     /*
-	 * Initialize CPU and basic hardware.
-	 */
+     * Initialize CPU and basic hardware.
+     */
     cpu_init();
     cache_init();
 
     /*
-	 * Reserve system pages.
-	 */
+     * Reserve system pages.
+     */
     page_reserve(kvtop(SYSPAGE), SYSPAGESZ);
 
 #ifdef CONFIG_MMU
     /*
-	 * Modify page mapping
-	 * We assume the first block in ram[] for x86 is main memory.
-	 */
+     * Modify page mapping
+     * We assume the first block in ram[] for x86 is main memory.
+     */
     mmumap_table[0].size = bi->ram[0].size;
 
     /*
-	 * Initialize MMU
-	 */
+     * Initialize MMU
+     */
     mmu_init(mmumap_table);
 #endif
 }

@@ -57,10 +57,11 @@
 #define KEY_ALL 0x03ff
 
 /* KEY_CNT value */
-#define KEYIRQ_EN 0x4000 /* 0=Disable, 1=Enable */
+#define KEYIRQ_EN 0x4000   /* 0=Disable, 1=Enable */
 #define KEYIRQ_COND 0x8000 /* 0=Logical OR, 1=Logical AND */
 
-struct keypad_softc {
+struct keypad_softc
+{
     device_t dev;
     irq_t irq;
 };
@@ -89,8 +90,7 @@ struct driver keypad_driver = {
 /*
  * Interrupt service routine
  */
-static int
-keypad_isr(void* arg)
+static int keypad_isr(void* arg)
 {
     uint16_t sts;
 
@@ -132,11 +132,10 @@ int keypad_init(struct driver* self)
     sc = device_private(dev);
 
     /*
-	 * Setup isr
-	 */
+     * Setup isr
+     */
     REG_KEYCNT = 0; /* disable irq */
-    sc->irq = irq_attach(KEYPAD_IRQ, IPL_INPUT, 0, keypad_isr,
-        IST_NONE, sc);
+    sc->irq = irq_attach(KEYPAD_IRQ, IPL_INPUT, 0, keypad_isr, IST_NONE, sc);
     REG_KEYCNT = KEY_ALL | KEYIRQ_EN;
 
     return 0;

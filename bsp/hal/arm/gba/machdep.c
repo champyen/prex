@@ -76,7 +76,7 @@ void machine_startup(void)
 {
 
     /*
-	 * Initialize CPU and basic hardware.
-	 */
+     * Initialize CPU and basic hardware.
+     */
     cpu_init();
 }

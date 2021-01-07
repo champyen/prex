@@ -32,7 +32,8 @@
 
 #include <sys/cdefs.h>
 
-struct list {
+struct list
+{
     struct list* next;
     struct list* prev;
 };
@@ -50,19 +51,17 @@ typedef struct list* list_t;
 /*
  * Get the struct for this entry
  */
-#define list_entry(p, type, member) \
-    ((type*)((char*)(p) - (unsigned long)(&((type*)0)->member)))
+#define list_entry(p, type, member) ((type*)((char*)(p) - (unsigned long)(&((type*)0)->member)))
 
-#define LIST_INIT(head)  \
-    {                    \
-        &(head), &(head) \
+#define LIST_INIT(head)                                                                                                \
+    {                                                                                                                  \
+        &(head), &(head)                                                                                               \
     }
 
 /*
  * Insert new node after specified node
  */
-static __inline void
-list_insert(list_t prev, list_t node)
+static __inline void list_insert(list_t prev, list_t node)
 {
     prev->next->prev = node;
     node->next = prev->next;
@@ -73,8 +72,7 @@ list_insert(list_t prev, list_t node)
 /*
  * Remove specified node from list
  */
-static __inline void
-list_remove(list_t node)
+static __inline void list_remove(list_t node)
 {
     node->prev->next = node->next;
     node->next->prev = node->prev;

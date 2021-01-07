@@ -34,8 +34,7 @@ void __dassert(const char* file, int line, const char* exp)
 {
     char buf[128];
 
-    sprintf(buf, "assertion \"%s\" failed: file \"%s\", line %d\n",
-        exp, file, line);
+    sprintf(buf, "assertion \"%s\" failed: file \"%s\", line %d\n", exp, file, line);
     sys_panic(buf);
     /* NOTREACHED */
 }

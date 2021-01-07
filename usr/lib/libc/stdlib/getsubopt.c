@@ -39,9 +39,7 @@
  */
 char* suboptarg;
 
-int
-    getsubopt(optionp, tokens, valuep) char **optionp,
-    **valuep;
+int getsubopt(optionp, tokens, valuep) char **optionp, **valuep;
 char* const* tokens;
 {
     int cnt;
@@ -62,20 +60,18 @@ char* const* tokens;
     }
 
     /* save the start of the token, and skip the rest of the token. */
-    for (suboptarg = p;
-         *++p && *p != ',' && *p != '=' && *p != ' ' && *p != '\t';)
+    for (suboptarg = p; *++p && *p != ',' && *p != '=' && *p != ' ' && *p != '\t';)
         ;
 
     if (*p) {
         /*
-		 * If there's an equals sign, set the value pointer, and
-		 * skip over the value part of the token.  Terminate the
-		 * token.
-		 */
+         * If there's an equals sign, set the value pointer, and
+         * skip over the value part of the token.  Terminate the
+         * token.
+         */
         if (*p == '=') {
             *p = '\0';
-            for (*valuep = ++p;
-                 *p && *p != ',' && *p != ' ' && *p != '\t'; ++p)
+            for (*valuep = ++p; *p && *p != ',' && *p != ' ' && *p != '\t'; ++p)
                 ;
             if (*p)
                 *p++ = '\0';

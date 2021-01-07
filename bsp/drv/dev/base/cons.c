@@ -68,8 +68,7 @@ static struct diag_ops cons_diag_ops = {
 
 static struct consdev* consdev; /* console device info */
 
-static int
-cons_open(device_t dev, int mode)
+static int cons_open(device_t dev, int mode)
 {
 
     ASSERT(consdev != NULL);
@@ -77,8 +76,7 @@ cons_open(device_t dev, int mode)
     return consdev->devops->open(dev, mode);
 }
 
-static int
-cons_close(device_t dev)
+static int cons_close(device_t dev)
 {
 
     ASSERT(consdev != NULL);
@@ -86,8 +84,7 @@ cons_close(device_t dev)
     return consdev->devops->close(dev);
 }
 
-static int
-cons_read(device_t dev, char* buf, size_t* nbyte, int blkno)
+static int cons_read(device_t dev, char* buf, size_t* nbyte, int blkno)
 {
 
     ASSERT(consdev != NULL);
@@ -95,8 +92,7 @@ cons_read(device_t dev, char* buf, size_t* nbyte, int blkno)
     return consdev->devops->read(dev, buf, nbyte, blkno);
 }
 
-static int
-cons_write(device_t dev, char* buf, size_t* nbyte, int blkno)
+static int cons_write(device_t dev, char* buf, size_t* nbyte, int blkno)
 {
 
     ASSERT(consdev != NULL);
@@ -104,8 +100,7 @@ cons_write(device_t dev, char* buf, size_t* nbyte, int blkno)
     return consdev->devops->write(dev, buf, nbyte, blkno);
 }
 
-static int
-cons_ioctl(device_t dev, u_long cmd, void* arg)
+static int cons_ioctl(device_t dev, u_long cmd, void* arg)
 {
 
     ASSERT(consdev != NULL);
@@ -113,8 +108,7 @@ cons_ioctl(device_t dev, u_long cmd, void* arg)
     return consdev->devops->ioctl(dev, cmd, arg);
 }
 
-static int
-cons_devctl(device_t dev, u_long cmd, void* arg)
+static int cons_devctl(device_t dev, u_long cmd, void* arg)
 {
 
     ASSERT(consdev != NULL);
@@ -183,8 +177,8 @@ void cons_attach(struct consdev* cdev, int diag)
     consdev = cdev;
 
     /*
-	 * Set console port as diag port.
-	 */
+     * Set console port as diag port.
+     */
     if (diag)
         dbgctl(DBGC_SETDIAG, &cons_diag_ops);
 }

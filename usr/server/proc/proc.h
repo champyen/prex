@@ -62,47 +62,50 @@ struct proc;
 /*
  * Session
  */
-struct session {
-    int s_refcnt; /* reference count */
+struct session
+{
+    int s_refcnt;          /* reference count */
     struct proc* s_leader; /* session leader */
-    int s_ttyhold; /* true if hold tty */
+    int s_ttyhold;         /* true if hold tty */
 };
 
 /*
  * Process group
  */
-struct pgrp {
-    struct list pg_link; /* link for pgid hash */
-    struct list pg_members; /* list head of processes */
+struct pgrp
+{
+    struct list pg_link;        /* link for pgid hash */
+    struct list pg_members;     /* list head of processes */
     struct session* pg_session; /* pointer to session */
-    pid_t pg_pgid; /* pgrp id */
+    pid_t pg_pgid;              /* pgrp id */
 };
 
 /*
  * Description of a process
  */
-struct proc {
-    struct list p_link; /* link for all processes */
-    struct proc* p_parent; /* pointer to parent process */
-    struct list p_children; /* list head of child processes */
-    struct list p_sibling; /* link for sibling processes */
-    struct list p_pid_link; /* link for pid hash */
+struct proc
+{
+    struct list p_link;      /* link for all processes */
+    struct proc* p_parent;   /* pointer to parent process */
+    struct list p_children;  /* list head of child processes */
+    struct list p_sibling;   /* link for sibling processes */
+    struct list p_pid_link;  /* link for pid hash */
     struct list p_task_link; /* link for task hash */
     struct list p_pgrp_link; /* link for process group */
-    struct pgrp* p_pgrp; /* pointer to process group */
-    int p_stat; /* process status S* */
-    int p_flag; /* P_* flags */
-    int p_exitcode; /* exit code to send to parrent */
-    int p_vforked; /* true while processing vfork() */
-    int p_invfork; /* true if child of vfork() */
-    pid_t p_pid; /* process id */
-    task_t p_task; /* task id */
-    void* p_stackbase; /* pointer to stack */
-    void* p_stacksaved; /* pointer to saved stack */
+    struct pgrp* p_pgrp;     /* pointer to process group */
+    int p_stat;              /* process status S* */
+    int p_flag;              /* P_* flags */
+    int p_exitcode;          /* exit code to send to parrent */
+    int p_vforked;           /* true while processing vfork() */
+    int p_invfork;           /* true if child of vfork() */
+    pid_t p_pid;             /* process id */
+    task_t p_task;           /* task id */
+    void* p_stackbase;       /* pointer to stack */
+    void* p_stacksaved;      /* pointer to saved stack */
 };
 
 /* Status values. */
-#define SRUN 1 /* running */
+#define SRUN 1  /* running */
 #define SZOMB 2 /* process terminated but not waited for */
 #define SSTOP 3 /* proces stopped */
 
@@ -113,9 +116,9 @@ struct proc {
  * Global variables.
  */
 extern struct proc initproc; /* process slot for init */
-extern struct list allproc; /* list of all processes */
+extern struct list allproc;  /* list of all processes */
 extern struct proc* curproc; /* current (caller) process */
-extern int perrno; /* errno */
+extern int perrno;           /* errno */
 
 __BEGIN_DECLS
 

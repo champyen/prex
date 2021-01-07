@@ -64,10 +64,11 @@
  * All free blocks that have same size are linked each other.
  * In addition, all free blocks within same page are also linked.
  */
-struct block_hdr {
-    u_short magic; /* magic number */
-    u_short size; /* size of this block */
-    struct list link; /* link to the free list */
+struct block_hdr
+{
+    u_short magic;             /* magic number */
+    u_short size;              /* size of this block */
+    struct list link;          /* link to the free list */
     struct block_hdr* pg_next; /* next block in same page */
 };
 
@@ -79,9 +80,10 @@ struct block_hdr {
  * used block left in the page. If 'nallocs' value becomes zero,
  * that page can be removed from kernel page.
  */
-struct page_hdr {
-    u_short magic; /* magic number */
-    u_short nallocs; /* number of allocated blocks */
+struct page_hdr
+{
+    u_short magic;              /* magic number */
+    u_short nallocs;            /* number of allocated blocks */
     struct block_hdr first_blk; /* first block in this page */
 };
 
@@ -144,8 +146,7 @@ static struct list free_blocks[NR_BLOCK_LIST];
  * It will use the block of smallest size that satisfies the
  * specified size.
  */
-static struct block_hdr*
-block_find(size_t size)
+static struct block_hdr* block_find(size_t size)
 {
     int i;
     list_t n;
@@ -181,10 +182,10 @@ void* kmem_alloc(size_t size)
     sched_lock(); /* Lock scheduler */
 
     /*
-	 * First, the free block of enough size is searched
-	 * from the page already used. If it does not exist,
-	 * new page is allocated for free block.
-	 */
+     * First, the free block of enough size is searched
+     * from the page already used. If it does not exist,
+     * new page is allocated for free block.
+     */
     size = ALLOC_SIZE(size + BLKHDR_SIZE);
     if (size > MAX_ALLOC_SIZE)
         panic("kmem_alloc: too large allocation");
@@ -192,14 +193,14 @@ void* kmem_alloc(size_t size)
     blk = block_find(size);
     if (blk) {
         /*
-		 * Block found.
-		 */
+         * Block found.
+         */
         list_remove(&blk->link); /* Remove from free list */
-        pg = PAGETOP(blk); /* Get the page address */
+        pg = PAGETOP(blk);       /* Get the page address */
     } else {
         /*
-		 * No block found. Allocate new page.
-		 */
+         * No block found. Allocate new page.
+         */
         if ((pa = page_alloc(PAGE_SIZE)) == 0) {
             sched_unlock();
             return NULL;
@@ -209,8 +210,8 @@ void* kmem_alloc(size_t size)
         pg->magic = PAGE_MAGIC;
 
         /*
-		 * Setup first block.
-		 */
+         * Setup first block.
+         */
         blk = &pg->first_blk;
         blk->magic = BLOCK_MAGIC;
         blk->size = MAX_BLOCK_SIZE;
@@ -218,33 +219,33 @@ void* kmem_alloc(size_t size)
     }
 
     /*
-	 * Sanity check
-	 */
+     * Sanity check
+     */
     if (pg->magic != PAGE_MAGIC || blk->magic != BLOCK_MAGIC)
         panic("kmem_alloc: overrun");
 
     /*
-	 * If the found block is large enough, split it.
-	 */
+     * If the found block is large enough, split it.
+     */
     if (blk->size - size >= MIN_BLOCK_SIZE) {
         /*
-		 * Make new block.
-		 */
+         * Make new block.
+         */
         newblk = (struct block_hdr*)((vaddr_t)blk + size);
         newblk->magic = BLOCK_MAGIC;
         newblk->size = (u_short)(blk->size - size);
         list_insert(&free_blocks[BLKNDX(newblk)], &newblk->link);
 
         /*
-		 * Update page list.
-		 */
+         * Update page list.
+         */
         newblk->pg_next = blk->pg_next;
         blk->pg_next = newblk;
         blk->size = (u_short)size;
     }
     /*
-	 * Increment allocation count of this page.
-	 */
+     * Increment allocation count of this page.
+     */
     pg->nallocs++;
     p = (void*)((vaddr_t)blk + BLKHDR_SIZE);
 
@@ -278,21 +279,21 @@ void kmem_free(void* ptr)
         panic("kmem_free: invalid address");
 
     /*
-	 * Return the block to free list. Since kernel code will
-	 * request fixed size of memory block, we don't merge the
-	 * blocks to use it as cache.
-	 */
+     * Return the block to free list. Since kernel code will
+     * request fixed size of memory block, we don't merge the
+     * blocks to use it as cache.
+     */
     list_insert(&free_blocks[BLKNDX(blk)], &blk->link);
 
     /*
-	 * Decrement allocation count of this page.
-	 */
+     * Decrement allocation count of this page.
+     */
     pg = PAGETOP(blk);
     if (--pg->nallocs == 0) {
         /*
-		 * No allocated block in this page.
-		 * Remove all blocks and deallocate this page.
-		 */
+         * No allocated block in this page.
+         * Remove all blocks and deallocate this page.
+         */
         for (blk = &pg->first_blk; blk != NULL; blk = blk->pg_next) {
             list_remove(&blk->link); /* Remove from free list */
         }

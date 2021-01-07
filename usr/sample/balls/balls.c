@@ -46,8 +46,7 @@ static int max_y;
 
 static char stack[NBALLS][STACKLEN];
 
-static thread_t
-thread_run(void (*start)(void), char* stack)
+static thread_t thread_run(void (*start)(void), char* stack)
 {
     thread_t t;
 
@@ -63,8 +62,7 @@ thread_run(void (*start)(void), char* stack)
 /*
  * A thread to move one ball.
  */
-static void
-move_ball(void)
+static void move_ball(void)
 {
     int x, y;
     int delta_x, delta_y;

@@ -42,7 +42,7 @@ static mutex_t malloc_lock = MUTEX_INITIALIZER;
 
 static struct header* more_core(size_t size);
 
-static struct header free_list; /* start of free list */
+static struct header free_list;  /* start of free list */
 static struct header* scan_head; /* start point to scan */
 
 /*
@@ -67,7 +67,7 @@ void* malloc(size_t size)
     }
     prev = scan_head;
     for (p = prev->next;; prev = p, p = p->next) {
-        if (p->size >= size) { /* big enough */
+        if (p->size >= size) {   /* big enough */
             if (p->size == size) /* exactly */
                 prev->next = p->next;
             else { /* allocate tail end */

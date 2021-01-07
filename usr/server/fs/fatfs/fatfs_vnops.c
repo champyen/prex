@@ -74,22 +74,22 @@ static int fatfs_truncate(vnode_t, off_t);
  * vnode operations
  */
 struct vnops fatfs_vnops = {
-    fatfs_open, /* open */
-    fatfs_close, /* close */
-    fatfs_read, /* read */
-    fatfs_write, /* write */
-    fatfs_seek, /* seek */
-    fatfs_ioctl, /* ioctl */
-    fatfs_fsync, /* fsync */
-    fatfs_readdir, /* readdir */
-    fatfs_lookup, /* lookup */
-    fatfs_create, /* create */
-    fatfs_remove, /* remove */
-    fatfs_rename, /* remame */
-    fatfs_mkdir, /* mkdir */
-    fatfs_rmdir, /* rmdir */
-    fatfs_getattr, /* getattr */
-    fatfs_setattr, /* setattr */
+    fatfs_open,     /* open */
+    fatfs_close,    /* close */
+    fatfs_read,     /* read */
+    fatfs_write,    /* write */
+    fatfs_seek,     /* seek */
+    fatfs_ioctl,    /* ioctl */
+    fatfs_fsync,    /* fsync */
+    fatfs_readdir,  /* readdir */
+    fatfs_lookup,   /* lookup */
+    fatfs_create,   /* create */
+    fatfs_remove,   /* remove */
+    fatfs_rename,   /* remame */
+    fatfs_mkdir,    /* mkdir */
+    fatfs_rmdir,    /* rmdir */
+    fatfs_getattr,  /* getattr */
+    fatfs_setattr,  /* setattr */
     fatfs_inactive, /* inactive */
     fatfs_truncate, /* truncate */
 };
@@ -97,8 +97,7 @@ struct vnops fatfs_vnops = {
 /*
  * Read one cluster to buffer.
  */
-static int
-fat_read_cluster(struct fatfsmount* fmp, u_long cluster)
+static int fat_read_cluster(struct fatfsmount* fmp, u_long cluster)
 {
     u_long sec;
     size_t size;
@@ -111,8 +110,7 @@ fat_read_cluster(struct fatfsmount* fmp, u_long cluster)
 /*
  * Write one cluster from buffer.
  */
-static int
-fat_write_cluster(struct fatfsmount* fmp, u_long cluster)
+static int fat_write_cluster(struct fatfsmount* fmp, u_long cluster)
 {
     u_long sec;
     size_t size;
@@ -126,8 +124,7 @@ fat_write_cluster(struct fatfsmount* fmp, u_long cluster)
  * Lookup vnode for the specified file/directory.
  * The vnode data will be set properly.
  */
-static int
-fatfs_lookup(vnode_t dvp, char* name, vnode_t vp)
+static int fatfs_lookup(vnode_t dvp, char* name, vnode_t vp)
 {
     struct fatfsmount* fmp;
     struct fat_dirent* de;
@@ -161,8 +158,7 @@ fatfs_lookup(vnode_t dvp, char* name, vnode_t vp)
     return 0;
 }
 
-static int
-fatfs_read(vnode_t vp, file_t fp, void* buf, size_t size, size_t* result)
+static int fatfs_read(vnode_t vp, file_t fp, void* buf, size_t size, size_t* result)
 {
     struct fatfsmount* fmp;
     int nr_read, nr_copy, buf_pos, error;
@@ -232,8 +228,7 @@ out:
     return error;
 }
 
-static int
-fatfs_write(vnode_t vp, file_t fp, void* buf, size_t size, size_t* result)
+static int fatfs_write(vnode_t vp, file_t fp, void* buf, size_t size, size_t* result)
 {
     struct fatfsmount* fmp;
     struct fatfs_node* np;
@@ -322,12 +317,12 @@ fatfs_write(vnode_t vp, file_t fp, void* buf, size_t size, size_t* result)
     fp->f_offset = file_pos;
 
     /*
-	 * XXX: Todo!
-	 *    de.time = ?
-	 *    de.date = ?
-	 *    if (dirent_set(fp, &de))
-	 *        return EIO;
-	 */
+     * XXX: Todo!
+     *    de.time = ?
+     *    de.date = ?
+     *    if (dirent_set(fp, &de))
+     *        return EIO;
+     */
     *result = nr_write;
     error = 0;
 out:
@@ -335,8 +330,7 @@ out:
     return error;
 }
 
-static int
-fatfs_readdir(vnode_t vp, file_t fp, struct dirent* dir)
+static int fatfs_readdir(vnode_t vp, file_t fp, struct dirent* dir)
 {
     struct fatfsmount* fmp;
     struct fatfs_node np;
@@ -372,8 +366,7 @@ out:
 /*
  * Create empty file.
  */
-static int
-fatfs_create(vnode_t dvp, char* name, mode_t mode)
+static int fatfs_create(vnode_t dvp, char* name, mode_t mode)
 {
     struct fatfsmount* fmp;
     struct fatfs_node np;
@@ -413,8 +406,7 @@ out:
     return error;
 }
 
-static int
-fatfs_remove(vnode_t dvp, vnode_t vp, char* name)
+static int fatfs_remove(vnode_t dvp, vnode_t vp, char* name)
 {
     struct fatfsmount* fmp;
     struct fatfs_node np;
@@ -453,9 +445,7 @@ out:
     return error;
 }
 
-static int
-fatfs_rename(vnode_t dvp1, vnode_t vp1, char* name1,
-    vnode_t dvp2, vnode_t vp2, char* name2)
+static int fatfs_rename(vnode_t dvp1, vnode_t vp1, char* name1, vnode_t dvp2, vnode_t vp2, char* name2)
 {
     struct fatfsmount* fmp;
     struct fatfs_node np1;
@@ -549,8 +539,7 @@ out:
     return error;
 }
 
-static int
-fatfs_mkdir(vnode_t dvp, char* name, mode_t mode)
+static int fatfs_mkdir(vnode_t dvp, char* name, mode_t mode)
 {
     struct fatfsmount* fmp;
     struct fatfs_node np;
@@ -613,8 +602,7 @@ out:
 /*
  * remove can be done only with empty directory
  */
-static int
-fatfs_rmdir(vnode_t dvp, vnode_t vp, char* name)
+static int fatfs_rmdir(vnode_t dvp, vnode_t vp, char* name)
 {
     struct fatfsmount* fmp;
     struct fatfs_node np;
@@ -651,30 +639,26 @@ out:
     return error;
 }
 
-static int
-fatfs_getattr(vnode_t vp, struct vattr* vap)
+static int fatfs_getattr(vnode_t vp, struct vattr* vap)
 {
     /* XXX */
     return 0;
 }
 
-static int
-fatfs_setattr(vnode_t vp, struct vattr* vap)
+static int fatfs_setattr(vnode_t vp, struct vattr* vap)
 {
     /* XXX */
     return 0;
 }
 
-static int
-fatfs_inactive(vnode_t vp)
+static int fatfs_inactive(vnode_t vp)
 {
 
     free(vp->v_data);
     return 0;
 }
 
-static int
-fatfs_truncate(vnode_t vp, off_t length)
+static int fatfs_truncate(vnode_t vp, off_t length)
 {
     struct fatfsmount* fmp;
     struct fatfs_node* np;

@@ -57,8 +57,8 @@ extern int vfs_debug;
 
 #define VFSDB_FLAGS 0x00000013
 
-#define DPRINTF(_m, X)    \
-    if (vfs_debug & (_m)) \
+#define DPRINTF(_m, X)                                                                                                 \
+    if (vfs_debug & (_m))                                                                                              \
     dprintf X
 #define ASSERT(e) dassert(e)
 #else
@@ -70,34 +70,35 @@ extern int vfs_debug;
 #define malloc(s) malloc_r(s)
 #define free(p) free_r(p)
 #else
-#define mutex_init(m) \
-    do {              \
+#define mutex_init(m)                                                                                                  \
+    do {                                                                                                               \
     } while (0)
-#define mutex_destroy(m) \
-    do {                 \
+#define mutex_destroy(m)                                                                                               \
+    do {                                                                                                               \
     } while (0)
-#define mutex_lock(m) \
-    do {              \
+#define mutex_lock(m)                                                                                                  \
+    do {                                                                                                               \
     } while (0)
-#define mutex_unlock(m) \
-    do {                \
+#define mutex_unlock(m)                                                                                                \
+    do {                                                                                                               \
     } while (0)
-#define mutex_trylock(m) \
-    do {                 \
+#define mutex_trylock(m)                                                                                               \
+    do {                                                                                                               \
     } while (0)
 #endif
 
 /*
  * per task data
  */
-struct task {
-    struct list t_link; /* hash link */
-    task_t t_taskid; /* task id */
-    char t_cwd[PATH_MAX]; /* current working directory */
-    file_t t_cwdfp; /* directory for cwd */
+struct task
+{
+    struct list t_link;     /* hash link */
+    task_t t_taskid;        /* task id */
+    char t_cwd[PATH_MAX];   /* current working directory */
+    file_t t_cwdfp;         /* directory for cwd */
     file_t t_ofile[NOFILE]; /* pointers to file structures of open files */
-    int t_nopens; /* number of opening files */
-    mutex_t t_lock; /* lock for this task */
+    int t_nopens;           /* number of opening files */
+    mutex_t t_lock;         /* lock for this task */
 };
 
 extern const struct vfssw vfssw[];

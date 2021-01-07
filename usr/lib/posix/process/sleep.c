@@ -33,8 +33,7 @@
 #include <unistd.h>
 #include <errno.h>
 
-unsigned int
-sleep(unsigned int seconds)
+unsigned int sleep(unsigned int seconds)
 {
     unsigned int remain = 0;
 

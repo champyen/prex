@@ -44,8 +44,8 @@ void rewinddir(DIR* dir)
     __posix_call(__fs_obj, &m, sizeof(m), 1);
 
     /*
-	 * XXX: rewinddir() does not return error. But, we may get error...
-	 */
+     * XXX: rewinddir() does not return error. But, we may get error...
+     */
 
     return;
 }

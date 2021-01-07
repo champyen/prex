@@ -42,15 +42,15 @@ extern char** environ;
 #define VTABSIZE 20
 #define MAXVARNAME 32
 
-struct var {
+struct var
+{
     char* name;
     char* val;
 };
 
 static struct var vartab[VTABSIZE];
 
-static int
-is_name(char c)
+static int is_name(char c)
 {
 
     if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_')
@@ -58,8 +58,7 @@ is_name(char c)
     return 0;
 }
 
-static int
-is_validname(char* name)
+static int is_validname(char* name)
 {
     char* p;
 
@@ -70,8 +69,7 @@ is_validname(char* name)
     return 1;
 }
 
-static struct var*
-lookupvar(char* name)
+static struct var* lookupvar(char* name)
 {
     struct var* var;
     int i;
@@ -91,14 +89,14 @@ void setvar(char* name, char* val)
     int i;
 
     /*
-	 * Lookup existing name in variable table.
-	 */
+     * Lookup existing name in variable table.
+     */
     var = lookupvar(name);
 
     if (var == NULL) {
         /*
-		 * Not found. Find empty slot.
-		 */
+         * Not found. Find empty slot.
+         */
         free = NULL;
         var = &vartab[0];
         for (i = 0; i < VTABSIZE; i++) {

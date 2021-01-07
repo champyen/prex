@@ -34,8 +34,7 @@
 #include <string.h>
 #include "local.h"
 
-size_t
-    fread(buf, size, count, fp) void* buf;
+size_t fread(buf, size, count, fp) void* buf;
 size_t size, count;
 FILE* fp;
 {
@@ -45,10 +44,10 @@ FILE* fp;
     size_t total;
 
     /*
-	 * The ANSI standard requires a return value of 0 for a count
-	 * or a size of 0.  Peculiarily, it imposes no such requirements
-	 * on fwrite; it only requires fread to be broken.
-	 */
+     * The ANSI standard requires a return value of 0 for a count
+     * or a size of 0.  Peculiarily, it imposes no such requirements
+     * on fwrite; it only requires fread to be broken.
+     */
     if ((resid = count * size) == 0)
         return (0);
     if (fp->_r < 0)

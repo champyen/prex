@@ -34,9 +34,7 @@
 #include <termios.h>
 #include <unistd.h>
 
-speed_t
-    cfgetospeed(t)
-        const struct termios* t;
+speed_t cfgetospeed(t) const struct termios* t;
 {
 
     return (t->c_ospeed);

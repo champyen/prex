@@ -30,12 +30,12 @@
 #ifndef _PPC_SYSTRAP_H
 #define _PPC_SYSTRAP_H
 
-#define SYSCALL0(name) \
-    .global name;      \
-    .align;            \
-    name##:;           \
-    li r0, SYS_##name; \
-    sc;                \
+#define SYSCALL0(name)                                                                                                 \
+    .global name;                                                                                                      \
+    .align;                                                                                                            \
+    name##:;                                                                                                           \
+    li r0, SYS_##name;                                                                                                 \
+    sc;                                                                                                                \
     blr;
 
 #define SYSCALL1(name) SYSCALL0(name)

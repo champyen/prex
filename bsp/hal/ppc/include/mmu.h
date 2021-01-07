@@ -34,7 +34,8 @@
 
 typedef uint32_t* pgd_t; /* page directory */
 
-struct pte {
+struct pte
+{
     uint32_t pte_hi;
     uint32_t pte_lo;
 };
@@ -46,16 +47,16 @@ typedef struct pte* pte_t; /* page table entry */
  */
 /* high word: */
 #define PTE_VALID 0x00000001 /* valid */
-#define PTE_VSID 0x7fffff80 /* virtual segment */
-#define PTE_HID 0x00000040 /* hash */
-#define PTE_API 0x0000003f /* abbreviated page index */
+#define PTE_VSID 0x7fffff80  /* virtual segment */
+#define PTE_HID 0x00000040   /* hash */
+#define PTE_API 0x0000003f   /* abbreviated page index */
 
 /* low word: */
-#define PTE_RPN 0xfffff000 /* real page number */
-#define PTE_REF 0x00000100 /* reference */
-#define PTE_CHG 0x00000080 /* change */
+#define PTE_RPN 0xfffff000  /* real page number */
+#define PTE_REF 0x00000100  /* reference */
+#define PTE_CHG 0x00000080  /* change */
 #define PTE_WIMG 0x00000078 /* memory/cache control */
-#define PTE_PP 0x00000003 /* page protection */
+#define PTE_PP 0x00000003   /* page protection */
 
 /*
  *  Virtual and physical address translation

@@ -57,19 +57,19 @@ extern int fatfs_init(void);
  */
 const struct vfssw vfssw[] = {
 #ifdef CONFIG_RAMFS
-    { "ramfs", ramfs_init, &ramfs_vfsops }, /* RAM */
+    {"ramfs", ramfs_init, &ramfs_vfsops}, /* RAM */
 #endif
 #ifdef CONFIG_DEVFS
-    { "devfs", devfs_init, &devfs_vfsops }, /* device fs */
+    {"devfs", devfs_init, &devfs_vfsops}, /* device fs */
 #endif
 #ifdef CONFIG_ARFS
-    { "arfs", arfs_init, &arfs_vfsops }, /* archive fs */
+    {"arfs", arfs_init, &arfs_vfsops}, /* archive fs */
 #endif
 #ifdef CONFIG_FIFOFS
-    { "fifofs", fifofs_init, &fifofs_vfsops }, /* FIFO & pipe */
+    {"fifofs", fifofs_init, &fifofs_vfsops}, /* FIFO & pipe */
 #endif
 #ifdef CONFIG_FATFS
-    { "fatfs", fatfs_init, &fatfs_vfsops }, /* DOS FAT */
+    {"fatfs", fatfs_init, &fatfs_vfsops}, /* DOS FAT */
 #endif
-    { NULL, fs_noop, NULL },
+    {NULL, fs_noop, NULL},
 };

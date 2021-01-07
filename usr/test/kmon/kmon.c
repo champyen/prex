@@ -44,8 +44,7 @@ extern int dispatch_cmd(int argc, char** args);
 /*
  * Parse an entire given line.
  */
-static int
-parse_line(char* line)
+static int parse_line(char* line)
 {
     static char* args[ARGMAX];
     char *p, *word = NULL;
@@ -85,8 +84,7 @@ parse_line(char* line)
     return rc;
 }
 
-static void
-read_line(char* line)
+static void read_line(char* line)
 {
     int c, len = 0;
     char* p = line;

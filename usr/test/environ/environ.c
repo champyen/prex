@@ -37,15 +37,13 @@
 
 extern char** environ;
 
-static void
-oops(void)
+static void oops(void)
 {
     printf("oops!\n");
     exit(1);
 }
 
-static void
-show_env(void)
+static void show_env(void)
 {
     char** envp = environ;
     int i;

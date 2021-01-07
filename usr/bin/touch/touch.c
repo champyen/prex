@@ -78,15 +78,13 @@ int main(int argc, char* argv[])
     exit(1);
 }
 
-static void
-usage(void)
+static void usage(void)
 {
     fprintf(stderr, "usage: touch [-c] file...\n");
     exit(1);
 }
 
-static int
-do_touch(char* file, unsigned int flags)
+static int do_touch(char* file, unsigned int flags)
 {
     struct stat st;
     int fd;

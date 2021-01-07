@@ -56,8 +56,8 @@ extern dkifn_t* dki_table; /* pointer to DKI function table */
 /*
  * Return value of ISR
  */
-#define INT_DONE 0 /* done */
-#define INT_ERROR 1 /* error */
+#define INT_DONE 0     /* done */
+#define INT_ERROR 1    /* error */
 #define INT_CONTINUE 2 /* continue to IST */
 
 /* No IST for irq_attach() */
@@ -66,15 +66,16 @@ extern dkifn_t* dki_table; /* pointer to DKI function table */
 /*
  * Event for sleep/wakeup
  */
-struct event {
+struct event
+{
     struct queue sleepq; /* queue for waiting thread */
-    const char* name; /* pointer to event name string */
+    const char* name;    /* pointer to event name string */
 };
 
-#define event_init(event, evt_name)  \
-    do {                             \
-        list_init(&(event)->sleepq); \
-        (event)->name = evt_name;    \
+#define event_init(event, evt_name)                                                                                    \
+    do {                                                                                                               \
+        list_init(&(event)->sleepq);                                                                                   \
+        (event)->name = evt_name;                                                                                      \
     } while (0)
 
 /*
@@ -90,7 +91,8 @@ struct event {
  * DPC (Deferred Procedure Call) object
  * The data member is private to kernel.
  */
-struct dpc {
+struct dpc
+{
     void* _data[5];
 };
 
@@ -100,7 +102,8 @@ typedef struct dpc dpc_t;
  * Timer structure
  * The data member is private to kernel.
  */
-struct timer {
+struct timer
+{
     void* _data[10];
 };
 

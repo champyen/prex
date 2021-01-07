@@ -45,21 +45,22 @@
 /*
  * Resource limits
  */
-#define RLIMIT_CPU 0 /* cpu time in milliseconds */
-#define RLIMIT_FSIZE 1 /* maximum file size */
-#define RLIMIT_DATA 2 /* data size */
-#define RLIMIT_STACK 3 /* stack size */
-#define RLIMIT_CORE 4 /* core file size */
-#define RLIMIT_RSS 5 /* resident set size */
+#define RLIMIT_CPU 0     /* cpu time in milliseconds */
+#define RLIMIT_FSIZE 1   /* maximum file size */
+#define RLIMIT_DATA 2    /* data size */
+#define RLIMIT_STACK 3   /* stack size */
+#define RLIMIT_CORE 4    /* core file size */
+#define RLIMIT_RSS 5     /* resident set size */
 #define RLIMIT_MEMLOCK 6 /* locked-in-memory address space */
-#define RLIMIT_NPROC 7 /* number of processes */
-#define RLIMIT_NOFILE 8 /* number of open files */
+#define RLIMIT_NPROC 7   /* number of processes */
+#define RLIMIT_NOFILE 8  /* number of open files */
 
 #define RLIM_NLIMITS 9 /* number of resource limits */
 
 #define RLIM_INFINITY (((u_long)1 << 31) - 1)
 
-struct rlimit {
+struct rlimit
+{
     rlim_t rlim_cur; /* current (soft) limit */
     rlim_t rlim_max; /* maximum value for rlim_cur */
 };

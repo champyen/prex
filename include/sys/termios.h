@@ -41,26 +41,26 @@
  *
  *	Name	     Subscript	Enabled by
  */
-#define VEOF 0 /* ICANON */
-#define VEOL 1 /* ICANON */
-#define VEOL2 2 /* ICANON */
-#define VERASE 3 /* ICANON */
-#define VWERASE 4 /* ICANON */
-#define VKILL 5 /* ICANON */
+#define VEOF 0     /* ICANON */
+#define VEOL 1     /* ICANON */
+#define VEOL2 2    /* ICANON */
+#define VERASE 3   /* ICANON */
+#define VWERASE 4  /* ICANON */
+#define VKILL 5    /* ICANON */
 #define VREPRINT 6 /* ICANON */
 /*			7	   spare 1 */
-#define VINTR 8 /* ISIG */
-#define VQUIT 9 /* ISIG */
-#define VSUSP 10 /* ISIG */
-#define VDSUSP 11 /* ISIG */
-#define VSTART 12 /* IXON, IXOFF */
-#define VSTOP 13 /* IXON, IXOFF */
-#define VLNEXT 14 /* IEXTEN */
+#define VINTR 8     /* ISIG */
+#define VQUIT 9     /* ISIG */
+#define VSUSP 10    /* ISIG */
+#define VDSUSP 11   /* ISIG */
+#define VSTART 12   /* IXON, IXOFF */
+#define VSTOP 13    /* IXON, IXOFF */
+#define VLNEXT 14   /* IEXTEN */
 #define VDISCARD 15 /* IEXTEN */
-#define VMIN 16 /* !ICANON */
-#define VTIME 17 /* !ICANON */
-#define VSTATUS 18 /* ICANON */
-#define VDDB 19 /* Prex: debugger key */
+#define VMIN 16     /* !ICANON */
+#define VTIME 17    /* !ICANON */
+#define VSTATUS 18  /* ICANON */
+#define VDDB 19     /* Prex: debugger key */
 #define NCCS 20
 
 #define _POSIX_VDISABLE ((unsigned char)'\377')
@@ -70,47 +70,47 @@
 /*
  * Input flags - software input processing
  */
-#define IGNBRK 0x00000001 /* ignore BREAK condition */
-#define BRKINT 0x00000002 /* map BREAK to SIGINTR */
-#define IGNPAR 0x00000004 /* ignore (discard) parity errors */
-#define PARMRK 0x00000008 /* mark parity and framing errors */
-#define INPCK 0x00000010 /* enable checking of parity errors */
-#define ISTRIP 0x00000020 /* strip 8th bit off chars */
-#define INLCR 0x00000040 /* map NL into CR */
-#define IGNCR 0x00000080 /* ignore CR */
-#define ICRNL 0x00000100 /* map CR to NL (ala CRMOD) */
-#define IXON 0x00000200 /* enable output flow control */
-#define IXOFF 0x00000400 /* enable input flow control */
-#define IXANY 0x00000800 /* any char will restart after stop */
+#define IGNBRK 0x00000001  /* ignore BREAK condition */
+#define BRKINT 0x00000002  /* map BREAK to SIGINTR */
+#define IGNPAR 0x00000004  /* ignore (discard) parity errors */
+#define PARMRK 0x00000008  /* mark parity and framing errors */
+#define INPCK 0x00000010   /* enable checking of parity errors */
+#define ISTRIP 0x00000020  /* strip 8th bit off chars */
+#define INLCR 0x00000040   /* map NL into CR */
+#define IGNCR 0x00000080   /* ignore CR */
+#define ICRNL 0x00000100   /* map CR to NL (ala CRMOD) */
+#define IXON 0x00000200    /* enable output flow control */
+#define IXOFF 0x00000400   /* enable input flow control */
+#define IXANY 0x00000800   /* any char will restart after stop */
 #define IMAXBEL 0x00002000 /* ring bell on input queue full */
 
 /*
  * Output flags - software output processing
  */
-#define OPOST 0x00000001 /* enable following output processing */
-#define ONLCR 0x00000002 /* map NL to CR-NL (ala CRMOD) */
+#define OPOST 0x00000001  /* enable following output processing */
+#define ONLCR 0x00000002  /* map NL to CR-NL (ala CRMOD) */
 #define OXTABS 0x00000004 /* expand tabs to spaces */
 #define ONOEOT 0x00000008 /* discard EOT's (^D) on output) */
 
 /*
  * Control flags - hardware control of terminal
  */
-#define CIGNORE 0x00000001 /* ignore control flags */
-#define CSIZE 0x00000300 /* character size mask */
-#define CS5 0x00000000 /* 5 bits (pseudo) */
-#define CS6 0x00000100 /* 6 bits */
-#define CS7 0x00000200 /* 7 bits */
-#define CS8 0x00000300 /* 8 bits */
-#define CSTOPB 0x00000400 /* send 2 stop bits */
-#define CREAD 0x00000800 /* enable receiver */
-#define PARENB 0x00001000 /* parity enable */
-#define PARODD 0x00002000 /* odd parity, else even */
-#define HUPCL 0x00004000 /* hang up on last close */
-#define CLOCAL 0x00008000 /* ignore modem status lines */
+#define CIGNORE 0x00000001    /* ignore control flags */
+#define CSIZE 0x00000300      /* character size mask */
+#define CS5 0x00000000        /* 5 bits (pseudo) */
+#define CS6 0x00000100        /* 6 bits */
+#define CS7 0x00000200        /* 7 bits */
+#define CS8 0x00000300        /* 8 bits */
+#define CSTOPB 0x00000400     /* send 2 stop bits */
+#define CREAD 0x00000800      /* enable receiver */
+#define PARENB 0x00001000     /* parity enable */
+#define PARODD 0x00002000     /* odd parity, else even */
+#define HUPCL 0x00004000      /* hang up on last close */
+#define CLOCAL 0x00008000     /* ignore modem status lines */
 #define CCTS_OFLOW 0x00010000 /* CTS flow control of output */
-#define CRTSCTS CCTS_OFLOW /* ??? */
+#define CRTSCTS CCTS_OFLOW    /* ??? */
 #define CRTS_IFLOW 0x00020000 /* RTS flow control of input */
-#define MDMBUF 0x00100000 /* flow control output via Carrier */
+#define MDMBUF 0x00100000     /* flow control output via Carrier */
 
 /*
  * "Local" flags - dumping ground for other state
@@ -122,48 +122,49 @@
 
 #ifndef _POSIX_SOURCE
 #define ECHOKE 0x00000001 /* visual erase for line kill */
-#endif /*_POSIX_SOURCE */
-#define ECHOE 0x00000002 /* visually erase chars */
-#define ECHOK 0x00000004 /* echo NL after line kill */
-#define ECHO 0x00000008 /* enable echoing */
+#endif                    /*_POSIX_SOURCE */
+#define ECHOE 0x00000002  /* visually erase chars */
+#define ECHOK 0x00000004  /* echo NL after line kill */
+#define ECHO 0x00000008   /* enable echoing */
 #define ECHONL 0x00000010 /* echo NL even if ECHO is off */
 #ifndef _POSIX_SOURCE
 #define ECHOPRT 0x00000020 /* visual erase mode for hardcopy */
 #define ECHOCTL 0x00000040 /* echo control chars as ^(Char) */
-#endif /*_POSIX_SOURCE */
-#define ISIG 0x00000080 /* enable signals INTR, QUIT, [D]SUSP */
-#define ICANON 0x00000100 /* canonicalize input lines */
+#endif                     /*_POSIX_SOURCE */
+#define ISIG 0x00000080    /* enable signals INTR, QUIT, [D]SUSP */
+#define ICANON 0x00000100  /* canonicalize input lines */
 #ifndef _POSIX_SOURCE
 #define ALTWERASE 0x00000200 /* use alternate WERASE algorithm */
-#endif /*_POSIX_SOURCE */
-#define IEXTEN 0x00000400 /* enable DISCARD and LNEXT */
-#define EXTPROC 0x00000800 /* external processing */
-#define TOSTOP 0x00400000 /* stop background jobs from output */
+#endif                       /*_POSIX_SOURCE */
+#define IEXTEN 0x00000400    /* enable DISCARD and LNEXT */
+#define EXTPROC 0x00000800   /* external processing */
+#define TOSTOP 0x00400000    /* stop background jobs from output */
 #ifndef _POSIX_SOURCE
-#define FLUSHO 0x00800000 /* output being flushed (state) */
+#define FLUSHO 0x00800000     /* output being flushed (state) */
 #define NOKERNINFO 0x02000000 /* no kernel output from VSTATUS */
-#define PENDIN 0x20000000 /* XXX retype pending input (state) */
-#endif /*_POSIX_SOURCE */
-#define NOFLSH 0x80000000 /* don't flush after interrupt */
+#define PENDIN 0x20000000     /* XXX retype pending input (state) */
+#endif                        /*_POSIX_SOURCE */
+#define NOFLSH 0x80000000     /* don't flush after interrupt */
 
 typedef unsigned long tcflag_t;
 typedef unsigned char cc_t;
 typedef long speed_t;
 
-struct termios {
+struct termios
+{
     tcflag_t c_iflag; /* input flags */
     tcflag_t c_oflag; /* output flags */
     tcflag_t c_cflag; /* control flags */
     tcflag_t c_lflag; /* local flags */
-    cc_t c_cc[NCCS]; /* control chars */
-    long c_ispeed; /* input speed */
-    long c_ospeed; /* output speed */
+    cc_t c_cc[NCCS];  /* control chars */
+    long c_ispeed;    /* input speed */
+    long c_ospeed;    /* output speed */
 };
 
 /*
  * Commands passed to tcsetattr() for setting the termios structure.
  */
-#define TCSANOW 0 /* make change immediate */
+#define TCSANOW 0   /* make change immediate */
 #define TCSADRAIN 1 /* drain output, then change */
 #define TCSAFLUSH 2 /* drain output, flush input */
 #ifndef _POSIX_SOURCE
@@ -231,9 +232,10 @@ __END_DECLS
  * Window/terminal size structure.  This information is stored by the kernel
  * in order to provide a consistent interface, but is not used by the kernel.
  */
-struct winsize {
-    unsigned short ws_row; /* rows, in characters */
-    unsigned short ws_col; /* columns, in characters */
+struct winsize
+{
+    unsigned short ws_row;    /* rows, in characters */
+    unsigned short ws_col;    /* columns, in characters */
     unsigned short ws_xpixel; /* horizontal size, pixels */
     unsigned short ws_ypixel; /* vertical size, pixels */
 };
@@ -243,44 +245,44 @@ struct winsize {
 /* 15 unused */
 #define TIOCFLUSH _IOW('t', 16, int) /* flush buffers */
 /* 17-18 compat */
-#define TIOCGETA _IOR('t', 19, struct termios) /* get termios struct */
-#define TIOCSETA _IOW('t', 20, struct termios) /* set termios struct */
+#define TIOCGETA _IOR('t', 19, struct termios)  /* get termios struct */
+#define TIOCSETA _IOW('t', 20, struct termios)  /* set termios struct */
 #define TIOCSETAW _IOW('t', 21, struct termios) /* drain output, set */
 #define TIOCSETAF _IOW('t', 22, struct termios) /* drn out, fls in, set */
-#define TIOCGETD _IOR('t', 26, int) /* get line discipline */
-#define TIOCSETD _IOW('t', 27, int) /* set line discipline */
+#define TIOCGETD _IOR('t', 26, int)             /* get line discipline */
+#define TIOCSETD _IOW('t', 27, int)             /* set line discipline */
 /* 127-124 compat */
-#define TIOCSBRK _IO('t', 123) /* set break bit */
-#define TIOCCBRK _IO('t', 122) /* clear break bit */
-#define TIOCSDTR _IO('t', 121) /* set data terminal ready */
-#define TIOCCDTR _IO('t', 120) /* clear data terminal ready */
+#define TIOCSBRK _IO('t', 123)        /* set break bit */
+#define TIOCCBRK _IO('t', 122)        /* clear break bit */
+#define TIOCSDTR _IO('t', 121)        /* set data terminal ready */
+#define TIOCCDTR _IO('t', 120)        /* clear data terminal ready */
 #define TIOCGPGRP _IOR('t', 119, int) /* get pgrp of tty */
 #define TIOCSPGRP _IOW('t', 118, int) /* set pgrp of tty */
 /* 117-116 compat */
 #define TIOCOUTQ _IOR('t', 115, int) /* output queue size */
 #define TIOCSTI _IOW('t', 114, char) /* simulate terminal input */
-#define TIOCNOTTY _IO('t', 113) /* void tty association */
+#define TIOCNOTTY _IO('t', 113)      /* void tty association */
 
-#define TIOCSTOP _IO('t', 111) /* stop output, like ^S */
-#define TIOCSTART _IO('t', 110) /* start output, like ^Q */
-#define TIOCMSET _IOW('t', 109, int) /* set all modem bits */
-#define TIOCMBIS _IOW('t', 108, int) /* bis modem bits */
-#define TIOCMBIC _IOW('t', 107, int) /* bic modem bits */
-#define TIOCMGET _IOR('t', 106, int) /* get all modem bits */
+#define TIOCSTOP _IO('t', 111)                    /* stop output, like ^S */
+#define TIOCSTART _IO('t', 110)                   /* start output, like ^Q */
+#define TIOCMSET _IOW('t', 109, int)              /* set all modem bits */
+#define TIOCMBIS _IOW('t', 108, int)              /* bis modem bits */
+#define TIOCMBIC _IOW('t', 107, int)              /* bic modem bits */
+#define TIOCMGET _IOR('t', 106, int)              /* get all modem bits */
 #define TIOCGWINSZ _IOR('t', 104, struct winsize) /* get window size */
 #define TIOCSWINSZ _IOW('t', 103, struct winsize) /* set window size */
-#define UIOCCMD(n) _IO('u', n) /* usr cntl op "n" */
-#define TIOCCONS _IOW('t', 98, int) /* become virtual console */
-#define TIOCSCTTY _IO('t', 97) /* become controlling tty */
-#define TIOCDRAIN _IO('t', 94) /* wait till output drained */
+#define UIOCCMD(n) _IO('u', n)                    /* usr cntl op "n" */
+#define TIOCCONS _IOW('t', 98, int)               /* become virtual console */
+#define TIOCSCTTY _IO('t', 97)                    /* become controlling tty */
+#define TIOCDRAIN _IO('t', 94)                    /* wait till output drained */
 
-#define TTYDISC 0 /* termios tty line discipline */
+#define TTYDISC 0  /* termios tty line discipline */
 #define TABLDISC 3 /* tablet discipline */
 #define SLIPDISC 4 /* serial IP discipline */
 
 /* Prex unique */
 #define TIOCSETSIGT _IOW('t', 200, int) /* set signal task */
-#define TIOCINQ _IOR('t', 201, int) /* input queue size */
+#define TIOCINQ _IOR('t', 201, int)     /* input queue size */
 
 /*
  * Defaults on "first" open.
@@ -323,11 +325,10 @@ struct winsize {
 /*
  * #define TTYDEFCHARS to include an array of default control characters.
  */
-#define TTYDEFCHARS                                                              \
-    {                                                                            \
-        CEOF, CEOL, CEOL, CERASE, CWERASE, CKILL, CREPRINT,                      \
-            _POSIX_VDISABLE, CINTR, CQUIT, CSUSP, CDSUSP, CSTART, CSTOP, CLNEXT, \
-            CDISCARD, CMIN, CTIME, CSTATUS, CKDB                                 \
+#define TTYDEFCHARS                                                                                                    \
+    {                                                                                                                  \
+        CEOF, CEOL, CEOL, CERASE, CWERASE, CKILL, CREPRINT, _POSIX_VDISABLE, CINTR, CQUIT, CSUSP, CDSUSP, CSTART,      \
+            CSTOP, CLNEXT, CDISCARD, CMIN, CTIME, CSTATUS, CKDB                                                        \
     }
 #endif /* KERNEL */
 

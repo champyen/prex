@@ -47,8 +47,8 @@
 #define IOCPARM_MAX 256
 
 #define IOC_VOID 0x20000000 /* no parameters */
-#define IOC_OUT 0x40000000 /* copy out parameters */
-#define IOC_IN 0x80000000U /* copy in parameters */
+#define IOC_OUT 0x40000000  /* copy out parameters */
+#define IOC_IN 0x80000000U  /* copy in parameters */
 #define IOC_INOUT (IOC_IN | IOC_OUT)
 #define IOC_DIRMASK 0xe0000000
 
@@ -56,8 +56,7 @@
 #define IOC_IVAL 0x10000000 /* input argument is immediate value */
 #define IOC_OVAL 0x08000000 /* return value as output */
 
-#define _IOC(inout, group, num, len) \
-    (u_long)(inout | ((len & IOCPARM_MASK) << 16) | ((group) << 8) | (num))
+#define _IOC(inout, group, num, len) (u_long)(inout | ((len & IOCPARM_MASK) << 16) | ((group) << 8) | (num))
 #define _IO(g, n) _IOC(IOC_VOID, (g), (n), 0)
 #define _IOR(g, n, t) _IOC(IOC_OUT, (g), (n), sizeof(t))
 #define _IOW(g, n, t) _IOC(IOC_IN, (g), (n), sizeof(t))
@@ -75,11 +74,12 @@
 /*
  * CPU frequency information
  */
-struct cpufreqinfo {
-    int maxfreq; /* max speed in MHz */
+struct cpufreqinfo
+{
+    int maxfreq;  /* max speed in MHz */
     int maxvolts; /* max power in mV */
-    int freq; /* current speed in MHz */
-    int volts; /* current power in mV */
+    int freq;     /* current speed in MHz */
+    int volts;    /* current power in mV */
 };
 
 /*
@@ -101,8 +101,9 @@ struct cpufreqinfo {
 #define RTCIOC_GET_TIME _IOR('R', 0, struct __timeval)
 #define RTCIOC_SET_TIME _IOW('R', 1, struct __timeval)
 
-struct __timeval {
-    long tv_sec; /* seconds */
+struct __timeval
+{
+    long tv_sec;  /* seconds */
     long tv_usec; /* and microseconds */
 };
 

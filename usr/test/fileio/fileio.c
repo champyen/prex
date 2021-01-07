@@ -49,8 +49,7 @@
 
 static char iobuf[IOBUFSZ];
 
-static void
-test_write(void)
+static void test_write(void)
 {
     int fd, i;
 
@@ -67,8 +66,7 @@ test_write(void)
 /*
  * Display file contents
  */
-static void
-cat_file(void)
+static void cat_file(void)
 {
     int rd, fd;
 
@@ -83,8 +81,7 @@ cat_file(void)
 /*
  * Test invalid request
  */
-static void
-test_invalid(void)
+static void test_invalid(void)
 {
     object_t fsobj;
     struct msg m;
@@ -97,8 +94,7 @@ test_invalid(void)
 /*
  * Test open/close
  */
-static void
-test_open(void)
+static void test_open(void)
 {
     int fd;
 
@@ -112,8 +108,7 @@ test_open(void)
 /*
  * Test file read
  */
-static void
-test_read(void)
+static void test_read(void)
 {
     int rd, fd;
 
@@ -140,13 +135,13 @@ int main(int argc, char* argv[])
     timer_sleep(1000, 0);
 
     /*
-	 * Prepare to use a file system.
-	 */
+     * Prepare to use a file system.
+     */
     fslib_init();
 
     /*
-	 * Mount file systems
-	 */
+     * Mount file systems
+     */
     mount("", "/", "ramfs", 0, NULL);
     mkdir("/dev", 0);
     mount("", "/dev", "devfs", 0, NULL); /* device */
@@ -154,11 +149,11 @@ int main(int argc, char* argv[])
     mount("/dev/ram0", "/boot", "arfs", 0, NULL); /* archive */
     mkdir("/tmp", 0);
     /*
-	 * Prepare stdio
-	 */
+     * Prepare stdio
+     */
     open("/dev/tty", O_RDWR); /* stdin */
-    dup(0); /* stdout */
-    dup(0); /* stderr */
+    dup(0);                   /* stdout */
+    dup(0);                   /* stderr */
 
     /* Test device write */
     write(STDOUT_FILENO, test_str, strlen(test_str));
@@ -174,8 +169,8 @@ int main(int argc, char* argv[])
     test_open(); /* test open/close loop */
 
     /*
-	 * Disconnect from a file system.
-	 */
+     * Disconnect from a file system.
+     */
     fslib_exit();
     return 0;
 }

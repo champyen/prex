@@ -32,10 +32,7 @@
 /*
  * bcmp -- vax cmpc3 instruction
  */
-int
-    bcmp(b1, b2, length)
-        const void *b1,
-    *b2;
+int bcmp(b1, b2, length) const void *b1, *b2;
 size_t length;
 {
     char *p1, *p2;

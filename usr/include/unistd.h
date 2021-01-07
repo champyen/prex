@@ -35,7 +35,7 @@
 #include <sys/cdefs.h>
 #include <sys/types.h>
 
-#define STDIN_FILENO 0 /* standard input file descriptor */
+#define STDIN_FILENO 0  /* standard input file descriptor */
 #define STDOUT_FILENO 1 /* standard output file descriptor */
 #define STDERR_FILENO 2 /* standard error file descriptor */
 

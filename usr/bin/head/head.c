@@ -81,8 +81,7 @@ int main(int argc, char* argv[])
                 continue;
             }
             if (argc > 1) {
-                (void)printf("%s==> %s <==\n",
-                    first ? "" : "\n", *argv);
+                (void)printf("%s==> %s <==\n", first ? "" : "\n", *argv);
                 first = 0;
             }
             head(fp, linecnt);
@@ -106,8 +105,7 @@ void head(FILE* fp, int cnt)
         }
 }
 
-static void
-usage()
+static void usage()
 {
     (void)fprintf(stderr, "usage: head [-n lines] [file ...]\n");
     exit(1);

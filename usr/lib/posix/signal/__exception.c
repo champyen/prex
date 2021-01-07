@@ -130,8 +130,7 @@ int __sig_flush(void)
 /*
  * Exception handler for signal emulation
  */
-static void
-__exception_handler(int excpt)
+static void __exception_handler(int excpt)
 {
 
     if (excpt > 0 && excpt <= NSIG) {

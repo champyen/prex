@@ -60,13 +60,12 @@ extern const struct cmdentry builtin_cmds[];
 #endif
 
 static pid_t shpid = 0; /* pid of shell */
-char retval; /* return value for shell */
-unsigned interact; /* if shell reads from stdin */
+char retval;            /* return value for shell */
+unsigned interact;      /* if shell reads from stdin */
 
 jmp_buf jmpbuf;
 
-static void
-error(const char* msg, ...)
+static void error(const char* msg, ...)
 {
     va_list ap;
 
@@ -84,8 +83,7 @@ error(const char* msg, ...)
     retval = 1;
 }
 
-static void
-showsignal(int pid, int s)
+static void showsignal(int pid, int s)
 {
     int signo = WTERMSIG(s);
 
@@ -98,8 +96,7 @@ showsignal(int pid, int s)
     retval = signo + 0200;
 }
 
-static void
-showprompt(void)
+static void showprompt(void)
 {
     static char cwd[PATH_MAX];
     static char prompt[PATH_MAX + 20];
@@ -109,8 +106,7 @@ showprompt(void)
     write(1, prompt, strlen(prompt));
 }
 
-static void
-execute(int argc, char* argv[], int* redir, int flags, cmdfn_t cmdfn)
+static void execute(int argc, char* argv[], int* redir, int flags, cmdfn_t cmdfn)
 {
     int pid, i;
     int status;
@@ -156,8 +152,7 @@ execute(int argc, char* argv[], int* redir, int flags, cmdfn_t cmdfn)
         if (cmdfn) {
             task_setname(task_self(), basename(file));
             if (cmdfn(argc, argv) != 0)
-                fprintf(stderr, "%s: %s\n", argv[0],
-                    strerror(errno));
+                fprintf(stderr, "%s: %s\n", argv[0], strerror(errno));
         } else {
             execv(file, arg);
             /* Try $PATH */
@@ -198,8 +193,7 @@ execute(int argc, char* argv[], int* redir, int flags, cmdfn_t cmdfn)
     return;
 }
 
-static int
-redirect(char** args, int* redir)
+static int redirect(char** args, int* redir)
 {
     unsigned int i, io, append = 0;
     int fd, argc;
@@ -258,8 +252,7 @@ redirect(char** args, int* redir)
     return argc;
 }
 
-static cmdfn_t
-findcmd(const struct cmdentry cmds[], char* cmd)
+static cmdfn_t findcmd(const struct cmdentry cmds[], char* cmd)
 {
     int i = 0;
 
@@ -271,8 +264,7 @@ findcmd(const struct cmdentry cmds[], char* cmd)
     return 0;
 }
 
-static void
-parsecmd(char* cmds, int* redir, int flags)
+static void parsecmd(char* cmds, int* redir, int flags)
 {
     static char cmdbox[] = "cmdbox";
     static char* args[ARGMAX];
@@ -335,8 +327,8 @@ parsecmd(char* cmds, int* redir, int flags)
     fn = findcmd(builtin_cmds, args[0]);
 
     /*
-	 * Alias: 'sh' => 'cmdbox sh'
-	 */
+     * Alias: 'sh' => 'cmdbox sh'
+     */
     if (fn == NULL && !strcmp(args[0], "sh")) {
         for (i = argc; i >= 0; i--)
             args[i + 1] = args[i];
@@ -346,11 +338,10 @@ parsecmd(char* cmds, int* redir, int flags)
     execute(argc, args, redir, flags, fn);
 }
 
-static void
-parsepipe(char* str, int flags)
+static void parsepipe(char* str, int flags)
 {
-    int pip[2] = { -1, -1 };
-    int redir[2] = { -1, -1 };
+    int pip[2] = {-1, -1};
+    int redir[2] = {-1, -1};
     char *p, *cmds;
 
     p = cmds = str;
@@ -377,8 +368,7 @@ parsepipe(char* str, int flags)
     }
 }
 
-static void
-parseline(char* line)
+static void parseline(char* line)
 {
     char *p, *cmds;
 
@@ -406,8 +396,7 @@ parseline(char* line)
     }
 }
 
-static char*
-readline(int fd, char* line, int len)
+static char* readline(int fd, char* line, int len)
 {
     char* p = line;
     int nleft = len;
@@ -430,8 +419,7 @@ readline(int fd, char* line, int len)
     return line;
 }
 
-static void
-cmdloop(int fd)
+static void cmdloop(int fd)
 {
     static char line[LINE_MAX];
     char* p;

@@ -74,28 +74,27 @@ static mutex_t ramfs_lock = MUTEX_INITIALIZER;
  * vnode operations
  */
 struct vnops ramfs_vnops = {
-    ramfs_open, /* open */
-    ramfs_close, /* close */
-    ramfs_read, /* read */
-    ramfs_write, /* write */
-    ramfs_seek, /* seek */
-    ramfs_ioctl, /* ioctl */
-    ramfs_fsync, /* fsync */
-    ramfs_readdir, /* readdir */
-    ramfs_lookup, /* lookup */
-    ramfs_create, /* create */
-    ramfs_remove, /* remove */
-    ramfs_rename, /* remame */
-    ramfs_mkdir, /* mkdir */
-    ramfs_rmdir, /* rmdir */
-    ramfs_getattr, /* getattr */
-    ramfs_setattr, /* setattr */
+    ramfs_open,     /* open */
+    ramfs_close,    /* close */
+    ramfs_read,     /* read */
+    ramfs_write,    /* write */
+    ramfs_seek,     /* seek */
+    ramfs_ioctl,    /* ioctl */
+    ramfs_fsync,    /* fsync */
+    ramfs_readdir,  /* readdir */
+    ramfs_lookup,   /* lookup */
+    ramfs_create,   /* create */
+    ramfs_remove,   /* remove */
+    ramfs_rename,   /* remame */
+    ramfs_mkdir,    /* mkdir */
+    ramfs_rmdir,    /* rmdir */
+    ramfs_getattr,  /* getattr */
+    ramfs_setattr,  /* setattr */
     ramfs_inactive, /* inactive */
     ramfs_truncate, /* truncate */
 };
 
-struct ramfs_node*
-ramfs_allocate_node(char* name, int type)
+struct ramfs_node* ramfs_allocate_node(char* name, int type)
 {
     struct ramfs_node* np;
 
@@ -122,8 +121,7 @@ void ramfs_free_node(struct ramfs_node* np)
     free(np);
 }
 
-static struct ramfs_node*
-ramfs_add_node(struct ramfs_node* dnp, char* name, int type)
+static struct ramfs_node* ramfs_add_node(struct ramfs_node* dnp, char* name, int type)
 {
     struct ramfs_node *np, *prev;
 
@@ -146,8 +144,7 @@ ramfs_add_node(struct ramfs_node* dnp, char* name, int type)
     return np;
 }
 
-static int
-ramfs_remove_node(struct ramfs_node* dnp, struct ramfs_node* np)
+static int ramfs_remove_node(struct ramfs_node* dnp, struct ramfs_node* np)
 {
     struct ramfs_node* prev;
 
@@ -160,8 +157,7 @@ ramfs_remove_node(struct ramfs_node* dnp, struct ramfs_node* np)
     if (dnp->rn_child == np) {
         dnp->rn_child = np->rn_next;
     } else {
-        for (prev = dnp->rn_child; prev->rn_next != np;
-             prev = prev->rn_next) {
+        for (prev = dnp->rn_child; prev->rn_next != np; prev = prev->rn_next) {
             if (prev->rn_next == NULL) {
                 mutex_unlock(&ramfs_lock);
                 return ENOENT;
@@ -175,8 +171,7 @@ ramfs_remove_node(struct ramfs_node* dnp, struct ramfs_node* np)
     return 0;
 }
 
-static int
-ramfs_rename_node(struct ramfs_node* np, char* name)
+static int ramfs_rename_node(struct ramfs_node* np, char* name)
 {
     size_t len;
     char* tmp;
@@ -198,8 +193,7 @@ ramfs_rename_node(struct ramfs_node* np, char* name)
     return 0;
 }
 
-static int
-ramfs_lookup(vnode_t dvp, char* name, vnode_t vp)
+static int ramfs_lookup(vnode_t dvp, char* name, vnode_t vp)
 {
     struct ramfs_node *np, *dnp;
     size_t len;
@@ -232,8 +226,7 @@ ramfs_lookup(vnode_t dvp, char* name, vnode_t vp)
     return 0;
 }
 
-static int
-ramfs_mkdir(vnode_t dvp, char* name, mode_t mode)
+static int ramfs_mkdir(vnode_t dvp, char* name, mode_t mode)
 {
     struct ramfs_node* np;
 
@@ -249,16 +242,14 @@ ramfs_mkdir(vnode_t dvp, char* name, mode_t mode)
 }
 
 /* Remove a directory */
-static int
-ramfs_rmdir(vnode_t dvp, vnode_t vp, char* name)
+static int ramfs_rmdir(vnode_t dvp, vnode_t vp, char* name)
 {
 
     return ramfs_remove_node(dvp->v_data, vp->v_data);
 }
 
 /* Remove a file */
-static int
-ramfs_remove(vnode_t dvp, vnode_t vp, char* name)
+static int ramfs_remove(vnode_t dvp, vnode_t vp, char* name)
 {
     struct ramfs_node* np;
     int error;
@@ -275,8 +266,7 @@ ramfs_remove(vnode_t dvp, vnode_t vp, char* name)
 }
 
 /* Truncate file */
-static int
-ramfs_truncate(vnode_t vp, off_t length)
+static int ramfs_truncate(vnode_t vp, off_t length)
 {
     struct ramfs_node* np;
     void* new_buf;
@@ -312,8 +302,7 @@ ramfs_truncate(vnode_t vp, off_t length)
 /*
  * Create empty file.
  */
-static int
-ramfs_create(vnode_t dvp, char* name, mode_t mode)
+static int ramfs_create(vnode_t dvp, char* name, mode_t mode)
 {
     struct ramfs_node* np;
 
@@ -327,8 +316,7 @@ ramfs_create(vnode_t dvp, char* name, mode_t mode)
     return 0;
 }
 
-static int
-ramfs_read(vnode_t vp, file_t fp, void* buf, size_t size, size_t* result)
+static int ramfs_read(vnode_t vp, file_t fp, void* buf, size_t size, size_t* result)
 {
     struct ramfs_node* np;
     off_t off;
@@ -354,8 +342,7 @@ ramfs_read(vnode_t vp, file_t fp, void* buf, size_t size, size_t* result)
     return 0;
 }
 
-static int
-ramfs_write(vnode_t vp, file_t fp, void* buf, size_t size, size_t* result)
+static int ramfs_write(vnode_t vp, file_t fp, void* buf, size_t size, size_t* result)
 {
     struct ramfs_node* np;
     off_t file_pos, end_pos;
@@ -379,12 +366,12 @@ ramfs_write(vnode_t vp, file_t fp, void* buf, size_t size, size_t* result)
         if (end_pos > (off_t)np->rn_bufsize) {
             task = task_self();
             /*
-			 * We allocate the data buffer in page boundary.
-			 * So that we can reduce the memory allocation unless
-			 * the file size exceeds next page boundary.
-			 * This will prevent the memory fragmentation by
-			 * many malloc/free calls.
-			 */
+             * We allocate the data buffer in page boundary.
+             * So that we can reduce the memory allocation unless
+             * the file size exceeds next page boundary.
+             * This will prevent the memory fragmentation by
+             * many malloc/free calls.
+             */
             new_size = round_page(end_pos);
             if (vm_allocate(task, &new_buf, new_size, 1))
                 return EIO;
@@ -404,9 +391,7 @@ ramfs_write(vnode_t vp, file_t fp, void* buf, size_t size, size_t* result)
     return 0;
 }
 
-static int
-ramfs_rename(vnode_t dvp1, vnode_t vp1, char* name1,
-    vnode_t dvp2, vnode_t vp2, char* name2)
+static int ramfs_rename(vnode_t dvp1, vnode_t vp1, char* name1, vnode_t dvp2, vnode_t vp2, char* name2)
 {
     struct ramfs_node *np, *old_np;
     int error;
@@ -445,8 +430,7 @@ ramfs_rename(vnode_t dvp1, vnode_t vp1, char* name1,
 /*
  * @vp: vnode of the directory.
  */
-static int
-ramfs_readdir(vnode_t vp, file_t fp, struct dirent* dir)
+static int ramfs_readdir(vnode_t vp, file_t fp, struct dirent* dir)
 {
     struct ramfs_node *np, *dnp;
     int i;
@@ -478,8 +462,7 @@ ramfs_readdir(vnode_t vp, file_t fp, struct dirent* dir)
             dir->d_type = DT_DIR;
         else
             dir->d_type = DT_REG;
-        strlcpy((char*)&dir->d_name, np->rn_name,
-            sizeof(dir->d_name));
+        strlcpy((char*)&dir->d_name, np->rn_name, sizeof(dir->d_name));
     }
     dir->d_fileno = (uint32_t)fp->f_offset;
     dir->d_namlen = (uint16_t)strlen(dir->d_name);

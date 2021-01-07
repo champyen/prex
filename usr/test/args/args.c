@@ -45,8 +45,8 @@ int main(int argc, char* argv[])
     printf("argument test\n");
 
     /*
-	 * Print all arguments that were input by user.
-	 */
+     * Print all arguments that were input by user.
+     */
     printf("argc=%d argv=%x\n", argc, (unsigned int)argv);
     printf("Dump args:\n");
     for (i = 0; i < argc; i++) {

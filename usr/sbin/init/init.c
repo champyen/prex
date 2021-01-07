@@ -75,15 +75,15 @@ int main(int argc, char* argv[])
 
     if (pid == 0) {
         /*
-		 * Child
-		 */
+         * Child
+         */
         signal(SIGHUP, SIG_DFL);
         signal(SIGINT, SIG_DFL);
         signal(SIGALRM, SIG_DFL);
         setsid();
         open(ctty, O_RDWR); /* stdin */
-        dup(0); /* stdout */
-        dup(0); /* stderr */
+        dup(0);             /* stdout */
+        dup(0);             /* stderr */
 
         sys_log("init: running boot script\n");
         execl(cmdbox, sh, runcom, NULL);
@@ -95,8 +95,8 @@ int main(int argc, char* argv[])
         ;
 
     /*
-	 * Login shell is terminated.
-	 */
+     * Login shell is terminated.
+     */
     sys_log("init: restarting...\n");
     sync();
     kill(-1, SIGTERM);

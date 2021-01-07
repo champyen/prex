@@ -57,8 +57,7 @@ static pid_t last_pid = 1;
  * Assign new pid.
  * Returns pid on sucess, or 0 on failure.
  */
-static pid_t
-pid_alloc(void)
+static pid_t pid_alloc(void)
 {
     pid_t pid;
 
@@ -94,8 +93,8 @@ int newproc(struct proc* p, pid_t pid, task_t task)
         }
     }
     /*
-	 * make proc entry for new proc
-	 */
+     * make proc entry for new proc
+     */
     p->p_parent = curproc;
     p->p_pgrp = pg;
     p->p_stat = SRUN;
@@ -171,14 +170,13 @@ void cleanup(struct proc* p)
     free(p);
 }
 
-static int
-vfork_start(struct proc* p)
+static int vfork_start(struct proc* p)
 {
     void* stack;
 
     /*
-	 * Save parent's stack
-	 */
+     * Save parent's stack
+     */
     DPRINTF(("proc: vfork_start stack=%x\n", p->p_stackbase));
 
     if (vm_allocate(p->p_task, &stack, DFLSTKSZ, 1) != 0) {
@@ -196,17 +194,16 @@ vfork_start(struct proc* p)
 void vfork_end(struct proc* p)
 {
 
-    DPRINTF(("proc: vfork_end org=%x saved=%x\n", p->p_stackbase,
-        p->p_stacksaved));
+    DPRINTF(("proc: vfork_end org=%x saved=%x\n", p->p_stackbase, p->p_stacksaved));
     /*
-	 * Restore parent's stack
-	 */
+     * Restore parent's stack
+     */
     memcpy(p->p_stackbase, p->p_stacksaved, DFLSTKSZ);
     vm_free(p->p_task, p->p_stacksaved);
 
     /*
-	 * Resume parent
-	 */
+     * Resume parent
+     */
     p->p_vforked = 0;
     task_resume(p->p_task);
 }

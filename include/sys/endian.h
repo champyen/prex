@@ -43,8 +43,8 @@
  * address to high.
  */
 #define LITTLE_ENDIAN 1234 /* LSB first: i386, vax */
-#define BIG_ENDIAN 4321 /* MSB first: 68000, ibm, net */
-#define PDP_ENDIAN 3412 /* LSB first in word, MSW first in long */
+#define BIG_ENDIAN 4321    /* MSB first: 68000, ibm, net */
+#define PDP_ENDIAN 3412    /* LSB first in word, MSW first in long */
 
 #include <machine/endian.h>
 #include <sys/cdefs.h>

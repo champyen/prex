@@ -54,8 +54,7 @@
  * Clock interrupt service routine.
  * No H/W reprogram is required.
  */
-static int
-clock_isr(void* arg)
+static int clock_isr(void* arg)
 {
     int s;
 
@@ -74,12 +73,11 @@ void clock_init(void)
 {
     irq_t clock_irq;
 
-    outb_p(PIT_CTRL, 0x34); /* Command to set generator mode */
-    outb_p(PIT_CH0, (u_char)(PIT_LATCH & 0xff)); /* LSB */
+    outb_p(PIT_CTRL, 0x34);                             /* Command to set generator mode */
+    outb_p(PIT_CH0, (u_char)(PIT_LATCH & 0xff));        /* LSB */
     outb_p(PIT_CH0, (u_char)((PIT_LATCH >> 8) & 0xff)); /* MSB */
 
-    clock_irq = irq_attach(CLOCK_IRQ, IPL_CLOCK, 0, &clock_isr,
-        IST_NONE, NULL);
+    clock_irq = irq_attach(CLOCK_IRQ, IPL_CLOCK, 0, &clock_isr, IST_NONE, NULL);
 
     DPRINTF(("Clock rate: %d ticks/sec\n", CONFIG_HZ));
 }

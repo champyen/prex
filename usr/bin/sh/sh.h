@@ -32,7 +32,8 @@ typedef int (*cmdfn_t)(int, char**);
 /*
  * Command description
  */
-struct cmdentry {
+struct cmdentry
+{
     char* cmd;
     cmdfn_t func;
 };
@@ -40,7 +41,8 @@ struct cmdentry {
 /*
  * Command alias
  */
-struct alias {
+struct alias
+{
     char* name;
     char* value;
 };

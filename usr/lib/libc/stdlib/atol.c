@@ -30,9 +30,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-long
-    atol(str)
-        const char* str;
+long atol(str) const char* str;
 {
     return (strtol(str, (char**)NULL, 10));
 }

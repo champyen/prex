@@ -33,7 +33,8 @@
 #include <sys/cdefs.h>
 #include <sys/ioctl.h>
 
-struct cpufreq_ops {
+struct cpufreq_ops
+{
     int (*setperf)(int speed);
     int (*getperf)(void);
     void (*getinfo)(struct cpufreqinfo* info);

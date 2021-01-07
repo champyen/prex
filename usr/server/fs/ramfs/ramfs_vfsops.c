@@ -46,19 +46,18 @@ static int ramfs_unmount(mount_t mp);
  * File system operations
  */
 struct vfsops ramfs_vfsops = {
-    ramfs_mount, /* mount */
+    ramfs_mount,   /* mount */
     ramfs_unmount, /* unmount */
-    ramfs_sync, /* sync */
-    ramfs_vget, /* vget */
-    ramfs_statfs, /* statfs */
-    &ramfs_vnops, /* vnops */
+    ramfs_sync,    /* sync */
+    ramfs_vget,    /* vget */
+    ramfs_statfs,  /* statfs */
+    &ramfs_vnops,  /* vnops */
 };
 
 /*
  * Mount a file system.
  */
-static int
-ramfs_mount(mount_t mp, char* dev, int flags, void* data)
+static int ramfs_mount(mount_t mp, char* dev, int flags, void* data)
 {
     struct ramfs_node* np;
 
@@ -79,8 +78,7 @@ ramfs_mount(mount_t mp, char* dev, int flags, void* data)
  *       because we have to deallocate all nodes included in all sub
  *       directories, and it requires more work...
  */
-static int
-ramfs_unmount(mount_t mp)
+static int ramfs_unmount(mount_t mp)
 {
 
     return EBUSY;

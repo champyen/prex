@@ -62,14 +62,13 @@ volatile int irq_level;
 /*
  * Interrupt mapping table
  */
-static int ipl_table[NIRQS]; /* vector -> level */
+static int ipl_table[NIRQS];       /* vector -> level */
 static uint32_t mask_table[NIPLS]; /* level -> mask */
 
 /*
  * Set mask for current ipl
  */
-static void
-update_mask(void)
+static void update_mask(void)
 {
     u_int mask = mask_table[irq_level];
 
@@ -91,9 +90,9 @@ void interrupt_unmask(int vector, int level)
     ipl_table[vector] = level;
 
     /*
-	 * Unmask the target interrupt for all
-	 * lower interrupt levels.
-	 */
+     * Unmask the target interrupt for all
+     * lower interrupt levels.
+     */
     for (i = 0; i < level; i++)
         mask_table[i] |= unmask;
     update_mask();

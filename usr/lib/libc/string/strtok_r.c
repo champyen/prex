@@ -32,8 +32,7 @@
 #include <sys/cdefs.h>
 #include <string.h>
 
-char*
-    strtok_r(s, delim, lasts) char* s;
+char* strtok_r(s, delim, lasts) char* s;
 const char* delim;
 char** lasts;
 {
@@ -45,8 +44,8 @@ char** lasts;
         return (NULL);
 
     /*
-	 * Skip (span) leading delimiters (s += strspn(s, delim), sort of).
-	 */
+     * Skip (span) leading delimiters (s += strspn(s, delim), sort of).
+     */
 cont:
     c = *s++;
     for (spanp = delim; (sc = *spanp++) != 0;) {
@@ -61,9 +60,9 @@ cont:
     tok = s - 1;
 
     /*
-	 * Scan token (scan for delimiters: s += strcspn(s, delim), sort of).
-	 * Note that delim must have one NUL; we stop if we see that, too.
-	 */
+     * Scan token (scan for delimiters: s += strcspn(s, delim), sort of).
+     * Note that delim must have one NUL; we stop if we see that, too.
+     */
     for (;;) {
         c = *s++;
         spanp = delim;

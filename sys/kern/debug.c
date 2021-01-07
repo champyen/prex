@@ -42,13 +42,13 @@ typedef void (*diagfn_t)(char*);
 typedef void (*abtfn_t)(void);
 
 static abtfn_t db_abort = &machine_abort; /* abort handler */
-static diagfn_t db_puts = &diag_puts; /* function to print string */
-static char db_msg[DBGMSGSZ]; /* debug message string */
+static diagfn_t db_puts = &diag_puts;     /* function to print string */
+static char db_msg[DBGMSGSZ];             /* debug message string */
 
 static char log_buf[LOGBUFSZ]; /* log buffer */
-static u_long log_head; /* index for log head */
-static u_long log_tail; /* iundex for log tail */
-static u_long log_len; /* length of log */
+static u_long log_head;        /* index for log head */
+static u_long log_tail;        /* iundex for log tail */
+static u_long log_len;         /* length of log */
 
 #define LOGINDEX(x) ((x) & (LOGBUFSZ - 1))
 
@@ -70,8 +70,8 @@ void printf(const char* fmt, ...)
     (*db_puts)(db_msg);
 
     /*
-	 * Record to log buffer.
-	 */
+     * Record to log buffer.
+     */
     for (i = 0; i < DBGMSGSZ; i++) {
         c = db_msg[i];
         if (c == '\0')
@@ -114,8 +114,7 @@ void panic(const char* msg)
 /*
  * Copy log to the user's buffer.
  */
-static int
-getlog(char* buf)
+static int getlog(char* buf)
 {
     u_long cnt, len, i;
     int s, error = 0;
@@ -126,8 +125,8 @@ getlog(char* buf)
     len = log_len;
     if (len >= LOGBUFSZ) {
         /*
-		 * Overrun found. Discard broken message.
-		 */
+         * Overrun found. Discard broken message.
+         */
         while (len > 0 && log_buf[LOGINDEX(i)] != '\n') {
             i++;
             len--;

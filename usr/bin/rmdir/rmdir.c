@@ -37,8 +37,7 @@
 #define main(argc, argv) rmdir_main(argc, argv)
 #endif
 
-static void
-usage(void)
+static void usage(void)
 {
     fprintf(stderr, "usage: rmdir dirname...\n");
     exit(1);

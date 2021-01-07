@@ -43,7 +43,8 @@ x *
 #define PSFX 0x01
 #define PSFL 0x02
 
-struct procinfo {
+struct procinfo
+{
     pid_t pid;
     pid_t ppid;
     int stat;
@@ -51,8 +52,7 @@ struct procinfo {
 
 static object_t procobj;
 
-static int
-pstat(task_t task, struct procinfo* pi)
+static int pstat(task_t task, struct procinfo* pi)
 {
     static struct msg m;
     int rc;
@@ -78,8 +78,8 @@ pstat(task_t task, struct procinfo* pi)
 
 int main(int argc, char* argv[])
 {
-    static const char stat[][2] = { "R", "Z", "S" };
-    static const char pol[][5] = { "FIFO", "RR  " };
+    static const char stat[][2] = {"R", "Z", "S"};
+    static const char pol[][5] = {"FIFO", "RR  "};
     static struct threadinfo ti;
     static struct procinfo pi;
     int ch, rc, ps_flag = 0;
@@ -114,13 +114,13 @@ int main(int argc, char* argv[])
     ti.cookie = 0;
     do {
         /*
-		 * Get thread info from kernel.
-		 */
+         * Get thread info from kernel.
+         */
         rc = sys_info(INFO_THREAD, &ti);
         if (!rc) {
             /*
-			 * Get process info from server.
-			 */
+             * Get process info from server.
+             */
             if (pstat(ti.task, &pi) && !(ps_flag & PSFX))
                 continue;
 
@@ -132,9 +132,7 @@ int main(int argc, char* argv[])
 
                 printf(" %3d %s    %s %8d "
                        "%-11s %-11s\n",
-                    ti.priority, stat[pi.stat - 1],
-                    pol[ti.policy],
-                    ti.time, ti.slpevt, ti.taskname);
+                       ti.priority, stat[pi.stat - 1], pol[ti.policy], ti.time, ti.slpevt, ti.taskname);
             } else {
                 if (!(ps_flag & PSFX) && (pi.pid == last_pid))
                     continue;

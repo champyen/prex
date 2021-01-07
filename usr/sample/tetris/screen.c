@@ -180,13 +180,13 @@ void scr_update(void)
 
             ccol = i + 1;
             /*
-			 * Look ahead a bit, to avoid extra motion if
-			 * we will be redrawing the cell after the next.
-			 * Motion probably takes four or more characters,
-			 * so we save even if we rewrite two cells
-			 * `unnecessarily'.  Skip it all, though, if
-			 * the next cell is a different color.
-			 */
+             * Look ahead a bit, to avoid extra motion if
+             * we will be redrawing the cell after the next.
+             * Motion probably takes four or more characters,
+             * so we save even if we rewrite two cells
+             * `unnecessarily'.  Skip it all, though, if
+             * the next cell is a different color.
+             */
 #define STOP (B_COLS - 3)
             if (i > STOP || sp[1] != bp[1] || so != bp[1])
                 continue;

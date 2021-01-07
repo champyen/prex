@@ -56,34 +56,34 @@ int main(void)
     memset(bootinfo, 0, BOOTINFOSZ);
 
     /*
-	 * Initialize debug port.
-	 */
+     * Initialize debug port.
+     */
     debug_init();
     DPRINTF(("Prex Boot Loader\n"));
 
     /*
-	 * Do platform dependent initialization.
-	 */
+     * Do platform dependent initialization.
+     */
     startup();
 
     /*
-	 * Show splash screen.
-	 */
+     * Show splash screen.
+     */
     splash();
 
     /*
-	 * Load OS modules to appropriate locations.
-	 */
+     * Load OS modules to appropriate locations.
+     */
     load_os();
 
     /*
-	 * Dump boot infomation for debug.
-	 */
+     * Dump boot infomation for debug.
+     */
     dump_bootinfo();
 
     /*
-	 * Launch kernel.
-	 */
+     * Launch kernel.
+     */
     entry = (entry_t)kvtop(bootinfo->kernel.entry);
     DPRINTF(("Entering kernel (at 0x%lx) ...\n\n", (long)entry));
     (*entry)();

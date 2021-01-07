@@ -64,8 +64,8 @@ int main(int argc, char* argv[])
     }
 
     /*
-	 * Load current passcode.
-	 */
+     * Load current passcode.
+     */
     if ((fp = fopen(_PATH_PASSWD, "r")) == NULL) {
         printf("Passcode is not set.\n");
         setpass();
@@ -79,8 +79,8 @@ int main(int argc, char* argv[])
 
     if (update) {
         /*
-		 * Update current passcode.
-		 */
+         * Update current passcode.
+         */
         if (strcmp(getpass("Old passcode:"), passcode)) {
             printf("Mismatch.\n");
             exit(0);
@@ -89,8 +89,8 @@ int main(int argc, char* argv[])
     }
 
     /*
-	 * Lock keyboard until correct passcode input.
-	 */
+     * Lock keyboard until correct passcode input.
+     */
     signal(SIGQUIT, SIG_IGN);
     signal(SIGINT, SIG_IGN);
     signal(SIGTSTP, SIG_IGN);
@@ -104,8 +104,7 @@ int main(int argc, char* argv[])
     exit(0);
 }
 
-static void
-usage(void)
+static void usage(void)
 {
     fputs("usage: lock [-u]\n", stderr);
     exit(1);
@@ -116,8 +115,7 @@ usage(void)
  * We don't need to encrypt passcode file because it is stored
  * secure area in the file system.
  */
-static void
-setpass(void)
+static void setpass(void)
 {
     FILE* fp;
     char *p, *t;

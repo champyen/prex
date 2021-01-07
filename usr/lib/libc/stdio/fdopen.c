@@ -37,8 +37,7 @@
 #include <errno.h>
 #include "local.h"
 
-FILE*
-    fdopen(fd, mode) int fd;
+FILE* fdopen(fd, mode) int fd;
 const char* mode;
 {
     FILE* fp;
@@ -60,10 +59,10 @@ const char* mode;
         return (NULL);
     fp->_flags = flags;
     /*
-	 * If opened for appending, but underlying descriptor does not have
-	 * O_APPEND bit set, assert __SAPP so that __swrite() will lseek to
-	 * end before each write.
-	 */
+     * If opened for appending, but underlying descriptor does not have
+     * O_APPEND bit set, assert __SAPP so that __swrite() will lseek to
+     * end before each write.
+     */
     if ((oflags & O_APPEND) && !(fdflags & O_APPEND))
         fp->_flags |= __SAPP;
     fp->_file = fd;

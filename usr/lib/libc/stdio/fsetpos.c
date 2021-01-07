@@ -35,9 +35,7 @@
 /*
  * fsetpos: like fseek.
  */
-int
-    fsetpos(iop, pos)
-        FILE* iop;
+int fsetpos(iop, pos) FILE* iop;
 const fpos_t* pos;
 {
     return (fseek(iop, (long)*pos, SEEK_SET));

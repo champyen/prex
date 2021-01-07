@@ -32,9 +32,7 @@
 #include <stdio.h>
 #include <string.h>
 
-void
-    perror(s)
-        const char* s;
+void perror(s) const char* s;
 {
     if (s != NULL && *s != '\0') {
         fputs(s, stderr);

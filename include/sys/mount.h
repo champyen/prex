@@ -37,39 +37,42 @@
 #include <sys/vnode.h>
 #include <sys/syslimits.h>
 
-typedef struct {
+typedef struct
+{
     int32_t val[2];
 } fsid_t; /* file system id type */
 
 /*
  * file system statistics
  */
-struct statfs {
-    short f_type; /* filesystem type number */
-    short f_flags; /* copy of mount flags */
-    long f_bsize; /* fundamental file system block size */
-    long f_blocks; /* total data blocks in file system */
-    long f_bfree; /* free blocks in fs */
-    long f_bavail; /* free blocks avail to non-superuser */
-    long f_files; /* total file nodes in file system */
-    long f_ffree; /* free file nodes in fs */
-    fsid_t f_fsid; /* file system id */
+struct statfs
+{
+    short f_type;   /* filesystem type number */
+    short f_flags;  /* copy of mount flags */
+    long f_bsize;   /* fundamental file system block size */
+    long f_blocks;  /* total data blocks in file system */
+    long f_bfree;   /* free blocks in fs */
+    long f_bavail;  /* free blocks avail to non-superuser */
+    long f_files;   /* total file nodes in file system */
+    long f_ffree;   /* free file nodes in fs */
+    fsid_t f_fsid;  /* file system id */
     long f_namelen; /* maximum filename length */
 };
 
 /*
  * Mount data
  */
-struct mount {
-    struct list m_link; /* link to next mount point */
-    struct vfsops* m_op; /* pointer to vfs operation */
-    int m_flags; /* mount flag */
-    int m_count; /* reference count */
-    char m_path[PATH_MAX]; /* mounted path */
-    dev_t m_dev; /* mounted device */
-    struct vnode* m_root; /* root vnode */
+struct mount
+{
+    struct list m_link;      /* link to next mount point */
+    struct vfsops* m_op;     /* pointer to vfs operation */
+    int m_flags;             /* mount flag */
+    int m_count;             /* reference count */
+    char m_path[PATH_MAX];   /* mounted path */
+    dev_t m_dev;             /* mounted device */
+    struct vnode* m_root;    /* root vnode */
     struct vnode* m_covered; /* vnode covered on parent fs */
-    void* m_data; /* private data for fs */
+    void* m_data;            /* private data for fs */
 };
 typedef struct mount* mount_t;
 
@@ -78,28 +81,28 @@ typedef struct mount* mount_t;
  *
  * Unmount uses MNT_FORCE flag.
  */
-#define MNT_RDONLY 0x00000001 /* read only filesystem */
+#define MNT_RDONLY 0x00000001      /* read only filesystem */
 #define MNT_SYNCHRONOUS 0x00000002 /* file system written synchronously */
-#define MNT_NOEXEC 0x00000004 /* can't exec from filesystem */
-#define MNT_NOSUID 0x00000008 /* don't honor setuid bits on fs */
-#define MNT_NODEV 0x00000010 /* don't interpret special files */
-#define MNT_UNION 0x00000020 /* union with underlying filesystem */
-#define MNT_ASYNC 0x00000040 /* file system written asynchronously */
+#define MNT_NOEXEC 0x00000004      /* can't exec from filesystem */
+#define MNT_NOSUID 0x00000008      /* don't honor setuid bits on fs */
+#define MNT_NODEV 0x00000010       /* don't interpret special files */
+#define MNT_UNION 0x00000020       /* union with underlying filesystem */
+#define MNT_ASYNC 0x00000040       /* file system written asynchronously */
 
 /*
  * exported mount flags.
  */
-#define MNT_EXRDONLY 0x00000080 /* exported read only */
-#define MNT_EXPORTED 0x00000100 /* file system is exported */
+#define MNT_EXRDONLY 0x00000080    /* exported read only */
+#define MNT_EXPORTED 0x00000100    /* file system is exported */
 #define MNT_DEFEXPORTED 0x00000200 /* exported to the world */
-#define MNT_EXPORTANON 0x00000400 /* use anon uid mapping for everyone */
-#define MNT_EXKERB 0x00000800 /* exported with Kerberos uid mapping */
+#define MNT_EXPORTANON 0x00000400  /* use anon uid mapping for everyone */
+#define MNT_EXKERB 0x00000800      /* exported with Kerberos uid mapping */
 
 /*
  * Flags set by internal operations.
  */
-#define MNT_LOCAL 0x00001000 /* filesystem is stored locally */
-#define MNT_QUOTA 0x00002000 /* quotas are enabled on filesystem */
+#define MNT_LOCAL 0x00001000  /* filesystem is stored locally */
+#define MNT_QUOTA 0x00002000  /* quotas are enabled on filesystem */
 #define MNT_ROOTFS 0x00004000 /* identifies the root filesystem */
 
 /*
@@ -110,8 +113,9 @@ typedef struct mount* mount_t;
 /*
  * Filesystem type switch table.
  */
-struct vfssw {
-    char* vs_name; /* name of file system */
+struct vfssw
+{
+    char* vs_name;        /* name of file system */
     int (*vs_init)(void); /* initialize routine */
     struct vfsops* vs_op; /* pointer to vfs operation */
 };
@@ -119,7 +123,8 @@ struct vfssw {
 /*
  * Operations supported on virtual file system.
  */
-struct vfsops {
+struct vfsops
+{
     int (*vfs_mount)(mount_t, char*, int, void*);
     int (*vfs_unmount)(mount_t);
     int (*vfs_sync)(mount_t);

@@ -36,18 +36,16 @@
 /*
  * Span the complement of string s2.
  */
-size_t
-    strcspn(s1, s2)
-        const char* s1;
+size_t strcspn(s1, s2) const char* s1;
 const char* s2;
 {
     const char *p, *spanp;
     char c, sc;
 
     /*
-	 * Stop as soon as we find any character from s2.  Note that there
-	 * must be a NUL in s2; it suffices to stop when we find that, too.
-	 */
+     * Stop as soon as we find any character from s2.  Note that there
+     * must be a NUL in s2; it suffices to stop when we find that, too.
+     */
     for (p = s1;;) {
         c = *p++;
         spanp = s2;

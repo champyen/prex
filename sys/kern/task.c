@@ -43,9 +43,9 @@
 #include <hal.h>
 #include <sys/bootinfo.h>
 
-struct task kernel_task; /* kernel task */
+struct task kernel_task;      /* kernel task */
 static struct list task_list; /* list for all tasks */
-static int ntasks; /* number of tasks in system */
+static int ntasks;            /* number of tasks in system */
 
 /**
  * task_create - create a new task.
@@ -89,10 +89,10 @@ int task_create(task_t parent, int vm_option, task_t* childp)
             return EPERM;
         }
         /*
-		 * It's important to set zero as task id before
-		 * copying parent's memory space. Otherwise, we
-		 * have to switch VM space to copy it.
-		 */
+         * It's important to set zero as task id before
+         * copying parent's memory space. Otherwise, we
+         * have to switch VM space to copy it.
+         */
         task = 0;
         if (copyout(&task, childp, sizeof(task))) {
             sched_unlock();
@@ -107,8 +107,8 @@ int task_create(task_t parent, int vm_option, task_t* childp)
     memset(task, 0, sizeof(*task));
 
     /*
-	 * Setup VM mapping.
-	 */
+     * Setup VM mapping.
+     */
     switch (vm_option) {
     case VM_NEW:
         map = vm_create();
@@ -128,8 +128,8 @@ int task_create(task_t parent, int vm_option, task_t* childp)
     }
 
     /*
-	 * Fill initial task data.
-	 */
+     * Fill initial task data.
+     */
     task->map = map;
     task->handler = parent->handler;
     task->capability = parent->capability;
@@ -148,9 +148,9 @@ int task_create(task_t parent, int vm_option, task_t* childp)
         *childp = task;
     else {
         /*
-		 * No page fault here because we have already
-		 * checked it.
-		 */
+         * No page fault here because we have already
+         * checked it.
+         */
         copyout(&task, childp, sizeof(task));
     }
 
@@ -180,8 +180,8 @@ int task_terminate(task_t task)
     task->handler = EXC_DFL;
 
     /*
-	 * Clean up all resources owned by the target task.
-	 */
+     * Clean up all resources owned by the target task.
+     */
     timer_stop(&task->alarm);
     object_cleanup(task);
     mutex_cleanup(task);
@@ -189,8 +189,8 @@ int task_terminate(task_t task)
     sem_cleanup(task);
 
     /*
-	 * Terminate each thread in the task.
-	 */
+     * Terminate each thread in the task.
+     */
     head = &task->threads;
     for (n = list_first(head); n != head; n = list_next(n)) {
         t = list_entry(n, struct thread, task_link);
@@ -211,8 +211,7 @@ int task_terminate(task_t task)
 /*
  * Return the current task.
  */
-task_t
-task_self(void)
+task_t task_self(void)
 {
 
     return curthread->task;
@@ -238,8 +237,8 @@ int task_suspend(task_t task)
 
     if (++task->suscnt == 1) {
         /*
-		 * Suspend all threads within the task.
-		 */
+         * Suspend all threads within the task.
+         */
         head = &task->threads;
         for (n = list_first(head); n != head; n = list_next(n)) {
             t = list_entry(n, struct thread, task_link);
@@ -279,8 +278,8 @@ int task_resume(task_t task)
 
     if (--task->suscnt == 0) {
         /*
-		 * Resume all threads in the target task.
-		 */
+         * Resume all threads in the target task.
+         */
         head = &task->threads;
         for (n = list_first(head); n != head; n = list_next(n)) {
             t = list_entry(n, struct thread, task_link);
@@ -362,8 +361,7 @@ int task_chkcap(task_t task, cap_t cap)
         return ESRCH;
     }
     if ((task->capability & cap) == 0) {
-        DPRINTF(("Denying capability by %s: task=%s cap=%08x\n",
-            curtask->name, task->name, cap));
+        DPRINTF(("Denying capability by %s: task=%s cap=%08x\n", curtask->name, task->name, cap));
         if (task->flags & TF_AUDIT)
             panic("audit failed");
         error = EPERM;
@@ -381,8 +379,7 @@ int task_capable(cap_t cap)
     int capable = 1;
 
     if ((curtask->capability & cap) == 0) {
-        DPRINTF(("Denying capability by kernel: task=%s cap=%08x\n",
-            curtask->name, cap));
+        DPRINTF(("Denying capability by kernel: task=%s cap=%08x\n", curtask->name, cap));
         if (curtask->flags & TF_AUDIT)
             panic("audit failed");
         capable = 0;
@@ -471,8 +468,8 @@ void task_bootstrap(void)
 
     for (i = 0; i < bi->nr_tasks; i++) {
         /*
-		 * Create a new task.
-		 */
+         * Create a new task.
+         */
         if ((error = task_create(&kernel_task, VM_NEW, &task)) != 0)
             break;
         if ((error = vm_load(task->map, mod, &stack)) != 0)
@@ -480,16 +477,16 @@ void task_bootstrap(void)
         task_setname(task, mod->name);
 
         /*
-		 * Set the default capability.
-		 * We give CAP_SETPCAP to the exec server.
-		 */
+         * Set the default capability.
+         * We give CAP_SETPCAP to the exec server.
+         */
         task->capability = CAPSET_BOOT;
         if (!strncmp(task->name, "exec", MAXTASKNAME))
             task->capability |= CAP_SETPCAP;
 
         /*
-		 * Create and start a new thread.
-		 */
+         * Create and start a new thread.
+         */
         if ((error = thread_create(task, &t)) != 0)
             break;
         sp = (char*)stack + DFLSTKSZ - (sizeof(int) * 3);
@@ -517,8 +514,8 @@ void task_init(void)
     list_init(&task_list);
 
     /*
-	 * Create a kernel task as first task.
-	 */
+     * Create a kernel task as first task.
+     */
     strlcpy(kernel_task.name, "kernel", MAXTASKNAME);
     kernel_task.flags = TF_SYSTEM;
     kernel_task.nthreads = 0;

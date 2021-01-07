@@ -58,32 +58,31 @@ static void disk_partition(int, char**);
 static void disk_help(int, char**);
 static void disk_null(int, char**);
 
-struct cmdtab {
+struct cmdtab
+{
     const char* cmd;
     void (*func)(int, char**);
     const char* usage;
 };
 
 static const struct cmdtab cmdtab[] = {
-    { "list", disk_list, " list      - List the partitions of a disk.\n" },
-    { "info", disk_info, " info      - Display information on a disk or volume.\n" },
-    { "mount", disk_mount, " mount     - Mount a single volume.\n" },
-    { "unmount", disk_unmount, " unmount   - Unmount a single volume.\n" },
-    { "eject", disk_eject, " eject     - Eject a disk.\n" },
-    { "rename", disk_rename, " rename    - Rename a volume.\n" },
-    { "verify", disk_verify, " verify    - Verify the structure of a volume.\n" },
-    { "partition", disk_partition, " partition - Partitiona disk, removing all volume.\n" },
-    { "-?", disk_help, " -?        - This help.\n" },
-    { NULL, disk_null, NULL },
+    {"list", disk_list, " list      - List the partitions of a disk.\n"},
+    {"info", disk_info, " info      - Display information on a disk or volume.\n"},
+    {"mount", disk_mount, " mount     - Mount a single volume.\n"},
+    {"unmount", disk_unmount, " unmount   - Unmount a single volume.\n"},
+    {"eject", disk_eject, " eject     - Eject a disk.\n"},
+    {"rename", disk_rename, " rename    - Rename a volume.\n"},
+    {"verify", disk_verify, " verify    - Verify the structure of a volume.\n"},
+    {"partition", disk_partition, " partition - Partitiona disk, removing all volume.\n"},
+    {"-?", disk_help, " -?        - This help.\n"},
+    {NULL, disk_null, NULL},
 };
 
-static void
-disk_null(int argc, char** argv)
+static void disk_null(int argc, char** argv)
 {
 }
 
-static void
-disk_help(int argc, char** argv)
+static void disk_help(int argc, char** argv)
 {
     int i = 0;
 
@@ -96,18 +95,15 @@ disk_help(int argc, char** argv)
     }
 }
 
-static void
-disk_list(int argc, char** argv)
+static void disk_list(int argc, char** argv)
 {
 }
 
-static void
-disk_info(int argc, char** argv)
+static void disk_info(int argc, char** argv)
 {
 }
 
-static void
-disk_mount(int argc, char** argv)
+static void disk_mount(int argc, char** argv)
 {
 
     if (argc != 6) {
@@ -120,28 +116,23 @@ disk_mount(int argc, char** argv)
     }
 }
 
-static void
-disk_unmount(int argc, char** argv)
+static void disk_unmount(int argc, char** argv)
 {
 }
 
-static void
-disk_eject(int argc, char** argv)
+static void disk_eject(int argc, char** argv)
 {
 }
 
-static void
-disk_rename(int argc, char** argv)
+static void disk_rename(int argc, char** argv)
 {
 }
 
-static void
-disk_verify(int argc, char** argv)
+static void disk_verify(int argc, char** argv)
 {
 }
 
-static void
-disk_partition(int argc, char** argv)
+static void disk_partition(int argc, char** argv)
 {
 }
 

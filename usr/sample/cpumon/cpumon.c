@@ -59,21 +59,21 @@ int main(int argc, char* argv[])
         panic("Invalid cpu power/speed");
 
     /*
-	 * Setup periodic timer for 10msec period
-	 */
+     * Setup periodic timer for 10msec period
+     */
     timer_periodic(thread_self(), 100, 10);
     for (;;) {
         /*
-		 * Wait next period
-		 */
+         * Wait next period
+         */
         timer_waitperiod();
         device_ioctl(dev, CFIOC_GET_INFO, &cf_info);
         if (cf_info.freq != last_mhz) {
             printf("\33[s"); /* save cursor */
 
             /*
-			 * Display speed
-			 */
+             * Display speed
+             */
             printf("\nSpeed: %4dMHz  0|", cf_info.freq);
             j = cf_info.freq * 100 / cf_info.maxfreq;
             for (i = 0; i < 20; i++)
@@ -82,8 +82,8 @@ int main(int argc, char* argv[])
             printf("%s|100", bar);
 
             /*
-			 * Display power
-			 */
+             * Display power
+             */
             printf("\nPower: %4dmV   0|", cf_info.volts);
             j = cf_info.volts * 100 / cf_info.maxvolts;
             for (i = 0; i < 20; i++)

@@ -56,37 +56,36 @@
  */
 struct mmumap mmumap_table[] = {
     /*
-	 * Internal SRAM (4M)
-	 */
-    { 0x80000000, 0x00000000, 0x400000, VMT_RAM },
+     * Internal SRAM (4M)
+     */
+    {0x80000000, 0x00000000, 0x400000, VMT_RAM},
 
     /*
-	 * FPGA core control (4K)
-	 */
-    { 0xD0000000, 0x10000000, 0x1000, VMT_IO },
+     * FPGA core control (4K)
+     */
+    {0xD0000000, 0x10000000, 0x1000, VMT_IO},
 
     /*
-	 * Counter/Timers (1M)
-	 */
-    { 0xD3000000, 0x13000000, 0x100000, VMT_IO },
+     * Counter/Timers (1M)
+     */
+    {0xD3000000, 0x13000000, 0x100000, VMT_IO},
 
     /*
-	 * Interrupt controller (1M)
-	 */
-    { 0xD4000000, 0x14000000, 0x100000, VMT_IO },
+     * Interrupt controller (1M)
+     */
+    {0xD4000000, 0x14000000, 0x100000, VMT_IO},
 
     /*
-	 * Real-time clock (1M)
-	 */
-    { 0xD5000000, 0x15000000, 0x100000, VMT_IO },
+     * Real-time clock (1M)
+     */
+    {0xD5000000, 0x15000000, 0x100000, VMT_IO},
 
     /*
-	 * UART 0 (1M)
-	 */
-    { 0xD6000000, 0x16000000, 0x100000, VMT_IO },
+     * UART 0 (1M)
+     */
+    {0xD6000000, 0x16000000, 0x100000, VMT_IO},
 
-    { 0, 0, 0, 0 }
-};
+    {0, 0, 0, 0}};
 #endif
 
 /*
@@ -101,8 +100,7 @@ void machine_idle(void)
 /*
  * Reset system.
  */
-static void
-machine_reset(void)
+static void machine_reset(void)
 {
 
     SC_CTRL = SCCTRL_SOFTRESET;
@@ -158,25 +156,25 @@ void machine_startup(void)
 {
 
     /*
-	 * Initialize CPU and basic hardware.
-	 */
+     * Initialize CPU and basic hardware.
+     */
     cpu_init();
     cache_init();
 
     /*
-	 * Reserve system pages.
-	 */
+     * Reserve system pages.
+     */
     page_reserve(kvtop(SYSPAGE), SYSPAGESZ);
 
     /*
-	 * Setup vector page.
-	 */
+     * Setup vector page.
+     */
     vector_copy((vaddr_t)ptokv(CONFIG_ARM_VECTORS));
 
 #ifdef CONFIG_MMU
     /*
-	 * Initialize MMU
-	 */
+     * Initialize MMU
+     */
     mmu_init(mmumap_table);
 #endif
 }

@@ -67,17 +67,14 @@ int relocate_rela(Elf32_Rela* rela, Elf32_Addr sym_val, char* target_sect)
         break;
     case R_PPC_REL24:
         ELFDBG(("R_PPC_REL24\n"));
-        *(uint32_t*)where = (*(uint32_t*)where & ~0x03fffffc)
-            | ((val - (uint32_t)where)
-                & 0x03fffffc);
+        *(uint32_t*)where = (*(uint32_t*)where & ~0x03fffffc) | ((val - (uint32_t)where) & 0x03fffffc);
         break;
     case R_PPC_REL32:
         ELFDBG(("R_PPC_REL32\n"));
         *(uint32_t*)where = val - (uint32_t)where;
         break;
     default:
-        ELFDBG(("Unkown relocation type=%d\n",
-            ELF32_R_TYPE(rela->r_info)));
+        ELFDBG(("Unkown relocation type=%d\n", ELF32_R_TYPE(rela->r_info)));
         panic("relocation fail");
         return -1;
     }

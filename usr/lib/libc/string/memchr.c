@@ -33,9 +33,7 @@
 #include <sys/cdefs.h>
 #include <string.h>
 
-void*
-    memchr(s, c, n)
-        const void* s;
+void* memchr(s, c, n) const void* s;
 unsigned char c;
 size_t n;
 {

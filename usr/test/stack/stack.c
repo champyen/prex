@@ -36,8 +36,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-static void
-print_recursive(int num)
+static void print_recursive(int num)
 {
 
     printf("%d %x\n", num, (unsigned int)&num);

@@ -43,7 +43,7 @@ static int load_relocatable(char*, struct module*);
 #define SHF_VALID (SHF_ALLOC | SHF_EXECINSTR | SHF_ALLOC | SHF_WRITE)
 
 static char* sect_addr[32]; /* array of section address */
-static int strshndx; /* index of string section */
+static int strshndx;        /* index of string section */
 
 /*
  * Load the program from specified ELF image stored in memory.
@@ -59,7 +59,8 @@ int load_elf(char* img, struct module* m)
     ehdr = (Elf32_Ehdr*)img;
 
     /*  Check ELF header */
-    if ((ehdr->e_ident[EI_MAG0] != ELFMAG0) || (ehdr->e_ident[EI_MAG1] != ELFMAG1) || (ehdr->e_ident[EI_MAG2] != ELFMAG2) || (ehdr->e_ident[EI_MAG3] != ELFMAG3)) {
+    if ((ehdr->e_ident[EI_MAG0] != ELFMAG0) || (ehdr->e_ident[EI_MAG1] != ELFMAG1) ||
+        (ehdr->e_ident[EI_MAG2] != ELFMAG2) || (ehdr->e_ident[EI_MAG3] != ELFMAG3)) {
         DPRINTF(("Invalid ELF image\n"));
         return -1;
     }
@@ -101,8 +102,7 @@ int load_elf(char* img, struct module* m)
     return 0;
 }
 
-static int
-load_executable(char* img, struct module* m)
+static int load_executable(char* img, struct module* m)
 {
     Elf32_Ehdr* ehdr;
     Elf32_Phdr* phdr;
@@ -140,16 +140,13 @@ load_executable(char* img, struct module* m)
             load_base = phys_base + (m->data - m->text);
         }
         if (phdr->p_filesz > 0) {
-            memcpy((char*)load_base, img + phdr->p_offset,
-                (size_t)phdr->p_filesz);
-            ELFDBG(("load: offset=%lx size=%x\n",
-                load_base, (int)phdr->p_filesz));
+            memcpy((char*)load_base, img + phdr->p_offset, (size_t)phdr->p_filesz);
+            ELFDBG(("load: offset=%lx size=%x\n", load_base, (int)phdr->p_filesz));
         }
         if (!(phdr->p_flags & PF_X)) {
             if (m->bsssz > 0) {
                 /* Zero fill BSS */
-                memset((char*)load_base + m->datasz,
-                    0, m->bsssz);
+                memset((char*)load_base + m->datasz, 0, m->bsssz);
             }
             load_base += phdr->p_memsz;
         }
@@ -168,9 +165,7 @@ load_executable(char* img, struct module* m)
     return 0;
 }
 
-static int
-relocate_section_rela(Elf32_Sym* sym_table, Elf32_Rela* rela,
-    char* target_sect, int nr_reloc, char* strtab)
+static int relocate_section_rela(Elf32_Sym* sym_table, Elf32_Rela* rela, char* target_sect, int nr_reloc, char* strtab)
 {
     Elf32_Sym* sym;
     Elf32_Addr sym_val;
@@ -183,13 +178,11 @@ relocate_section_rela(Elf32_Sym* sym_table, Elf32_Rela* rela,
             /* Empty symbol used for R_ARM_V4BX, etc */
             sym_val = sym->st_value;
         } else if (sym->st_shndx != STN_UNDEF) {
-            sym_val = (Elf32_Addr)sect_addr[sym->st_shndx]
-                + sym->st_value;
+            sym_val = (Elf32_Addr)sect_addr[sym->st_shndx] + sym->st_value;
             if (relocate_rela(rela, sym_val, target_sect) != 0)
                 return -1;
         } else if (ELF32_ST_BIND(sym->st_info) != STB_WEAK) {
-            DPRINTF(("Undefined symbol for rela[%x] sym=%lx\n",
-                i, (long)sym));
+            DPRINTF(("Undefined symbol for rela[%x] sym=%lx\n", i, (long)sym));
             return -1;
         } else {
             DPRINTF(("Undefined weak symbol for rela[%x]\n", i));
@@ -199,9 +192,7 @@ relocate_section_rela(Elf32_Sym* sym_table, Elf32_Rela* rela,
     return 0;
 }
 
-static int
-relocate_section_rel(Elf32_Sym* sym_table, Elf32_Rel* rel,
-    char* target_sect, int nr_reloc, char* strtab)
+static int relocate_section_rel(Elf32_Sym* sym_table, Elf32_Rel* rel, char* target_sect, int nr_reloc, char* strtab)
 {
     Elf32_Sym* sym;
     Elf32_Addr sym_val;
@@ -214,13 +205,11 @@ relocate_section_rel(Elf32_Sym* sym_table, Elf32_Rel* rel,
             /* Empty symbol used for R_ARM_V4BX, etc */
             sym_val = sym->st_value;
         } else if (sym->st_shndx != STN_UNDEF) {
-            sym_val = (Elf32_Addr)sect_addr[sym->st_shndx]
-                + sym->st_value;
+            sym_val = (Elf32_Addr)sect_addr[sym->st_shndx] + sym->st_value;
             if (relocate_rel(rel, sym_val, target_sect) != 0)
                 return -1;
         } else if (ELF32_ST_BIND(sym->st_info) != STB_WEAK) {
-            DPRINTF(("Undefined symbol for rel[%x] sym=%lx\n",
-                i, (long)sym));
+            DPRINTF(("Undefined symbol for rel[%x] sym=%lx\n", i, (long)sym));
             return -1;
         } else {
             DPRINTF(("Undefined weak symbol for rel[%x]\n", i));
@@ -230,8 +219,7 @@ relocate_section_rel(Elf32_Sym* sym_table, Elf32_Rel* rel,
     return 0;
 }
 
-static int
-relocate_section(char* img, Elf32_Shdr* shdr)
+static int relocate_section(char* img, Elf32_Shdr* shdr)
 {
     Elf32_Sym* symtab;
     char* target_sect;
@@ -253,15 +241,11 @@ relocate_section(char* img, Elf32_Shdr* shdr)
     nr_reloc = (int)(shdr->sh_size / shdr->sh_entsize);
     switch (shdr->sh_type) {
     case SHT_REL:
-        error = relocate_section_rel(symtab,
-            (Elf32_Rel*)(img + shdr->sh_offset),
-            target_sect, nr_reloc, strtab);
+        error = relocate_section_rel(symtab, (Elf32_Rel*)(img + shdr->sh_offset), target_sect, nr_reloc, strtab);
         break;
 
     case SHT_RELA:
-        error = relocate_section_rela(symtab,
-            (Elf32_Rela*)(img + shdr->sh_offset),
-            target_sect, nr_reloc, strtab);
+        error = relocate_section_rela(symtab, (Elf32_Rela*)(img + shdr->sh_offset), target_sect, nr_reloc, strtab);
         break;
 
     default:
@@ -271,8 +255,7 @@ relocate_section(char* img, Elf32_Shdr* shdr)
     return error;
 }
 
-static int
-load_relocatable(char* img, struct module* m)
+static int load_relocatable(char* img, struct module* m)
 {
     Elf32_Ehdr* ehdr;
     Elf32_Shdr* shdr;
@@ -315,10 +298,8 @@ load_relocatable(char* img, struct module* m)
                 continue;
             }
             sect_base = load_base + shdr->sh_addr;
-            memcpy((char*)sect_base, img + shdr->sh_offset,
-                (size_t)shdr->sh_size);
-            ELFDBG(("load: offset=%lx size=%x\n",
-                sect_base, (int)shdr->sh_size));
+            memcpy((char*)sect_base, img + shdr->sh_offset, (size_t)shdr->sh_size);
+            ELFDBG(("load: offset=%lx size=%x\n", sect_base, (int)shdr->sh_size));
 
             sect_addr[i] = (char*)sect_base;
         } else if (shdr->sh_type == SHT_NOBITS) {
@@ -333,8 +314,7 @@ load_relocatable(char* img, struct module* m)
             sect_addr[i] = (char*)sect_base;
         } else if (shdr->sh_type == SHT_SYMTAB) {
             /* Symbol table */
-            ELFDBG(("load: symtab index=%d link=%d\n",
-                i, shdr->sh_link));
+            ELFDBG(("load: symtab index=%d link=%d\n", i, shdr->sh_link));
             sect_addr[i] = img + shdr->sh_offset;
             if (strshndx != 0)
                 panic("Multiple symtab found!");
@@ -342,8 +322,7 @@ load_relocatable(char* img, struct module* m)
         } else if (shdr->sh_type == SHT_STRTAB) {
             /* String table */
             sect_addr[i] = img + shdr->sh_offset;
-            ELFDBG(("load: strtab index=%d addr=%x\n",
-                i, sect_addr[i]));
+            ELFDBG(("load: strtab index=%d addr=%x\n", i, sect_addr[i]));
         }
     }
     m->textsz = (size_t)(m->data - m->text);

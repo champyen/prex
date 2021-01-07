@@ -97,20 +97,20 @@ int msg_send(object_t obj, void* msg, size_t size)
         return EINVAL;
     }
     /*
-	 * A thread can not send a message when it is
-	 * already receiving from the target object.
-	 * It will obviously cause a deadlock.
-	 */
+     * A thread can not send a message when it is
+     * already receiving from the target object.
+     * It will obviously cause a deadlock.
+     */
     if (obj == curthread->recvobj) {
         sched_unlock();
         return EDEADLK;
     }
     /*
-	 * Translate message address to the kernel linear
-	 * address.  So that a receiver thread can access
-	 * the message via kernel pointer. We can catch
-	 * the page fault here.
-	 */
+     * Translate message address to the kernel linear
+     * address.  So that a receiver thread can access
+     * the message via kernel pointer. We can catch
+     * the page fault here.
+     */
     if ((kmsg = kmem_map(msg, size)) == NULL) {
         sched_unlock();
         return EFAULT;
@@ -119,26 +119,26 @@ int msg_send(object_t obj, void* msg, size_t size)
     curthread->msgsize = size;
 
     /*
-	 * The sender ID is filled in the message header
-	 * by the kernel. So, the receiver can trust it.
-	 */
+     * The sender ID is filled in the message header
+     * by the kernel. So, the receiver can trust it.
+     */
     hdr = (struct msg_header*)kmsg;
     hdr->task = curtask;
 
     /*
-	 * If receiver already exists, wake it up.
-	 * The highest priority thread can get the message.
-	 */
+     * If receiver already exists, wake it up.
+     * The highest priority thread can get the message.
+     */
     if (!queue_empty(&obj->recvq)) {
         t = msg_dequeue(&obj->recvq);
         sched_unsleep(t, 0);
     }
     /*
-	 * Sleep until we get a reply message.
-	 * Note: Do not touch any data in the object
-	 * structure after we wakeup. This is because the
-	 * target object may be deleted while we are sleeping.
-	 */
+     * Sleep until we get a reply message.
+     * Note: Do not touch any data in the object
+     * structure after we wakeup. This is because the
+     * target object may be deleted while we are sleeping.
+     */
     curthread->sendobj = obj;
     msg_enqueue(&obj->sendq, curthread);
     rc = sched_sleep(&ipc_event);
@@ -149,8 +149,8 @@ int msg_send(object_t obj, void* msg, size_t size)
     sched_unlock();
 
     /*
-	 * Check sleep result.
-	 */
+     * Check sleep result.
+     */
     switch (rc) {
     case SLP_BREAK:
         return EAGAIN; /* Receiver has been terminated */
@@ -203,10 +203,10 @@ int msg_receive(object_t obj, void* msg, size_t size)
         return EACCES;
     }
     /*
-	 * Check if this thread finished previous receive
-	 * operation.  A thread can not receive different
-	 * messages at once.
-	 */
+     * Check if this thread finished previous receive
+     * operation.  A thread can not receive different
+     * messages at once.
+     */
     if (curthread->recvobj) {
         sched_unlock();
         return EBUSY;
@@ -214,18 +214,18 @@ int msg_receive(object_t obj, void* msg, size_t size)
     curthread->recvobj = obj;
 
     /*
-	 * If no message exists, wait until message arrives.
-	 */
+     * If no message exists, wait until message arrives.
+     */
     while (queue_empty(&obj->sendq)) {
         /*
-		 * Block until someone sends a message.
-		 */
+         * Block until someone sends a message.
+         */
         msg_enqueue(&obj->recvq, curthread);
         rc = sched_sleep(&ipc_event);
         if (rc != 0) {
             /*
-			 * Receive is failed due to some reasons.
-			 */
+             * Receive is failed due to some reasons.
+             */
             switch (rc) {
             case SLP_INVAL:
                 error = EINVAL; /* Object has been deleted */
@@ -244,19 +244,19 @@ int msg_receive(object_t obj, void* msg, size_t size)
         }
 
         /*
-		 * Check the existence of the sender thread again.
-		 * Even if this thread is woken by the sender thread,
-		 * the message may be received by another thread.
-		 * This may happen when another high priority thread
-		 * becomes runnable before we receive the message.
-		 */
+         * Check the existence of the sender thread again.
+         * Even if this thread is woken by the sender thread,
+         * the message may be received by another thread.
+         * This may happen when another high priority thread
+         * becomes runnable before we receive the message.
+         */
     }
 
     t = msg_dequeue(&obj->sendq);
 
     /*
-	 * Copy out the message to the user-space.
-	 */
+     * Copy out the message to the user-space.
+     */
     len = MIN(size, t->msgsize);
     if (len > 0) {
         if (copyout(t->msgaddr, msg, len)) {
@@ -267,8 +267,8 @@ int msg_receive(object_t obj, void* msg, size_t size)
         }
     }
     /*
-	 * Detach the message from the target object.
-	 */
+     * Detach the message from the target object.
+     */
     curthread->sender = t;
     t->receiver = curthread;
 
@@ -297,8 +297,8 @@ int msg_reply(object_t obj, void* msg, size_t size)
         return EINVAL;
     }
     /*
-	 * Check if sender still exists
-	 */
+     * Check if sender still exists
+     */
     if (curthread->sender == NULL) {
         /* Clear receive state */
         curthread->recvobj = NULL;
@@ -306,8 +306,8 @@ int msg_reply(object_t obj, void* msg, size_t size)
         return EINVAL;
     }
     /*
-	 * Copy a message to the sender's buffer.
-	 */
+     * Copy a message to the sender's buffer.
+     */
     t = curthread->sender;
     len = MIN(size, t->msgsize);
     if (len > 0) {
@@ -317,8 +317,8 @@ int msg_reply(object_t obj, void* msg, size_t size)
         }
     }
     /*
-	 * Wakeup sender with no error.
-	 */
+     * Wakeup sender with no error.
+     */
     sched_unsleep(t, 0);
     t->receiver = NULL;
 
@@ -383,16 +383,16 @@ void msg_abort(object_t obj)
     sched_lock();
 
     /*
-	 * Force wakeup all threads in the send queue.
-	 */
+     * Force wakeup all threads in the send queue.
+     */
     while (!queue_empty(&obj->sendq)) {
         q = dequeue(&obj->sendq);
         t = queue_entry(q, struct thread, ipc_link);
         sched_unsleep(t, SLP_INVAL);
     }
     /*
-	 * Force wakeup all threads waiting for receive.
-	 */
+     * Force wakeup all threads waiting for receive.
+     */
     while (!queue_empty(&obj->recvq)) {
         q = dequeue(&obj->recvq);
         t = queue_entry(q, struct thread, ipc_link);
@@ -405,8 +405,7 @@ void msg_abort(object_t obj)
  * Dequeue thread from the IPC queue.
  * The most highest priority thread will be chosen.
  */
-static thread_t
-msg_dequeue(queue_t head)
+static thread_t msg_dequeue(queue_t head)
 {
     queue_t q;
     thread_t t, top;
@@ -424,8 +423,7 @@ msg_dequeue(queue_t head)
     return top;
 }
 
-static void
-msg_enqueue(queue_t head, thread_t t)
+static void msg_enqueue(queue_t head, thread_t t)
 {
 
     enqueue(head, &t->ipc_link);

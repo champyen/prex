@@ -38,18 +38,18 @@
 /*
  * Interrupt priority levels
  */
-#define IPL_NONE 0 /* nothing (lowest) */
-#define IPL_COMM 1 /* serial, parallel */
-#define IPL_BLOCK 2 /* FDD, IDE */
-#define IPL_NET 3 /* network */
+#define IPL_NONE 0    /* nothing (lowest) */
+#define IPL_COMM 1    /* serial, parallel */
+#define IPL_BLOCK 2   /* FDD, IDE */
+#define IPL_NET 3     /* network */
 #define IPL_DISPLAY 4 /* screen */
-#define IPL_INPUT 5 /* keyboard, mouse */
-#define IPL_AUDIO 6 /* audio */
-#define IPL_BUS 7 /* USB, PCCARD */
-#define IPL_RTC 8 /* RTC Alarm */
+#define IPL_INPUT 5   /* keyboard, mouse */
+#define IPL_AUDIO 6   /* audio */
+#define IPL_BUS 7     /* USB, PCCARD */
+#define IPL_RTC 8     /* RTC Alarm */
 #define IPL_PROFILE 9 /* profiling timer */
-#define IPL_CLOCK 10 /* system Clock Timer */
-#define IPL_HIGH 11 /* everything */
+#define IPL_CLOCK 10  /* system Clock Timer */
+#define IPL_HIGH 11   /* everything */
 
 #define NIPLS 12 /* number of IPLs */
 

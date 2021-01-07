@@ -48,19 +48,20 @@
 #define DPRINTF(a)
 #endif
 
-struct pm_softc {
-    device_t dev; /* device object */
-    int isopen; /* number of open counts */
-    int policy; /* power management policy */
+struct pm_softc
+{
+    device_t dev;     /* device object */
+    int isopen;       /* number of open counts */
+    int policy;       /* power management policy */
     int timer_active; /* true if pm timer is staring */
-    timer_t timer; /* pm timer */
-    u_long idlecnt; /* idle counter in sec */
-    u_long dimtime; /* auto dim (lcd off) time in sec */
-    u_long sustime; /* auto suspend time in sec */
-    task_t powtask; /* task for power server */
-    int lcd_on; /* true if lcd is off */
+    timer_t timer;    /* pm timer */
+    u_long idlecnt;   /* idle counter in sec */
+    u_long dimtime;   /* auto dim (lcd off) time in sec */
+    u_long sustime;   /* auto suspend time in sec */
+    task_t powtask;   /* task for power server */
+    int lcd_on;       /* true if lcd is off */
     device_t lcd_dev; /* lcd device */
-    int lastevt; /* last event */
+    int lastevt;      /* last event */
 };
 
 static int pm_open(device_t, int);
@@ -95,8 +96,7 @@ struct driver pm_driver = {
  */
 static struct pm_softc* pm_softc;
 
-static int
-pm_open(device_t dev, int mode)
+static int pm_open(device_t dev, int mode)
 {
     struct pm_softc* sc = pm_softc;
 
@@ -110,8 +110,7 @@ pm_open(device_t dev, int mode)
     return 0;
 }
 
-static int
-pm_close(device_t dev)
+static int pm_close(device_t dev)
 {
     struct pm_softc* sc = pm_softc;
 
@@ -125,8 +124,7 @@ pm_close(device_t dev)
     return 0;
 }
 
-static int
-pm_ioctl(device_t dev, u_long cmd, void* arg)
+static int pm_ioctl(device_t dev, u_long cmd, void* arg)
 {
     struct pm_softc* sc = pm_softc;
     int error = 0;
@@ -226,8 +224,7 @@ pm_ioctl(device_t dev, u_long cmd, void* arg)
     return error;
 }
 
-static void
-pm_stop_timer(void)
+static void pm_stop_timer(void)
 {
     struct pm_softc* sc = pm_softc;
     int s;
@@ -243,8 +240,7 @@ pm_stop_timer(void)
     splx(s);
 }
 
-static void
-pm_update_timer(void)
+static void pm_update_timer(void)
 {
     struct pm_softc* sc = pm_softc;
     int s;
@@ -266,8 +262,7 @@ pm_update_timer(void)
     }
 }
 
-static int
-pm_suspend(void)
+static int pm_suspend(void)
 {
     int error;
 
@@ -283,8 +278,7 @@ pm_suspend(void)
     return 0;
 }
 
-static int
-pm_resume(void)
+static int pm_resume(void)
 {
 
     DPRINTF(("pm: resume...\n"));
@@ -294,8 +288,7 @@ pm_resume(void)
     return 0;
 }
 
-static int
-pm_poweroff(void)
+static int pm_poweroff(void)
 {
 
     DPRINTF(("pm: power off...\n"));
@@ -313,8 +306,7 @@ pm_poweroff(void)
     return 0;
 }
 
-static int
-pm_reboot(void)
+static int pm_reboot(void)
 {
 
     DPRINTF(("pm: rebooting...\n"));
@@ -328,8 +320,7 @@ pm_reboot(void)
     return 0;
 }
 
-static void
-pm_lcd_off(void)
+static void pm_lcd_off(void)
 {
     struct pm_softc* sc = pm_softc;
 
@@ -343,8 +334,7 @@ pm_lcd_off(void)
     }
 }
 
-static void
-pm_lcd_on(void)
+static void pm_lcd_on(void)
 {
     struct pm_softc* sc = pm_softc;
 
@@ -357,8 +347,7 @@ pm_lcd_on(void)
     }
 }
 
-static void
-pm_timeout(void* arg)
+static void pm_timeout(void* arg)
 {
     struct pm_softc* sc = arg;
     int s, reload;
@@ -424,8 +413,8 @@ void pm_notify(int event)
 
     if (event == PME_USER_ACTIVITY) {
         /*
-		 * Reload suspend timer for user activity.
-		 */
+         * Reload suspend timer for user activity.
+         */
         s = splhigh();
         sc->idlecnt = 0;
         splx(s);
@@ -439,17 +428,17 @@ void pm_notify(int event)
 
     if (sc->powtask != TASK_NULL) {
         /*
-		 * Power server exists.
-		 */
+         * Power server exists.
+         */
         switch (event) {
         case PME_PWRBTN_PRESS:
         case PME_SLPBTN_PRESS:
         case PME_LOW_BATTERY:
         case PME_LCD_CLOSE:
             /*
-			 * Post an exception to the power server.
-			 * Then, the power server will query PM event.
-			 */
+             * Post an exception to the power server.
+             * Then, the power server will query PM event.
+             */
             sc->lastevt = event;
             DPRINTF(("pm: post %d\n", event));
             exception_post(sc->powtask, SIGPWR);
@@ -461,9 +450,9 @@ void pm_notify(int event)
         }
     } else {
         /*
-		 * No power server.
-		 * Map power event to default action.
-		 */
+         * No power server.
+         * Map power event to default action.
+         */
         switch (event) {
         case PME_PWRBTN_PRESS:
             pm_poweroff();
@@ -490,8 +479,7 @@ void pm_attach_lcd(device_t dev)
     pm_softc->lcd_dev = dev;
 }
 
-static int
-pm_init(struct driver* self)
+static int pm_init(struct driver* self)
 {
     struct pm_softc* sc;
     device_t dev;
@@ -514,7 +502,6 @@ pm_init(struct driver* self)
 
     pm_softc = sc;
 
-    DPRINTF(("Power policy: %s mode\n",
-        (sc->policy == PM_POWERSAVE) ? "power save" : "performance"));
+    DPRINTF(("Power policy: %s mode\n", (sc->policy == PM_POWERSAVE) ? "power save" : "performance"));
     return 0;
 }

@@ -33,17 +33,15 @@
 /*
  * Span the string s2 (skip characters that are in s2).
  */
-size_t
-    strspn(s1, s2)
-        const char* s1;
+size_t strspn(s1, s2) const char* s1;
 const char* s2;
 {
     const char *p = s1, *spanp;
     char c, sc;
 
     /*
-	 * Skip any characters in s2, excluding the terminating \0.
-	 */
+     * Skip any characters in s2, excluding the terminating \0.
+     */
 cont:
     c = *p++;
     for (spanp = s2; (sc = *spanp++) != 0;)

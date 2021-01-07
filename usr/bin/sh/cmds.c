@@ -51,24 +51,16 @@ static int cmd_exit(int argc, char* argv[]);
  * Internal shell commands
  */
 const struct cmdentry shell_cmds[] = {
-    { "cd", cmd_cd },
-    { "exec", cmd_exec },
-    { "exit", cmd_exit },
-    { "export", cmd_export },
-    { "mem", cmd_mem },
-    { "set", cmd_showvars },
-    { "unset", cmd_unsetvar },
-    { NULL, cmd_null },
+    {"cd", cmd_cd},   {"exec", cmd_exec},    {"exit", cmd_exit},      {"export", cmd_export},
+    {"mem", cmd_mem}, {"set", cmd_showvars}, {"unset", cmd_unsetvar}, {NULL, cmd_null},
 };
 
-static int
-cmd_null(int argc, char* argv[])
+static int cmd_null(int argc, char* argv[])
 {
     return 0;
 }
 
-static int
-cmd_cd(int argc, char* argv[])
+static int cmd_cd(int argc, char* argv[])
 {
     char* p;
 
@@ -88,8 +80,7 @@ cmd_cd(int argc, char* argv[])
     return 0;
 }
 
-static int
-cmd_exec(int argc, char* argv[])
+static int cmd_exec(int argc, char* argv[])
 {
     char** envp = environ;
 
@@ -102,8 +93,8 @@ cmd_exec(int argc, char* argv[])
     open("/dev/tty", O_RDONLY);
 
     /*
-	 * Memory size optimization for 'exec sh'.
-	 */
+     * Memory size optimization for 'exec sh'.
+     */
     if (!strcmp(argv[1], "sh")) {
         longjmp(jmpbuf, 1);
         /* NOTREACHED */
@@ -111,8 +102,7 @@ cmd_exec(int argc, char* argv[])
     return execve(argv[1], &argv[2], envp);
 }
 
-static int
-cmd_mem(int argc, char* argv[])
+static int cmd_mem(int argc, char* argv[])
 {
     struct meminfo info;
 
@@ -123,8 +113,7 @@ cmd_mem(int argc, char* argv[])
     return 0;
 }
 
-static int
-cmd_exit(int argc, char* argv[])
+static int cmd_exit(int argc, char* argv[])
 {
 
     exit(0);

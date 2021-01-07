@@ -51,8 +51,8 @@ int main(int argc, char* argv[])
     }
 
     /*
-	 * Set trace flag for current process.
-	 */
+     * Set trace flag for current process.
+     */
     if (object_lookup("!proc", &obj) != 0) {
         fputs("No process server found\n", stderr);
         exit(1);
@@ -61,8 +61,8 @@ int main(int argc, char* argv[])
     msg_send(obj, &m, sizeof(m));
 
     /*
-	 * Execute command.
-	 */
+     * Execute command.
+     */
     execvp(argv[1], &argv[2]);
 
     return 0;

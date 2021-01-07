@@ -38,10 +38,11 @@ struct vnode;
 /*
  * File structure
  */
-struct file {
-    int f_flags; /* open flag */
-    int f_count; /* reference count */
-    off_t f_offset; /* current position in file */
+struct file
+{
+    int f_flags;           /* open flag */
+    int f_count;           /* reference count */
+    off_t f_offset;        /* current position in file */
     struct vnode* f_vnode; /* vnode */
 };
 typedef struct file* file_t;

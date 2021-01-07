@@ -58,28 +58,28 @@
 /*
  * Control register CP15 register 1
  */
-#define CTL_MMU 0x00000001 /* M: MMU/Protection unit enable */
-#define CTL_AFLT 0x00000002 /* A: Alignment fault enable */
-#define CTL_CACHE 0x00000004 /* C: Cache enable */
-#define CTL_WBUF 0x00000008 /* W: Write buffer enable */
-#define CTL_32BP 0x00000010 /* P: 32-bit exception handlers */
-#define CTL_32BD 0x00000020 /* D: 32-bit addressing */
-#define CTL_LABT 0x00000040 /* L: Late abort enable */
+#define CTL_MMU 0x00000001    /* M: MMU/Protection unit enable */
+#define CTL_AFLT 0x00000002   /* A: Alignment fault enable */
+#define CTL_CACHE 0x00000004  /* C: Cache enable */
+#define CTL_WBUF 0x00000008   /* W: Write buffer enable */
+#define CTL_32BP 0x00000010   /* P: 32-bit exception handlers */
+#define CTL_32BD 0x00000020   /* D: 32-bit addressing */
+#define CTL_LABT 0x00000040   /* L: Late abort enable */
 #define CTL_BIGEND 0x00000080 /* B: Big-endian mode */
-#define CTL_SYSP 0x00000100 /* S: System protection bit */
-#define CTL_ROMP 0x00000200 /* R: ROM protection bit */
-#define CTL_BPRD 0x00000800 /* Z: Branch prediction enable */
+#define CTL_SYSP 0x00000100   /* S: System protection bit */
+#define CTL_ROMP 0x00000200   /* R: ROM protection bit */
+#define CTL_BPRD 0x00000800   /* Z: Branch prediction enable */
 #define CTL_ICACHE 0x00001000 /* I: Instruction cache enable */
-#define CTL_HIVEC 0x00002000 /* V: Vector relocation */
+#define CTL_HIVEC 0x00002000  /* V: Vector relocation */
 
 #ifdef __beagle__
 /* Useful ARMv7 specific flags */
-#define CTL_AFE 0x20000000 /* AFE: Access flag enable */
-#define CTL_TRE 0x10000000 /* TRE: TEX remap enable */
+#define CTL_AFE 0x20000000     /* AFE: Access flag enable */
+#define CTL_TRE 0x10000000     /* TRE: TEX remap enable */
 #define AUXCTL_L2EN 0x00000002 /* L2EN: L2 cache enable */
-#define AUXCTL_ASA 0x00000010 /* ASA: Speculative access enable */
-#define AUXCTL_IBE 0x00000040 /* IBE: */
-#define AUXCTL_BTB 0x00000080 /* BTB: */
+#define AUXCTL_ASA 0x00000010  /* ASA: Speculative access enable */
+#define AUXCTL_IBE 0x00000040  /* IBE: */
+#define AUXCTL_BTB 0x00000080  /* BTB: */
 #endif
 
 #ifndef __ASSEMBLY__

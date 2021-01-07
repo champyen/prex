@@ -108,27 +108,26 @@ int exception_setup(void (*handler)(int))
     sched_lock();
     if (self->handler != EXC_DFL && handler == EXC_DFL) {
         /*
-		 * Remove existing exception handler. Do clean up
-		 * job for all threads in the target task.
-		 */
+         * Remove existing exception handler. Do clean up
+         * job for all threads in the target task.
+         */
         head = &self->threads;
         for (n = list_first(head); n != head; n = list_next(n)) {
 
             /*
-			 * Clear pending exceptions.
-			 */
+             * Clear pending exceptions.
+             */
             s = splhigh();
             t = list_entry(n, struct thread, task_link);
             t->excbits = 0;
             splx(s);
 
             /*
-			 * If the thread is waiting for an exception,
-			 * cancel it.
-			 */
+             * If the thread is waiting for an exception,
+             * cancel it.
+             */
             if (t->slpevt == &exception_event) {
-                DPRINTF(("Exception cancelled task=%s\n",
-                    self->name));
+                DPRINTF(("Exception cancelled task=%s\n", self->name));
                 sched_unsleep(t, SLP_BREAK);
             }
         }
@@ -185,10 +184,10 @@ int exception_post(task_t task, int excno)
     }
 
     /*
-	 * Determine which thread should we send an exception.
-	 * First, search the thread that is currently waiting
-	 * an exception by calling exception_wait().
-	 */
+     * Determine which thread should we send an exception.
+     * First, search the thread that is currently waiting
+     * an exception by calling exception_wait().
+     */
     head = &task->threads;
     for (n = list_first(head); n != head; n = list_next(n)) {
         t = list_entry(n, struct thread, task_link);
@@ -199,9 +198,9 @@ int exception_post(task_t task, int excno)
     }
 
     /*
-	 * If no thread is waiting exceptions, we send it to
-	 * the master thread in the task.
-	 */
+     * If no thread is waiting exceptions, we send it to
+     * the master thread in the task.
+     */
     if (!found) {
         if (!list_empty(&task->threads)) {
             n = list_first(&task->threads);
@@ -210,16 +209,16 @@ int exception_post(task_t task, int excno)
     }
 
     /*
-	 * Mark pending bit for this exception.
-	 */
+     * Mark pending bit for this exception.
+     */
     s = splhigh();
     t->excbits |= (1 << excno);
     splx(s);
 
     /*
-	 * Wakeup the target thread regardless of its
-	 * waiting event.
-	 */
+     * Wakeup the target thread regardless of its
+     * waiting event.
+     */
     sched_unsleep(t, SLP_INTR);
 
     sched_unlock();
@@ -247,8 +246,8 @@ int exception_wait(int* excno)
     sched_lock();
 
     /*
-	 * Sleep until some exceptions occur.
-	 */
+     * Sleep until some exceptions occur.
+     */
     rc = sched_sleep(&exception_event);
     if (rc == SLP_BREAK) {
         sched_unlock();
@@ -314,26 +313,24 @@ void exception_deliver(void)
 
     if (bitmap != 0) {
         /*
-		 * Find a pending exception.
-		 */
+         * Find a pending exception.
+         */
         for (excno = 0; excno < NEXC; excno++) {
             if (bitmap & (1 << excno))
                 break;
         }
         handler = self->handler;
         if (handler == EXC_DFL) {
-            DPRINTF(("Exception #%d is not handled by task.\n",
-                excno));
-            DPRINTF(("Terminate task:%s (id:%lx)\n",
-                self->name, (long)self));
+            DPRINTF(("Exception #%d is not handled by task.\n", excno));
+            DPRINTF(("Terminate task:%s (id:%lx)\n", self->name, (long)self));
 
             task_terminate(self);
             /* NOTREACHED */
         }
 
         /*
-		 * Transfer control to an exception handler.
-		 */
+         * Transfer control to an exception handler.
+         */
         s = splhigh();
         context_save(&curthread->ctx);
         context_set(&curthread->ctx, CTX_UENTRY, (register_t)handler);

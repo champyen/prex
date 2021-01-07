@@ -37,9 +37,7 @@
 #include <errno.h>
 #include "local.h"
 
-FILE*
-    fopen(file, mode)
-        const char* file;
+FILE* fopen(file, mode) const char* file;
 const char* mode;
 {
     FILE* fp;
@@ -58,13 +56,13 @@ const char* mode;
     fp->_flags = flags;
 
     /*
-	 * When opening in append mode, even though we use O_APPEND,
-	 * we need to seek to the end so that ftell() gets the right
-	 * answer.  If the user then alters the seek pointer, or
-	 * the file extends, this will fail, but there is not much
-	 * we can do about this.  (We could set __SAPP and check in
-	 * fseek and ftell.)
-	 */
+     * When opening in append mode, even though we use O_APPEND,
+     * we need to seek to the end so that ftell() gets the right
+     * answer.  If the user then alters the seek pointer, or
+     * the file extends, this will fail, but there is not much
+     * we can do about this.  (We could set __SAPP and check in
+     * fseek and ftell.)
+     */
     if (oflags & O_APPEND)
         (void)__sseek((void*)fp, (fpos_t)0, SEEK_END);
     return (fp);

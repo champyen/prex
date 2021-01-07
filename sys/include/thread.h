@@ -42,60 +42,61 @@
 /*
  * Description of a thread.
  */
-struct thread {
-    struct list link; /* linkage on all threads */
-    struct list task_link; /* linkage on thread list in task */
+struct thread
+{
+    struct list link;        /* linkage on all threads */
+    struct list task_link;   /* linkage on thread list in task */
     struct queue sched_link; /* linkage on scheduling queue */
-    task_t task; /* task to which I belong */
-    int state; /* thread state */
-    int policy; /* scheduling policy */
-    int priority; /* current priority */
-    int basepri; /* statical base priority */
-    int timeleft; /* remaining ticks to run */
-    u_int time; /* total running time */
-    int resched; /* true if rescheduling is needed */
-    int locks; /* schedule lock counter */
-    int suscnt; /* suspend count */
-    struct event* slpevt; /* event we are waiting on */
-    int slpret; /* return value for sched_tleep */
-    struct timer timeout; /* thread timer */
-    struct timer* periodic; /* pointer to periodic timer */
-    uint32_t excbits; /* bitmap of pending exceptions */
-    struct list mutexes; /* mutexes locked by this thread */
-    mutex_t mutex_waiting; /* mutex pointer currently waiting */
-    struct queue ipc_link; /* linkage on IPC queue */
-    void* msgaddr; /* kernel address of IPC message */
-    size_t msgsize; /* size of IPC message */
-    thread_t sender; /* thread that sends IPC message */
-    thread_t receiver; /* thread that receives IPC message */
-    object_t sendobj; /* IPC object sending to */
-    object_t recvobj; /* IPC object receiving from */
-    void* kstack; /* base address of kernel stack */
-    struct context ctx; /* machine specific context */
+    task_t task;             /* task to which I belong */
+    int state;               /* thread state */
+    int policy;              /* scheduling policy */
+    int priority;            /* current priority */
+    int basepri;             /* statical base priority */
+    int timeleft;            /* remaining ticks to run */
+    u_int time;              /* total running time */
+    int resched;             /* true if rescheduling is needed */
+    int locks;               /* schedule lock counter */
+    int suscnt;              /* suspend count */
+    struct event* slpevt;    /* event we are waiting on */
+    int slpret;              /* return value for sched_tleep */
+    struct timer timeout;    /* thread timer */
+    struct timer* periodic;  /* pointer to periodic timer */
+    uint32_t excbits;        /* bitmap of pending exceptions */
+    struct list mutexes;     /* mutexes locked by this thread */
+    mutex_t mutex_waiting;   /* mutex pointer currently waiting */
+    struct queue ipc_link;   /* linkage on IPC queue */
+    void* msgaddr;           /* kernel address of IPC message */
+    size_t msgsize;          /* size of IPC message */
+    thread_t sender;         /* thread that sends IPC message */
+    thread_t receiver;       /* thread that receives IPC message */
+    object_t sendobj;        /* IPC object sending to */
+    object_t recvobj;        /* IPC object receiving from */
+    void* kstack;            /* base address of kernel stack */
+    struct context ctx;      /* machine specific context */
 };
 
 /*
  * Thread state
  */
-#define TS_RUN 0x00 /* running or ready to run */
+#define TS_RUN 0x00   /* running or ready to run */
 #define TS_SLEEP 0x01 /* awaiting an event */
-#define TS_SUSP 0x02 /* suspend count is not 0 */
-#define TS_EXIT 0x04 /* terminated */
+#define TS_SUSP 0x02  /* suspend count is not 0 */
+#define TS_EXIT 0x04  /* terminated */
 
 /*
  * Sleep result
  */
 #define SLP_SUCCESS 0 /* success */
-#define SLP_BREAK 1 /* break due to some reasons */
+#define SLP_BREAK 1   /* break due to some reasons */
 #define SLP_TIMEOUT 2 /* timeout */
-#define SLP_INVAL 3 /* target event becomes invalid */
-#define SLP_INTR 4 /* interrupted by exception */
+#define SLP_INVAL 3   /* target event becomes invalid */
+#define SLP_INTR 4    /* interrupted by exception */
 
 /*
  * Scheduling operations for thread_schedparam().
  */
-#define SOP_GETPRI 0 /* get scheduling priority */
-#define SOP_SETPRI 1 /* set scheduling priority */
+#define SOP_GETPRI 0    /* get scheduling priority */
+#define SOP_SETPRI 1    /* set scheduling priority */
 #define SOP_GETPOLICY 2 /* get scheduling policy */
 #define SOP_SETPOLICY 3 /* set scheduling policy */
 

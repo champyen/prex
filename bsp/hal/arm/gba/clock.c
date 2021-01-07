@@ -69,8 +69,7 @@
  * Clock interrupt service routine.
  * No H/W reprogram is required.
  */
-static int
-clock_isr(void* arg)
+static int clock_isr(void* arg)
 {
 
     splhigh();
@@ -92,8 +91,7 @@ void clock_init(void)
     TMR0_CTRL = (uint16_t)(TMR_IRQEN | TMR_64_CLOCK);
 
     /* Install ISR */
-    clock_irq = irq_attach(CLOCK_IRQ, IPL_CLOCK, 0, &clock_isr,
-        IST_NONE, NULL);
+    clock_irq = irq_attach(CLOCK_IRQ, IPL_CLOCK, 0, &clock_isr, IST_NONE, NULL);
 
     /* Enable timer */
     TMR0_CTRL |= TMR_EN;

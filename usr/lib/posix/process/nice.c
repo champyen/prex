@@ -37,8 +37,7 @@
 /*
  * Backwards compatible nice.
  */
-int
-    nice(incr) int incr;
+int nice(incr) int incr;
 {
     int pri;
 

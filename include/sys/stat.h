@@ -39,19 +39,20 @@
 
 #include <sys/time.h>
 
-struct stat {
-    dev_t st_dev; /* inode's device */
-    ino_t st_ino; /* inode's number */
-    mode_t st_mode; /* inode protection mode */
-    nlink_t st_nlink; /* number of hard links */
-    uid_t st_uid; /* user ID of the file's owner */
-    gid_t st_gid; /* group ID of the file's group */
-    dev_t st_rdev; /* device type */
-    off_t st_size; /* file size, in bytes */
-    time_t st_atime; /* time of last access */
-    time_t st_mtime; /* time of last data modification */
-    time_t st_ctime; /* time of last file status change */
-    int32_t st_blocks; /* blocks allocated for file */
+struct stat
+{
+    dev_t st_dev;        /* inode's device */
+    ino_t st_ino;        /* inode's number */
+    mode_t st_mode;      /* inode protection mode */
+    nlink_t st_nlink;    /* number of hard links */
+    uid_t st_uid;        /* user ID of the file's owner */
+    gid_t st_gid;        /* group ID of the file's group */
+    dev_t st_rdev;       /* device type */
+    off_t st_size;       /* file size, in bytes */
+    time_t st_atime;     /* time of last access */
+    time_t st_mtime;     /* time of last data modification */
+    time_t st_ctime;     /* time of last file status change */
+    int32_t st_blocks;   /* blocks allocated for file */
     uint32_t st_blksize; /* optimal blocksize for I/O */
 };
 
@@ -78,25 +79,25 @@ struct stat {
 #define S_IWOTH 0000002 /* W for other */
 #define S_IXOTH 0000001 /* X for other */
 
-#define S_IFMT 0170000 /* type of file mask */
-#define S_IFIFO 0010000 /* named pipe (fifo) */
-#define S_IFCHR 0020000 /* character special */
-#define S_IFDIR 0040000 /* directory */
-#define S_IFBLK 0060000 /* block special */
-#define S_IFREG 0100000 /* regular */
-#define S_IFLNK 0120000 /* symbolic link */
+#define S_IFMT 0170000   /* type of file mask */
+#define S_IFIFO 0010000  /* named pipe (fifo) */
+#define S_IFCHR 0020000  /* character special */
+#define S_IFDIR 0040000  /* directory */
+#define S_IFBLK 0060000  /* block special */
+#define S_IFREG 0100000  /* regular */
+#define S_IFLNK 0120000  /* symbolic link */
 #define S_IFSOCK 0140000 /* socket */
-#define S_IFWHT 0160000 /* whiteout */
-#define S_ISVTX 0001000 /* save swapped text even after use */
+#define S_IFWHT 0160000  /* whiteout */
+#define S_ISVTX 0001000  /* save swapped text even after use */
 
-#define S_ISDIR(m) ((m & 0170000) == 0040000) /* directory */
-#define S_ISCHR(m) ((m & 0170000) == 0020000) /* char special */
-#define S_ISBLK(m) ((m & 0170000) == 0060000) /* block special */
-#define S_ISREG(m) ((m & 0170000) == 0100000) /* regular file */
+#define S_ISDIR(m) ((m & 0170000) == 0040000)                              /* directory */
+#define S_ISCHR(m) ((m & 0170000) == 0020000)                              /* char special */
+#define S_ISBLK(m) ((m & 0170000) == 0060000)                              /* block special */
+#define S_ISREG(m) ((m & 0170000) == 0100000)                              /* regular file */
 #define S_ISFIFO(m) ((m & 0170000) == 0010000 || (m & 0170000) == 0140000) /* fifo or socket */
-#define S_ISLNK(m) ((m & 0170000) == 0120000) /* symbolic link */
+#define S_ISLNK(m) ((m & 0170000) == 0120000)                              /* symbolic link */
 #define S_ISSOCK(m) ((m & 0170000) == 0010000 || (m & 0170000) == 0140000) /* fifo or socket */
-#define S_ISWHT(m) ((m & 0170000) == 0160000) /* whiteout */
+#define S_ISWHT(m) ((m & 0170000) == 0160000)                              /* whiteout */
 
 #define ACCESSPERMS (S_IRWXU | S_IRWXG | S_IRWXO) /* 0777 */
 /* 7777 */

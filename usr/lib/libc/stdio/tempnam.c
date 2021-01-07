@@ -35,10 +35,7 @@
 #include <unistd.h>
 #include <paths.h>
 
-char *
-    tempnam(dir, pfx)
-        const char *dir,
-    *pfx;
+char *tempnam(dir, pfx) const char *dir, *pfx;
 {
     int sverrno;
     char *f, *name;
@@ -50,15 +47,13 @@ char *
         pfx = "tmp.";
 
     if ((f = getenv("TMPDIR")) != NULL) {
-        (void)snprintf(name, (size_t)MAXPATHLEN, "%s%s%sXXXXXXXXXX", f,
-            *(f + strlen(f) - 1) == '/' ? "" : "/", pfx);
+        (void)snprintf(name, (size_t)MAXPATHLEN, "%s%s%sXXXXXXXXXX", f, *(f + strlen(f) - 1) == '/' ? "" : "/", pfx);
         if ((f = mktemp(name)) != NULL)
             return (f);
     }
 
     if ((/* LINTED */ f = (char*)dir) != NULL) {
-        (void)snprintf(name, (size_t)MAXPATHLEN, "%s%s%sXXXXXXXXXX", f,
-            *(f + strlen(f) - 1) == '/' ? "" : "/", pfx);
+        (void)snprintf(name, (size_t)MAXPATHLEN, "%s%s%sXXXXXXXXXX", f, *(f + strlen(f) - 1) == '/' ? "" : "/", pfx);
         if ((f = mktemp(name)) != NULL)
             return (f);
     }

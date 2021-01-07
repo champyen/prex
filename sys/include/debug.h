@@ -43,10 +43,10 @@
 
 #ifdef DEBUG
 #define DPRINTF(a) printf a
-#define ASSERT(exp)                           \
-    do {                                      \
-        if (!(exp))                           \
-            assert(__FILE__, __LINE__, #exp); \
+#define ASSERT(exp)                                                                                                    \
+    do {                                                                                                               \
+        if (!(exp))                                                                                                    \
+            assert(__FILE__, __LINE__, #exp);                                                                          \
     } while (0)
 #else
 #define DPRINTF(a) ((void)0)

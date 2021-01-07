@@ -55,8 +55,7 @@ static char* sect_addr[32]; /* Array of section address */
 /*
  * Load executable ELF file
  */
-static int
-load_exec(Elf32_Ehdr* ehdr, task_t task, int fd, vaddr_t* entry)
+static int load_exec(Elf32_Ehdr* ehdr, task_t task, int fd, vaddr_t* entry)
 {
     Elf32_Phdr* phdr;
     void *addr, *mapped;
@@ -82,8 +81,7 @@ load_exec(Elf32_Ehdr* ehdr, task_t task, int fd, vaddr_t* entry)
         if (vm_map(task, (void*)phdr->p_vaddr, size, &mapped) != 0)
             return ENOEXEC;
         if (phdr->p_filesz > 0) {
-            if (lseek(fd, (off_t)phdr->p_offset, SEEK_SET)
-                == -(off_t)1)
+            if (lseek(fd, (off_t)phdr->p_offset, SEEK_SET) == -(off_t)1)
                 goto err;
             if (read(fd, mapped, phdr->p_filesz) < 0)
                 goto err;
@@ -106,9 +104,7 @@ err:
 }
 #else /* !CONFIG_MMU */
 
-static int
-relocate_section_rela(Elf32_Sym* sym_table, Elf32_Rela* rela,
-    char* target_sect, int nr_reloc)
+static int relocate_section_rela(Elf32_Sym* sym_table, Elf32_Rela* rela, char* target_sect, int nr_reloc)
 {
     Elf32_Sym* sym;
     Elf32_Addr sym_val;
@@ -120,8 +116,7 @@ relocate_section_rela(Elf32_Sym* sym_table, Elf32_Rela* rela,
             /* Empty symbol used for R_ARM_V4BX, etc */
             sym_val = sym->st_value;
         } else if (sym->st_shndx != STN_UNDEF) {
-            sym_val = (Elf32_Addr)sect_addr[sym->st_shndx]
-                + sym->st_value;
+            sym_val = (Elf32_Addr)sect_addr[sym->st_shndx] + sym->st_value;
             if (relocate_rela(rela, sym_val, target_sect) != 0)
                 return -1;
         } else if (ELF32_ST_BIND(sym->st_info) == STB_WEAK) {
@@ -132,9 +127,7 @@ relocate_section_rela(Elf32_Sym* sym_table, Elf32_Rela* rela,
     return 0;
 }
 
-static int
-relocate_section_rel(Elf32_Sym* sym_table, Elf32_Rel* rel,
-    char* target_sect, int nr_reloc)
+static int relocate_section_rel(Elf32_Sym* sym_table, Elf32_Rel* rel, char* target_sect, int nr_reloc)
 {
     Elf32_Sym* sym;
     Elf32_Addr sym_val;
@@ -146,8 +139,7 @@ relocate_section_rel(Elf32_Sym* sym_table, Elf32_Rel* rel,
             /* Empty symbol used for R_ARM_V4BX, etc */
             sym_val = sym->st_value;
         } else if (sym->st_shndx != STN_UNDEF) {
-            sym_val = (Elf32_Addr)sect_addr[sym->st_shndx]
-                + sym->st_value;
+            sym_val = (Elf32_Addr)sect_addr[sym->st_shndx] + sym->st_value;
             if (relocate_rel(rel, sym_val, target_sect) != 0)
                 return -1;
         } else if (ELF32_ST_BIND(sym->st_info) == STB_WEAK) {
@@ -161,8 +153,7 @@ relocate_section_rel(Elf32_Sym* sym_table, Elf32_Rel* rel,
 /*
  * Relocate ELF sections
  */
-static int
-relocate_section(Elf32_Shdr* shdr, char* rel_data)
+static int relocate_section(Elf32_Shdr* shdr, char* rel_data)
 {
     Elf32_Sym* sym_table;
     char* target_sect;
@@ -178,13 +169,11 @@ relocate_section(Elf32_Shdr* shdr, char* rel_data)
     nr_reloc = (int)(shdr->sh_size / shdr->sh_entsize);
     switch (shdr->sh_type) {
     case SHT_REL:
-        error = relocate_section_rel(sym_table, (Elf32_Rel*)rel_data,
-            target_sect, nr_reloc);
+        error = relocate_section_rel(sym_table, (Elf32_Rel*)rel_data, target_sect, nr_reloc);
         break;
 
     case SHT_RELA:
-        error = relocate_section_rela(sym_table, (Elf32_Rela*)rel_data,
-            target_sect, nr_reloc);
+        error = relocate_section_rela(sym_table, (Elf32_Rela*)rel_data, target_sect, nr_reloc);
         break;
 
     default:
@@ -197,8 +186,7 @@ relocate_section(Elf32_Shdr* shdr, char* rel_data)
 /*
  * Load ELF relocatable file.
  */
-static int
-load_reloc(Elf32_Ehdr* ehdr, task_t task, int fd, vaddr_t* entry)
+static int load_reloc(Elf32_Ehdr* ehdr, task_t task, int fd, vaddr_t* entry)
 {
     Elf32_Shdr* shdr;
     char* buf;
@@ -252,16 +240,16 @@ load_reloc(Elf32_Ehdr* ehdr, task_t task, int fd, vaddr_t* entry)
     shdr = (Elf32_Shdr*)buf;
     for (i = 0; i < ehdr->e_shnum; i++, shdr++) {
         /*
-		 *DPRINTF(("section: type=%x addr=%x size=%d offset=%x flags=%x\n",
-		 *   shdr->sh_type, shdr->sh_addr, shdr->sh_size,
-		 *   shdr->sh_offset, shdr->sh_flags));
-		 */
+         *DPRINTF(("section: type=%x addr=%x size=%d offset=%x flags=%x\n",
+         *   shdr->sh_type, shdr->sh_addr, shdr->sh_size,
+         *   shdr->sh_offset, shdr->sh_flags));
+         */
         sect_addr[i] = 0;
         if (shdr->sh_type == SHT_PROGBITS) {
             switch (shdr->sh_flags & SHF_VALID) {
             case (SHF_ALLOC | SHF_EXECINSTR): /* text */
-            case (SHF_ALLOC | SHF_WRITE): /* data */
-            case SHF_ALLOC: /* rodata */
+            case (SHF_ALLOC | SHF_WRITE):     /* data */
+            case SHF_ALLOC:                   /* rodata */
                 break;
             default:
                 continue;
@@ -334,8 +322,8 @@ int elf_load(struct exec* exec)
     int error, fd;
 
     /*
-	 * Check permission.
-	 */
+     * Check permission.
+     */
     if (access(exec->path, X_OK) == -1) {
         DPRINTF(("exec: no exec access\n"));
         return errno;
@@ -345,11 +333,9 @@ int elf_load(struct exec* exec)
         return ENOENT;
 
 #ifdef CONFIG_MMU
-    error = load_exec((Elf32_Ehdr*)exec->header, exec->task,
-        fd, &exec->entry);
+    error = load_exec((Elf32_Ehdr*)exec->header, exec->task, fd, &exec->entry);
 #else
-    error = load_reloc((Elf32_Ehdr*)exec->header, exec->task,
-        fd, &exec->entry);
+    error = load_reloc((Elf32_Ehdr*)exec->header, exec->task, fd, &exec->entry);
 #endif
     close(fd);
     return error;
@@ -364,13 +350,11 @@ int elf_probe(struct exec* exec)
 
     /* Check ELF header */
     ehdr = (Elf32_Ehdr*)exec->header;
-    DPRINTF(("exec: ELF magic %c %c %c %c\n",
-        ehdr->e_ident[EI_MAG0],
-        ehdr->e_ident[EI_MAG1],
-        ehdr->e_ident[EI_MAG2],
-        ehdr->e_ident[EI_MAG3]));
+    DPRINTF(("exec: ELF magic %c %c %c %c\n", ehdr->e_ident[EI_MAG0], ehdr->e_ident[EI_MAG1], ehdr->e_ident[EI_MAG2],
+             ehdr->e_ident[EI_MAG3]));
 
-    if ((ehdr->e_ident[EI_MAG0] != ELFMAG0) || (ehdr->e_ident[EI_MAG1] != ELFMAG1) || (ehdr->e_ident[EI_MAG2] != ELFMAG2) || (ehdr->e_ident[EI_MAG3] != ELFMAG3))
+    if ((ehdr->e_ident[EI_MAG0] != ELFMAG0) || (ehdr->e_ident[EI_MAG1] != ELFMAG1) ||
+        (ehdr->e_ident[EI_MAG2] != ELFMAG2) || (ehdr->e_ident[EI_MAG3] != ELFMAG3))
         return PROBE_ERROR;
 
 #ifdef CONFIG_MMU

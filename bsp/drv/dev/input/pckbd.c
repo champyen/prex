@@ -41,15 +41,16 @@
 /* Parameters */
 #define KBD_IRQ 1
 
-struct pckbd_softc {
-    device_t dev; /* device object */
-    irq_t irq; /* irq handle */
-    int polling; /* true if polling mode */
+struct pckbd_softc
+{
+    device_t dev;   /* device object */
+    irq_t irq;      /* irq handle */
+    int polling;    /* true if polling mode */
     u_char led_sts; /* keyboard LED status */
-    int shift; /* shift key state */
-    int alt; /* alt key state */
-    int ctrl; /* control key state */
-    int capslk; /* caps lock key staet */
+    int shift;      /* shift key state */
+    int alt;        /* alt key state */
+    int ctrl;       /* control key state */
+    int capslk;     /* caps lock key staet */
 };
 
 static int pckbd_init(struct driver*);
@@ -75,40 +76,27 @@ static struct wscons_kbd_ops wscons_pckbd_ops = {
  * Key map
  */
 static const u_char key_map[] = {
-    0, 0x1b, '1', '2', '3', '4', '5', '6',
-    '7', '8', '9', '0', '-', '=', '\b', '\t',
-    'q', 'w', 'e', 'r', 't', 'y', 'u', 'i',
-    'o', 'p', '[', ']', '\n', K_CTRL, 'a', 's',
-    'd', 'f', 'g', 'h', 'j', 'k', 'l', ';',
-    '\'', '`', K_SHFT, '\\', 'z', 'x', 'c', 'v',
-    'b', 'n', 'm', ',', '.', '/', K_SHFT, '*',
-    K_ALT, ' ', K_CAPS, K_F1, K_F2, K_F3, K_F4, K_F5,
-    K_F6, K_F7, K_F8, K_F9, K_F10, 0, 0, K_HOME,
-    K_UP, K_PGUP, 0, K_LEFT, 0, K_RGHT, 0, K_END,
-    K_DOWN, K_PGDN, K_INS, 0x7f, K_F11, K_F12
-};
+    0,      0x1b, '1',    '2',  '3',   '4',    '5',    '6',   '7',   '8',    '9',  '0',    '-',    '=',    '\b',
+    '\t',   'q',  'w',    'e',  'r',   't',    'y',    'u',   'i',   'o',    'p',  '[',    ']',    '\n',   K_CTRL,
+    'a',    's',  'd',    'f',  'g',   'h',    'j',    'k',   'l',   ';',    '\'', '`',    K_SHFT, '\\',   'z',
+    'x',    'c',  'v',    'b',  'n',   'm',    ',',    '.',   '/',   K_SHFT, '*',  K_ALT,  ' ',    K_CAPS, K_F1,
+    K_F2,   K_F3, K_F4,   K_F5, K_F6,  K_F7,   K_F8,   K_F9,  K_F10, 0,      0,    K_HOME, K_UP,   K_PGUP, 0,
+    K_LEFT, 0,    K_RGHT, 0,    K_END, K_DOWN, K_PGDN, K_INS, 0x7f,  K_F11,  K_F12};
 
 #define KEY_MAX (sizeof(key_map) / sizeof(char))
 
 static const u_char shift_map[] = {
-    0, 0x1b, '!', '@', '#', '$', '%', '^',
-    '&', '*', '(', ')', '_', '+', '\b', '\t',
-    'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I',
-    'O', 'P', '{', '}', '\n', K_CTRL, 'A', 'S',
-    'D', 'F', 'G', 'H', 'J', 'K', 'L', ':',
-    '"', '~', 0, '|', 'Z', 'X', 'C', 'V',
-    'B', 'N', 'M', '<', '>', '?', 0, '*',
-    K_ALT, ' ', 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, K_HOME,
-    K_UP, K_PGUP, 0, K_LEFT, 0, K_RGHT, 0, K_END,
-    K_DOWN, K_PGDN, K_INS, 0x7f, 0, 0
-};
+    0,      0x1b, '!',    '@', '#',   '$',    '%',    '^',   '&',  '*', '(', ')',    '_',  '+',    '\b',
+    '\t',   'Q',  'W',    'E', 'R',   'T',    'Y',    'U',   'I',  'O', 'P', '{',    '}',  '\n',   K_CTRL,
+    'A',    'S',  'D',    'F', 'G',   'H',    'J',    'K',   'L',  ':', '"', '~',    0,    '|',    'Z',
+    'X',    'C',  'V',    'B', 'N',   'M',    '<',    '>',   '?',  0,   '*', K_ALT,  ' ',  0,      0,
+    0,      0,    0,      0,   0,     0,      0,      0,     0,    0,   0,   K_HOME, K_UP, K_PGUP, 0,
+    K_LEFT, 0,    K_RGHT, 0,   K_END, K_DOWN, K_PGDN, K_INS, 0x7f, 0,   0};
 
 /*
  * Send command to keyboard controller
  */
-static void
-kmc_send_cmd(u_char cmd)
+static void kmc_send_cmd(u_char cmd)
 {
 
     kmc_wait_ibe();
@@ -118,8 +106,7 @@ kmc_send_cmd(u_char cmd)
 /*
  * Update LEDs for current modifier state.
  */
-static void
-pckbd_set_leds(struct pckbd_softc* sc)
+static void pckbd_set_leds(struct pckbd_softc* sc)
 {
     u_char val = 0;
 
@@ -140,8 +127,7 @@ pckbd_set_leds(struct pckbd_softc* sc)
 /*
  * Scan key input. Returns ascii code.
  */
-static int
-pckbd_scan_key(struct pckbd_softc* sc)
+static int pckbd_scan_key(struct pckbd_softc* sc)
 {
     u_char scan, ascii, val;
     int press;
@@ -229,8 +215,7 @@ again:
 /*
  * Interrupt service routine
  */
-static int
-pckbd_isr(void* arg)
+static int pckbd_isr(void* arg)
 {
     struct pckbd_softc* sc = arg;
     int c;
@@ -241,8 +226,7 @@ pckbd_isr(void* arg)
     return 0;
 }
 
-static int
-pckbd_getc(void* aux)
+static int pckbd_getc(void* aux)
 {
     struct pckbd_softc* sc = aux;
     int c;
@@ -259,16 +243,14 @@ pckbd_getc(void* aux)
     return c;
 }
 
-static void
-pckbd_set_poll(void* aux, int on)
+static void pckbd_set_poll(void* aux, int on)
 {
     struct pckbd_softc* sc = aux;
 
     sc->polling = on;
 }
 
-static int
-pckbd_init(struct driver* self)
+static int pckbd_init(struct driver* self)
 {
     struct pckbd_softc* sc;
     device_t dev;

@@ -119,8 +119,8 @@ int enterpgrp(struct proc* p, pid_t pgid)
     DPRINTF(("proc: enter pgrp pid=%d pgid=%d\n", p->p_pid, pgid));
     if ((pgrp = pg_find(pgid)) == NULL) {
         /*
-		 * Create a new process group.
-		 */
+         * Create a new process group.
+         */
         DPRINTF(("proc: create new pgrp\n"));
         if ((pgrp = malloc(sizeof(struct pgrp))) == NULL)
             return ENOMEM;
@@ -130,9 +130,9 @@ int enterpgrp(struct proc* p, pid_t pgid)
         pg_add(pgrp);
     }
     /*
-	 * Remove from the old process group.
-	 * And, join an existing process group.
-	 */
+     * Remove from the old process group.
+     * And, join an existing process group.
+     */
     list_remove(&p->p_pgrp_link);
     list_insert(&pgrp->pg_members, &p->p_pgrp_link);
     pgrp->pg_session = curproc->p_pgrp->pg_session;
@@ -208,8 +208,8 @@ int sys_setsid(pid_t* retval)
     memset(sess, 0, sizeof(*sess));
 
     /*
-	 * Create a new process group.
-	 */
+     * Create a new process group.
+     */
     if ((error = enterpgrp(p, p->p_pid)) != 0) {
         free(sess);
         return error;
@@ -217,8 +217,8 @@ int sys_setsid(pid_t* retval)
     pgrp = p->p_pgrp;
 
     /*
-	 * Create a new session.
-	 */
+     * Create a new session.
+     */
     sess->s_refcnt = 1;
     sess->s_leader = p;
     sess->s_ttyhold = 0;

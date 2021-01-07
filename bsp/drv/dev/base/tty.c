@@ -96,8 +96,7 @@ int tty_getc(struct tty_queue* tq)
 /*
  * Put a character into a queue.
  */
-static void
-tty_putc(int c, struct tty_queue* tq)
+static void tty_putc(int c, struct tty_queue* tq)
 {
     int s;
 
@@ -115,8 +114,7 @@ tty_putc(int c, struct tty_queue* tq)
 /*
  * Remove the last character in a queue and return it.
  */
-static int
-tty_unputc(struct tty_queue* tq)
+static int tty_unputc(struct tty_queue* tq)
 {
     char c;
     int s;
@@ -134,8 +132,7 @@ tty_unputc(struct tty_queue* tq)
 /*
  * Put the chars in the from queue on the end of the to queue.
  */
-static void
-tty_catq(struct tty_queue* from, struct tty_queue* to)
+static void tty_catq(struct tty_queue* from, struct tty_queue* to)
 {
     int c;
 
@@ -146,8 +143,7 @@ tty_catq(struct tty_queue* from, struct tty_queue* to)
 /*
  * Rubout one character from the rawq of tp
  */
-static void
-tty_rubout(int c, struct tty* tp)
+static void tty_rubout(int c, struct tty* tp)
 {
 
     if (!(tp->t_lflag & ECHO))
@@ -163,8 +159,7 @@ tty_rubout(int c, struct tty* tp)
 /*
  * Echo char
  */
-static void
-tty_echo(int c, struct tty* tp)
+static void tty_echo(int c, struct tty* tp)
 {
 
     if (!(tp->t_lflag & ECHO)) {
@@ -182,8 +177,7 @@ tty_echo(int c, struct tty* tp)
 /*
  * Start output.
  */
-static void
-tty_start(struct tty* tp)
+static void tty_start(struct tty* tp)
 {
 
     DPRINTF(("tty_start\n"));
@@ -197,8 +191,7 @@ tty_start(struct tty* tp)
 /*
  * Flush tty read and/or write queues, notifying anyone waiting.
  */
-static void
-tty_flush(struct tty* tp, int rw)
+static void tty_flush(struct tty* tp, int rw)
 {
 
     DPRINTF(("tty_flush rw=%d\n", rw));
@@ -233,8 +226,7 @@ void tty_done(struct tty* tp)
 /*
  * Wait for output to drain.
  */
-static void
-tty_wait(struct tty* tp)
+static void tty_wait(struct tty* tp)
 {
 
     /*	DPRINTF(("tty_wait\n")); */
@@ -254,8 +246,7 @@ tty_wait(struct tty* tp)
 /*
  * Send TTY signal at DPC level.
  */
-static void
-tty_signal(void* arg)
+static void tty_signal(void* arg)
 {
     struct tty* tp = arg;
 
@@ -354,8 +345,8 @@ void tty_input(int c, struct tty* tp)
     }
 
     /*
-	 * Check for input buffer overflow
-	 */
+     * Check for input buffer overflow
+     */
     if (ttyq_full(&tp->t_rawq)) {
         tty_flush(tp, FREAD | FWRITE);
         goto endcase;
@@ -374,8 +365,8 @@ void tty_input(int c, struct tty* tp)
         tty_echo(c, tp);
 endcase:
     /*
-	 * IXANY means allow any character to restart output.
-	 */
+     * IXANY means allow any character to restart output.
+     */
     if ((tp->t_state & TS_TTSTOP) && (iflag & IXANY) == 0 && cc[VSTART] != cc[VSTOP])
         return;
 restartoutput:
@@ -394,8 +385,7 @@ restartoutput:
  * Output a single character on a tty, doing output processing
  * as needed (expanding tabs, newline processing, etc.).
  */
-static void
-tty_output(int c, struct tty* tp)
+static void tty_output(int c, struct tty* tp)
 {
     int i, col;
 
@@ -527,8 +517,7 @@ int tty_ioctl(struct tty* tp, u_long cmd, void* data)
 
     switch (cmd) {
     case TIOCGETA:
-        if (copyout(&tp->t_termios, data,
-                sizeof(struct termios)))
+        if (copyout(&tp->t_termios, data, sizeof(struct termios)))
             return EFAULT;
         break;
     case TIOCSETAW:
@@ -538,8 +527,7 @@ int tty_ioctl(struct tty* tp, u_long cmd, void* data)
             tty_flush(tp, FREAD);
         /* FALLTHROUGH */
     case TIOCSETA:
-        if (copyin(data, &tp->t_termios,
-                sizeof(struct termios)))
+        if (copyin(data, &tp->t_termios, sizeof(struct termios)))
             return EFAULT;
         break;
     case TIOCSPGRP: /* set pgrp of tty */
@@ -571,13 +559,11 @@ int tty_ioctl(struct tty* tp, u_long cmd, void* data)
         }
         break;
     case TIOCGWINSZ:
-        if (copyout(&tp->t_winsize, data,
-                sizeof(struct winsize)))
+        if (copyout(&tp->t_winsize, data, sizeof(struct winsize)))
             return EFAULT;
         break;
     case TIOCSWINSZ:
-        if (copyin(data, &tp->t_winsize,
-                sizeof(struct winsize)))
+        if (copyin(data, &tp->t_winsize, sizeof(struct winsize)))
             return EFAULT;
         break;
     case TIOCSETSIGT: /* Prex */

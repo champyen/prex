@@ -30,10 +30,10 @@
 #ifndef _X86_SYSTRAP_H
 #define _X86_SYSTRAP_H
 
-#define SYSCALL0(name)                  \
-    .global name;                       \
-    .align 2;                           \
-    name## : movl $(SYS_##name), % eax; \
+#define SYSCALL0(name)                                                                                                 \
+    .global name;                                                                                                      \
+    .align 2;                                                                                                          \
+    name## : movl $(SYS_##name), % eax;                                                                                \
     jmp __systrap
 
 #define SYSCALL1(name) SYSCALL0(name)

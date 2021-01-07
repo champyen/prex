@@ -55,8 +55,7 @@ long atol(const char* str)
  * Safer version of strncpy
  * The destination string is always terminated with NULL character.
  */
-size_t
-strlcpy(char* dest, const char* src, size_t count)
+size_t strlcpy(char* dest, const char* src, size_t count)
 {
     char* d = dest;
     const char* s = src;

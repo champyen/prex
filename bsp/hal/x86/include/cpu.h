@@ -53,22 +53,22 @@
 /*
  * x86 flags register
  */
-#define EFL_CF 0x00000001 /* Carry */
-#define EFL_PF 0x00000004 /* Parity */
-#define EFL_AF 0x00000010 /* Carry */
-#define EFL_ZF 0x00000040 /* Zero */
-#define EFL_SF 0x00000080 /* Sign */
-#define EFL_TF 0x00000100 /* Trap */
-#define EFL_IF 0x00000200 /* Interrupt enable */
-#define EFL_DF 0x00000400 /* Direction */
-#define EFL_OF 0x00000800 /* Overflow */
-#define EFL_IOPL 0x00003000 /* IO privilege level: */
+#define EFL_CF 0x00000001        /* Carry */
+#define EFL_PF 0x00000004        /* Parity */
+#define EFL_AF 0x00000010        /* Carry */
+#define EFL_ZF 0x00000040        /* Zero */
+#define EFL_SF 0x00000080        /* Sign */
+#define EFL_TF 0x00000100        /* Trap */
+#define EFL_IF 0x00000200        /* Interrupt enable */
+#define EFL_DF 0x00000400        /* Direction */
+#define EFL_OF 0x00000800        /* Overflow */
+#define EFL_IOPL 0x00003000      /* IO privilege level: */
 #define EFL_IOPL_KERN 0x00000000 /* Kernel */
 #define EFL_IOPL_USER 0x00003000 /* User */
-#define EFL_NT 0x00004000 /* Nested task */
-#define EFL_RF 0x00010000 /* Resume without tracing */
-#define EFL_VM 0x00020000 /* Virtual 8086 mode */
-#define EFL_AC 0x00040000 /* Alignment Check */
+#define EFL_NT 0x00004000        /* Nested task */
+#define EFL_RF 0x00010000        /* Resume without tracing */
+#define EFL_VM 0x00020000        /* Virtual 8086 mode */
+#define EFL_AC 0x00040000        /* Alignment Check */
 
 /*
  * CR0 register
@@ -97,31 +97,34 @@
 /*
  * Segment Descriptor
  */
-struct seg_desc {
+struct seg_desc
+{
     u_int limit_lo : 16; /* segment limit (lsb) */
-    u_int base_lo : 16; /* segment base address (lsb) */
-    u_int base_mid : 8; /* segment base address (middle) */
-    u_int type : 8; /* type */
-    u_int limit_hi : 4; /* segment limit (msb) */
-    u_int size : 4; /* size */
-    u_int base_hi : 8; /* segment base address (msb) */
+    u_int base_lo : 16;  /* segment base address (lsb) */
+    u_int base_mid : 8;  /* segment base address (middle) */
+    u_int type : 8;      /* type */
+    u_int limit_hi : 4;  /* segment limit (msb) */
+    u_int size : 4;      /* size */
+    u_int base_hi : 8;   /* segment base address (msb) */
 } __packed;
 
 /*
  * Gate Descriptor
  */
-struct gate_desc {
+struct gate_desc
+{
     u_int offset_lo : 16; /* gate offset (lsb) */
-    u_int selector : 16; /* gate segment selector */
-    u_int nr_copy : 8; /* stack copy count */
-    u_int type : 8; /* type */
+    u_int selector : 16;  /* gate segment selector */
+    u_int nr_copy : 8;    /* stack copy count */
+    u_int type : 8;       /* type */
     u_int offset_hi : 16; /* gate offset (msb) */
 } __packed;
 
 /*
  * Linear memory description for lgdt and lidt instructions.
  */
-struct desc_p {
+struct desc_p
+{
     uint16_t limit;
     uint32_t base;
 } __packed;
@@ -136,25 +139,25 @@ struct desc_p {
 /*
  * Segment type
  */
-#define ST_ACC 0x01 /* accessed */
-#define ST_LDT 0x02 /* LDT */
+#define ST_ACC 0x01          /* accessed */
+#define ST_LDT 0x02          /* LDT */
 #define ST_CALL_GATE_16 0x04 /* 16-bit call gate */
-#define ST_TASK_GATE 0x05 /* task gate */
-#define ST_TSS 0x09 /* task segment */
-#define ST_CALL_GATE 0x0c /* call gate */
-#define ST_INTR_GATE 0x0e /* interrupt gate */
-#define ST_TRAP_GATE 0x0f /* trap gate */
+#define ST_TASK_GATE 0x05    /* task gate */
+#define ST_TSS 0x09          /* task segment */
+#define ST_CALL_GATE 0x0c    /* call gate */
+#define ST_INTR_GATE 0x0e    /* interrupt gate */
+#define ST_TRAP_GATE 0x0f    /* trap gate */
 
 #define ST_TSS_BUSY 0x02 /* task busy */
 
-#define ST_DATA 0x10 /* data */
-#define ST_DATA_W 0x12 /* data, writable */
-#define ST_DATA_E 0x14 /* data, expand-down */
+#define ST_DATA 0x10    /* data */
+#define ST_DATA_W 0x12  /* data, writable */
+#define ST_DATA_E 0x14  /* data, expand-down */
 #define ST_DATA_EW 0x16 /* data, expand-down, writable */
 
-#define ST_CODE 0x18 /* code */
-#define ST_CODE_R 0x1a /* code, readable */
-#define ST_CODE_C 0x1c /* code, conforming */
+#define ST_CODE 0x18    /* code */
+#define ST_CODE_R 0x1a  /* code, readable */
+#define ST_CODE_C 0x1c  /* code, conforming */
 #define ST_CODE_CR 0x1e /* code, conforming, readable */
 
 #define ST_KERN 0x00 /* kernel access only */
@@ -169,7 +172,8 @@ struct desc_p {
 #define IO_BITMAP_SIZE (65536 / 8 + 1)
 #define INVALID_IO_BITMAP 0x8000
 
-struct tss {
+struct tss
+{
     uint32_t back_link;
     uint32_t esp0, ss0;
     uint32_t esp1, ss1;

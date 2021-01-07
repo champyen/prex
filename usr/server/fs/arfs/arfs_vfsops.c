@@ -55,19 +55,18 @@ static int arfs_unmount(mount_t mp);
  * File system operations
  */
 const struct vfsops arfs_vfsops = {
-    arfs_mount, /* mount */
+    arfs_mount,   /* mount */
     arfs_unmount, /* unmount */
-    arfs_sync, /* sync */
-    arfs_vget, /* vget */
-    arfs_statfs, /* statfs */
-    &arfs_vnops, /* vnops */
+    arfs_sync,    /* sync */
+    arfs_vget,    /* vget */
+    arfs_statfs,  /* statfs */
+    &arfs_vnops,  /* vnops */
 };
 
 /*
  * Mount a file system.
  */
-static int
-arfs_mount(mount_t mp, char* dev, int flags, void* data)
+static int arfs_mount(mount_t mp, char* dev, int flags, void* data)
 {
     size_t size;
     char* buf;
@@ -100,8 +99,7 @@ out:
     return error;
 }
 
-static int
-arfs_unmount(mount_t mp)
+static int arfs_unmount(mount_t mp)
 {
     return 0;
 }

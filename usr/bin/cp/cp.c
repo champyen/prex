@@ -80,8 +80,8 @@ int main(int argc, char* argv[])
         err(1, "%s", target);
     if (r == -1 || !S_ISDIR(to_stat.st_mode)) {
         /*
-		 * File to file
-		 */
+         * File to file
+         */
         if (argc > 1)
             usage();
 
@@ -104,8 +104,8 @@ int main(int argc, char* argv[])
         r = copy(argv[0], target, 0);
     } else {
         /*
-		 * File(s) to directory
-		 */
+         * File(s) to directory
+         */
         r = 0;
         for (i = 0; i < argc; i++)
             r = copy(argv[i], target, 1);
@@ -114,8 +114,7 @@ int main(int argc, char* argv[])
     exit(r);
 }
 
-static void
-usage(void)
+static void usage(void)
 {
     fprintf(stderr, "usage: cp src target\n"
                     "       cp src1 ... srcN directory\n");
@@ -123,8 +122,7 @@ usage(void)
     /* NOTREACHED */
 }
 
-static int
-copy(char* from, char* to, int dirflag)
+static int copy(char* from, char* to, int dirflag)
 {
     char path[PATH_MAX];
     int fold, fnew, n;

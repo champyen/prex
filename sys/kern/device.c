@@ -126,8 +126,7 @@ static struct device* device_list = NULL;
  * I/O services to applications.  Returns device ID on
  * success, or 0 on failure.
  */
-static device_t
-device_create(struct driver* drv, const char* name, int flags)
+static device_t device_create(struct driver* drv, const char* name, int flags)
 {
     device_t dev;
     size_t len;
@@ -147,8 +146,8 @@ device_create(struct driver* drv, const char* name, int flags)
         panic("duplicate device");
 
     /*
-	 * Allocate a device structure and device private data.
-	 */
+     * Allocate a device structure and device private data.
+     */
     if ((dev = kmem_alloc(sizeof(*dev))) == NULL)
         panic("device_create");
 
@@ -175,8 +174,7 @@ device_create(struct driver* drv, const char* name, int flags)
  * refer the target device, the destroy operation will be
  * pending until its reference count becomes 0.
  */
-static int
-device_destroy(device_t dev)
+static int device_destroy(device_t dev)
 {
 
     sched_lock();
@@ -193,8 +191,7 @@ device_destroy(device_t dev)
 /*
  * Look up a device object by device name.
  */
-static device_t
-device_lookup(const char* name)
+static device_t device_lookup(const char* name)
 {
     device_t dev;
 
@@ -208,8 +205,7 @@ device_lookup(const char* name)
 /*
  * Return device's private data.
  */
-static void*
-device_private(device_t dev)
+static void* device_private(device_t dev)
 {
     ASSERT(dev != NULL);
     ASSERT(dev->private != NULL);
@@ -220,8 +216,7 @@ device_private(device_t dev)
 /*
  * Return true if specified device is valid.
  */
-static int
-device_valid(device_t dev)
+static int device_valid(device_t dev)
 {
     device_t tmp;
     int found = 0;
@@ -240,8 +235,7 @@ device_valid(device_t dev)
 /*
  * Increment the reference count on an active device.
  */
-static int
-device_reference(device_t dev)
+static int device_reference(device_t dev)
 {
 
     sched_lock();
@@ -262,8 +256,7 @@ device_reference(device_t dev)
  * Decrement the reference count on a device. If the reference
  * count becomes zero, we can release the resource for the device.
  */
-static void
-device_release(device_t dev)
+static void device_release(device_t dev)
 {
     device_t* tmp;
 
@@ -273,8 +266,8 @@ device_release(device_t dev)
         return;
     }
     /*
-	 * No more references - we can remove the device.
-	 */
+     * No more references - we can remove the device.
+     */
     for (tmp = &device_list; *tmp; tmp = &(*tmp)->next) {
         if (*tmp == dev) {
             *tmp = dev->next;
@@ -442,8 +435,7 @@ int device_ioctl(device_t dev, u_long cmd, void* arg)
  * Device control - devctl is similar to ioctl, but is invoked from
  * other device driver rather than from user application.
  */
-static int
-device_control(device_t dev, u_long cmd, void* arg)
+static int device_control(device_t dev, u_long cmd, void* arg)
 {
     struct devops* ops;
     int error;
@@ -471,8 +463,7 @@ device_control(device_t dev, u_long cmd, void* arg)
  * device_broadcast will return the error code which is returned
  * by the driver.
  */
-static int
-device_broadcast(u_long cmd, void* arg, int force)
+static int device_broadcast(u_long cmd, void* arg, int force)
 {
     device_t dev;
     struct devops* ops;
@@ -482,8 +473,8 @@ device_broadcast(u_long cmd, void* arg, int force)
 
     for (dev = device_list; dev != NULL; dev = dev->next) {
         /*
-		 * Call driver's devctl() routine.
-		 */
+         * Call driver's devctl() routine.
+         */
         ops = dev->driver->devops;
         if (ops == NULL)
             continue;
@@ -491,8 +482,7 @@ device_broadcast(u_long cmd, void* arg, int force)
         ASSERT(ops->devctl != NULL);
         error = (*ops->devctl)(dev, cmd, arg);
         if (error) {
-            DPRINTF(("%s returns error=%d for cmd=%ld\n",
-                dev->name, error, cmd));
+            DPRINTF(("%s returns error=%d for cmd=%ld\n", dev->name, error, cmd));
             if (force)
                 retval = EIO;
             else {

@@ -44,8 +44,7 @@
 /*
  * Check if current process has CAP_KILL capability.
  */
-static int
-kill_capable(void)
+static int kill_capable(void)
 {
 
     if (task_chkcap(curproc->p_task, CAP_KILL) == 0)
@@ -56,21 +55,20 @@ kill_capable(void)
 /*
  * Send a signal to the process.
  */
-static int
-sendsig(struct proc* p, int sig)
+static int sendsig(struct proc* p, int sig)
 {
 
     /*
-	 * We never allow to send signal to the
-	 * process server in any case.
-	 */
+     * We never allow to send signal to the
+     * process server in any case.
+     */
     if (p->p_pid == 0)
         return EPERM;
 
     /*
-	 * Filter signals for init process.
-	 * This is for fail safe...
-	 */
+     * Filter signals for init process.
+     * This is for fail safe...
+     */
     if (p->p_pid == 1 && sig != SIGCHLD)
         return EPERM;
 
@@ -81,8 +79,7 @@ sendsig(struct proc* p, int sig)
 /*
  * Send a signal to one process.
  */
-static int
-kill_one(pid_t pid, int sig)
+static int kill_one(pid_t pid, int sig)
 {
     struct proc* p;
 
@@ -164,17 +161,16 @@ int sys_kill(pid_t pid, int sig)
             return EPERM;
 
         DPRINTF(("proc: kill all!\n"));
-        for (n = list_first(&allproc); n != &allproc;
-             n = list_next(n)) {
+        for (n = list_first(&allproc); n != &allproc; n = list_next(n)) {
             p = list_entry(n, struct proc, p_link);
 
             /*
-			 * We don't send a signal to the following processes.
-			 *
-			 *  pid=0   - process server
-			 *  pid=1   - init process
-			 *  curproc - current process (sleeping in msg_send)
-			 */
+             * We don't send a signal to the following processes.
+             *
+             *  pid=0   - process server
+             *  pid=1   - init process
+             *  curproc - current process (sleeping in msg_send)
+             */
             if (p->p_pid != 0 && p->p_pid != 1 && p->p_pid != curproc->p_pid) {
                 error = kill_one(p->p_pid, sig);
                 if (error != 0)

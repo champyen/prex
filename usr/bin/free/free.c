@@ -46,9 +46,8 @@ int main(int argc, char* argv[])
     sys_info(INFO_MEMORY, &info);
 
     printf("          total       used       free   bootdisk\n");
-    printf("Mem: %10d %10d %10d %10d\n", (u_int)info.total,
-        (u_int)(info.total - info.free), (u_int)info.free,
-        (u_int)info.bootdisk);
+    printf("Mem: %10d %10d %10d %10d\n", (u_int)info.total, (u_int)(info.total - info.free), (u_int)info.free,
+           (u_int)info.bootdisk);
     exit(0);
     /* NOTREACHED */
 }

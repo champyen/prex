@@ -37,22 +37,19 @@
 
 static int _gettemp(char*, int*);
 
-int
-    mkstemp(path) char* path;
+int mkstemp(path) char* path;
 {
     int fd;
 
     return (_gettemp(path, &fd) ? fd : -1);
 }
 
-char*
-    mktemp(path) char* path;
+char* mktemp(path) char* path;
 {
     return (_gettemp(path, (int*)NULL) ? path : (char*)NULL);
 }
 
-static int
-    _gettemp(path, doopen) char* path;
+static int _gettemp(path, doopen) char* path;
 int* doopen;
 {
     extern int errno;
@@ -69,9 +66,9 @@ int* doopen;
     }
 
     /*
-	 * check the target directory; if you have six X's and it
-	 * doesn't exist this runs for a *very* long time.
-	 */
+     * check the target directory; if you have six X's and it
+     * doesn't exist this runs for a *very* long time.
+     */
     for (start = trv + 1;; --trv) {
         if (trv <= path)
             break;

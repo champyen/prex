@@ -34,20 +34,19 @@
 /*
  * Setup boot information.
  */
-static void
-bootinfo_init(void)
+static void bootinfo_init(void)
 {
     struct bootinfo* bi = bootinfo;
 
     /*
-	 * Screen size
-	 */
+     * Screen size
+     */
     bi->video.text_x = 30;
     bi->video.text_y = 20;
 
     /*
-	 * EWRAM - 256K
-	 */
+     * EWRAM - 256K
+     */
     bi->ram[0].base = 0x2000000;
     bi->ram[0].size = 0x40000;
     bi->ram[0].type = MT_USABLE;

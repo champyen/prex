@@ -49,15 +49,15 @@
 #define MACHINE __s(CONFIG_MACHINE)
 #define VERSION __s(MAJORVERSION) "." __s(MINORVERSION) "." __s(PATCHLEVEL)
 
-#define BANNER "Prex version " VERSION PROFILE " for " MACHINE \
-               " ("__DATE__                                    \
-               ")\n"                                           \
-               "Copyright (c) 2005-2009 Kohsuke Ohtani\n"
+#define BANNER                                                                                                         \
+    "Prex version " VERSION PROFILE " for " MACHINE " ("__DATE__                                                       \
+    ")\n"                                                                                                              \
+    "Copyright (c) 2005-2009 Kohsuke Ohtani\n"
 
 /*
  * Global variables in the kernel.
  */
 extern struct thread* curthread; /* pointer to the current thread */
-extern struct task kernel_task; /* kernel task */
+extern struct task kernel_task;  /* kernel task */
 
 #endif /* !_KERNEL_H */

@@ -30,8 +30,7 @@
 #include <sys/time.h>
 #include <time.h>
 
-struct tm*
-localtime_r(const time_t* timep, struct tm* tmp)
+struct tm* localtime_r(const time_t* timep, struct tm* tmp)
 {
     /* XXX: handle timezone */
     return gmtime_r(timep, tmp);

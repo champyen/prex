@@ -37,9 +37,7 @@
  */
 #undef ferror
 
-int
-    ferror(fp)
-        FILE* fp;
+int ferror(fp) FILE* fp;
 {
     return (__sferror(fp));
 }

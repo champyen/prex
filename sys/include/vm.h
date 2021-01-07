@@ -38,14 +38,15 @@
 /*
  * One structure per allocated segment.
  */
-struct seg {
+struct seg
+{
     struct seg* prev; /* segment list sorted by address */
     struct seg* next;
     struct seg* sh_prev; /* link for all shared segments */
     struct seg* sh_next;
     vaddr_t addr; /* base address */
-    size_t size; /* size */
-    int flags; /* SEG_* flag */
+    size_t size;  /* size */
+    int flags;    /* SEG_* flag */
     paddr_t phys; /* physical address */
 };
 
@@ -58,19 +59,20 @@ struct seg {
 #define SEG_FREE 0x00000080
 
 /* Attribute for vm_attribute() */
-#define PROT_NONE 0x0 /* pages cannot be accessed */
-#define PROT_READ 0x1 /* pages can be read */
+#define PROT_NONE 0x0  /* pages cannot be accessed */
+#define PROT_READ 0x1  /* pages can be read */
 #define PROT_WRITE 0x2 /* pages can be written */
-#define PROT_EXEC 0x4 /* pages can be executed */
+#define PROT_EXEC 0x4  /* pages can be executed */
 
 /*
  * VM mapping per one task.
  */
-struct vm_map {
+struct vm_map
+{
     struct seg head; /* list head of segements */
-    int refcnt; /* reference count */
-    pgd_t pgd; /* page directory */
-    size_t total; /* total used size */
+    int refcnt;      /* reference count */
+    pgd_t pgd;       /* page directory */
+    size_t total;    /* total used size */
 };
 
 __BEGIN_DECLS

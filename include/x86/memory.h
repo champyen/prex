@@ -33,12 +33,12 @@
 #include <conf/config.h>
 
 #ifdef CONFIG_MMU
-#define KERNBASE 0x80000000 /* offset of kernel address space */
-#define PAGE_SIZE 4096 /* bytes per page */
+#define KERNBASE 0x80000000  /* offset of kernel address space */
+#define PAGE_SIZE 4096       /* bytes per page */
 #define USERLIMIT 0x80000000 /* upper limit on user address space */
 #else
-#define KERNBASE 0 /* offset of kernel address space */
-#define PAGE_SIZE 1024 /* bytes per page */
+#define KERNBASE 0           /* offset of kernel address space */
+#define PAGE_SIZE 1024       /* bytes per page */
 #define USERLIMIT 0xffffffff /* upper limit on user address space */
 #endif
 

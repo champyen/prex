@@ -51,7 +51,8 @@
 
 #define VID_RAM 0xB8000
 
-struct vga_softc {
+struct vga_softc
+{
     device_t dev;
     short* vram;
     int cols;
@@ -88,32 +89,29 @@ struct driver vga_driver = {
 };
 
 static struct wscons_video_ops wscons_vga_ops = {
-    vga_cursor, /* cursor */
-    vga_putc, /* putc */
-    vga_copyrows, /* copyrows */
-    vga_eraserows, /* eraserows */
-    vga_set_attr, /* set_attr */
+    vga_cursor,     /* cursor */
+    vga_putc,       /* putc */
+    vga_copyrows,   /* copyrows */
+    vga_eraserows,  /* eraserows */
+    vga_set_attr,   /* set_attr */
     vga_get_cursor, /* set_cursor */
 };
 
-static u_char
-crtc_read(u_char index)
+static u_char crtc_read(u_char index)
 {
 
     bus_write_8(CRTC_INDEX, index);
     return bus_read_8(CRTC_DATA);
 }
 
-static void
-crtc_write(u_char index, u_char val)
+static void crtc_write(u_char index, u_char val)
 {
 
     bus_write_8(CRTC_INDEX, index);
     bus_write_8(CRTC_DATA, val);
 }
 
-static void
-vga_on(void)
+static void vga_on(void)
 {
     u_char val;
 
@@ -122,8 +120,7 @@ vga_on(void)
     bus_write_8(SEQ_DATA, val & ~0x20);
 }
 
-static void
-vga_off(void)
+static void vga_off(void)
 {
     u_char val;
 
@@ -132,8 +129,7 @@ vga_off(void)
     bus_write_8(SEQ_DATA, val | 0x20);
 }
 
-static void
-vga_cursor(void* aux, int row, int col)
+static void vga_cursor(void* aux, int row, int col)
 {
     struct vga_softc* sc = aux;
     int pos, s;
@@ -146,26 +142,21 @@ vga_cursor(void* aux, int row, int col)
     splx(s);
 }
 
-static void
-vga_putc(void* aux, int row, int col, int ch)
+static void vga_putc(void* aux, int row, int col, int ch)
 {
     struct vga_softc* sc = aux;
 
     sc->vram[row * sc->cols + col] = ch | (sc->attr << 8);
 }
 
-static void
-vga_copyrows(void* aux, int srcrow, int dstrow, int nrows)
+static void vga_copyrows(void* aux, int srcrow, int dstrow, int nrows)
 {
     struct vga_softc* sc = aux;
 
-    memcpy(sc->vram + dstrow * sc->cols,
-        sc->vram + srcrow * sc->cols,
-        (size_t)nrows * sc->cols * 2);
+    memcpy(sc->vram + dstrow * sc->cols, sc->vram + srcrow * sc->cols, (size_t)nrows * sc->cols * 2);
 }
 
-static void
-vga_eraserows(void* aux, int row, int nrows)
+static void vga_eraserows(void* aux, int row, int nrows)
 {
     struct vga_softc* sc = aux;
     int i, start, end;
@@ -177,16 +168,14 @@ vga_eraserows(void* aux, int row, int nrows)
         sc->vram[i] = ' ' | (sc->attr << 8);
 }
 
-static void
-vga_set_attr(void* aux, int attr)
+static void vga_set_attr(void* aux, int attr)
 {
     struct vga_softc* sc = aux;
 
     sc->attr = attr;
 }
 
-static void
-vga_get_cursor(void* aux, int* col, int* row)
+static void vga_get_cursor(void* aux, int* col, int* row)
 {
     struct vga_softc* sc = aux;
     u_int offset;
@@ -201,8 +190,7 @@ vga_get_cursor(void* aux, int* col, int* row)
     splx(s);
 }
 
-static int
-vga_devctl(device_t dev, u_long cmd, void* arg)
+static int vga_devctl(device_t dev, u_long cmd, void* arg)
 {
     struct vga_softc* sc = device_private(dev);
     int s;
@@ -230,8 +218,7 @@ vga_devctl(device_t dev, u_long cmd, void* arg)
     return 0;
 }
 
-static int
-vga_init(struct driver* self)
+static int vga_init(struct driver* self)
 {
     device_t dev;
     struct bootinfo* bi;

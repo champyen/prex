@@ -29,8 +29,7 @@
 
 #include <string.h>
 
-char*
-    strcat(s, append) char* s;
+char* strcat(s, append) char* s;
 const char* append;
 {
     char* save = s;

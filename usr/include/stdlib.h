@@ -42,14 +42,16 @@ typedef unsigned int size_t; /* size of something in bytes */
 typedef int wchar_t;
 #endif
 
-typedef struct {
+typedef struct
+{
     int quot; /* quotient */
-    int rem; /* remainder */
+    int rem;  /* remainder */
 } div_t;
 
-typedef struct {
+typedef struct
+{
     long quot; /* quotient */
-    long rem; /* remainder */
+    long rem;  /* remainder */
 } ldiv_t;
 
 #ifndef NULL
@@ -73,8 +75,7 @@ int atexit(void (*)(void));
 double atof(const char*);
 int atoi(const char*);
 long atol(const char*);
-void* bsearch(const void*, const void*, size_t,
-    size_t, int (*)(const void*, const void*));
+void* bsearch(const void*, const void*, size_t, size_t, int (*)(const void*, const void*));
 void* calloc(size_t, size_t);
 div_t div(int, int);
 void exit(int) __noreturn;
@@ -84,15 +85,13 @@ long labs(long);
 ldiv_t ldiv(long, long);
 void mstat(void);
 void* malloc(size_t);
-void qsort(void*, size_t, size_t,
-    int (*)(const void*, const void*));
+void qsort(void*, size_t, size_t, int (*)(const void*, const void*));
 int rand(void);
 void* realloc(void*, size_t);
 void srand(unsigned);
 double strtod(const char*, char**);
 long strtol(const char*, char**, int);
-unsigned long
-strtoul(const char*, char**, int);
+unsigned long strtoul(const char*, char**, int);
 int system(const char*);
 
 /* These are currently just stubs. */
@@ -128,25 +127,19 @@ char* devname(int, int);
 int getloadavg(double[], int);
 
 char* group_from_gid(unsigned long, int);
-int heapsort(void*, size_t, size_t,
-    int (*)(const void*, const void*));
+int heapsort(void*, size_t, size_t, int (*)(const void*, const void*));
 char* initstate(unsigned long, char*, long);
-int mergesort(void*, size_t, size_t,
-    int (*)(const void*, const void*));
-int radixsort(const unsigned char**, int, const unsigned char*,
-    unsigned);
-int sradixsort(const unsigned char**, int, const unsigned char*,
-    unsigned);
+int mergesort(void*, size_t, size_t, int (*)(const void*, const void*));
+int radixsort(const unsigned char**, int, const unsigned char*, unsigned);
+int sradixsort(const unsigned char**, int, const unsigned char*, unsigned);
 long random(void);
 char* realpath(const char*, char resolved_path[]);
 char* setstate(char*);
 void srandom(unsigned long);
 char* user_from_uid(unsigned long, int);
 #ifndef __STRICT_ANSI__
-long long
-strtoq(const char*, char**, int);
-unsigned long long
-strtouq(const char*, char**, int);
+long long strtoq(const char*, char**, int);
+unsigned long long strtouq(const char*, char**, int);
 #endif
 void unsetenv(const char*);
 #endif

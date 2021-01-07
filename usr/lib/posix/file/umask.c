@@ -33,8 +33,7 @@
 
 #include <errno.h>
 
-mode_t
-umask(mode_t mode)
+mode_t umask(mode_t mode)
 {
 
     return 0777;

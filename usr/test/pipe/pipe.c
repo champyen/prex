@@ -41,8 +41,7 @@
 #include <string.h>
 #include <unistd.h>
 
-static void
-test1(void)
+static void test1(void)
 {
     int fd[2];
     char str[] = "test1";
@@ -59,8 +58,7 @@ test1(void)
     printf("str=%s\n", buf);
 }
 
-static void
-test2(void)
+static void test2(void)
 {
     int fd[2];
     char str[] = "test2: hello!";

@@ -87,44 +87,29 @@ static int proc_debug(struct msg*);
 /*
  * Message mapping
  */
-struct msg_map {
+struct msg_map
+{
     int code;
     int (*func)(struct msg*);
 };
 
 static const struct msg_map procmsg_map[] = {
-    { PS_GETPID, proc_getpid },
-    { PS_GETPPID, proc_getppid },
-    { PS_GETPGID, proc_getpgid },
-    { PS_SETPGID, proc_setpgid },
-    { PS_GETSID, proc_getsid },
-    { PS_SETSID, proc_setsid },
-    { PS_FORK, proc_fork },
-    { PS_EXIT, proc_exit },
-    { PS_STOP, proc_stop },
-    { PS_WAITPID, proc_waitpid },
-    { PS_KILL, proc_kill },
-    { PS_EXEC, proc_exec },
-    { PS_PSTAT, proc_pstat },
-    { PS_REGISTER, proc_register },
-    { PS_SETINIT, proc_setinit },
-    { PS_TRACE, proc_trace },
-    { STD_BOOT, proc_boot },
-    { STD_SHUTDOWN, proc_shutdown },
-    { STD_DEBUG, proc_debug },
-    { 0, proc_noop },
+    {PS_GETPID, proc_getpid}, {PS_GETPPID, proc_getppid},    {PS_GETPGID, proc_getpgid}, {PS_SETPGID, proc_setpgid},
+    {PS_GETSID, proc_getsid}, {PS_SETSID, proc_setsid},      {PS_FORK, proc_fork},       {PS_EXIT, proc_exit},
+    {PS_STOP, proc_stop},     {PS_WAITPID, proc_waitpid},    {PS_KILL, proc_kill},       {PS_EXEC, proc_exec},
+    {PS_PSTAT, proc_pstat},   {PS_REGISTER, proc_register},  {PS_SETINIT, proc_setinit}, {PS_TRACE, proc_trace},
+    {STD_BOOT, proc_boot},    {STD_SHUTDOWN, proc_shutdown}, {STD_DEBUG, proc_debug},    {0, proc_noop},
 };
 
-static struct proc proc0; /* process data of this server (pid=0) */
-static struct pgrp pgrp0; /* process group for first process */
+static struct proc proc0;       /* process data of this server (pid=0) */
+static struct pgrp pgrp0;       /* process group for first process */
 static struct session session0; /* session for first process */
 
 struct proc initproc; /* process slot for init process (pid=1) */
 struct proc* curproc; /* current (caller) process */
-struct list allproc; /* list of all processes */
+struct list allproc;  /* list of all processes */
 
-static int
-proc_getpid(struct msg* msg)
+static int proc_getpid(struct msg* msg)
 {
     pid_t pid;
 
@@ -134,8 +119,7 @@ proc_getpid(struct msg* msg)
     return 0;
 }
 
-static int
-proc_getppid(struct msg* msg)
+static int proc_getppid(struct msg* msg)
 {
     pid_t ppid;
 
@@ -145,8 +129,7 @@ proc_getppid(struct msg* msg)
     return 0;
 }
 
-static int
-proc_getpgid(struct msg* msg)
+static int proc_getpgid(struct msg* msg)
 {
     pid_t pid, pgid;
     int error;
@@ -161,8 +144,7 @@ proc_getpgid(struct msg* msg)
     return 0;
 }
 
-static int
-proc_setpgid(struct msg* msg)
+static int proc_setpgid(struct msg* msg)
 {
     pid_t pid, pgid;
 
@@ -172,8 +154,7 @@ proc_setpgid(struct msg* msg)
     return sys_setpgid(pid, pgid);
 }
 
-static int
-proc_getsid(struct msg* msg)
+static int proc_getsid(struct msg* msg)
 {
     pid_t pid, sid;
     int error;
@@ -188,8 +169,7 @@ proc_getsid(struct msg* msg)
     return 0;
 }
 
-static int
-proc_setsid(struct msg* msg)
+static int proc_setsid(struct msg* msg)
 {
     pid_t sid;
     int error;
@@ -202,8 +182,7 @@ proc_setsid(struct msg* msg)
     return 0;
 }
 
-static int
-proc_fork(struct msg* msg)
+static int proc_fork(struct msg* msg)
 {
     task_t child;
     int vfork;
@@ -221,8 +200,7 @@ proc_fork(struct msg* msg)
     return 0;
 }
 
-static int
-proc_exit(struct msg* msg)
+static int proc_exit(struct msg* msg)
 {
     int exitcode;
 
@@ -231,8 +209,7 @@ proc_exit(struct msg* msg)
     return sys_exit(exitcode);
 }
 
-static int
-proc_stop(struct msg* msg)
+static int proc_stop(struct msg* msg)
 {
     int exitcode;
 
@@ -241,8 +218,7 @@ proc_stop(struct msg* msg)
     return stop(exitcode);
 }
 
-static int
-proc_waitpid(struct msg* msg)
+static int proc_waitpid(struct msg* msg)
 {
     pid_t pid, pid_child;
     int options, status, error;
@@ -260,8 +236,7 @@ proc_waitpid(struct msg* msg)
     return 0;
 }
 
-static int
-proc_kill(struct msg* msg)
+static int proc_kill(struct msg* msg)
 {
     pid_t pid;
     int sig;
@@ -277,8 +252,7 @@ proc_kill(struct msg* msg)
  * The almost all work is done by a exec server for exec()
  * emulation. So, there is not so many jobs here...
  */
-static int
-proc_exec(struct msg* msg)
+static int proc_exec(struct msg* msg)
 {
     task_t orgtask, newtask;
     struct proc *p, *parent;
@@ -311,8 +285,7 @@ proc_exec(struct msg* msg)
 /*
  * Get process status.
  */
-static int
-proc_pstat(struct msg* msg)
+static int proc_pstat(struct msg* msg)
 {
     task_t task;
     struct proc* p;
@@ -335,8 +308,7 @@ proc_pstat(struct msg* msg)
 /*
  * Set init process (pid=1).
  */
-static int
-proc_setinit(struct msg* msg)
+static int proc_setinit(struct msg* msg)
 {
 
     DPRINTF(("proc: setinit task=%x\n", msg->hdr.task));
@@ -357,8 +329,7 @@ proc_setinit(struct msg* msg)
 /*
  * Set trace flag
  */
-static int
-proc_trace(struct msg* msg)
+static int proc_trace(struct msg* msg)
 {
     task_t task = msg->hdr.task;
     struct proc* p;
@@ -376,8 +347,7 @@ proc_trace(struct msg* msg)
 /*
  * Register boot task.
  */
-static int
-proc_register(struct msg* msg)
+static int proc_register(struct msg* msg)
 {
     struct proc* p;
 
@@ -402,8 +372,7 @@ proc_register(struct msg* msg)
 /*
  * Ready to boot
  */
-static int
-proc_boot(struct msg* msg)
+static int proc_boot(struct msg* msg)
 {
     object_t obj;
     struct bind_msg m;
@@ -415,9 +384,9 @@ proc_boot(struct msg* msg)
         return EPERM;
 
     /*
-	 * Request exec server to bind an appropriate
-	 * capability for us.
-	 */
+     * Request exec server to bind an appropriate
+     * capability for us.
+     */
     if (object_lookup("!exec", &obj) != 0)
         sys_panic("proc: no exec found");
     m.hdr.code = EXEC_BINDCAP;
@@ -427,49 +396,42 @@ proc_boot(struct msg* msg)
     return 0;
 }
 
-static int
-proc_shutdown(struct msg* msg)
+static int proc_shutdown(struct msg* msg)
 {
 
     DPRINTF(("proc: shutdown\n"));
     return 0;
 }
 
-static int
-proc_noop(struct msg* msg)
+static int proc_noop(struct msg* msg)
 {
 
     return 0;
 }
 
-static int
-proc_debug(struct msg* msg)
+static int proc_debug(struct msg* msg)
 {
 #ifdef DEBUG_PROC
     struct proc* p;
     list_t n;
-    char stat[][5] = { "    ", "RUN ", "ZOMB", "STOP" };
+    char stat[][5] = {"    ", "RUN ", "ZOMB", "STOP"};
 
     dprintf("<Process Server>\n");
     dprintf("Dump process\n");
     dprintf(" pid    ppid   pgid   sid    stat task\n");
     dprintf(" ------ ------ ------ ------ ---- --------\n");
 
-    for (n = list_first(&allproc); n != &allproc;
-         n = list_next(n)) {
+    for (n = list_first(&allproc); n != &allproc; n = list_next(n)) {
         p = list_entry(n, struct proc, p_link);
-        dprintf(" %6d %6d %6d %6d %s %08x\n", p->p_pid,
-            p->p_parent->p_pid, p->p_pgrp->pg_pgid,
-            p->p_pgrp->pg_session->s_leader->p_pid,
-            stat[p->p_stat], p->p_task);
+        dprintf(" %6d %6d %6d %6d %s %08x\n", p->p_pid, p->p_parent->p_pid, p->p_pgrp->pg_pgid,
+                p->p_pgrp->pg_session->s_leader->p_pid, stat[p->p_stat], p->p_task);
     }
     dprintf("\n");
 #endif
     return 0;
 }
 
-static void
-proc_init(void)
+static void proc_init(void)
 {
 
     list_init(&allproc);
@@ -480,8 +442,7 @@ proc_init(void)
 /*
  * Initialize process 0.
  */
-static void
-proc0_init(void)
+static void proc0_init(void)
 {
     struct proc* p;
     struct pgrp* pg;
@@ -540,18 +501,17 @@ int main(int argc, char* argv[])
         sys_panic("proc: fail to create object");
 
     /*
-	 * Message loop
-	 */
+     * Message loop
+     */
     for (;;) {
         /*
-		 * Wait for an incoming request.
-		 */
+         * Wait for an incoming request.
+         */
         error = msg_receive(obj, &msg, sizeof(msg));
         if (error)
             continue;
 
-        DPRINTF(("proc: msg code=%x task=%x\n",
-            msg.hdr.code, msg.hdr.task));
+        DPRINTF(("proc: msg code=%x task=%x\n", msg.hdr.code, msg.hdr.task));
 
         error = EINVAL;
         map = &procmsg_map[0];
@@ -566,14 +526,13 @@ int main(int argc, char* argv[])
             map++;
         }
         /*
-		 * Reply to the client.
-		 */
+         * Reply to the client.
+         */
         msg.hdr.status = error;
         msg_reply(obj, &msg, sizeof(msg));
 #ifdef DEBUG_PROC
         if (error) {
-            DPRINTF(("proc: msg code=%x error=%d\n",
-                map->code, error));
+            DPRINTF(("proc: msg code=%x error=%d\n", map->code, error));
         }
 #endif
     }

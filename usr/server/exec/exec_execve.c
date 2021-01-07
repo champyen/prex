@@ -54,8 +54,7 @@
 #define SP_ALIGN(p) ((unsigned)(p) & ~_ALIGNBYTES)
 
 /* forward declarations */
-static int build_args(task_t, void*, char*, struct exec_msg*,
-    char*, char*, void**);
+static int build_args(task_t, void*, char*, struct exec_msg*, char*, char*, void**);
 static int conv_path(char*, char*, char*);
 static void notify_server(task_t, task_t, void*);
 static int read_header(char*);
@@ -84,16 +83,16 @@ int exec_execve(struct exec_msg* msg)
     old_task = msg->hdr.task;
 
     /*
-	 * Make it full path.
-	 */
+     * Make it full path.
+     */
     if ((error = conv_path(msg->cwd, msg->path, path)) != 0) {
         DPRINTF(("exec: invalid path\n"));
         goto err1;
     }
 
     /*
-	 * Check permission.
-	 */
+     * Check permission.
+     */
     if (access(path, X_OK) == -1) {
         DPRINTF(("exec: no exec access\n"));
         error = errno;
@@ -107,15 +106,15 @@ int exec_execve(struct exec_msg* msg)
 
 again:
     /*
-	 * Read file header
-	 */
+     * Read file header
+     */
     DPRINTF(("exec: read header for %s\n", exec.path));
     if ((error = read_header(exec.path)) != 0)
         goto err1;
 
     /*
-	 * Find file loader
-	 */
+     * Find file loader
+     */
     rc = PROBE_ERROR;
     for (i = 0; i < nloader; i++) {
         ldr = &loader_table[i];
@@ -130,16 +129,16 @@ again:
     }
 
     /*
-	 * Check file header again if indirect case.
-	 */
+     * Check file header again if indirect case.
+     */
     if (rc == PROBE_INDIRECT)
         goto again;
 
     DPRINTF(("exec: loader=%s\n", ldr->el_name));
 
     /*
-	 * Check file permission.
-	 */
+     * Check file permission.
+     */
     if (access(exec.path, X_OK) == -1) {
         DPRINTF(("exec: no exec access\n"));
         error = errno;
@@ -147,14 +146,14 @@ again:
     }
 
     /*
-	 * Suspend old task
-	 */
+     * Suspend old task
+     */
     if ((error = task_suspend(old_task)) != 0)
         goto err1;
 
     /*
-	 * Create new task
-	 */
+     * Create new task
+     */
     if ((error = task_create(old_task, VM_NEW, &new_task)) != 0) {
         DPRINTF(("exec: failed to crete task\n"));
         goto err1;
@@ -164,29 +163,27 @@ again:
         task_setname(new_task, basename(exec.path));
 
     /*
-	 * Bind capabilities.
-	 */
+     * Bind capabilities.
+     */
     bind_cap(exec.path, new_task);
 
     if ((error = thread_create(new_task, &t)) != 0)
         goto err3;
 
     /*
-	 * Allocate stack and build arguments on it.
-	 */
+     * Allocate stack and build arguments on it.
+     */
     error = vm_allocate(new_task, &stack, DFLSTKSZ, 1);
     if (error) {
         DPRINTF(("exec: failed to allocate stack\n"));
         goto err4;
     }
-    if ((error = build_args(new_task, stack, exec.path, msg,
-             exec.xarg1, exec.xarg2, &sp))
-        != 0)
+    if ((error = build_args(new_task, stack, exec.path, msg, exec.xarg1, exec.xarg2, &sp)) != 0)
         goto err5;
 
     /*
-	 * Load file image.
-	 */
+     * Load file image.
+     */
     DPRINTF(("exec: load file image\n"));
     exec.task = new_task;
     if ((error = ldr->el_load(&exec)) != 0)
@@ -195,18 +192,18 @@ again:
         goto err5;
 
     /*
-	 * Notify to servers.
-	 */
+     * Notify to servers.
+     */
     notify_server(old_task, new_task, stack);
 
     /*
-	 * Terminate old task.
-	 */
+     * Terminate old task.
+     */
     task_terminate(old_task);
 
     /*
-	 * Set him running.
-	 */
+     * Set him running.
+     */
     thread_setpri(t, PRI_DEFAULT);
     thread_resume(t);
 
@@ -229,8 +226,7 @@ err1:
  * @path: target path
  * @full: full path to be returned
  */
-static int
-conv_path(char* cwd, char* path, char* full)
+static int conv_path(char* cwd, char* path, char* full)
 {
     char *src, *tgt, *p, *end;
     size_t len = 0;
@@ -310,9 +306,8 @@ conv_path(char* cwd, char* path, char* full)
  *
  * NOTE: This may depend on processor architecture.
  */
-static int
-build_args(task_t task, void* stack, char* path, struct exec_msg* msg,
-    char* xarg1, char* xarg2, void** new_sp)
+static int build_args(task_t task, void* stack, char* path, struct exec_msg* msg, char* xarg1, char* xarg2,
+                      void** new_sp)
 {
     int argc, envc;
     char* file;
@@ -327,8 +322,8 @@ build_args(task_t task, void* stack, char* path, struct exec_msg* msg,
     DPRINTF(("exec: xarg1=%s xarg2=%s\n", xarg1, xarg2));
 
     /*
-	 * Map target stack in current task.
-	 */
+     * Map target stack in current task.
+     */
     error = vm_map(task, stack, DFLSTKSZ, (void*)&mapped);
     if (error)
         return ENOMEM;
@@ -336,8 +331,8 @@ build_args(task_t task, void* stack, char* path, struct exec_msg* msg,
     sp = mapped + DFLSTKSZ - sizeof(int) * 3;
 
     /*
-	 * Copy items
-	 */
+     * Copy items
+     */
 
     /* File name */
     *(char*)sp = '\0';
@@ -353,8 +348,8 @@ build_args(task_t task, void* stack, char* path, struct exec_msg* msg,
     arg_top = sp;
 
     /*
-	 * Insert extra argument for indirect loader.
-	 */
+     * Insert extra argument for indirect loader.
+     */
     if (xarg2 != NULL) {
         len = strlen(xarg2);
         sp -= (len + 1);
@@ -383,8 +378,8 @@ build_args(task_t task, void* stack, char* path, struct exec_msg* msg,
     *(int*)(sp) = argc + 1;
 
     /*
-	 * Build argument list
-	 */
+     * Build argument list
+     */
     argv[0] = (char*)((u_long)stack + (u_long)file - mapped);
 
     for (i = 1; i <= argc; i++) {
@@ -410,8 +405,7 @@ build_args(task_t task, void* stack, char* path, struct exec_msg* msg,
 /*
  * Notify exec() to servers.
  */
-static void
-notify_server(task_t org_task, task_t new_task, void* stack)
+static void notify_server(task_t org_task, task_t new_task, void* stack)
 {
     struct msg m;
     int error;
@@ -441,15 +435,14 @@ notify_server(task_t org_task, task_t new_task, void* stack)
     } while (error == EINTR);
 }
 
-static int
-read_header(char* path)
+static int read_header(char* path)
 {
     int fd;
     struct stat st;
 
     /*
-	 * Check target file type.
-	 */
+     * Check target file type.
+     */
     if ((fd = open(path, O_RDONLY)) == -1)
         return ENOENT;
 
@@ -463,8 +456,8 @@ read_header(char* path)
         return EACCES; /* must be regular file */
     }
     /*
-	 * Read file header.
-	 */
+     * Read file header.
+     */
     memset(hdrbuf, 0, HEADER_SIZE);
     if (read(fd, hdrbuf, HEADER_SIZE) == -1) {
         close(fd);

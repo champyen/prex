@@ -78,8 +78,7 @@ static struct irq* irq_table[MAXIRQS]; /* IRQ descriptor table */
  * attached irq will be unmasked (enabled) in this routine.
  * TODO: Interrupt sharing is not supported, for now.
  */
-irq_t irq_attach(int vector, int pri, int shared,
-    int (*isr)(void*), void (*ist)(void*), void* data)
+irq_t irq_attach(int vector, int pri, int shared, int (*isr)(void*), void (*ist)(void*), void* data)
 {
     struct irq* irq;
     int mode;
@@ -99,8 +98,8 @@ irq_t irq_attach(int vector, int pri, int shared,
 
     if (ist != IST_NONE) {
         /*
-		 * Create a new thread for IST.
-		 */
+         * Create a new thread for IST.
+         */
         irq->thread = kthread_create(&irq_thread, irq, ISTPRI(pri));
         if (irq->thread == NULL)
             panic("irq_attach");
@@ -139,8 +138,7 @@ void irq_detach(irq_t irq)
  * Interrupt service thread.
  * This is a common dispatcher to all interrupt threads.
  */
-static void
-irq_thread(void* arg)
+static void irq_thread(void* arg)
 {
     void (*fn)(void*);
     void* data;
@@ -155,21 +153,21 @@ irq_thread(void* arg)
     for (;;) {
         if (irq->istreq <= 0) {
             /*
-			 * Since the interrupt is disabled above,
-			 * an interrupt for this vector keeps
-			 * pending until this thread enters sleep
-			 * state. Thus, we don't lose any IST
-			 * requests even if the interrupt is fired
-			 * here.
-			 */
+             * Since the interrupt is disabled above,
+             * an interrupt for this vector keeps
+             * pending until this thread enters sleep
+             * state. Thus, we don't lose any IST
+             * requests even if the interrupt is fired
+             * here.
+             */
             sched_sleep(&irq->istevt);
         }
         irq->istreq--;
         ASSERT(irq->istreq >= 0);
 
         /*
-		 * Call IST
-		 */
+         * Call IST
+         */
         spl0();
         (*fn)(data);
         splhigh();
@@ -200,14 +198,14 @@ void irq_handler(int vector)
     irq->count++;
 
     /*
-	 * Call ISR
-	 */
+     * Call ISR
+     */
     rc = (*irq->isr)(irq->data);
 
     if (rc == INT_CONTINUE) {
         /*
-		 * Kick IST
-		 */
+         * Kick IST
+         */
         ASSERT(irq->ist != IST_NONE);
         irq->istreq++;
         sched_wakeup(&irq->istevt);

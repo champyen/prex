@@ -61,8 +61,7 @@ static pgd_t boot_pgd = (pgd_t)BOOT_PGD;
  * boundary. So, we allocates 32K bytes first, and use
  * 16K-aligned area in it.
  */
-static paddr_t
-alloc_pgd(void)
+static paddr_t alloc_pgd(void)
 {
     paddr_t pg, pgd;
     size_t gap;
@@ -119,8 +118,8 @@ int mmu_map(pgd_t pgd, paddr_t pa, vaddr_t va, size_t size, int type)
     size = trunc_page(size);
 
     /*
-	 * Set page flag
-	 */
+     * Set page flag
+     */
     switch (type) {
     case PG_UNMAP:
         pte_flag = 0;
@@ -141,8 +140,8 @@ int mmu_map(pgd_t pgd, paddr_t pa, vaddr_t va, size_t size, int type)
         panic("mmu_map");
     }
     /*
-	 * Map all pages
-	 */
+     * Map all pages
+     */
     flush_tlb();
 
     while (size > 0) {
@@ -213,8 +212,7 @@ void mmu_terminate(pgd_t pgd)
     for (i = 0; i < PAGE_DIR(KERNBASE); i++) {
         pte = (pte_t)pgd[i];
         if (pte != 0)
-            page_free(((paddr_t)pte & PTE_ADDRESS),
-                L2TBL_SIZE);
+            page_free(((paddr_t)pte & PTE_ADDRESS), L2TBL_SIZE);
     }
     /* Release page directory */
     page_free(kvtop(pgd), L1TBL_SIZE);
@@ -240,8 +238,7 @@ void mmu_switch(pgd_t pgd)
  * This routine checks if the virtual area actually exist.
  * It returns NULL if at least one page is not mapped.
  */
-paddr_t
-mmu_extract(pgd_t pgd, vaddr_t virt, size_t size)
+paddr_t mmu_extract(pgd_t pgd, vaddr_t virt, size_t size)
 {
     pte_t pte;
     vaddr_t start, end, pg;
@@ -309,13 +306,12 @@ void mmu_init(struct mmumap* mmumap_table)
             break;
         }
 
-        if (mmu_map(boot_pgd, map->phys, map->virt,
-                map->size, map_type))
+        if (mmu_map(boot_pgd, map->phys, map->virt, map->size, map_type))
             panic("mmu_init");
     }
     /*
-	 * Map vector page.
-	 */
+     * Map vector page.
+     */
     if (mmu_map(boot_pgd, CONFIG_RAM_BASE, CONFIG_ARM_VECTORS, PAGE_SIZE, PG_SYSTEM))
         panic("mmu_init");
 }

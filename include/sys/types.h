@@ -45,14 +45,14 @@ typedef unsigned short u_short;
 typedef unsigned int u_int;
 typedef unsigned long u_long;
 
-typedef uint32_t dev_t; /* device number */
-typedef uint32_t gid_t; /* group id */
-typedef uint32_t ino_t; /* inode number */
-typedef uint32_t mode_t; /* permissions */
-typedef uint32_t nlink_t; /* link count */
-typedef int32_t off_t; /* file offset */
-typedef int32_t pid_t; /* process id */
-typedef uint32_t uid_t; /* user id */
+typedef uint32_t dev_t;       /* device number */
+typedef uint32_t gid_t;       /* group id */
+typedef uint32_t ino_t;       /* inode number */
+typedef uint32_t mode_t;      /* permissions */
+typedef uint32_t nlink_t;     /* link count */
+typedef int32_t off_t;        /* file offset */
+typedef int32_t pid_t;        /* process id */
+typedef uint32_t uid_t;       /* user id */
 typedef unsigned long rlim_t; /* resource limit */
 
 #ifndef KERNEL
@@ -119,7 +119,8 @@ typedef int32_t fd_mask;
 #define howmany(x, y) (((x) + ((y)-1)) / (y))
 #endif
 
-typedef struct fd_set {
+typedef struct fd_set
+{
     fd_mask fds_bits[howmany(FD_SETSIZE, NFDBITS)];
 } fd_set;
 

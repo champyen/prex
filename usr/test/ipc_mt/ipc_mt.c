@@ -42,8 +42,7 @@ static char stack[NR_THREADS][1024];
 /*
  * Run specified thread
  */
-static int
-thread_run(void (*start)(void), void* stack)
+static int thread_run(void (*start)(void), void* stack)
 {
     thread_t t;
     int error;
@@ -66,8 +65,7 @@ thread_run(void (*start)(void), void* stack)
 /*
  * Receiver thread
  */
-static void
-receive_thread(void)
+static void receive_thread(void)
 {
     struct msg msg;
     object_t obj;
@@ -78,21 +76,21 @@ receive_thread(void)
     thread_setpri(thread_self(), 240);
 
     /*
-	 * Find objects.
-	 */
+     * Find objects.
+     */
     error = object_lookup("test-A", &obj);
 
     for (;;) {
         /*
-		 * Receive message from object.
-		 */
+         * Receive message from object.
+         */
         printf("Wait message.\n");
         msg_receive(obj, &msg, sizeof(msg));
 
         printf("Message received.\n");
         /*
-		 * Wait a sec.
-		 */
+         * Wait a sec.
+         */
         timer_sleep(1000, 0);
 
         printf("Reply message.\n");
@@ -111,15 +109,15 @@ int main(int argc, char* argv[])
     printf("IPC test for multi threads\n");
 
     /*
-	 * Create an object.
-	 */
+     * Create an object.
+     */
     error = object_create("test-A", &obj);
     if (error)
         panic("failed to create object");
 
     /*
-	 * Start receiver thread.
-	 */
+     * Start receiver thread.
+     */
     for (i = 0; i < NR_THREADS; i++) {
         error = thread_run(receive_thread, stack[i] + 1024);
         if (error)

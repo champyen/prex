@@ -48,8 +48,8 @@ void bind_cap(char* path, task_t task)
     int error;
 
     /*
-	 * Set capabilities to the known applications.
-	 */
+     * Set capabilities to the known applications.
+     */
     map = &cap_table[0];
     while (map->c_path != NULL) {
         if (!strncmp(path, map->c_path, PATH_MAX)) {
@@ -80,15 +80,15 @@ int exec_bindcap(struct bind_msg* msg)
         return EFAULT;
 
     /*
-	 * Check capability of caller task.
-	 */
+     * Check capability of caller task.
+     */
     error = task_chkcap(task, CAP_PROTSERV);
     if (error != 0)
         return EPERM;
 
     /*
-	 * Set capability
-	 */
+     * Set capability
+     */
     bind_cap(msg->path, task);
 
     return 0;

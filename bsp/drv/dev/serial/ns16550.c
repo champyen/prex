@@ -60,28 +60,28 @@
 #define COM_DLM (COM_BASE + 0x01) /* divisor latch MSB (LCR[7] = 1) */
 
 /* Interrupt enable register */
-#define IER_RDA 0x01 /* enable receive data available */
+#define IER_RDA 0x01  /* enable receive data available */
 #define IER_THRE 0x02 /* enable transmitter holding register empty */
-#define IER_RLS 0x04 /* enable recieve line status */
-#define IER_RMS 0x08 /* enable receive modem status */
+#define IER_RLS 0x04  /* enable recieve line status */
+#define IER_RMS 0x08  /* enable receive modem status */
 
 /* Interrupt identification register */
-#define IIR_MSR 0x00 /* modem status change */
-#define IIR_IP 0x01 /* 0 when interrupt pending */
-#define IIR_TXB 0x02 /* transmitter holding register empty */
-#define IIR_RXB 0x04 /* received data available */
-#define IIR_LSR 0x06 /* line status change */
+#define IIR_MSR 0x00  /* modem status change */
+#define IIR_IP 0x01   /* 0 when interrupt pending */
+#define IIR_TXB 0x02  /* transmitter holding register empty */
+#define IIR_RXB 0x04  /* received data available */
+#define IIR_LSR 0x06  /* line status change */
 #define IIR_MASK 0x07 /* mask off just the meaningful bits */
 
 /* line status register */
 #define LSR_RCV_FIFO 0x80
-#define LSR_TSRE 0x40 /* Transmitter empty: byte sent */
-#define LSR_TXRDY 0x20 /* Transmitter buffer empty */
-#define LSR_BI 0x10 /* Break detected */
-#define LSR_FE 0x08 /* Framing error: bad stop bit */
-#define LSR_PE 0x04 /* Parity error */
-#define LSR_OE 0x02 /* Overrun, lost incoming byte */
-#define LSR_RXRDY 0x01 /* Byte ready in Receive Buffer */
+#define LSR_TSRE 0x40     /* Transmitter empty: byte sent */
+#define LSR_TXRDY 0x20    /* Transmitter buffer empty */
+#define LSR_BI 0x10       /* Break detected */
+#define LSR_FE 0x08       /* Framing error: bad stop bit */
+#define LSR_PE 0x04       /* Parity error */
+#define LSR_OE 0x02       /* Overrun, lost incoming byte */
+#define LSR_RXRDY 0x01    /* Byte ready in Receive Buffer */
 #define LSR_RCV_MASK 0x1f /* Mask for incoming data or error */
 
 /* Forward functions */
@@ -114,8 +114,7 @@ static struct serial_ops ns16550_ops = {
 
 static struct serial_port ns16550_port;
 
-static void
-ns16550_xmt_char(struct serial_port* sp, char c)
+static void ns16550_xmt_char(struct serial_port* sp, char c)
 {
 
     while (!(bus_read_8(COM_LSR) & LSR_TXRDY))
@@ -123,8 +122,7 @@ ns16550_xmt_char(struct serial_port* sp, char c)
     bus_write_8(COM_THR, c);
 }
 
-static char
-ns16550_rcv_char(struct serial_port* sp)
+static char ns16550_rcv_char(struct serial_port* sp)
 {
 
     while (!(bus_read_8(COM_LSR) & LSR_RXRDY))
@@ -132,8 +130,7 @@ ns16550_rcv_char(struct serial_port* sp)
     return bus_read_8(COM_RBR);
 }
 
-static void
-ns16550_set_poll(struct serial_port* sp, int on)
+static void ns16550_set_poll(struct serial_port* sp, int on)
 {
 
     if (on) {
@@ -145,8 +142,7 @@ ns16550_set_poll(struct serial_port* sp, int on)
     }
 }
 
-static int
-ns16550_isr(void* arg)
+static int ns16550_isr(void* arg)
 {
     struct serial_port* sp = arg;
 
@@ -167,8 +163,7 @@ ns16550_isr(void* arg)
     return 0;
 }
 
-static void
-ns16550_start(struct serial_port* sp)
+static void ns16550_start(struct serial_port* sp)
 {
     int s;
 
@@ -179,26 +174,23 @@ ns16550_start(struct serial_port* sp)
     bus_write_8(COM_LCR, 0x03); /* N, 8, 1 */
     bus_write_8(COM_FCR, 0x06); /* Disable & clear FIFO */
 
-    sp->irq = irq_attach(COM_IRQ, IPL_COMM, 0, ns16550_isr,
-        IST_NONE, sp);
+    sp->irq = irq_attach(COM_IRQ, IPL_COMM, 0, ns16550_isr, IST_NONE, sp);
 
     s = splhigh();
-    bus_write_8(COM_MCR, 0x0b); /* Enable OUT2 interrupt */
+    bus_write_8(COM_MCR, 0x0b);                         /* Enable OUT2 interrupt */
     bus_write_8(COM_IER, IER_RDA | IER_THRE | IER_RLS); /* Enable interrupt */
     bus_read_8(COM_IIR);
     splx(s);
 }
 
-static void
-ns16550_stop(struct serial_port* sp)
+static void ns16550_stop(struct serial_port* sp)
 {
 
     /* Disable all interrupts */
     bus_write_8(COM_IER, 0x00);
 }
 
-static int
-ns16550_probe(struct driver* self)
+static int ns16550_probe(struct driver* self)
 {
 
     if (bus_read_8(COM_LSR) == 0xff)
@@ -206,8 +198,7 @@ ns16550_probe(struct driver* self)
     return 0;
 }
 
-static int
-ns16550_init(struct driver* self)
+static int ns16550_init(struct driver* self)
 {
 
     serial_attach(&ns16550_ops, &ns16550_port);

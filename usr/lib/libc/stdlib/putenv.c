@@ -30,9 +30,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-int
-    putenv(str)
-        const char* str;
+int putenv(str) const char* str;
 {
     char *p, *equal;
     int rval;

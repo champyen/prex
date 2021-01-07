@@ -34,8 +34,7 @@
 #include <stdio.h>
 #include "local.h"
 
-int
-    _fwalk(function) int (*function)(FILE*);
+int _fwalk(function) int (*function)(FILE*);
 {
     FILE* fp;
     int ret;

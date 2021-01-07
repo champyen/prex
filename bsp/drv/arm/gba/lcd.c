@@ -44,7 +44,8 @@
 #define DPRINTF(a)
 #endif
 
-struct lcd_softc {
+struct lcd_softc
+{
     device_t dev;
     uint16_t* vram;
 };
@@ -77,31 +78,28 @@ struct driver lcd_driver = {
 };
 
 static struct wscons_video_ops wscons_lcd_ops = {
-    lcd_cursor, /* cursor */
-    lcd_putc, /* putc */
-    lcd_copyrows, /* copyrows */
-    lcd_eraserows, /* eraserows */
-    lcd_set_attr, /* set_attr */
+    lcd_cursor,     /* cursor */
+    lcd_putc,       /* putc */
+    lcd_copyrows,   /* copyrows */
+    lcd_eraserows,  /* eraserows */
+    lcd_set_attr,   /* set_attr */
     lcd_get_cursor, /* get_cursor */
 };
 
-static void
-lcd_cursor(void* aux, int row, int col)
+static void lcd_cursor(void* aux, int row, int col)
 {
 
     /* DO NOTHING */
 }
 
-static void
-lcd_putc(void* aux, int row, int col, int ch)
+static void lcd_putc(void* aux, int row, int col, int ch)
 {
     struct lcd_softc* sc = aux;
 
     sc->vram[row * VSCR_COLS + col] = ch;
 }
 
-static void
-lcd_copyrows(void* aux, int srcrow, int dstrow, int nrows)
+static void lcd_copyrows(void* aux, int srcrow, int dstrow, int nrows)
 {
     struct lcd_softc* sc = aux;
     int i;
@@ -111,8 +109,7 @@ lcd_copyrows(void* aux, int srcrow, int dstrow, int nrows)
     }
 }
 
-static void
-lcd_eraserows(void* aux, int row, int nrows)
+static void lcd_eraserows(void* aux, int row, int nrows)
 {
     struct lcd_softc* sc = aux;
     int i, start, end;
@@ -124,23 +121,20 @@ lcd_eraserows(void* aux, int row, int nrows)
         sc->vram[i] = ' ';
 }
 
-static void
-lcd_set_attr(void* aux, int attr)
+static void lcd_set_attr(void* aux, int attr)
 {
 
     /* DO NOTHING */
 }
 
-static void
-lcd_get_cursor(void* aux, int* col, int* row)
+static void lcd_get_cursor(void* aux, int* col, int* row)
 {
 
     *col = 0;
     *row = 0;
 }
 
-static void
-lcd_init_font(void)
+static void lcd_init_font(void)
 {
     int i, row, col, bit, val = 0;
     uint16_t* tile = CONSOLE_TILE;
@@ -158,23 +152,21 @@ lcd_init_font(void)
     }
 }
 
-static void
-lcd_init_screen(void)
+static void lcd_init_screen(void)
 {
     uint16_t* pal = BG_PALETTE;
 
     /* Initialize palette */
-    pal[0] = 0; /* Transparent */
-    pal[1] = RGB(0, 0, 0); /* Black */
+    pal[0] = 0;               /* Transparent */
+    pal[1] = RGB(0, 0, 0);    /* Black */
     pal[2] = RGB(31, 31, 31); /* White */
 
     /* Setup lcd */
-    REG_BG3CNT = 0x1080; /* Size0, 256color, priority0 */
+    REG_BG3CNT = 0x1080;  /* Size0, 256color, priority0 */
     REG_DISPCNT = 0x0800; /* Mode0, BG3 */
 }
 
-static int
-lcd_init(struct driver* self)
+static int lcd_init(struct driver* self)
 {
     device_t dev;
     struct lcd_softc* sc;

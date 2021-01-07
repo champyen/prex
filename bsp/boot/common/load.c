@@ -40,9 +40,9 @@
 static int load_module(struct ar_hdr*, struct module*);
 static void setup_bootdisk(struct ar_hdr*);
 
-paddr_t load_base; /* current load address */
+paddr_t load_base;  /* current load address */
 paddr_t load_start; /* start address for loading */
-int nr_img; /* number of module images */
+int nr_img;         /* number of module images */
 
 /*
  * Load OS images - kernel, driver and boot tasks.
@@ -62,29 +62,29 @@ void load_os(void)
     long len;
 
     /*
-	 * Initialize our data.
-	 */
+     * Initialize our data.
+     */
     load_base = 0;
     load_start = 0;
     nr_img = 0;
 
     /*
-	 *  Sanity check of archive image.
-	 */
+     *  Sanity check of archive image.
+     */
     magic = (char*)kvtop(CONFIG_BOOTIMG_BASE);
     if (strncmp(magic, ARMAG, 8))
         panic("Invalid OS image");
 
     /*
-	 * Load kernel module.
-	 */
+     * Load kernel module.
+     */
     hdr = (char*)((paddr_t)magic + 8);
     if (load_module((struct ar_hdr*)hdr, &bi->kernel))
         panic("Can not load kernel");
 
     /*
-	 * Load driver module.
-	 */
+     * Load driver module.
+     */
     len = atol((char*)&((struct ar_hdr*)hdr)->ar_size);
     len += len % 2; /* even alignment */
     if (len == 0)
@@ -94,8 +94,8 @@ void load_os(void)
         panic("Can not load driver");
 
     /*
-	 * Load boot tasks.
-	 */
+     * Load boot tasks.
+     */
     i = 0;
     m = (struct module*)&bi->tasks[0];
     while (1) {
@@ -107,13 +107,11 @@ void load_os(void)
         hdr = (char*)((paddr_t)hdr + sizeof(struct ar_hdr) + len);
 
         /* Check archive header */
-        if (strncmp((char*)&((struct ar_hdr*)hdr)->ar_fmag,
-                ARFMAG, 2))
+        if (strncmp((char*)&((struct ar_hdr*)hdr)->ar_fmag, ARFMAG, 2))
             break;
 
         /* Load boot disk image */
-        if (!strncmp((char*)&((struct ar_hdr*)hdr)->ar_name,
-                "bootdisk.a", 10)) {
+        if (!strncmp((char*)&((struct ar_hdr*)hdr)->ar_name, "bootdisk.a", 10)) {
             setup_bootdisk((struct ar_hdr*)hdr);
             continue;
         }
@@ -131,9 +129,9 @@ void load_os(void)
         panic("No boot task found!");
 
     /*
-	 * Reserve single memory block for all boot modules.
-	 * This includes kernel, driver, and boot tasks.
-	 */
+     * Reserve single memory block for all boot modules.
+     * This includes kernel, driver, and boot tasks.
+     */
     i = bi->nr_rams;
     bi->ram[i].base = load_start;
     bi->ram[i].size = (size_t)(load_base - load_start);
@@ -145,8 +143,7 @@ void load_os(void)
  * Load module.
  * Return 0 on success, -1 on failure.
  */
-static int
-load_module(struct ar_hdr* hdr, struct module* m)
+static int load_module(struct ar_hdr* hdr, struct module* m)
 {
     char* c;
 
@@ -160,8 +157,7 @@ load_module(struct ar_hdr* hdr, struct module* m)
         c++;
     *c = '\0';
 
-    DPRINTF(("loading: hdr=%lx module=%lx name=%s\n",
-        (paddr_t)hdr, (paddr_t)m, m->name));
+    DPRINTF(("loading: hdr=%lx module=%lx name=%s\n", (paddr_t)hdr, (paddr_t)m, m->name));
 
     if (load_elf((char*)hdr + sizeof(struct ar_hdr), m))
         panic("Load error");
@@ -172,16 +168,15 @@ load_module(struct ar_hdr* hdr, struct module* m)
 /*
  * Setup boot disk
  */
-static void
-setup_bootdisk(struct ar_hdr* hdr)
+static void setup_bootdisk(struct ar_hdr* hdr)
 {
     struct bootinfo* bi = bootinfo;
     paddr_t base;
     size_t size;
 
     /*
-	 * Store image information.
-	 */
+     * Store image information.
+     */
     if (strncmp((char*)&hdr->ar_fmag, ARFMAG, 2)) {
         DPRINTF(("Invalid bootdisk image\n"));
         return;
@@ -198,14 +193,13 @@ setup_bootdisk(struct ar_hdr* hdr)
 
 #if !defined(CONFIG_ROMBOOT)
     /*
-	 * Reserve memory for boot disk if the image
-	 * was copied to RAM.
-	 */
+     * Reserve memory for boot disk if the image
+     * was copied to RAM.
+     */
     bi->ram[bi->nr_rams].base = base;
     bi->ram[bi->nr_rams].size = size;
     bi->ram[bi->nr_rams].type = MT_BOOTDISK;
     bi->nr_rams++;
 #endif
-    DPRINTF(("bootdisk base=%lx size=%lx\n",
-        bi->bootdisk.base, bi->bootdisk.size));
+    DPRINTF(("bootdisk base=%lx size=%lx\n", bi->bootdisk.base, bi->bootdisk.size));
 }

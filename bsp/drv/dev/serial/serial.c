@@ -45,11 +45,12 @@
 #define DPRINTF(a)
 #endif
 
-struct serial_softc {
-    device_t dev; /* device object */
-    struct tty tty; /* tty structure */
+struct serial_softc
+{
+    device_t dev;             /* device object */
+    struct tty tty;           /* tty structure */
     struct serial_port* port; /* port setting */
-    struct serial_ops* ops; /* h/w operation */
+    struct serial_ops* ops;   /* h/w operation */
 };
 
 /* Forward functions */
@@ -89,24 +90,21 @@ static struct consdev serial_consdev = {
     /* cnpollc */ serial_cnpollc,
 };
 
-static int
-serial_read(device_t dev, char* buf, size_t* nbyte, int blkno)
+static int serial_read(device_t dev, char* buf, size_t* nbyte, int blkno)
 {
     struct serial_softc* sc = device_private(dev);
 
     return tty_read(&sc->tty, buf, nbyte);
 }
 
-static int
-serial_write(device_t dev, char* buf, size_t* nbyte, int blkno)
+static int serial_write(device_t dev, char* buf, size_t* nbyte, int blkno)
 {
     struct serial_softc* sc = device_private(dev);
 
     return tty_write(&sc->tty, buf, nbyte);
 }
 
-static int
-serial_ioctl(device_t dev, u_long cmd, void* arg)
+static int serial_ioctl(device_t dev, u_long cmd, void* arg)
 {
     struct serial_softc* sc = device_private(dev);
 
@@ -116,8 +114,7 @@ serial_ioctl(device_t dev, u_long cmd, void* arg)
 /*
  * Start TTY output operation.
  */
-static void
-serial_start(struct tty* tp)
+static void serial_start(struct tty* tp)
 {
     struct serial_softc* sc = device_private(tp->t_dev);
     struct serial_port* port = sc->port;
@@ -145,8 +142,7 @@ void serial_rcv_char(struct serial_port* port, char c)
     tty_input(c, port->tty);
 }
 
-static int
-serial_cngetc(device_t dev)
+static int serial_cngetc(device_t dev)
 {
     struct serial_softc* sc = device_private(dev);
     struct serial_port* port = sc->port;
@@ -154,8 +150,7 @@ serial_cngetc(device_t dev)
     return sc->ops->rcv_char(port);
 }
 
-static void
-serial_cnputc(device_t dev, int c)
+static void serial_cnputc(device_t dev, int c)
 {
     struct serial_softc* sc = device_private(dev);
     struct serial_port* port = sc->port;
@@ -163,8 +158,7 @@ serial_cnputc(device_t dev, int c)
     sc->ops->xmt_char(port, c);
 }
 
-static void
-serial_cnpollc(device_t dev, int on)
+static void serial_cnpollc(device_t dev, int on)
 {
     struct serial_softc* sc = device_private(dev);
     struct serial_port* port = sc->port;
@@ -200,8 +194,7 @@ void serial_attach(struct serial_ops* ops, struct serial_port* port)
     cons_attach(&serial_consdev, diag);
 }
 
-static int
-serial_init(struct driver* self)
+static int serial_init(struct driver* self)
 {
 
     return 0;

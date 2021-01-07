@@ -37,9 +37,7 @@ int rand()
     return ((next = next * 1103515245 + 12345) % ((u_long)RAND_MAX + 1));
 }
 
-void
-    srand(seed)
-        u_int seed;
+void srand(seed) u_int seed;
 {
     next = seed;
 }

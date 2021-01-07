@@ -44,8 +44,8 @@ void __file_init(void)
     int error;
 
     /*
-	 * Look up file system server
-	 */
+     * Look up file system server
+     */
     error = object_lookup("!fs", &__fs_obj);
     if (error)
         __fs_obj = 0;

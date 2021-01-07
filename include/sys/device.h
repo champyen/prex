@@ -38,18 +38,19 @@
  *
  * If D_PROT is set, the device can not be opened via devfs.
  */
-#define D_CHR 0x00000001 /* character device */
-#define D_BLK 0x00000002 /* block device */
-#define D_REM 0x00000004 /* removable device */
+#define D_CHR 0x00000001  /* character device */
+#define D_BLK 0x00000002  /* block device */
+#define D_REM 0x00000004  /* removable device */
 #define D_PROT 0x00000008 /* protected device */
-#define D_TTY 0x00000010 /* tty device */
+#define D_TTY 0x00000010  /* tty device */
 
 #ifdef KERNEL
 
 /*
  * Device operations
  */
-struct devops {
+struct devops
+{
     int (*open)(device_t, int);
     int (*close)(device_t);
     int (*read)(device_t, char*, size_t*, int);
@@ -75,11 +76,12 @@ typedef int (*devop_devctl_t)(device_t, u_long, void*);
 /*
  * Driver object
  */
-struct driver {
-    const char* name; /* name of device driver */
+struct driver
+{
+    const char* name;      /* name of device driver */
     struct devops* devops; /* device operations */
-    size_t devsz; /* size of private data */
-    int flags; /* state of driver */
+    size_t devsz;          /* size of private data */
+    int flags;             /* state of driver */
     int (*probe)(struct driver*);
     int (*init)(struct driver*);
     int (*unload)(struct driver*);
@@ -89,9 +91,9 @@ struct driver {
  * flags for the driver.
  */
 #define DS_INACTIVE 0x00 /* driver is inactive */
-#define DS_ALIVE 0x01 /* probe succeded */
-#define DS_ACTIVE 0x02 /* intialized */
-#define DS_DEBUG 0x04 /* debug */
+#define DS_ALIVE 0x01    /* probe succeded */
+#define DS_ACTIVE 0x02   /* intialized */
+#define DS_DEBUG 0x04    /* debug */
 
 #endif /* !KERNEL */
 #endif /* !_SYS_DEVICE_H */

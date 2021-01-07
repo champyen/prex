@@ -64,8 +64,7 @@ int main(int argc, char* argv[])
     return 0;
 }
 
-static void
-gotsig(int sig)
+static void gotsig(int sig)
 {
     printf("Got signal: %d\n", sig);
 }

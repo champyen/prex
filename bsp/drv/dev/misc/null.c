@@ -59,8 +59,7 @@ struct driver null_driver = {
 /*
  * Always returns 0 bytes as the read size.
  */
-static int
-null_read(device_t dev, char* buf, size_t* nbyte, int blkno)
+static int null_read(device_t dev, char* buf, size_t* nbyte, int blkno)
 {
 
     *nbyte = 0;
@@ -70,15 +69,13 @@ null_read(device_t dev, char* buf, size_t* nbyte, int blkno)
 /*
  * Data written to this device is discarded.
  */
-static int
-null_write(device_t dev, char* buf, size_t* nbyte, int blkno)
+static int null_write(device_t dev, char* buf, size_t* nbyte, int blkno)
 {
 
     return 0;
 }
 
-static int
-null_init(struct driver* self)
+static int null_init(struct driver* self)
 {
 
     device_create(self, "null", D_CHR);

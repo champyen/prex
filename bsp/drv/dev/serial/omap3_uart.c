@@ -57,43 +57,43 @@
 #endif
 
 /* Register offsets UART in OMAP35 SoC */
-#define UART_RHR (UART_BASE + 0x00) /* receive buffer register */
-#define UART_THR (UART_BASE + 0x00) /* transmit holding register */
-#define UART_IER (UART_BASE + 0x04) /* interrupt enable register */
-#define UART_FCR (UART_BASE + 0x08) /* FIFO control register */
-#define UART_IIR (UART_BASE + 0x08) /* interrupt identification register */
-#define UART_LCR (UART_BASE + 0x0C) /* line control register */
-#define UART_MCR (UART_BASE + 0x10) /* modem control register */
-#define UART_LSR (UART_BASE + 0x14) /* line status register */
-#define UART_MSR (UART_BASE + 0x18) /* mode definition register */
+#define UART_RHR (UART_BASE + 0x00)  /* receive buffer register */
+#define UART_THR (UART_BASE + 0x00)  /* transmit holding register */
+#define UART_IER (UART_BASE + 0x04)  /* interrupt enable register */
+#define UART_FCR (UART_BASE + 0x08)  /* FIFO control register */
+#define UART_IIR (UART_BASE + 0x08)  /* interrupt identification register */
+#define UART_LCR (UART_BASE + 0x0C)  /* line control register */
+#define UART_MCR (UART_BASE + 0x10)  /* modem control register */
+#define UART_LSR (UART_BASE + 0x14)  /* line status register */
+#define UART_MSR (UART_BASE + 0x18)  /* mode definition register */
 #define UART_MDR1 (UART_BASE + 0x20) /* modem status register */
-#define UART_DLL (UART_BASE + 0x00) /* divisor latch LSB (LCR[7] = 1) */
-#define UART_DLH (UART_BASE + 0x04) /* divisor latch MSB (LCR[7] = 1) */
+#define UART_DLL (UART_BASE + 0x00)  /* divisor latch LSB (LCR[7] = 1) */
+#define UART_DLH (UART_BASE + 0x04)  /* divisor latch MSB (LCR[7] = 1) */
 
 /* Interrupt enable register */
-#define IER_RDA 0x01 /* enable receive data available */
+#define IER_RDA 0x01  /* enable receive data available */
 #define IER_THRE 0x02 /* enable transmitter holding register empty */
-#define IER_RLS 0x04 /* enable recieve line status */
-#define IER_RMS 0x08 /* enable receive modem status */
+#define IER_RLS 0x04  /* enable recieve line status */
+#define IER_RMS 0x08  /* enable receive modem status */
 
 /* Interrupt identification register */
-#define IIR_MSR 0x00 /* modem status change */
-#define IIR_IP 0x01 /* 0 when interrupt pending */
-#define IIR_TXB 0x02 /* transmitter holding register empty */
-#define IIR_RXB 0x04 /* received data available */
-#define IIR_LSR 0x06 /* line status change */
+#define IIR_MSR 0x00  /* modem status change */
+#define IIR_IP 0x01   /* 0 when interrupt pending */
+#define IIR_TXB 0x02  /* transmitter holding register empty */
+#define IIR_RXB 0x04  /* received data available */
+#define IIR_LSR 0x06  /* line status change */
 #define IIR_RXTO 0x0C /* receive data timeout */
 #define IIR_MASK 0x0E /* mask off just the meaningful bits */
 
 /* line status register */
 #define LSR_RCV_FIFO 0x80
-#define LSR_TSRE 0x40 /* Transmitter empty: byte sent */
-#define LSR_TXRDY 0x20 /* Transmitter buffer empty */
-#define LSR_BI 0x10 /* Break detected */
-#define LSR_FE 0x08 /* Framing error: bad stop bit */
-#define LSR_PE 0x04 /* Parity error */
-#define LSR_OE 0x02 /* Overrun, lost incoming byte */
-#define LSR_RXRDY 0x01 /* Byte ready in Receive Buffer */
+#define LSR_TSRE 0x40     /* Transmitter empty: byte sent */
+#define LSR_TXRDY 0x20    /* Transmitter buffer empty */
+#define LSR_BI 0x10       /* Break detected */
+#define LSR_FE 0x08       /* Framing error: bad stop bit */
+#define LSR_PE 0x04       /* Parity error */
+#define LSR_OE 0x02       /* Overrun, lost incoming byte */
+#define LSR_RXRDY 0x01    /* Byte ready in Receive Buffer */
 #define LSR_RCV_MASK 0x1f /* Mask for incoming data or error */
 
 /* Bit definitions for line control */
@@ -154,8 +154,7 @@ static struct serial_ops omap3_uart_ops = {
 
 static struct serial_port omap3_uart_port;
 
-static void
-omap3_uart_xmt_char(struct serial_port* sp, char c)
+static void omap3_uart_xmt_char(struct serial_port* sp, char c)
 {
     struct tty* tp = sp->tty;
     struct tty_queue* tq = &tp->t_outq;
@@ -170,8 +169,7 @@ omap3_uart_xmt_char(struct serial_port* sp, char c)
         serial_xmt_done(sp);
 }
 
-static char
-omap3_uart_rcv_char(struct serial_port* sp)
+static char omap3_uart_rcv_char(struct serial_port* sp)
 {
     char c;
 
@@ -181,8 +179,7 @@ omap3_uart_rcv_char(struct serial_port* sp)
     return c;
 }
 
-static void
-omap3_uart_set_poll(struct serial_port* sp, int on)
+static void omap3_uart_set_poll(struct serial_port* sp, int on)
 {
 
     if (on) {
@@ -194,8 +191,7 @@ omap3_uart_set_poll(struct serial_port* sp, int on)
     }
 }
 
-static int
-omap3_uart_isr(void* arg)
+static int omap3_uart_isr(void* arg)
 {
     struct serial_port* sp = arg;
     char c;
@@ -204,10 +200,10 @@ omap3_uart_isr(void* arg)
     case IIR_LSR: /* Line status change */
         if (bus_read_16(UART_LSR) & (LSR_BI | LSR_FE | LSR_PE | LSR_OE)) {
             /*
-		 	 * Status error
-		 	 * Read whatever happens to be in the buffer to "eat" the
-		 	 * spurious data associated with break, parity error, etc.
-		 	*/
+             * Status error
+             * Read whatever happens to be in the buffer to "eat" the
+             * spurious data associated with break, parity error, etc.
+             */
             bus_read_16(UART_RHR);
         }
         /* Read LSR again to clear interrupt */
@@ -215,16 +211,16 @@ omap3_uart_isr(void* arg)
         break;
     case IIR_RXTO: /* Receive data timeout */
         /*
-		 	 * "Eat" the spurious data (same as above).
-		 	 *  This also clears the interrupt. 
-		 	*/
+         * "Eat" the spurious data (same as above).
+         *  This also clears the interrupt.
+         */
         bus_read_16(UART_RHR);
         break;
-    case IIR_RXB: /* Received data available */
+    case IIR_RXB:                         /* Received data available */
         c = bus_read_16(UART_RHR) & 0xff; /* Read pending data */
         serial_rcv_char(sp, c);
         break;
-    case IIR_TXB: /* Transmitter holding register empty */
+    case IIR_TXB:              /* Transmitter holding register empty */
         bus_read_16(UART_IIR); /* Clear interrupt */
         serial_xmt_done(sp);
         break;
@@ -234,8 +230,7 @@ omap3_uart_isr(void* arg)
     return 0;
 }
 
-static void
-omap3_uart_start(struct serial_port* sp)
+static void omap3_uart_start(struct serial_port* sp)
 {
     int baud_divisor = UART_CLK / 16 / BAUD_RATE;
 
@@ -252,8 +247,7 @@ omap3_uart_start(struct serial_port* sp)
     DPRINTF(("Installing UART IRQ\n"));
 
     /* Install interrupt handler */
-    sp->irq = irq_attach(UART_IRQ, IPL_COMM, 0, omap3_uart_isr,
-        IST_NONE, sp);
+    sp->irq = irq_attach(UART_IRQ, IPL_COMM, 0, omap3_uart_isr, IST_NONE, sp);
 
     /* Enable interrupts */
     bus_write_32(INTCPS_ILR(UART_IRQ), ((NIPLS - IPL_COMM) << 2));
@@ -261,8 +255,7 @@ omap3_uart_start(struct serial_port* sp)
     DPRINTF(("UART interrupt enabled\n"));
 }
 
-static void
-omap3_uart_stop(struct serial_port* sp)
+static void omap3_uart_stop(struct serial_port* sp)
 {
 
     /* Disable interrupts */
@@ -271,8 +264,7 @@ omap3_uart_stop(struct serial_port* sp)
     bus_write_16(UART_MDR1, MDR1_DISABLE);
 }
 
-static int
-omap3_uart_init(struct driver* self)
+static int omap3_uart_init(struct driver* self)
 {
 
     serial_attach(&omap3_uart_ops, &omap3_uart_port);

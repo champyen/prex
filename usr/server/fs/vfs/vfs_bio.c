@@ -79,8 +79,7 @@ static sem_t free_sem;
 /*
  * Insert buffer to the head of free list
  */
-static void
-bio_insert_head(struct buf* bp)
+static void bio_insert_head(struct buf* bp)
 {
 
     list_insert(&free_list, &bp->b_link);
@@ -90,8 +89,7 @@ bio_insert_head(struct buf* bp)
 /*
  * Insert buffer to the tail of free list
  */
-static void
-bio_insert_tail(struct buf* bp)
+static void bio_insert_tail(struct buf* bp)
 {
 
     list_insert(list_prev(&free_list), &bp->b_link);
@@ -101,8 +99,7 @@ bio_insert_tail(struct buf* bp)
 /*
  * Remove buffer from free list
  */
-static void
-bio_remove(struct buf* bp)
+static void bio_remove(struct buf* bp)
 {
 
     sem_wait(&free_sem, 0);
@@ -113,8 +110,7 @@ bio_remove(struct buf* bp)
 /*
  * Remove buffer from the head of free list
  */
-static struct buf*
-bio_remove_head(void)
+static struct buf* bio_remove_head(void)
 {
     struct buf* bp;
 
@@ -128,8 +124,7 @@ bio_remove_head(void)
 /*
  * Determine if a block is in the cache.
  */
-static struct buf*
-incore(dev_t dev, int blkno)
+static struct buf* incore(dev_t dev, int blkno)
 {
     struct buf* bp;
     int i;
@@ -150,8 +145,7 @@ incore(dev_t dev, int blkno)
  * block list, return it.  Otherwise, the least recently used
  * block is used.
  */
-struct buf*
-getblk(dev_t dev, int blkno)
+struct buf* getblk(dev_t dev, int blkno)
 {
     struct buf* bp;
 
@@ -163,8 +157,8 @@ start:
         /* Block found in cache. */
         if (ISSET(bp->b_flags, B_BUSY)) {
             /*
-			 * Wait buffer ready.
-			 */
+             * Wait buffer ready.
+             */
             BIO_UNLOCK();
             mutex_lock(&bp->b_lock);
             mutex_unlock(&bp->b_lock);
@@ -262,8 +256,7 @@ int bwrite(struct buf* bp)
     BIO_UNLOCK();
 
     size = BSIZE;
-    error = device_write((device_t)bp->b_dev, bp->b_data, &size,
-        bp->b_blkno);
+    error = device_write((device_t)bp->b_dev, bp->b_data, &size, bp->b_blkno);
     if (error)
         return error;
     BIO_LOCK();

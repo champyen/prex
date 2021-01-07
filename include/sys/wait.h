@@ -72,7 +72,7 @@
  * this option is done, it is as though they were still running... nothing
  * about them is returned.
  */
-#define WNOHANG 1 /* don't hang in wait */
+#define WNOHANG 1   /* don't hang in wait */
 #define WUNTRACED 2 /* tell about stopped, untraced children */
 
 #ifndef _POSIX_SOURCE
@@ -92,40 +92,43 @@
  * If w_stopval==WSTOPPED, then the second structure describes
  * the information returned, else the first.
  */
-union wait {
+union wait
+{
     int w_status; /* used in syscall */
     /*
-	 * Terminated process status.
-	 */
-    struct {
+     * Terminated process status.
+     */
+    struct
+    {
 #if BYTE_ORDER == LITTLE_ENDIAN
         unsigned int w_Termsig : 7, /* termination signal */
-            w_Coredump : 1, /* core dump indicator */
-            w_Retcode : 8, /* exit code if w_termsig==0 */
-            w_Filler : 16; /* upper bits filler */
+            w_Coredump : 1,         /* core dump indicator */
+            w_Retcode : 8,          /* exit code if w_termsig==0 */
+            w_Filler : 16;          /* upper bits filler */
 #endif
 #if BYTE_ORDER == BIG_ENDIAN
         unsigned int w_Filler : 16, /* upper bits filler */
-            w_Retcode : 8, /* exit code if w_termsig==0 */
-            w_Coredump : 1, /* core dump indicator */
-            w_Termsig : 7; /* termination signal */
+            w_Retcode : 8,          /* exit code if w_termsig==0 */
+            w_Coredump : 1,         /* core dump indicator */
+            w_Termsig : 7;          /* termination signal */
 #endif
     } w_T;
     /*
-	 * Stopped process status.  Returned
-	 * only for traced children unless requested
-	 * with the WUNTRACED option bit.
-	 */
-    struct {
+     * Stopped process status.  Returned
+     * only for traced children unless requested
+     * with the WUNTRACED option bit.
+     */
+    struct
+    {
 #if BYTE_ORDER == LITTLE_ENDIAN
         unsigned int w_Stopval : 8, /* == W_STOPPED if stopped */
-            w_Stopsig : 8, /* signal that stopped us */
-            w_Filler : 16; /* upper bits filler */
+            w_Stopsig : 8,          /* signal that stopped us */
+            w_Filler : 16;          /* upper bits filler */
 #endif
 #if BYTE_ORDER == BIG_ENDIAN
         unsigned int w_Filler : 16, /* upper bits filler */
-            w_Stopsig : 8, /* signal that stopped us */
-            w_Stopval : 8; /* == W_STOPPED if stopped */
+            w_Stopsig : 8,          /* signal that stopped us */
+            w_Stopval : 8;          /* == W_STOPPED if stopped */
 #endif
     } w_S;
 };

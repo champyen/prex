@@ -41,8 +41,7 @@
 int __sdidinit;
 FILE __sF[3];
 
-static void
-std(FILE* fp, FILE* next, short flags, short fileno)
+static void std(FILE* fp, FILE* next, short flags, short fileno)
 {
 
     memset(fp, 0, sizeof(FILE));

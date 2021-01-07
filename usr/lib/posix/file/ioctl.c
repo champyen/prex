@@ -49,8 +49,8 @@ int ioctl(int fd, unsigned long cmd, ...)
     va_end(args);
 
     /*
-	 * Check the parameter size
-	 */
+     * Check the parameter size
+     */
     size = IOCPARM_LEN(cmd);
     if (size > IOCPARM_MAX) {
         errno = EINVAL;
@@ -58,16 +58,17 @@ int ioctl(int fd, unsigned long cmd, ...)
     }
 
     /*
-	 * Check fault
-	 */
-    if ((cmd & IOC_IN && (cmd & IOC_IVAL) == 0 && argp == NULL) || (cmd & IOC_OUT && (cmd & IOC_OVAL) == 0 && argp == NULL)) {
+     * Check fault
+     */
+    if ((cmd & IOC_IN && (cmd & IOC_IVAL) == 0 && argp == NULL) ||
+        (cmd & IOC_OUT && (cmd & IOC_OVAL) == 0 && argp == NULL)) {
         errno = EFAULT;
         return -1;
     }
 
     /*
-	 * Copy in
-	 */
+     * Copy in
+     */
     if (cmd & IOC_IN) {
         if (cmd & IOC_IVAL)
             *((int*)m.buf) = (int)argp;
@@ -82,8 +83,8 @@ int ioctl(int fd, unsigned long cmd, ...)
         return -1;
 
     /*
-	 * Copy out
-	 */
+     * Copy out
+     */
     if (cmd & IOC_OUT) {
         if (cmd & IOC_OVAL)
             retval = *((int*)m.buf);

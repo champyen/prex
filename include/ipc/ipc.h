@@ -40,10 +40,11 @@
  * sender task. The receiver task can always trust the task ID
  * in all messages.
  */
-struct msg_header {
+struct msg_header
+{
     task_t task; /* id of send task */
-    int code; /* message code */
-    int status; /* return status */
+    int code;    /* message code */
+    int status;  /* return status */
 };
 
 /*
@@ -58,9 +59,10 @@ struct msg_header {
 /*
  * Generic message
  */
-struct msg {
+struct msg
+{
     struct msg_header hdr; /* message header */
-    int data[4]; /* integer data */
+    int data[4];           /* integer data */
 };
 
 #endif /* !_SYS_IPC_H */

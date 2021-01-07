@@ -43,17 +43,17 @@ int kill(pid_t pid, int sig)
     int error;
 
     /*
-	 * Request process server to send signal.
-	 */
+     * Request process server to send signal.
+     */
     m.hdr.code = PS_KILL;
     m.data[0] = pid;
     m.data[1] = sig;
     error = msg_send(__proc_obj, &m, sizeof(m));
 
     /*
-	 * XXX: error is always EINTR, and we can not determine whether
-	 *      msg_send() is interrupted by signal.
-	 */
+     * XXX: error is always EINTR, and we can not determine whether
+     *      msg_send() is interrupted by signal.
+     */
 
     if (m.hdr.status) {
         errno = m.hdr.status;

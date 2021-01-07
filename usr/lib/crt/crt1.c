@@ -63,8 +63,7 @@ void __prex_main(int argc, char* argv[], char* envp[])
     /* NOTREACHED */
 }
 
-static char*
-_strrchr(char* p, int ch)
+static char* _strrchr(char* p, int ch)
 {
     char* save;
 

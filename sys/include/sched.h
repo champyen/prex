@@ -38,8 +38,8 @@
 /*
  * Scheduling policies defined by IEEE Std 1003.1-2001
  */
-#define SCHED_FIFO 0 /* First in-first out */
-#define SCHED_RR 1 /* Round robin */
+#define SCHED_FIFO 0  /* First in-first out */
+#define SCHED_RR 1    /* Round robin */
 #define SCHED_OTHER 2 /* Another scheduling policy */
 
 /*
@@ -50,15 +50,16 @@
 /*
  * DPC (Deferred Procedure Call) object
  */
-struct dpc {
+struct dpc
+{
     struct queue link; /* linkage on DPC queue */
     int state;
     void (*func)(void*); /* callback routine */
-    void* arg; /* argument to pass */
+    void* arg;           /* argument to pass */
 };
 
 /* state for DPC */
-#define DPC_FREE 0x4470463f /* magic# 'DpF?' */
+#define DPC_FREE 0x4470463f    /* magic# 'DpF?' */
 #define DPC_PENDING 0x4470503f /* magic# 'DpP?' */
 
 #define sched_sleep(evt) sched_tsleep((evt), 0)

@@ -79,8 +79,7 @@ static jmp_buf __fork_env;
  * - File descriptor is shared.
  * - Directory stream is shared.
  */
-static pid_t
-fork(void)
+static pid_t fork(void)
 {
     struct msg m;
     task_t tsk;
@@ -91,8 +90,8 @@ fork(void)
     /* Save current stack pointer */
     if (setjmp(__fork_env) == 0) {
         /*
-		 * Create new task
-		 */
+         * Create new task
+         */
         error = task_create(task_self(), VM_COPY, &tsk);
         if (error) {
             errno = error;
@@ -104,32 +103,32 @@ fork(void)
             return -1;
         }
         /*
-		 * Notify to process server
-		 */
+         * Notify to process server
+         */
         m.hdr.code = PS_FORK;
         m.data[0] = tsk; /* child task */
-        m.data[1] = 0; /* fork type */
+        m.data[1] = 0;   /* fork type */
         if (__posix_call(__proc_obj, &m, sizeof(m), 1) != 0)
             return -1;
         pid = m.data[0];
 
         /*
-		 * Notify to file system server
-		 */
+         * Notify to file system server
+         */
         m.hdr.code = FS_FORK;
         m.data[0] = tsk; /* child task */
         if (__posix_call(__fs_obj, &m, sizeof(m), 1) != 0)
             return -1;
 
         /*
-		 * Start child task
-		 */
+         * Start child task
+         */
         thread_load(t, __child_entry, NULL);
         thread_resume(t);
     } else {
         /*
-		 * Child task
-		 */
+         * Child task
+         */
 #ifdef _REENTRANT
         error = mutex_init(&__sig_lock);
 #endif
@@ -139,8 +138,7 @@ fork(void)
     return pid;
 }
 
-static void
-__child_entry(void)
+static void __child_entry(void)
 {
 
     longjmp(__fork_env, 1);

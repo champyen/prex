@@ -38,16 +38,15 @@
  * strcmp() on transformed strings returns what strcoll()
  * on the original untransformed strings would return.
  */
-size_t
-    strxfrm(dst, src, n) char* dst;
+size_t strxfrm(dst, src, n) char* dst;
 const char* src;
 size_t n;
 {
     size_t srclen, copysize;
 
     /*
-	 * Since locales are unimplemented, this is just a copy.
-	 */
+     * Since locales are unimplemented, this is just a copy.
+     */
     srclen = strlen(src);
     if (n != 0) {
         copysize = srclen < n ? srclen : n - 1;

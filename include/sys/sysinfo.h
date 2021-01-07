@@ -59,66 +59,71 @@
  * Kernel information
  * Note: must be same with struct utsname.
  */
-struct kerninfo {
-    char sysname[_SYS_NMLN]; /* name of this OS. */
+struct kerninfo
+{
+    char sysname[_SYS_NMLN];  /* name of this OS. */
     char nodename[_SYS_NMLN]; /* name of this network node. */
-    char release[_SYS_NMLN]; /* release level. */
-    char version[_SYS_NMLN]; /* version level. */
-    char machine[_SYS_NMLN]; /* hardware type. */
+    char release[_SYS_NMLN];  /* release level. */
+    char version[_SYS_NMLN];  /* version level. */
+    char machine[_SYS_NMLN];  /* hardware type. */
 };
 
 /*
  * Memory information
  */
-struct meminfo {
-    psize_t total; /* total memory size in bytes */
-    psize_t free; /* current free memory in bytes */
+struct meminfo
+{
+    psize_t total;    /* total memory size in bytes */
+    psize_t free;     /* current free memory in bytes */
     psize_t bootdisk; /* total size of boot disk */
 };
 
 /*
  * Thread information
  */
-struct threadinfo {
-    u_long cookie; /* index cookie */
-    thread_t id; /* thread id */
-    int state; /* thread state */
-    int policy; /* scheduling policy */
-    int priority; /* current priority */
-    int basepri; /* base priority */
-    u_int time; /* total running time */
-    int suscnt; /* suspend count */
-    task_t task; /* task id */
-    int active; /* true if active thread */
+struct threadinfo
+{
+    u_long cookie;              /* index cookie */
+    thread_t id;                /* thread id */
+    int state;                  /* thread state */
+    int policy;                 /* scheduling policy */
+    int priority;               /* current priority */
+    int basepri;                /* base priority */
+    u_int time;                 /* total running time */
+    int suscnt;                 /* suspend count */
+    task_t task;                /* task id */
+    int active;                 /* true if active thread */
     char taskname[MAXTASKNAME]; /* task name */
-    char slpevt[MAXEVTNAME]; /* sleep event */
+    char slpevt[MAXEVTNAME];    /* sleep event */
 };
 
 /*
  * Task information
  */
-struct taskinfo {
-    u_long cookie; /* index cookie */
-    task_t id; /* task id */
-    int flags; /* task flags */
-    int suscnt; /* suspend count */
-    cap_t capability; /* security permission flag */
-    size_t vmsize; /* used memory size */
-    int nthreads; /* number of threads */
-    int active; /* true if active task */
+struct taskinfo
+{
+    u_long cookie;              /* index cookie */
+    task_t id;                  /* task id */
+    int flags;                  /* task flags */
+    int suscnt;                 /* suspend count */
+    cap_t capability;           /* security permission flag */
+    size_t vmsize;              /* used memory size */
+    int nthreads;               /* number of threads */
+    int active;                 /* true if active task */
     char taskname[MAXTASKNAME]; /* task name */
 };
 
 /*
  * VM information
  */
-struct vminfo {
+struct vminfo
+{
     u_long cookie; /* index cookie */
-    task_t task; /* task id */
-    vaddr_t virt; /* virtual address */
-    size_t size; /* size */
-    int flags; /* region flag */
-    paddr_t phys; /* physical address */
+    task_t task;   /* task id */
+    vaddr_t virt;  /* virtual address */
+    size_t size;   /* size */
+    int flags;     /* region flag */
+    paddr_t phys;  /* physical address */
 };
 
 /* Flags for vm */
@@ -132,31 +137,34 @@ struct vminfo {
 /*
  * Device information
  */
-struct devinfo {
-    u_long cookie; /* index cookie */
-    device_t id; /* device id */
-    int flags; /* device characteristics flags */
+struct devinfo
+{
+    u_long cookie;         /* index cookie */
+    device_t id;           /* device id */
+    int flags;             /* device characteristics flags */
     char name[MAXDEVNAME]; /* device name */
 };
 
 /*
  * Timer informations
  */
-struct timerinfo {
-    int hz; /* clock frequency */
-    u_long cputicks; /* total cpu ticks since boot */
+struct timerinfo
+{
+    int hz;           /* clock frequency */
+    u_long cputicks;  /* total cpu ticks since boot */
     u_long idleticks; /* total idle ticks */
 };
 
 /*
  * IRQ information
  */
-struct irqinfo {
-    int cookie; /* index cookie */
-    int vector; /* vector number */
-    u_int count; /* interrupt count */
-    int priority; /* interrupt priority */
-    int istreq; /* pending ist request */
+struct irqinfo
+{
+    int cookie;      /* index cookie */
+    int vector;      /* vector number */
+    u_int count;     /* interrupt count */
+    int priority;    /* interrupt priority */
+    int istreq;      /* pending ist request */
     thread_t thread; /* thread id of ist */
 };
 

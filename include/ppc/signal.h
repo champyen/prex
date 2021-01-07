@@ -31,9 +31,10 @@
 
 typedef int sig_atomic_t;
 
-struct sigcontext {
+struct sigcontext
+{
     int sc_onstack; /* sigstack state to restore */
-    int sc_mask; /* signal mask to restore */
+    int sc_mask;    /* signal mask to restore */
 
     /* temporal! */
     register_t fixreg[32];

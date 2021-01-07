@@ -37,12 +37,13 @@
 
 #define _SYS_NMLN 16
 
-struct utsname {
-    char sysname[_SYS_NMLN]; /* name of this OS. */
+struct utsname
+{
+    char sysname[_SYS_NMLN];  /* name of this OS. */
     char nodename[_SYS_NMLN]; /* name of this network node. */
-    char release[_SYS_NMLN]; /* release level. */
-    char version[_SYS_NMLN]; /* version level. */
-    char machine[_SYS_NMLN]; /* hardware type. */
+    char release[_SYS_NMLN];  /* release level. */
+    char version[_SYS_NMLN];  /* version level. */
+    char machine[_SYS_NMLN];  /* hardware type. */
 };
 
 #include <sys/cdefs.h>

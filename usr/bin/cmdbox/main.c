@@ -68,12 +68,11 @@ int help_main(int argc, char* argv[])
     fprintf(stderr, "builtin commands:\n");
 
     /*
-	 * Show help for builtin commands.
-	 */
+     * Show help for builtin commands.
+     */
     entry = builtin_cmds;
     while (entry->cmd != NULL) {
-        col += fprintf(stderr, "%s%s", ((col == 0) ? "    " : ", "),
-            entry->cmd);
+        col += fprintf(stderr, "%s%s", ((col == 0) ? "    " : ", "), entry->cmd);
         entry++;
         if (col > maxcol && entry->cmd != NULL) {
             fprintf(stderr, ",\n");
@@ -83,12 +82,11 @@ int help_main(int argc, char* argv[])
 
 #ifdef CONFIG_CMD_SH
     /*
-	 * Show help for shell commands.
-	 */
+     * Show help for shell commands.
+     */
     entry = shell_cmds;
     while (entry->cmd != NULL) {
-        col += fprintf(stderr, "%s%s", ((col == 0) ? "    " : ", "),
-            entry->cmd);
+        col += fprintf(stderr, "%s%s", ((col == 0) ? "    " : ", "), entry->cmd);
         entry++;
         if (col > maxcol && entry->cmd != NULL) {
             fprintf(stderr, ",\n");
@@ -110,13 +108,13 @@ int main(int argc, char* argv[])
     cmd = prog;
 
     /*
-	 * Alias:
-	 * 'sh'            => sh
-	 * 'cmdbox'        => sh
-	 * 'cmdbox sh'     => sh
-	 * 'cmdbox cmd'    => cmd
-	 * 'cmd' (symlink) => cmd
-	 */
+     * Alias:
+     * 'sh'            => sh
+     * 'cmdbox'        => sh
+     * 'cmdbox sh'     => sh
+     * 'cmdbox cmd'    => cmd
+     * 'cmd' (symlink) => cmd
+     */
     if (!strcmp(prog, "sh"))
         shcmd = 1;
     else if (!strcmp(prog, "cmdbox")) {

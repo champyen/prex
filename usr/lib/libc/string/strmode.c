@@ -32,9 +32,7 @@
 #include <string.h>
 #include <unistd.h>
 
-void
-    strmode(mode, p)
-        mode_t mode;
+void strmode(mode, p) mode_t mode;
 char* p;
 {
     /* print type */

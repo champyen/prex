@@ -64,7 +64,8 @@ typedef off_t fpos_t;
  */
 
 /* stdio buffers */
-struct __sbuf {
+struct __sbuf
+{
     unsigned char* _base;
     int _size;
 };
@@ -95,19 +96,20 @@ struct __sbuf {
  *
  * NB: see WARNING above before changing the layout of this structure!
  */
-typedef struct __sFILE {
+typedef struct __sFILE
+{
     struct __sFILE* next; /* file chain */
-    unsigned char* _p; /* current position in (some) buffer */
-    int _r; /* read space left for getc() */
-    int _w; /* write space left for putc() */
-    short _flags; /* flags, below; this FILE is free if 0 */
-    short _file; /* fileno, if Unix descriptor, else -1 */
-    struct __sbuf _bf; /* the buffer (at least 1 byte, if !NULL) */
+    unsigned char* _p;    /* current position in (some) buffer */
+    int _r;               /* read space left for getc() */
+    int _w;               /* write space left for putc() */
+    short _flags;         /* flags, below; this FILE is free if 0 */
+    short _file;          /* fileno, if Unix descriptor, else -1 */
+    struct __sbuf _bf;    /* the buffer (at least 1 byte, if !NULL) */
 
     /* separate buffer for long sequences of ungetc() */
-    struct __sbuf _ub; /* ungetc buffer */
+    struct __sbuf _ub;  /* ungetc buffer */
     unsigned char* _up; /* saved _p when _p is doing ungetc data */
-    int _ur; /* saved _r when _r is counting ungetc data */
+    int _ur;            /* saved _r when _r is counting ungetc data */
 
     /* tricks to meet minimum requirements even when malloc() fails */
     unsigned char _ubuf[3]; /* guarantee an ungetc() buffer */
@@ -120,10 +122,10 @@ __END_DECLS
 
 #define __SLBF 0x0001 /* line buffered */
 #define __SNBF 0x0002 /* unbuffered */
-#define __SRD 0x0004 /* OK to read */
-#define __SWR 0x0008 /* OK to write */
+#define __SRD 0x0004  /* OK to read */
+#define __SWR 0x0008  /* OK to write */
 /* RD and WR are never simultaneously asserted */
-#define __SRW 0x0010 /* open for reading & writing */
+#define __SRW 0x0010  /* open for reading & writing */
 #define __SEOF 0x0020 /* found EOF */
 #define __SERR 0x0040 /* found error */
 #define __SMBF 0x0080 /* _buf is from malloc */
@@ -152,7 +154,7 @@ __END_DECLS
  * (which could fail).  Do not use this for anything.
  */
 /* must be == _POSIX_STREAM_MAX <limits.h> */
-#define FOPEN_MAX 16 /* must be <= OPEN_MAX <sys/syslimits.h> */
+#define FOPEN_MAX 16     /* must be <= OPEN_MAX <sys/syslimits.h> */
 #define FILENAME_MAX 256 /* must be <= PATH_MAX <sys/syslimits.h> */
 
 /* System V/ANSI C; this is the wrong way to do this, do *not* use these. */
@@ -163,7 +165,7 @@ __END_DECLS
 #define TMP_MAX 308915776
 
 /* access function */
-#define F_OK 0 /* test for existence of file */
+#define F_OK 0    /* test for existence of file */
 #define X_OK 0x01 /* test for execute or search permission */
 #define W_OK 0x02 /* test for write permission */
 #define R_OK 0x04 /* test for read permission */
@@ -232,7 +234,7 @@ __END_DECLS
  * Functions defined in POSIX 1003.1.
  */
 #ifndef _ANSI_SOURCE
-#define L_cuserid 9 /* size for cuserid(); UT_NAMESIZE + 1 */
+#define L_cuserid 9    /* size for cuserid(); UT_NAMESIZE + 1 */
 #define L_ctermid 1024 /* size for ctermid(); PATH_MAX */
 
 __BEGIN_DECLS

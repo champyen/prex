@@ -59,27 +59,23 @@ static int exec_shutdown(struct msg*);
 /*
  * Message mapping
  */
-struct msg_map {
+struct msg_map
+{
     int code;
     int (*func)(struct msg*);
 };
 
-#define MSGMAP(code, fn)               \
-    {                                  \
-        code, (int (*)(struct msg*))fn \
+#define MSGMAP(code, fn)                                                                                               \
+    {                                                                                                                  \
+        code, (int (*)(struct msg*))fn                                                                                 \
     }
 
 static const struct msg_map execmsg_map[] = {
-    MSGMAP(EXEC_EXECVE, exec_execve),
-    MSGMAP(EXEC_BINDCAP, exec_bindcap),
-    MSGMAP(STD_BOOT, exec_boot),
-    MSGMAP(STD_SHUTDOWN, exec_shutdown),
-    MSGMAP(STD_DEBUG, exec_debug),
-    MSGMAP(0, exec_null),
+    MSGMAP(EXEC_EXECVE, exec_execve),    MSGMAP(EXEC_BINDCAP, exec_bindcap), MSGMAP(STD_BOOT, exec_boot),
+    MSGMAP(STD_SHUTDOWN, exec_shutdown), MSGMAP(STD_DEBUG, exec_debug),      MSGMAP(0, exec_null),
 };
 
-static void
-register_process(void)
+static void register_process(void)
 {
     struct msg m;
     object_t obj;
@@ -93,15 +89,13 @@ register_process(void)
     msg_send(obj, &m, sizeof(m));
 }
 
-static int
-exec_null(struct msg* msg)
+static int exec_null(struct msg* msg)
 {
 
     return 0;
 }
 
-static int
-exec_boot(struct msg* msg)
+static int exec_boot(struct msg* msg)
 {
 
     /* Check client's capability. */
@@ -117,8 +111,7 @@ exec_boot(struct msg* msg)
     return 0;
 }
 
-static int
-exec_debug(struct msg* msg)
+static int exec_debug(struct msg* msg)
 {
 
 #ifdef DEBUG
@@ -127,8 +120,7 @@ exec_debug(struct msg* msg)
     return 0;
 }
 
-static int
-exec_shutdown(struct msg* msg)
+static int exec_shutdown(struct msg* msg)
 {
 
     DPRINTF(("exec_shutdown\n"));
@@ -138,8 +130,7 @@ exec_shutdown(struct msg* msg)
 /*
  * Initialize all exec loaders.
  */
-static void
-exec_init(void)
+static void exec_init(void)
 {
     struct exec_loader* ldr;
     int i;
@@ -151,8 +142,7 @@ exec_init(void)
     }
 }
 
-static void
-exception_handler(int sig)
+static void exception_handler(int sig)
 {
 
     exception_return();
@@ -174,23 +164,23 @@ int main(int argc, char* argv[])
     thread_setpri(thread_self(), PRI_EXEC);
 
     /*
-	 * Set capability for us
-	 */
+     * Set capability for us
+     */
     bind_cap("/boot/exec", task_self());
 
     /*
-	 * Setup exception handler.
-	 */
+     * Setup exception handler.
+     */
     exception_setup(exception_handler);
 
     /*
-	 * Initialize exec loaders.
-	 */
+     * Initialize exec loaders.
+     */
     exec_init();
 
     /*
-	 * Create an object to expose our service.
-	 */
+     * Create an object to expose our service.
+     */
     error = object_create("!exec", &obj);
     if (error)
         sys_panic("fail to create object");
@@ -199,12 +189,12 @@ int main(int argc, char* argv[])
     ASSERT(msg);
 
     /*
-	 * Message loop
-	 */
+     * Message loop
+     */
     for (;;) {
         /*
-		 * Wait for an incoming request.
-		 */
+         * Wait for an incoming request.
+         */
         error = msg_receive(obj, msg, MAX_EXECMSG);
         if (error)
             continue;
@@ -220,17 +210,16 @@ int main(int argc, char* argv[])
         }
 #ifdef DEBUG_EXEC
         if (error)
-            DPRINTF(("exec: msg error=%d code=%x\n",
-                error, msg->hdr.code));
+            DPRINTF(("exec: msg error=%d code=%x\n", error, msg->hdr.code));
 #endif
         /*
-		 * Reply to the client.
-		 *
-		 * Note: If EXEC_EXECVE request is handled successfully,
-		 * the receiver task has been terminated here. But, we
-		 * have to call msg_reply() even in such case to reset
-		 * our IPC state.
-		 */
+         * Reply to the client.
+         *
+         * Note: If EXEC_EXECVE request is handled successfully,
+         * the receiver task has been terminated here. But, we
+         * have to call msg_reply() even in such case to reset
+         * our IPC state.
+         */
         msg->hdr.status = error;
         error = msg_reply(obj, msg, MAX_EXECMSG);
     }

@@ -49,23 +49,23 @@
  */
 #include <sys/syslimits.h>
 
-#define NCARGS ARG_MAX /* max bytes for an exec function */
+#define NCARGS ARG_MAX      /* max bytes for an exec function */
 #define NGROUPS NGROUPS_MAX /* max number groups */
-#define NOFILE OPEN_MAX /* max open files per process */
-#define NOGROUP 65535 /* marker for empty group set member */
-#define MAXHOSTNAMELEN 32 /* max hostname size */
+#define NOFILE OPEN_MAX     /* max open files per process */
+#define NOGROUP 65535       /* marker for empty group set member */
+#define MAXHOSTNAMELEN 32   /* max hostname size */
 
-#define MAXTASKS 256 /* max number of tasks in system */
-#define MAXTHREADS 128 /* max number of threads per task */
-#define MAXOBJECTS 32 /* max number of objects per task */
-#define MAXSYNCS 512 /* max number of synch objects per task */
+#define MAXTASKS 256             /* max number of tasks in system */
+#define MAXTHREADS 128           /* max number of threads per task */
+#define MAXOBJECTS 32            /* max number of objects per task */
+#define MAXSYNCS 512             /* max number of synch objects per task */
 #define MAXMEM (4 * 1024 * 1024) /* max core per task - first # is Mb */
 
 /* The following name length include a null-terminate character */
 #define MAXTASKNAME 12 /* max task name */
-#define MAXDEVNAME 12 /* max device name */
-#define MAXOBJNAME 16 /* max object name */
-#define MAXEVTNAME 12 /* max event name */
+#define MAXDEVNAME 12  /* max device name */
+#define MAXOBJNAME 16  /* max object name */
+#define MAXEVTNAME 12  /* max event name */
 
 #define HZ CONFIG_HZ /* ticks per second */
 #ifdef __beagle__
@@ -79,12 +79,12 @@
  * Priorities.
  * Probably should not be altered too much.
  */
-#define PRI_TIMER 15 /* priority for timer thread */
-#define PRI_IST 16 /* top priority for interrupt threads */
-#define PRI_DPC 33 /* priority for Deferred Procedure Call */
-#define PRI_IDLE 255 /* priority for idle thread */
+#define PRI_TIMER 15     /* priority for timer thread */
+#define PRI_IST 16       /* top priority for interrupt threads */
+#define PRI_DPC 33       /* priority for Deferred Procedure Call */
+#define PRI_IDLE 255     /* priority for idle thread */
 #define PRI_REALTIME 127 /* default priority for real-time thread */
-#define PRI_DEFAULT 200 /* default user priority */
+#define PRI_DEFAULT 200  /* default user priority */
 
 #define MAXPRI 0
 #define MINPRI 255
@@ -93,8 +93,8 @@
 /* Server priorities */
 #define PRI_PROC 124 /* process server */
 #define PRI_EXEC 125 /* exec server */
-#define PRI_FS 126 /* file system server */
-#define PRI_POW 100 /* power server */
+#define PRI_FS 126   /* file system server */
+#define PRI_POW 100  /* power server */
 
 #ifndef NULL
 #if !defined(__cplusplus)
@@ -120,7 +120,7 @@
 #define KSTACKSZ 768 /* kernel stack size */
 
 #define USRSTACK (0 + PAGE_SIZE) /* base address of user stack */
-#define DFLSTKSZ 4096 /* default size of user stack */
+#define DFLSTKSZ 4096            /* default size of user stack */
 
 #ifdef CONFIG_MMU
 #define user_area(a) ((vaddr_t)(a) < (vaddr_t)USERLIMIT)

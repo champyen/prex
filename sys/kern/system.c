@@ -45,9 +45,7 @@
 
 static char infobuf[MAXINFOSZ]; /* common information buffer */
 
-static const struct kerninfo kerninfo = {
-    "Prex", HOSTNAME, VERSION, __DATE__, MACHINE
-};
+static const struct kerninfo kerninfo = {"Prex", HOSTNAME, VERSION, __DATE__, MACHINE};
 
 /*
  * Get system information.

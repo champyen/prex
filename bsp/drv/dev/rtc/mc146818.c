@@ -71,8 +71,7 @@ struct rtc_ops mc146818_ops = {
     /* settime */ mc146818_settime,
 };
 
-static u_char
-mc_read(u_char index)
+static u_char mc_read(u_char index)
 {
     u_char val;
     int s;
@@ -97,8 +96,7 @@ mc_write(u_char index, u_char val)
 }
 #endif
 
-static int
-mc146818_gettime(void* aux, struct timeval* tv)
+static int mc146818_gettime(void* aux, struct timeval* tv)
 {
     struct clock_ymdhms cy;
     int i;
@@ -130,22 +128,19 @@ mc146818_gettime(void* aux, struct timeval* tv)
     else
         cy.year += 1900;
 #ifdef DEBUG
-    printf("rtc: system time was %d/%d/%d %d:%d:%d\n",
-        cy.year, cy.mon, cy.day, cy.hour, cy.min, cy.sec);
+    printf("rtc: system time was %d/%d/%d %d:%d:%d\n", cy.year, cy.mon, cy.day, cy.hour, cy.min, cy.sec);
 #endif
     tv->tv_usec = 0;
     tv->tv_sec = rtc_ymdhms_to_secs(&cy);
     return 0;
 }
 
-static int
-mc146818_settime(void* aux, struct timeval* ts)
+static int mc146818_settime(void* aux, struct timeval* ts)
 {
     return 0;
 }
 
-static int
-mc146818_init(struct driver* self)
+static int mc146818_init(struct driver* self)
 {
 
     rtc_attach(&mc146818_ops, NULL);

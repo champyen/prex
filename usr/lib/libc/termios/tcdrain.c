@@ -33,8 +33,7 @@
 #include <termios.h>
 #include <unistd.h>
 
-int
-    tcdrain(fd) int fd;
+int tcdrain(fd) int fd;
 {
 
     return (ioctl(fd, TIOCDRAIN, 0));

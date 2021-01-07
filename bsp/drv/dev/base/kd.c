@@ -62,34 +62,35 @@ static int kd_trace(int, char**);
 static int kd_examine(int, char**);
 static int kd_write(int, char**);
 
-struct cmd_entry {
+struct cmd_entry
+{
     const char* cmd;
     int (*func)(int, char**);
     const char* usage;
 };
 
 static const struct cmd_entry cmd_table[] = {
-    { "help", kd_help, "This help" },
-    { "continue", kd_continue, "Continue execution [c]" },
-    { "reboot", kd_reboot, "Reboot system" },
-    { "mstat", kd_mstat, "Display memory usage" },
-    { "thread", kd_thread, "Display thread information" },
-    { "task", kd_task, "Display task information" },
-    { "vm", kd_vm, "Dump all VM segments" },
-    { "device", kd_device, "Display list of devices" },
-    { "driver", kd_driver, "Display list of drivers" },
-    { "irq", kd_irq, "Display interrupt information" },
-    { "trap", kd_trap, "Dump current trap frame" },
-    { "devstat", kd_devstat, "Dump all device state" },
-    { "trace", kd_trace, "Set trace flag for task" },
-    { "examine", kd_examine, "Examine data (x [/fmt] [addr])" },
-    { "write", kd_write, "Write data (w [/size] addr val)" },
+    {"help", kd_help, "This help"},
+    {"continue", kd_continue, "Continue execution [c]"},
+    {"reboot", kd_reboot, "Reboot system"},
+    {"mstat", kd_mstat, "Display memory usage"},
+    {"thread", kd_thread, "Display thread information"},
+    {"task", kd_task, "Display task information"},
+    {"vm", kd_vm, "Dump all VM segments"},
+    {"device", kd_device, "Display list of devices"},
+    {"driver", kd_driver, "Display list of drivers"},
+    {"irq", kd_irq, "Display interrupt information"},
+    {"trap", kd_trap, "Dump current trap frame"},
+    {"devstat", kd_devstat, "Dump all device state"},
+    {"trace", kd_trace, "Set trace flag for task"},
+    {"examine", kd_examine, "Examine data (x [/fmt] [addr])"},
+    {"write", kd_write, "Write data (w [/size] addr val)"},
     /* command alias section */
-    { "?", kd_help, NULL },
-    { "x", kd_examine, NULL },
-    { "w", kd_write, NULL },
-    { "c", kd_continue, NULL },
-    { NULL, kd_null, NULL },
+    {"?", kd_help, NULL},
+    {"x", kd_examine, NULL},
+    {"w", kd_write, NULL},
+    {"c", kd_continue, NULL},
+    {NULL, kd_null, NULL},
 };
 
 /*
@@ -120,14 +121,12 @@ static struct abort_ops kd_abort_ops = {
     /* abort */ kd_abort,
 };
 
-static int
-kd_null(int argc, char** argv)
+static int kd_null(int argc, char** argv)
 {
     return 0;
 }
 
-static void
-kd_error(int id)
+static void kd_error(int id)
 {
 
     if (id < KERR_MAX)
@@ -137,8 +136,7 @@ kd_error(int id)
 /*
  * Get taks id from its name.
  */
-static task_t
-kd_lookup_task(char* name)
+static task_t kd_lookup_task(char* name)
 {
     struct taskinfo ti;
     task_t task = TASK_NULL;
@@ -155,30 +153,26 @@ kd_lookup_task(char* name)
     return task;
 }
 
-static int
-kd_help(int argc, char** argv)
+static int kd_help(int argc, char** argv)
 {
     int i = 0;
 
     while (cmd_table[i].cmd != NULL) {
         if (cmd_table[i].usage)
-            printf(" %10s -- %s.\n", cmd_table[i].cmd,
-                cmd_table[i].usage);
+            printf(" %10s -- %s.\n", cmd_table[i].cmd, cmd_table[i].usage);
         i++;
     }
     printf("\nuse `-?` to find out more about each command.\n");
     return 0;
 }
 
-static int
-kd_continue(int argc, char** argv)
+static int kd_continue(int argc, char** argv)
 {
 
     return -1;
 }
 
-static int
-kd_reboot(int argc, char** argv)
+static int kd_reboot(int argc, char** argv)
 {
 
 #ifdef CONFIG_PM
@@ -189,8 +183,7 @@ kd_reboot(int argc, char** argv)
     return 0;
 }
 
-static int
-kd_mstat(int argc, char** argv)
+static int kd_mstat(int argc, char** argv)
 {
     struct meminfo info;
 
@@ -205,11 +198,10 @@ kd_mstat(int argc, char** argv)
     return 0;
 }
 
-static int
-kd_thread(int argc, char** argv)
+static int kd_thread(int argc, char** argv)
 {
-    const char state[][4] = { "RUN", "SLP", "SUS", "S&S", "EXT" };
-    const char pol[][5] = { "FIFO", "RR  " };
+    const char state[][4] = {"RUN", "SLP", "SUS", "S&S", "EXT"};
+    const char pol[][5] = {"FIFO", "RR  "};
     struct threadinfo ti;
     int rc;
 
@@ -225,19 +217,15 @@ kd_thread(int argc, char** argv)
         /* Get thread information from kernel. */
         rc = sysinfo(INFO_THREAD, &ti);
         if (!rc) {
-            printf(" %08lx %12s %s%c %s  %3d  %3d %8d %6d %s\n",
-                ti.id, ti.taskname, state[ti.state],
-                ti.active ? '*' : ' ',
-                pol[ti.policy], ti.priority, ti.basepri,
-                ti.time, ti.suscnt, ti.slpevt);
+            printf(" %08lx %12s %s%c %s  %3d  %3d %8d %6d %s\n", ti.id, ti.taskname, state[ti.state],
+                   ti.active ? '*' : ' ', pol[ti.policy], ti.priority, ti.basepri, ti.time, ti.suscnt, ti.slpevt);
         }
     } while (rc == 0);
 
     return 0;
 }
 
-static int
-kd_task(int argc, char** argv)
+static int kd_task(int argc, char** argv)
 {
     struct taskinfo ti;
     int rc;
@@ -252,18 +240,15 @@ kd_task(int argc, char** argv)
         /* Get task information from kernel. */
         rc = sysinfo(INFO_TASK, &ti);
         if (!rc) {
-            printf(" %08lx%c %8s %8d %08x %6d   %08x %8d\n",
-                ti.id, ti.active ? '*' : ' ', ti.taskname,
-                ti.nthreads, ti.flags, ti.suscnt,
-                ti.capability, ti.vmsize);
+            printf(" %08lx%c %8s %8d %08x %6d   %08x %8d\n", ti.id, ti.active ? '*' : ' ', ti.taskname, ti.nthreads,
+                   ti.flags, ti.suscnt, ti.capability, ti.vmsize);
         }
     } while (rc == 0);
 
     return 0;
 }
 
-static void
-kd_vm_region(task_t task)
+static void kd_vm_region(task_t task)
 {
     struct vminfo vi;
     char flags[6];
@@ -291,16 +276,13 @@ kd_vm_region(task_t task)
                     flags[3] = 'S';
                 if (vi.flags & VF_MAPPED)
                     flags[4] = 'M';
-                printf(" %08lx %08lx %8x %s\n",
-                    (long)vi.virt, (long)vi.phys,
-                    vi.size, flags);
+                printf(" %08lx %08lx %8x %s\n", (long)vi.virt, (long)vi.phys, vi.size, flags);
             }
         }
     } while (rc == 0);
 }
 
-static int
-kd_vm(int argc, char** argv)
+static int kd_vm(int argc, char** argv)
 {
     struct taskinfo ti;
     int rc;
@@ -314,8 +296,7 @@ kd_vm(int argc, char** argv)
         rc = sysinfo(INFO_TASK, &ti);
         if (!rc) {
             if (ti.vmsize != 0) {
-                printf("\ntask=%08lx name=%s total=%dK bytes\n",
-                    ti.id, ti.taskname, ti.vmsize / 1024);
+                printf("\ntask=%08lx name=%s total=%dK bytes\n", ti.id, ti.taskname, ti.vmsize / 1024);
                 kd_vm_region(ti.id);
             }
         }
@@ -324,8 +305,7 @@ kd_vm(int argc, char** argv)
     return 0;
 }
 
-static int
-kd_device(int argc, char** argv)
+static int kd_device(int argc, char** argv)
 {
     struct devinfo di;
     char flags[6];
@@ -360,16 +340,14 @@ kd_device(int argc, char** argv)
     return 0;
 }
 
-static int
-kd_driver(int argc, char** argv)
+static int kd_driver(int argc, char** argv)
 {
 
     driver_dump();
     return 0;
 }
 
-static int
-kd_irq(int argc, char** argv)
+static int kd_irq(int argc, char** argv)
 {
     struct irqinfo ii;
     int rc;
@@ -383,17 +361,14 @@ kd_irq(int argc, char** argv)
     do {
         rc = sysinfo(INFO_IRQ, &ii);
         if (!rc) {
-            printf("   %4d %8d    %8d %3d %08lx\n",
-                ii.vector, ii.count, ii.istreq,
-                ii.priority, (long)ii.thread);
+            printf("   %4d %8d    %8d %3d %08lx\n", ii.vector, ii.count, ii.istreq, ii.priority, (long)ii.thread);
         }
     } while (rc == 0);
 
     return 0;
 }
 
-static int
-kd_trap(int argc, char** argv)
+static int kd_trap(int argc, char** argv)
 {
 
     printf("Trap frame:\n");
@@ -402,8 +377,7 @@ kd_trap(int argc, char** argv)
     return 0;
 }
 
-static int
-kd_devstat(int argc, char** argv)
+static int kd_devstat(int argc, char** argv)
 {
 
     printf("Device state:\n");
@@ -412,8 +386,7 @@ kd_devstat(int argc, char** argv)
     return 0;
 }
 
-static int
-kd_trace(int argc, char** argv)
+static int kd_trace(int argc, char** argv)
 {
     task_t task;
 
@@ -432,8 +405,7 @@ kd_trace(int argc, char** argv)
     return 0;
 }
 
-static int
-kd_examine(int argc, char** argv)
+static int kd_examine(int argc, char** argv)
 {
     char* p;
     u_char* kp;
@@ -513,8 +485,7 @@ kd_examine(int argc, char** argv)
     return 0;
 }
 
-static int
-kd_write(int argc, char** argv)
+static int kd_write(int argc, char** argv)
 {
     vaddr_t addr;
     int size = 4;
@@ -563,7 +534,7 @@ kd_write(int argc, char** argv)
 
 #if BYTE_ORDER == LITTLE_ENDIAN
     for (i = 0; i < size; i++) {
-#else /* BYTE_ORDER == BIG_ENDIAN */
+#else  /* BYTE_ORDER == BIG_ENDIAN */
     for (i = size; i-- > 0;) {
 #endif /* BYTE_ORDER */
         /* FIXME: need to check alignment...  */
@@ -574,8 +545,7 @@ kd_write(int argc, char** argv)
     return 0;
 }
 
-static int
-kd_dispatch(int argc, char** argv)
+static int kd_dispatch(int argc, char** argv)
 {
     int i = 0;
     int error = 0;
@@ -598,8 +568,7 @@ kd_dispatch(int argc, char** argv)
     return 0;
 }
 
-static int
-kd_parse_line(char* line)
+static int kd_parse_line(char* line)
 {
     static char* args[ARGMAX];
     char *p, *word = NULL;
@@ -639,8 +608,7 @@ kd_parse_line(char* line)
     return rc;
 }
 
-static void
-kd_read_line(char* line)
+static void kd_read_line(char* line)
 {
     int c, pos = 0;
     char* p = line;
@@ -727,7 +695,7 @@ void kd_init(void)
 {
 
     /*
-	 * Install abort handler to catch assert & panic events.
-	 */
+     * Install abort handler to catch assert & panic events.
+     */
     dbgctl(DBGC_SETABORT, &kd_abort_ops);
 }

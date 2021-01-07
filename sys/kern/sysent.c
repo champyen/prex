@@ -45,14 +45,14 @@
 typedef register_t (*sysfn_t)(register_t, register_t, register_t, register_t);
 
 #ifdef DEBUG
-static void strace_entry(register_t, register_t, register_t, register_t,
-    register_t);
+static void strace_entry(register_t, register_t, register_t, register_t, register_t);
 static void strace_return(register_t, register_t);
 #endif
 
-struct sysent {
+struct sysent
+{
 #ifdef DEBUG
-    int sy_narg; /* number of arguments */
+    int sy_narg;   /* number of arguments */
     char* sy_name; /* name string */
 #endif
     sysfn_t sy_call; /* handler */
@@ -68,14 +68,14 @@ struct sysent {
  *
  */
 #ifdef DEBUG
-#define SYSENT(n, fn)                  \
-    {                                  \
-        n, __STRING(fn), (sysfn_t)(fn) \
+#define SYSENT(n, fn)                                                                                                  \
+    {                                                                                                                  \
+        n, __STRING(fn), (sysfn_t)(fn)                                                                                 \
     }
 #else
-#define SYSENT(n, fn) \
-    {                 \
-        (sysfn_t)(fn) \
+#define SYSENT(n, fn)                                                                                                  \
+    {                                                                                                                  \
+        (sysfn_t)(fn)                                                                                                  \
     }
 #endif
 
@@ -153,9 +153,7 @@ static const struct sysent sysent[] = {
 /*
  * System call dispatcher.
  */
-register_t
-syscall_handler(register_t a1, register_t a2, register_t a3, register_t a4,
-    register_t id)
+register_t syscall_handler(register_t a1, register_t a2, register_t a3, register_t a4, register_t id)
 {
     register_t retval = EINVAL;
     const struct sysent* callp;
@@ -179,16 +177,13 @@ syscall_handler(register_t a1, register_t a2, register_t a3, register_t a4,
 /*
  * Show syscall info if the task is being traced.
  */
-static void
-strace_entry(register_t a1, register_t a2, register_t a3, register_t a4,
-    register_t id)
+static void strace_entry(register_t a1, register_t a2, register_t a3, register_t a4, register_t id)
 {
     const struct sysent* callp;
 
     if (curtask->flags & TF_TRACE) {
         if (id >= NSYSCALL) {
-            printf("%s: OUT OF RANGE (%d)\n",
-                curtask->name, id);
+            printf("%s: OUT OF RANGE (%d)\n", curtask->name, id);
             return;
         }
 
@@ -206,12 +201,10 @@ strace_entry(register_t a1, register_t a2, register_t a3, register_t a4,
             printf("0x%08x, 0x%08x)\n", a1, a2);
             break;
         case 3:
-            printf("0x%08x, 0x%08x, 0x%08x)\n",
-                a1, a2, a3);
+            printf("0x%08x, 0x%08x, 0x%08x)\n", a1, a2, a3);
             break;
         case 4:
-            printf("0x%08x, 0x%08x, 0x%08x, 0x%08x)\n",
-                a1, a2, a3, a4);
+            printf("0x%08x, 0x%08x, 0x%08x, 0x%08x)\n", a1, a2, a3, a4);
             break;
         }
     }
@@ -224,8 +217,7 @@ strace_entry(register_t a1, register_t a2, register_t a3, register_t a4,
  * not have any arguments, although timer_waitperiod()
  * has valid return code...
  */
-static void
-strace_return(register_t retval, register_t id)
+static void strace_return(register_t retval, register_t id)
 {
     const struct sysent* callp;
 
@@ -234,8 +226,7 @@ strace_return(register_t retval, register_t id)
             return;
         callp = &sysent[id];
         if (callp->sy_narg != 0 && retval != 0)
-            printf("%s: !!! %s() = 0x%08x\n",
-                curtask->name, callp->sy_name, retval);
+            printf("%s: !!! %s() = 0x%08x\n", curtask->name, callp->sy_name, retval);
     }
 }
 #endif /* !DEBUG */

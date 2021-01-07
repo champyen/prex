@@ -80,8 +80,8 @@ int main(int argc, char* argv[])
         for (i = 1; i < argc; i++) {
             src = argv[i];
             /*
-			 * User confirmation is required for security.
-			 */
+             * User confirmation is required for security.
+             */
             fputs("Are you sure you want to install ", stdout);
             fputs(basename(src), stdout);
             fputs("? (y/n) ", stdout);
@@ -99,16 +99,14 @@ int main(int argc, char* argv[])
     exit(r);
 }
 
-static void
-usage(void)
+static void usage(void)
 {
     fputs("usage: install file\n", stderr);
     exit(1);
     /* NOTREACHED */
 }
 
-static int
-copy(char* from, char* to)
+static int copy(char* from, char* to)
 {
     char path[PATH_MAX];
     int fold, fnew, n;
@@ -144,8 +142,7 @@ copy(char* from, char* to)
     return 0;
 }
 
-static void
-error(void)
+static void error(void)
 {
     perror("install");
 }

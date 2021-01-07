@@ -39,14 +39,14 @@ void pm_notify(int event);
 int pm_set_power(int);
 void pm_attach_lcd(device_t);
 #else
-#define pm_notify(e) \
-    do {             \
+#define pm_notify(e)                                                                                                   \
+    do {                                                                                                               \
     } while (0)
-#define pm_set_power(p) \
-    do {                \
+#define pm_set_power(p)                                                                                                \
+    do {                                                                                                               \
     } while (0)
-#define pm_attach_lcd(d) \
-    do {                 \
+#define pm_attach_lcd(d)                                                                                               \
+    do {                                                                                                               \
     } while (0)
 #endif
 __END_DECLS

@@ -59,9 +59,9 @@ int namei(char* path, vnode_t* vpp)
     DPRINTF(VFSDB_VNODE, ("namei: path=%s\n", path));
 
     /*
-	 * Convert a full path name to its mount point and
-	 * the local node in the file system.
-	 */
+     * Convert a full path name to its mount point and
+     * the local node in the file system.
+     */
     if (vfs_findroot(path, &mp, &p))
         return ENOTDIR;
     strlcpy(node, "/", sizeof(node));
@@ -73,10 +73,10 @@ int namei(char* path, vnode_t* vpp)
         return 0;
     }
     /*
-	 * Find target vnode, started from root directory.
-	 * This is done to attach the fs specific data to
-	 * the target vnode.
-	 */
+     * Find target vnode, started from root directory.
+     * This is done to attach the fs specific data to
+     * the target vnode.
+     */
     if ((dvp = mp->m_root) == NULL)
         sys_panic("VFS: no root");
 
@@ -86,8 +86,8 @@ int namei(char* path, vnode_t* vpp)
 
     while (*p != '\0') {
         /*
-		 * Get lower directory/file name.
-		 */
+         * Get lower directory/file name.
+         */
         while (*p == '/')
             p++;
         for (i = 0; i < PATH_MAX; i++) {
@@ -98,8 +98,8 @@ int namei(char* path, vnode_t* vpp)
         name[i] = '\0';
 
         /*
-		 * Get a vnode for the target.
-		 */
+         * Get a vnode for the target.
+         */
         strlcat(node, "/", sizeof(node));
         strlcat(node, name, sizeof(node));
         vp = vn_lookup(mp, node);
@@ -125,8 +125,8 @@ int namei(char* path, vnode_t* vpp)
     }
 
     /*
-	 * Detemine X permission.
-	 */
+     * Detemine X permission.
+     */
     if (vp->v_type != VDIR && sec_vnode_permission(path) != 0) {
         vp->v_mode &= ~(0111);
     }
@@ -156,8 +156,8 @@ int lookup(char* path, vnode_t* vpp, char** name)
     DPRINTF(VFSDB_VNODE, ("lookup: path=%s\n", path));
 
     /*
-	 * Get the path for directory.
-	 */
+     * Get the path for directory.
+     */
     strlcpy(buf, path, sizeof(buf));
     file = strrchr(buf, '/');
     if (!buf[0])
@@ -169,8 +169,8 @@ int lookup(char* path, vnode_t* vpp, char** name)
         dir = buf;
     }
     /*
-	 * Get the vnode for directory
-	 */
+     * Get the vnode for directory
+     */
     if ((error = namei(dir, &vp)) != 0)
         return error;
     if (vp->v_type != VDIR) {
@@ -180,8 +180,8 @@ int lookup(char* path, vnode_t* vpp, char** name)
     *vpp = vp;
 
     /*
-	 * Get the file name
-	 */
+     * Get the file name
+     */
     *name = strrchr(path, '/') + 1;
     return 0;
 }

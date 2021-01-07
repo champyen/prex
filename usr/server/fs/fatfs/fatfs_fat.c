@@ -40,8 +40,7 @@
 /*
  * Read the FAT entry for specified cluster.
  */
-static int
-read_fat_entry(struct fatfsmount* fmp, u_long cl)
+static int read_fat_entry(struct fatfsmount* fmp, u_long cl)
 {
     u_long sec;
     char* buf = fmp->fat_buf;
@@ -54,10 +53,10 @@ read_fat_entry(struct fatfsmount* fmp, u_long cl)
     else {
         sec = (cl * 3 / 2) / SEC_SIZE;
         /*
-		 * Check if the entry data is placed at the
-		 * end of sector. If so, we have to read one
-		 * more sector to get complete FAT12 entry.
-		 */
+         * Check if the entry data is placed at the
+         * end of sector. If so, we have to read one
+         * more sector to get complete FAT12 entry.
+         */
         if ((cl * 3 / 2) % SEC_SIZE == SEC_SIZE - 1)
             border = 1;
     }
@@ -83,8 +82,7 @@ read_fat_entry(struct fatfsmount* fmp, u_long cl)
 /*
  * Write fat entry from buffer.
  */
-static int
-write_fat_entry(struct fatfsmount* fmp, u_long cl)
+static int write_fat_entry(struct fatfsmount* fmp, u_long cl)
 {
     u_long sec;
     char* buf = fmp->fat_buf;
@@ -270,8 +268,7 @@ int fat_free_clusters(struct fatfsmount* fmp, u_long start)
  * @offset: file offset
  * @cl: cluster# to return
  */
-int fat_seek_cluster(struct fatfsmount* fmp, u_long start, u_long offset,
-    u_long* cl)
+int fat_seek_cluster(struct fatfsmount* fmp, u_long start, u_long offset, u_long* cl)
 {
     int error, i;
     u_long c, target;

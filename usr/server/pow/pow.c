@@ -57,11 +57,12 @@
 /*
  * Action for each power event.
  */
-struct power_action {
-    int pwrbtn; /* state for power button press */
-    int slpbtn; /* state for sleep button press */
+struct power_action
+{
+    int pwrbtn;   /* state for power button press */
+    int slpbtn;   /* state for sleep button press */
     int lcdclose; /* state for LCD close */
-    int lowbatt; /* state for low battery */
+    int lowbatt;  /* state for low battery */
 };
 
 static int pow_noop(struct msg*);
@@ -81,35 +82,29 @@ static void shutdown_server(const char*);
 /*
  * Message mapping
  */
-struct msg_map {
+struct msg_map
+{
     int code;
     int (*func)(struct msg*);
 };
 
 static const struct msg_map powermsg_map[] = {
-    { POW_SET_POWER, pow_set_power },
-    { POW_GET_POLICY, pow_get_policy },
-    { POW_SET_POLICY, pow_set_policy },
-    { POW_GET_SUSTMR, pow_get_sustmr },
-    { POW_SET_SUSTMR, pow_set_sustmr },
-    { POW_GET_DIMTMR, pow_get_dimtmr },
-    { POW_SET_DIMTMR, pow_set_dimtmr },
-    { POW_BATTERY_LVL, pow_battery_lvl },
-    { STD_DEBUG, pow_debug },
-    { 0, pow_noop },
+    {POW_SET_POWER, pow_set_power},   {POW_GET_POLICY, pow_get_policy},
+    {POW_SET_POLICY, pow_set_policy}, {POW_GET_SUSTMR, pow_get_sustmr},
+    {POW_SET_SUSTMR, pow_set_sustmr}, {POW_GET_DIMTMR, pow_get_dimtmr},
+    {POW_SET_DIMTMR, pow_set_dimtmr}, {POW_BATTERY_LVL, pow_battery_lvl},
+    {STD_DEBUG, pow_debug},           {0, pow_noop},
 };
 
 static struct power_action pmact;
 static device_t pmdev;
 
-static int
-pow_noop(struct msg* msg)
+static int pow_noop(struct msg* msg)
 {
     return 0;
 }
 
-static int
-pow_set_power(struct msg* msg)
+static int pow_set_power(struct msg* msg)
 {
     int state;
 
@@ -118,8 +113,7 @@ pow_set_power(struct msg* msg)
     return 0;
 }
 
-static int
-pow_get_policy(struct msg* msg)
+static int pow_get_policy(struct msg* msg)
 {
     int policy;
 
@@ -128,8 +122,7 @@ pow_get_policy(struct msg* msg)
     return 0;
 }
 
-static int
-pow_set_policy(struct msg* msg)
+static int pow_set_policy(struct msg* msg)
 {
     int policy;
 
@@ -138,8 +131,7 @@ pow_set_policy(struct msg* msg)
     return 0;
 }
 
-static int
-pow_get_sustmr(struct msg* msg)
+static int pow_get_sustmr(struct msg* msg)
 {
     int timeout;
 
@@ -148,8 +140,7 @@ pow_get_sustmr(struct msg* msg)
     return 0;
 }
 
-static int
-pow_set_sustmr(struct msg* msg)
+static int pow_set_sustmr(struct msg* msg)
 {
     int timeout;
 
@@ -158,8 +149,7 @@ pow_set_sustmr(struct msg* msg)
     return 0;
 }
 
-static int
-pow_get_dimtmr(struct msg* msg)
+static int pow_get_dimtmr(struct msg* msg)
 {
     int timeout;
 
@@ -168,8 +158,7 @@ pow_get_dimtmr(struct msg* msg)
     return 0;
 }
 
-static int
-pow_set_dimtmr(struct msg* msg)
+static int pow_set_dimtmr(struct msg* msg)
 {
     int timeout;
 
@@ -178,15 +167,13 @@ pow_set_dimtmr(struct msg* msg)
     return 0;
 }
 
-static int
-pow_battery_lvl(struct msg* msg)
+static int pow_battery_lvl(struct msg* msg)
 {
     /* TODO: Get current battery level from battery driver. */
     return 0;
 }
 
-static void
-set_power_state(int state)
+static void set_power_state(int state)
 {
 
     if (pmdev != NODEV) {
@@ -203,8 +190,7 @@ set_power_state(int state)
     }
 }
 
-static void
-exception_handler(int sig)
+static void exception_handler(int sig)
 {
 
     if (sig == SIGPWR) {
@@ -213,8 +199,7 @@ exception_handler(int sig)
     exception_return();
 }
 
-static void
-power_thread(void)
+static void power_thread(void)
 {
     int sig, event, state;
 
@@ -222,21 +207,21 @@ power_thread(void)
 
     for (;;) {
         /*
-		 * Wait signals from PM driver.
-		 */
+         * Wait signals from PM driver.
+         */
         exception_wait(&sig);
         DPRINTF(("power_thread: sig=%d\n", sig));
 
         if (sig == SIGPWR) {
             /*
-			 * Query PM events.
-			 */
+             * Query PM events.
+             */
             device_ioctl(pmdev, PMIOC_QUERY_EVENT, &event);
             DPRINTF(("power_thread: event=%d\n", event));
 
             /*
-			 * Do action for current power settings.
-			 */
+             * Do action for current power settings.
+             */
             state = PWR_ON;
             switch (event) {
             case PME_PWRBTN_PRESS:
@@ -261,8 +246,7 @@ power_thread(void)
 /*
  * Run specified routine as a thread.
  */
-static int
-run_thread(void (*entry)(void))
+static int run_thread(void (*entry)(void))
 {
     task_t self;
     thread_t t;
@@ -282,45 +266,43 @@ run_thread(void (*entry)(void))
     return thread_resume(t);
 }
 
-static void
-pow_init(void)
+static void pow_init(void)
 {
     task_t self;
 
     /*
-	 * Set default power actions
-	 */
+     * Set default power actions
+     */
     pmact.pwrbtn = PWR_OFF;
     pmact.slpbtn = PWR_SUSPEND;
     pmact.lcdclose = PWR_SUSPEND;
     pmact.lowbatt = PWR_OFF;
 
     /*
-	 * Connect to the pm driver to get all power events.
-	 */
+     * Connect to the pm driver to get all power events.
+     */
     if (device_open("pm", 0, &pmdev) != 0) {
         /*
-		 * Bad config...
-		 */
+         * Bad config...
+         */
         sys_panic("pow: no pm driver");
     }
     self = task_self();
     device_ioctl(pmdev, PMIOC_CONNECT, &self);
 
     /*
-	 * Setup exception to receive signals from pm driver.
-	 */
+     * Setup exception to receive signals from pm driver.
+     */
     exception_setup(exception_handler);
 
     /*
-	 * Start power thread.
-	 */
+     * Start power thread.
+     */
     if (run_thread(power_thread))
         sys_panic("pow_init");
 }
 
-static void
-register_process(void)
+static void register_process(void)
 {
     struct msg m;
     object_t obj;
@@ -337,8 +319,7 @@ register_process(void)
 /*
  * Wait until specified server starts.
  */
-static void
-wait_server(const char* name, object_t* pobj)
+static void wait_server(const char* name, object_t* pobj)
 {
     int i, error = 0;
 
@@ -346,8 +327,8 @@ wait_server(const char* name, object_t* pobj)
     thread_yield();
 
     /*
-	 * Wait for server loading. timeout is 1 sec.
-	 */
+     * Wait for server loading. timeout is 1 sec.
+     */
     for (i = 0; i < 100; i++) {
         error = object_lookup((char*)name, pobj);
         if (error == 0)
@@ -361,8 +342,7 @@ wait_server(const char* name, object_t* pobj)
         sys_panic("pow: server not found");
 }
 
-static void
-shutdown_server(const char* name)
+static void shutdown_server(const char* name)
 {
     struct msg m;
     object_t obj;
@@ -379,8 +359,7 @@ shutdown_server(const char* name)
         sys_panic("pow: shutdown error");
 }
 
-static int
-pow_debug(struct msg* msg)
+static int pow_debug(struct msg* msg)
 {
     return 0;
 }
@@ -403,49 +382,48 @@ int main(int argc, char* argv[])
     thread_setpri(thread_self(), PRI_POW);
 
     /*
-	 * Wait until all required system servers
-	 * become available.
-	 */
+     * Wait until all required system servers
+     * become available.
+     */
     wait_server("!proc", &procobj);
     wait_server("!exec", &execobj);
 
     /*
-	 * Request to bind a new capabilities for us.
-	 */
+     * Request to bind a new capabilities for us.
+     */
     bm.hdr.code = EXEC_BINDCAP;
     strlcpy(bm.path, "/boot/pow", sizeof(bm.path));
     msg_send(execobj, &bm, sizeof(bm));
 
     /*
-	 * Register to process server
-	 */
+     * Register to process server
+     */
     register_process();
 
     /*
-	 * Initialize power service.
-	 */
+     * Initialize power service.
+     */
     pow_init();
 
     /*
-	 * Create an object to expose our service.
-	 */
+     * Create an object to expose our service.
+     */
     error = object_create("!pow", &obj);
     if (error)
         sys_panic("fail to create object");
 
     /*
-	 * Message loop
-	 */
+     * Message loop
+     */
     for (;;) {
         /*
-		 * Wait for an incoming request.
-		 */
+         * Wait for an incoming request.
+         */
         error = msg_receive(obj, &msg, sizeof(msg));
         if (error)
             continue;
 
-        DPRINTF(("pow: msg code=%x task=%x\n",
-            msg.hdr.code, msg.hdr.task));
+        DPRINTF(("pow: msg code=%x task=%x\n", msg.hdr.code, msg.hdr.task));
 
         /* Check client's capability. */
         if (task_chkcap(msg.hdr.task, CAP_POWERMGMT) != 0) {
@@ -463,14 +441,13 @@ int main(int argc, char* argv[])
             }
         }
         /*
-		 * Reply to the client.
-		 */
+         * Reply to the client.
+         */
         msg.hdr.status = error;
         msg_reply(obj, &msg, sizeof(msg));
 #ifdef DEBUG_POWER
         if (map != NULL && error != 0)
-            DPRINTF(("pow: msg code=%x error=%d\n",
-                map->code, error));
+            DPRINTF(("pow: msg code=%x error=%d\n", map->code, error));
 #endif
     }
 }

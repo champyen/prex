@@ -48,8 +48,7 @@ long atol(const char* str)
     return val;
 }
 
-size_t
-strnlen(const char* str, size_t count)
+size_t strnlen(const char* str, size_t count)
 {
     const char* tmp;
 
@@ -80,8 +79,7 @@ int strncmp(const char* src, const char* tgt, size_t count)
 }
 
 /* Safer version of strncpy */
-size_t
-strlcpy(char* dest, const char* src, size_t count)
+size_t strlcpy(char* dest, const char* src, size_t count)
 {
     const char* p = src;
 

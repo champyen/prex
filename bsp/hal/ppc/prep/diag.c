@@ -42,8 +42,7 @@
 #define COM_THR (COM_BASE + 0x00) /* transmit holding register */
 #define COM_LSR (COM_BASE + 0x05) /* line status register */
 
-static void
-serial_putc(char c)
+static void serial_putc(char c)
 {
 
     while (!(inb(COM_LSR) & 0x20))

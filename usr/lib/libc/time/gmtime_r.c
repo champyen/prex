@@ -30,16 +30,14 @@
 #include <sys/time.h>
 #include <tzfile.h>
 
-static const int daysinmonth[] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+static const int daysinmonth[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
-static int
-is_leap(int year)
+static int is_leap(int year)
 {
     return (isleap(year) ? 1 : 0);
 }
 
-struct tm*
-gmtime_r(const time_t* timep, struct tm* tmp)
+struct tm* gmtime_r(const time_t* timep, struct tm* tmp)
 {
     time_t t;
     int days, year, mon;
@@ -48,9 +46,7 @@ gmtime_r(const time_t* timep, struct tm* tmp)
     t = *timep;
     days = t / 60 / 60 / 24;
 
-    for (year = 1970, i = DAYSPERNYEAR + is_leap(year);
-         days >= i;
-         year++, i = DAYSPERNYEAR + is_leap(year))
+    for (year = 1970, i = DAYSPERNYEAR + is_leap(year); days >= i; year++, i = DAYSPERNYEAR + is_leap(year))
         days -= i;
 
     tmp->tm_year = year - 1900;

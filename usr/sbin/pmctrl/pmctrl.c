@@ -58,34 +58,33 @@ static void pmctrl_dimtime(int, char**);
 static void pmctrl_battery(int, char**);
 static void pmctrl_null(int, char**);
 
-struct cmdtab {
+struct cmdtab
+{
     const char* cmd;
     void (*func)(int, char**);
     const char* usage;
 };
 
 static const struct cmdtab cmdtab[] = {
-    { "off", pmctrl_off, "Power off." },
-    { "reboot", pmctrl_reboot, "Reboot system." },
-    { "suspend", pmctrl_suspend, "Suspend system." },
-    { "info", pmctrl_info, "Disaplay power management information." },
-    { "policy", pmctrl_policy, "Set power policy." },
-    { "sustime", pmctrl_sustime, "Set timeout for suspend timer." },
-    { "dimtime", pmctrl_dimtime, "Set timeout for dim timer." },
-    { "battery", pmctrl_battery, "Show current battery level." },
-    { "-?", pmctrl_help, "This help." },
-    { NULL, pmctrl_null, NULL },
+    {"off", pmctrl_off, "Power off."},
+    {"reboot", pmctrl_reboot, "Reboot system."},
+    {"suspend", pmctrl_suspend, "Suspend system."},
+    {"info", pmctrl_info, "Disaplay power management information."},
+    {"policy", pmctrl_policy, "Set power policy."},
+    {"sustime", pmctrl_sustime, "Set timeout for suspend timer."},
+    {"dimtime", pmctrl_dimtime, "Set timeout for dim timer."},
+    {"battery", pmctrl_battery, "Show current battery level."},
+    {"-?", pmctrl_help, "This help."},
+    {NULL, pmctrl_null, NULL},
 };
 
 static object_t powobj;
 
-static void
-pmctrl_null(int argc, char** argv)
+static void pmctrl_null(int argc, char** argv)
 {
 }
 
-static void
-pmctrl_help(int argc, char** argv)
+static void pmctrl_help(int argc, char** argv)
 {
     int i = 0;
 
@@ -93,8 +92,7 @@ pmctrl_help(int argc, char** argv)
     fprintf(stderr, "commands:\n");
     while (cmdtab[i].cmd != NULL) {
         if (cmdtab[i].usage)
-            fprintf(stderr, " %-8s -- %s\n", cmdtab[i].cmd,
-                cmdtab[i].usage);
+            fprintf(stderr, " %-8s -- %s\n", cmdtab[i].cmd, cmdtab[i].usage);
         i++;
     }
 }
@@ -103,8 +101,7 @@ pmctrl_help(int argc, char** argv)
  * User confirmation is required for some actions
  * due to security reason.
  */
-static void
-pmctrl_confirm(char* action)
+static void pmctrl_confirm(char* action)
 {
     int ch, checkch;
 
@@ -116,8 +113,7 @@ pmctrl_confirm(char* action)
         exit(1);
 }
 
-static void
-pmctrl_off(int argc, char** argv)
+static void pmctrl_off(int argc, char** argv)
 {
     struct msg m;
 
@@ -131,8 +127,7 @@ pmctrl_off(int argc, char** argv)
     fprintf(stderr, "Shutdown failed!\n");
 }
 
-static void
-pmctrl_reboot(int argc, char** argv)
+static void pmctrl_reboot(int argc, char** argv)
 {
     struct msg m;
 
@@ -146,8 +141,7 @@ pmctrl_reboot(int argc, char** argv)
     fprintf(stderr, "Reboot failed!\n");
 }
 
-static void
-pmctrl_suspend(int argc, char** argv)
+static void pmctrl_suspend(int argc, char** argv)
 {
     struct msg m;
 
@@ -161,8 +155,7 @@ pmctrl_suspend(int argc, char** argv)
     fprintf(stderr, "Suspend failed!\n");
 }
 
-static void
-pmctrl_info(int argc, char** argv)
+static void pmctrl_info(int argc, char** argv)
 {
     struct msg m;
     int policy;
@@ -171,8 +164,7 @@ pmctrl_info(int argc, char** argv)
     m.hdr.code = POW_GET_POLICY;
     msg_send(powobj, &m, sizeof(m));
     policy = m.data[0];
-    printf("Power policy   : %s mode\n",
-        policy == PM_PERFORMANCE ? "high performance" : "power save");
+    printf("Power policy   : %s mode\n", policy == PM_PERFORMANCE ? "high performance" : "power save");
 
     m.hdr.code = POW_GET_SUSTMR;
     msg_send(powobj, &m, sizeof(m));
@@ -185,8 +177,7 @@ pmctrl_info(int argc, char** argv)
     printf("Dim timeout    : %d sec\n", timeout);
 }
 
-static void
-pmctrl_policy(int argc, char** argv)
+static void pmctrl_policy(int argc, char** argv)
 {
     struct msg m;
 
@@ -207,8 +198,7 @@ pmctrl_policy(int argc, char** argv)
     msg_send(powobj, &m, sizeof(m));
 }
 
-static void
-pmctrl_sustime(int argc, char** argv)
+static void pmctrl_sustime(int argc, char** argv)
 {
     struct msg m;
     int timeout;
@@ -224,8 +214,7 @@ pmctrl_sustime(int argc, char** argv)
     }
 }
 
-static void
-pmctrl_dimtime(int argc, char** argv)
+static void pmctrl_dimtime(int argc, char** argv)
 {
     struct msg m;
     int timeout;
@@ -241,8 +230,7 @@ pmctrl_dimtime(int argc, char** argv)
     }
 }
 
-static void
-pmctrl_battery(int argc, char** argv)
+static void pmctrl_battery(int argc, char** argv)
 {
 
     fprintf(stderr, "Not supported...\n");

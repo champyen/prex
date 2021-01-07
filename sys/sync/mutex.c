@@ -121,8 +121,7 @@ int mutex_init(mutex_t* mp)
 /*
  * Internal version of mutex_destroy.
  */
-static void
-mutex_deallocate(mutex_t m)
+static void mutex_deallocate(mutex_t m)
 {
 
     m->owner->nsyncs--;
@@ -164,8 +163,7 @@ void mutex_cleanup(task_t task)
     mutex_t m;
 
     while (!list_empty(&task->mutexes)) {
-        m = list_entry(list_first(&task->mutexes),
-            struct mutex, task_link);
+        m = list_entry(list_first(&task->mutexes), struct mutex, task_link);
         mutex_deallocate(m);
     }
 }
@@ -193,22 +191,22 @@ int mutex_lock(mutex_t* mp)
 
     if (m->holder == curthread) {
         /*
-		 * Recursive lock
-		 */
+         * Recursive lock
+         */
         m->locks++;
         ASSERT(m->locks != 0);
     } else {
         /*
-		 * Check whether a target mutex is locked.
-		 * If the mutex is not locked, this routine
-		 * returns immediately.
-		 */
+         * Check whether a target mutex is locked.
+         * If the mutex is not locked, this routine
+         * returns immediately.
+         */
         if (m->holder == NULL)
             m->priority = curthread->priority;
         else {
             /*
-			 * Wait for a mutex.
-			 */
+             * Wait for a mutex.
+             */
             curthread->mutex_waiting = m;
             if ((error = prio_inherit(curthread)) != 0) {
                 curthread->mutex_waiting = NULL;
@@ -283,9 +281,9 @@ int mutex_unlock(mutex_t* mp)
         list_remove(&m->link);
         prio_uninherit(curthread);
         /*
-		 * Change the mutex holder, and make the next
-		 * holder runnable if it exists.
-		 */
+         * Change the mutex holder, and make the next
+         * holder runnable if it exists.
+         */
         m->holder = sched_wakeone(&m->event);
         if (m->holder)
             m->holder->mutex_waiting = NULL;
@@ -313,21 +311,21 @@ void mutex_cancel(thread_t t)
     thread_t holder;
 
     /*
-	 * Purge all mutexes held by the thread.
-	 */
+     * Purge all mutexes held by the thread.
+     */
     head = &t->mutexes;
     while (!list_empty(head)) {
         /*
-		 * Release locked mutex.
-		 */
+         * Release locked mutex.
+         */
         m = list_entry(list_first(head), struct mutex, link);
         m->locks = 0;
         list_remove(&m->link);
 
         /*
-		 * Change the mutex holder if other thread
-		 * is waiting for it.
-		 */
+         * Change the mutex holder if other thread
+         * is waiting for it.
+         */
         holder = sched_wakeone(&m->event);
         if (holder) {
             holder->mutex_waiting = NULL;
@@ -352,8 +350,7 @@ void mutex_setpri(thread_t t, int pri)
 /*
  * Check if the specified mutex is valid.
  */
-static int
-mutex_valid(mutex_t m)
+static int mutex_valid(mutex_t m)
 {
     mutex_t tmp;
     list_t head, n;
@@ -371,8 +368,7 @@ mutex_valid(mutex_t m)
  * Copy mutex from user space.
  * If it is not initialized, create new mutex.
  */
-static int
-mutex_copyin(mutex_t* ump, mutex_t* kmp)
+static int mutex_copyin(mutex_t* ump, mutex_t* kmp)
 {
     mutex_t m;
     int error;
@@ -382,9 +378,9 @@ mutex_copyin(mutex_t* ump, mutex_t* kmp)
 
     if (m == MUTEX_INITIALIZER) {
         /*
-		 * Allocate new mutex, and retreive its id
-		 * from the user space.
-		 */
+         * Allocate new mutex, and retreive its id
+         * from the user space.
+         */
         if ((error = mutex_init(ump)) != 0)
             return error;
         copyin(ump, &m, sizeof(ump));
@@ -406,8 +402,7 @@ mutex_copyin(mutex_t* ump, mutex_t* kmp)
  * that mutex is also processed. Returns EDEALK if it finds
  * deadlock condition.
  */
-static int
-prio_inherit(thread_t waiter)
+static int prio_inherit(thread_t waiter)
 {
     mutex_t m = waiter->mutex_waiting;
     thread_t holder;
@@ -416,28 +411,27 @@ prio_inherit(thread_t waiter)
     do {
         holder = m->holder;
         /*
-		 * If the holder of relative mutex has already
-		 * been waiting for the "waiter" thread, it
-		 * causes a deadlock.
-		 */
+         * If the holder of relative mutex has already
+         * been waiting for the "waiter" thread, it
+         * causes a deadlock.
+         */
         if (holder == waiter) {
-            DPRINTF(("Deadlock! mutex=%lx holder=%lx waiter=%lx\n",
-                (long)m, (long)holder, (long)waiter));
+            DPRINTF(("Deadlock! mutex=%lx holder=%lx waiter=%lx\n", (long)m, (long)holder, (long)waiter));
             return EDEADLK;
         }
         /*
-		 * If the priority of the mutex holder is lower
-		 * than "waiter" thread's, we rise the mutex
-		 * holder's priority.
-		 */
+         * If the priority of the mutex holder is lower
+         * than "waiter" thread's, we rise the mutex
+         * holder's priority.
+         */
         if (holder->priority > waiter->priority) {
             sched_setpri(holder, holder->basepri, waiter->priority);
             m->priority = waiter->priority;
         }
         /*
-		 * If the mutex holder is waiting for another
-		 * mutex, that mutex is also processed.
-		 */
+         * If the mutex holder is waiting for another
+         * mutex, that mutex is also processed.
+         */
         m = (mutex_t)holder->mutex_waiting;
 
         /* Fail safe... */
@@ -457,8 +451,7 @@ prio_inherit(thread_t waiter)
  * priority thread is waiting for it, the priority is kept to
  * that level.
  */
-static void
-prio_uninherit(thread_t t)
+static void prio_uninherit(thread_t t)
 {
     int maxpri;
     list_t head, n;
@@ -471,10 +464,10 @@ prio_uninherit(thread_t t)
     maxpri = t->basepri;
 
     /*
-	 * Find the highest priority thread that is waiting
-	 * for the thread. This is done by checking all mutexes
-	 * that the thread locks.
-	 */
+     * Find the highest priority thread that is waiting
+     * for the thread. This is done by checking all mutexes
+     * that the thread locks.
+     */
     head = &t->mutexes;
     for (n = list_first(head); n != head; n = list_next(n)) {
         m = list_entry(n, struct mutex, link);

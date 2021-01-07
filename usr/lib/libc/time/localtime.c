@@ -29,8 +29,7 @@
 
 #include <time.h>
 
-struct tm*
-localtime(const time_t* timep)
+struct tm* localtime(const time_t* timep)
 {
     static struct tm tm;
 

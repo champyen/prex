@@ -63,8 +63,7 @@ static char stack[3][1024];
 static thread_t th_1, th_2, th_3;
 static mutex_t mtx_A, mtx_B;
 
-static void
-dump_pri(void)
+static void dump_pri(void)
 {
     int pri;
 
@@ -78,8 +77,7 @@ dump_pri(void)
         printf("th_3: pri=%d\n", pri);
 }
 
-thread_t
-thread_run(void (*start)(void), void* stack)
+thread_t thread_run(void (*start)(void), void* stack)
 {
     thread_t t;
 
@@ -95,18 +93,17 @@ thread_run(void (*start)(void), void* stack)
 /*
  * Thread 1 - Priority = 100
  */
-static void
-thread_1(void)
+static void thread_1(void)
 {
     printf("thread_1: starting\n");
 
     /*
-	 * 4) Lock mutex B
-	 *
-	 * Priority inheritance:
-	 *    Thread 2... Pri 101 -> 100
-	 *    Thread 3... Pri 101 -> 100
-	 */
+     * 4) Lock mutex B
+     *
+     * Priority inheritance:
+     *    Thread 2... Pri 101 -> 100
+     *    Thread 3... Pri 101 -> 100
+     */
     printf("thread_1: 4) lock B\n");
     mutex_lock(&mtx_B);
 
@@ -114,8 +111,8 @@ thread_1(void)
     dump_pri();
 
     /*
-	 * 8) Unlock mutex B
-	 */
+     * 8) Unlock mutex B
+     */
     printf("thread_1: 7) unlock B\n");
     mutex_unlock(&mtx_B);
 
@@ -127,24 +124,23 @@ thread_1(void)
 /*
  * Thread 2 - Priority = 101
  */
-static void
-thread_2(void)
+static void thread_2(void)
 {
     printf("thread_2: starting\n");
 
     /*
-	 * 2) Lock mutex B
-	 */
+     * 2) Lock mutex B
+     */
     printf("thread_2: 2) lock B\n");
     mutex_lock(&mtx_B);
     dump_pri();
 
     /*
-	 * 3) Lock mutex A (Switch to thread 3)
-	 *
-	 * Priority inheritance:
-	 *    Thread 3... Pri 102 -> 101
-	 */
+     * 3) Lock mutex A (Switch to thread 3)
+     *
+     * Priority inheritance:
+     *    Thread 3... Pri 102 -> 101
+     */
     printf("thread_2: 3) lock A\n");
     mutex_lock(&mtx_A);
 
@@ -152,16 +148,16 @@ thread_2(void)
     dump_pri();
 
     /*
-	 * 6) Unlock mutex B
-	 */
+     * 6) Unlock mutex B
+     */
     printf("thread_2: 6) unlock B\n");
     mutex_unlock(&mtx_B);
 
     dump_pri();
 
     /*
-	 * 7) Unlock mutex A
-	 */
+     * 7) Unlock mutex A
+     */
     printf("thread_2: 8) unlock A\n");
     mutex_unlock(&mtx_A);
 
@@ -172,39 +168,38 @@ thread_2(void)
 /*
  * Thread 3 - Priority = 102
  */
-static void
-thread_3(void)
+static void thread_3(void)
 {
     printf("thread_3: start\n");
 
     /*
-	 * 1) Lock mutex A
-	 */
+     * 1) Lock mutex A
+     */
     printf("thread_3: 1) lock A\n");
     mutex_lock(&mtx_A);
     dump_pri();
 
     /*
-	 * Start thread 2
-	 */
+     * Start thread 2
+     */
     thread_resume(th_2);
 
     /*
-	 * Check priority
-	 */
+     * Check priority
+     */
     printf("thread_3: running-1\n");
     dump_pri();
 
     /*
-	 * Start thread 1
-	 */
+     * Start thread 1
+     */
     thread_resume(th_1);
     printf("thread_3: running-2\n");
     dump_pri();
 
     /*
-	 * 5) Unlock mutex A
-	 */
+     * 5) Unlock mutex A
+     */
     printf("thread_3: 5) unlock A\n");
     mutex_unlock(&mtx_A);
 
@@ -218,19 +213,19 @@ int main(int argc, char* argv[])
     printf("Mutex sample program\n");
 
     /*
-	 * Boost priority of this thread
-	 */
+     * Boost priority of this thread
+     */
     thread_setpri(thread_self(), 90);
 
     /*
-	 * Initialize mutexes.
-	 */
+     * Initialize mutexes.
+     */
     mutex_init(&mtx_A);
     mutex_init(&mtx_B);
 
     /*
-	 * Create new threads
-	 */
+     * Create new threads
+     */
     th_1 = thread_run(thread_1, stack[0] + 1024);
     thread_setpri(th_1, 100);
 
@@ -243,13 +238,13 @@ int main(int argc, char* argv[])
     dump_pri();
 
     /*
-	 * Start lowest priority thread
-	 */
+     * Start lowest priority thread
+     */
     thread_resume(th_3);
 
     /*
-	 * Wait...
-	 */
+     * Wait...
+     */
     thread_suspend(thread_self());
 
     return 0;

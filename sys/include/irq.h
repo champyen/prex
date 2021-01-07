@@ -36,23 +36,24 @@
 #include <sys/ipl.h>
 #include <event.h>
 
-struct irq {
-    int vector; /* vector number */
-    int (*isr)(void*); /* pointer to isr */
-    void (*ist)(void*); /* pointer to ist */
-    void* data; /* data to be passed for isr/ist */
-    int priority; /* interrupt priority */
-    u_int count; /* interrupt count */
-    int istreq; /* number of ist request */
-    thread_t thread; /* thread id of ist */
+struct irq
+{
+    int vector;          /* vector number */
+    int (*isr)(void*);   /* pointer to isr */
+    void (*ist)(void*);  /* pointer to ist */
+    void* data;          /* data to be passed for isr/ist */
+    int priority;        /* interrupt priority */
+    u_int count;         /* interrupt count */
+    int istreq;          /* number of ist request */
+    thread_t thread;     /* thread id of ist */
     struct event istevt; /* event for ist */
 };
 
 /*
  * Return values from ISR.
  */
-#define INT_DONE 0 /* success */
-#define INT_ERROR 1 /* interrupt not handled */
+#define INT_DONE 0     /* success */
+#define INT_ERROR 1    /* interrupt not handled */
 #define INT_CONTINUE 2 /* continue processing (Request IST) */
 
 /*

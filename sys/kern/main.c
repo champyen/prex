@@ -66,20 +66,20 @@ int main(void)
     DPRINTF((BANNER));
 
     /*
-	 * Initialize memory managers.
-	 */
+     * Initialize memory managers.
+     */
     page_init();
     kmem_init();
 
     /*
-	 * Do machine-dependent
-	 * initialization.
-	 */
+     * Do machine-dependent
+     * initialization.
+     */
     machine_startup();
 
     /*
-	 * Initialize kernel core.
-	 */
+     * Initialize kernel core.
+     */
     vm_init();
     task_init();
     thread_init();
@@ -90,22 +90,22 @@ int main(void)
     msg_init();
 
     /*
-	 * Enable interrupt and
-	 * initialize devices.
-	 */
+     * Enable interrupt and
+     * initialize devices.
+     */
     irq_init();
     clock_init();
     device_init();
 
     /*
-	 * Set up boot tasks.
-	 */
+     * Set up boot tasks.
+     */
     task_bootstrap();
 
     /*
-	 * Start scheduler and
-	 * enter idle loop.
-	 */
+     * Start scheduler and
+     * enter idle loop.
+     */
     sched_unlock();
     thread_idle();
 

@@ -35,11 +35,11 @@
 #ifndef _PPC_ASM_H
 #define _PPC_ASM_H
 
-#define _ENTRY(x)       \
-    .text;              \
-    .align 2;           \
-    .globl x;           \
-    .type x, @function; \
+#define _ENTRY(x)                                                                                                      \
+    .text;                                                                                                             \
+    .align 2;                                                                                                          \
+    .globl x;                                                                                                          \
+    .type x, @function;                                                                                                \
     x:
 
 #define _C_LABEL(x) x

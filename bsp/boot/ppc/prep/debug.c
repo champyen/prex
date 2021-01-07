@@ -51,15 +51,13 @@
 #ifdef DEBUG
 volatile u_char* ISA_io = (u_char*)0x80000000;
 
-static void
-outb(int port, u_char val)
+static void outb(int port, u_char val)
 {
 
     ISA_io[port] = val;
 }
 
-static u_char
-inb(int port)
+static u_char inb(int port)
 {
 
     return (ISA_io[port]);
@@ -74,8 +72,8 @@ void debug_putc(int c)
 
 #if defined(DEBUG) && defined(CONFIG_DIAG_SERIAL)
     /*
-	 * output to serial port.
-	 */
+     * output to serial port.
+     */
     while (!(inb(COM_LSR) & 0x20))
         ;
     outb(COM_THR, (u_char)c);
@@ -95,8 +93,8 @@ void debug_init(void)
 
 #if defined(DEBUG) && defined(CONFIG_DIAG_SERIAL)
     /*
-	 * Initialize serial port.
-	 */
+     * Initialize serial port.
+     */
     if (inb(COM_LSR) == 0xff)
         return; /* Serial port is disabled */
 

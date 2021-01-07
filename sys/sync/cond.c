@@ -73,8 +73,7 @@ int cond_init(cond_t* cp)
     return 0;
 }
 
-static void
-cond_deallocate(cond_t c)
+static void cond_deallocate(cond_t c)
 {
 
     c->owner->nsyncs--;
@@ -114,8 +113,7 @@ void cond_cleanup(task_t task)
     cond_t c;
 
     while (!list_empty(&task->conds)) {
-        c = list_entry(list_first(&task->conds),
-            struct cond, task_link);
+        c = list_entry(list_first(&task->conds), struct cond, task_link);
         cond_deallocate(c);
     }
 }
@@ -208,8 +206,7 @@ int cond_broadcast(cond_t* cp)
 /*
  * Check if the specified cv is valid.
  */
-static int
-cond_valid(cond_t c)
+static int cond_valid(cond_t c)
 {
     cond_t tmp;
     list_t head, n;
@@ -227,8 +224,7 @@ cond_valid(cond_t c)
  * cond_copyin - copy a condition variable from user space.
  * It also checks if the passed CV is valid.
  */
-static int
-cond_copyin(cond_t* ucp, cond_t* kcp)
+static int cond_copyin(cond_t* ucp, cond_t* kcp)
 {
     cond_t c;
 

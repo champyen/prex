@@ -33,12 +33,14 @@
 #include <sys/cdefs.h>
 #include <tty.h>
 
-struct serial_port {
+struct serial_port
+{
     irq_t irq;
     struct tty* tty;
 };
 
-struct serial_ops {
+struct serial_ops
+{
     void (*xmt_char)(struct serial_port* port, char c);
     char (*rcv_char)(struct serial_port* port);
     void (*set_poll)(struct serial_port* port, int on);

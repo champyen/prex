@@ -44,7 +44,8 @@
 /*
  * Video information
  */
-struct vidinfo {
+struct vidinfo
+{
     int pixel_x; /* screen pixels */
     int pixel_y;
     int text_x; /* text size, in characters */
@@ -55,25 +56,27 @@ struct vidinfo {
  * Module information for kernel, driver, and boot tasks.
  * An OS loader will build this structure regardless of its file format.
  */
-struct module {
+struct module
+{
     char name[MAXIMGNAME]; /* name of image */
-    paddr_t phys; /* physical address */
-    size_t size; /* size of image */
-    vaddr_t entry; /* entry address */
-    vaddr_t text; /* text address */
-    vaddr_t data; /* data address */
-    size_t textsz; /* text size */
-    size_t datasz; /* data size */
-    size_t bsssz; /* bss size */
+    paddr_t phys;          /* physical address */
+    size_t size;           /* size of image */
+    vaddr_t entry;         /* entry address */
+    vaddr_t text;          /* text address */
+    vaddr_t data;          /* data address */
+    size_t textsz;         /* text size */
+    size_t datasz;         /* data size */
+    size_t bsssz;          /* bss size */
 };
 
 /*
  * Physical memory
  */
-struct physmem {
+struct physmem
+{
     paddr_t base; /* start address */
     psize_t size; /* size in bytes */
-    int type; /* type */
+    int type;     /* type */
 };
 
 /* memory types */
@@ -87,15 +90,16 @@ struct physmem {
 /*
  * Boot information
  */
-struct bootinfo {
-    struct vidinfo video; /* video information */
+struct bootinfo
+{
+    struct vidinfo video;      /* video information */
     struct physmem ram[NMEMS]; /* physical ram table */
-    int nr_rams; /* number of ram blocks */
-    struct physmem bootdisk; /* boot disk in memory */
-    int nr_tasks; /* number of boot tasks */
-    struct module kernel; /* kernel image */
-    struct module driver; /* driver image */
-    struct module tasks[1]; /* boot tasks image */
+    int nr_rams;               /* number of ram blocks */
+    struct physmem bootdisk;   /* boot disk in memory */
+    int nr_tasks;              /* number of boot tasks */
+    struct module kernel;      /* kernel image */
+    struct module driver;      /* driver image */
+    struct module tasks[1];    /* boot tasks image */
 };
 
 #define BOOTINFOSZ 1024 /* max size of boot information */

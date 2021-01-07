@@ -30,9 +30,9 @@
 /*
  * Stub to call kernel device interface
  */
-#define STUB(index, func)    \
-    .global func;            \
-    ENTRY(func)              \
-    movl dki_table, % eax;   \
-    add $(index * 4), % eax; \
+#define STUB(index, func)                                                                                              \
+    .global func;                                                                                                      \
+    ENTRY(func)                                                                                                        \
+    movl dki_table, % eax;                                                                                             \
+    add $(index * 4), % eax;                                                                                           \
     jmp*(% eax);

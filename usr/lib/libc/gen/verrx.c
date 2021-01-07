@@ -36,8 +36,7 @@
 #include <string.h>
 #include <stdarg.h>
 
-void
-    verrx(eval, fmt, ap) int eval;
+void verrx(eval, fmt, ap) int eval;
 const char* fmt;
 va_list ap;
 {

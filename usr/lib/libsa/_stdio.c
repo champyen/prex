@@ -38,8 +38,7 @@ static device_t __console_dev;
 
 static int init_done = 0;
 
-static void
-__stdio_exit(void)
+static void __stdio_exit(void)
 {
 
     if (__console_dev)
@@ -47,8 +46,7 @@ __stdio_exit(void)
     init_done = 0;
 }
 
-static void
-__stdio_init(void)
+static void __stdio_init(void)
 {
 
     device_open("tty", 0, &__console_dev);

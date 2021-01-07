@@ -41,7 +41,8 @@
  * passed via registers, the system call library is completely
  * dependent on this register format.
  */
-struct cpu_regs {
+struct cpu_regs
+{
     uint32_t gr[32]; /* R0-R31 */
     uint32_t lr;
     uint32_t cr;
@@ -55,7 +56,8 @@ struct cpu_regs {
 /*
  * Kernel mode context for context switching.
  */
-struct kern_regs {
+struct kern_regs
+{
     uint32_t gr[19]; /* R13-R31 */
     uint32_t r2;
     uint32_t sp;
@@ -67,9 +69,10 @@ struct kern_regs {
 /*
  * Processor context
  */
-struct context {
-    struct kern_regs kregs; /* kernel mode registers */
-    struct cpu_regs* uregs; /* user mode registers */
+struct context
+{
+    struct kern_regs kregs;      /* kernel mode registers */
+    struct cpu_regs* uregs;      /* user mode registers */
     struct cpu_regs* saved_regs; /* saved user mode registers */
 };
 

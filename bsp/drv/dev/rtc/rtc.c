@@ -52,12 +52,13 @@
 #define days_in_year(a) (leapyear(a) ? 366 : 365)
 #define days_in_month(a) (month_days[(a)-1])
 
-struct rtc_softc {
-    device_t dev; /* device object */
+struct rtc_softc
+{
+    device_t dev;        /* device object */
     struct rtc_ops* ops; /* rtc operations */
-    void* aux; /* cookie data */
-    time_t boot_sec; /* Time (sec) at system boot */
-    u_long boot_ticks; /* Time (ticks) at system boot */
+    void* aux;           /* cookie data */
+    time_t boot_sec;     /* Time (sec) at system boot */
+    u_long boot_ticks;   /* Time (ticks) at system boot */
 };
 
 static int rtc_ioctl(device_t, u_long, void*);
@@ -82,12 +83,9 @@ struct driver rtc_driver = {
     /* shutdown */ NULL,
 };
 
-static const int month_days[12] = {
-    31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
-};
+static const int month_days[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
-static int
-leapyear(u_int year)
+static int leapyear(u_int year)
 {
     int rv = 0;
 
@@ -102,8 +100,7 @@ leapyear(u_int year)
     return (rv);
 }
 
-time_t
-rtc_ymdhms_to_secs(struct clock_ymdhms* dt)
+time_t rtc_ymdhms_to_secs(struct clock_ymdhms* dt)
 {
     time_t secs;
     u_int i, year, days;
@@ -111,9 +108,9 @@ rtc_ymdhms_to_secs(struct clock_ymdhms* dt)
     year = dt->year;
 
     /*
-	 * Compute days since start of time.
-	 * First from years, then from months.
-	 */
+     * Compute days since start of time.
+     * First from years, then from months.
+     */
     days = 0;
     for (i = POSIX_BASE_YEAR; i < year; i++)
         days += days_in_year(i);
@@ -126,9 +123,7 @@ rtc_ymdhms_to_secs(struct clock_ymdhms* dt)
     days += (dt->day - 1);
 
     /* Add hours, minutes, seconds. */
-    secs = (time_t)(((days * 24 + dt->hour) * 60 + dt->min)
-            * 60
-        + dt->sec);
+    secs = (time_t)(((days * 24 + dt->hour) * 60 + dt->min) * 60 + dt->sec);
 
     return (secs);
 }
@@ -174,8 +169,7 @@ void rtc_secs_to_ymdhms(time_t secs, struct clock_ymdhms* dt)
     dt->sec = rsec;
 }
 
-static int
-rtc_ioctl(device_t dev, u_long cmd, void* arg)
+static int rtc_ioctl(device_t dev, u_long cmd, void* arg)
 {
     struct rtc_softc* sc = device_private(dev);
     struct timeval tv;
@@ -185,9 +179,9 @@ rtc_ioctl(device_t dev, u_long cmd, void* arg)
     switch (cmd) {
     case RTCIOC_GET_TIME:
         /*
-		 * Calculate current time (sec/usec) from
-		 * boot time and current tick count.
-		 */
+         * Calculate current time (sec/usec) from
+         * boot time and current tick count.
+         */
         msec = hztoms(timer_ticks() - sc->boot_ticks);
         tv.tv_sec = sc->boot_sec + (msec / 1000);
         tv.tv_usec = (long)((msec * 1000) % 1000000);
@@ -197,8 +191,8 @@ rtc_ioctl(device_t dev, u_long cmd, void* arg)
 
     case RTCIOC_SET_TIME:
         /*
-		 * TODO: We need new capability to set time.
-		 */
+         * TODO: We need new capability to set time.
+         */
         error = EINVAL;
         break;
     default:
@@ -226,8 +220,7 @@ void rtc_attach(struct rtc_ops* ops, void* aux)
     sc->boot_ticks = timer_ticks();
 }
 
-static int
-rtc_init(struct driver* self)
+static int rtc_init(struct driver* self)
 {
 
     return 0;

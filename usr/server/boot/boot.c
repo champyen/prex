@@ -63,27 +63,24 @@
 #define DPRINTF(a)
 #endif
 
-static const char* initargs[] = { "1", NULL };
-static const char* initenvs[] = { "TERM=vt100", "USER=root", NULL };
+static const char* initargs[] = {"1", NULL};
+static const char* initenvs[] = {"TERM=vt100", "USER=root", NULL};
 
 static char iobuf[BUFSIZ];
 
 /*
  * Base directories at root.
  */
-static char* base_dir[] = {
-    "/bin", /* applications */
-    "/boot", /* system servers */
-    "/dev", /* device files */
-    "/etc", /* shareable read-only data */
-    "/mnt", /* mount point for file systems */
-    "/private", /* user's private data */
-    "/tmp", /* temporary files */
-    NULL
-};
+static char* base_dir[] = {"/bin",     /* applications */
+                           "/boot",    /* system servers */
+                           "/dev",     /* device files */
+                           "/etc",     /* shareable read-only data */
+                           "/mnt",     /* mount point for file systems */
+                           "/private", /* user's private data */
+                           "/tmp",     /* temporary files */
+                           NULL};
 
-static void
-wait_server(const char* name, object_t* pobj)
+static void wait_server(const char* name, object_t* pobj)
 {
     int i, error = 0;
 
@@ -91,8 +88,8 @@ wait_server(const char* name, object_t* pobj)
     thread_yield();
 
     /*
-	 * Wait for server loading. timeout is 1 sec.
-	 */
+     * Wait for server loading. timeout is 1 sec.
+     */
     for (i = 0; i < 100; i++) {
         error = object_lookup((char*)name, pobj);
         if (error == 0)
@@ -106,8 +103,7 @@ wait_server(const char* name, object_t* pobj)
         sys_panic("boot: server not found");
 }
 
-static void
-send_bootmsg(object_t obj)
+static void send_bootmsg(object_t obj)
 {
     struct msg m;
     int error;
@@ -118,8 +114,7 @@ send_bootmsg(object_t obj)
         sys_panic("boot: server error");
 }
 
-static void
-mount_fs(void)
+static void mount_fs(void)
 {
     char line[128];
     FILE* fp;
@@ -130,14 +125,14 @@ mount_fs(void)
     DPRINTF(("boot: mounting file systems\n"));
 
     /*
-	 * Mount root.
-	 */
+     * Mount root.
+     */
     if (mount("", "/", "ramfs", 0, NULL) < 0)
         sys_panic("boot: mount failed");
 
     /*
-	 * Create some default directories.
-	 */
+     * Create some default directories.
+     */
     i = 0;
     while (base_dir[i] != NULL) {
         if (mkdir(base_dir[i], 0) == -1)
@@ -146,14 +141,14 @@ mount_fs(void)
     }
 
     /*
-	 * Mount file system for /boot.
-	 */
+     * Mount file system for /boot.
+     */
     if (mount("/dev/ram0", "/boot", "arfs", 0, NULL) < 0)
         sys_panic("boot: mount failed");
 
     /*
-	 * Mount file systems described in fstab.
-	 */
+     * Mount file systems described in fstab.
+     */
     if ((fp = fopen("/boot/fstab", "r")) == NULL)
         sys_panic("boot: no fstab");
 
@@ -177,8 +172,7 @@ mount_fs(void)
     fclose(fp);
 }
 
-static int
-exec_init(object_t execobj)
+static int exec_init(object_t execobj)
 {
     struct exec_msg msg;
     int error, i, argc, envc;
@@ -204,8 +198,8 @@ exec_init(object_t execobj)
         sys_panic("boot: args too long");
 
     /*
-	 * Build exec message.
-	 */
+     * Build exec message.
+     */
     dest = msg.buf;
     for (i = 0; i < argc; i++) {
         src = initargs[i];
@@ -227,17 +221,16 @@ exec_init(object_t execobj)
     do {
         error = msg_send(execobj, &msg, sizeof(msg));
         /*
-		 * If exec server can execute new process
-		 * properly, it will terminate the caller task
-		 * automatically. So, the control never comes
-		 * here in that case.
-		 */
+         * If exec server can execute new process
+         * properly, it will terminate the caller task
+         * automatically. So, the control never comes
+         * here in that case.
+         */
     } while (error == EINTR);
     return -1;
 }
 
-static void
-copy_file(char* src, char* dest)
+static void copy_file(char* src, char* dest)
 {
     int fold, fnew, n;
     struct stat stbuf;
@@ -275,57 +268,57 @@ int main(int argc, char* argv[])
     thread_setpri(thread_self(), PRI_DEFAULT);
 
     /*
-	 * Wait until all required system servers
-	 * become available.
-	 */
+     * Wait until all required system servers
+     * become available.
+     */
     wait_server("!proc", &procobj);
     wait_server("!fs", &fsobj);
     wait_server("!exec", &execobj);
 
     /*
-	 * Send boot message to all servers.
-	 * This is required to synchronize the server
-	 * initialization without deadlock.
-	 */
+     * Send boot message to all servers.
+     * This is required to synchronize the server
+     * initialization without deadlock.
+     */
     send_bootmsg(execobj);
     send_bootmsg(procobj);
     send_bootmsg(fsobj);
 
     /*
-	 * Request to bind a new capabilities for us.
-	 */
+     * Request to bind a new capabilities for us.
+     */
     bm.hdr.code = EXEC_BINDCAP;
     strlcpy(bm.path, "/boot/boot", sizeof(bm.path));
     msg_send(execobj, &bm, sizeof(bm));
 
     /*
-	 * Register this process as 'init'.
-	 * We will become an init process later.
-	 */
+     * Register this process as 'init'.
+     * We will become an init process later.
+     */
     m.hdr.code = PS_SETINIT;
     msg_send(procobj, &m, sizeof(m));
 
     /*
-	 * Initialize a library for file I/O.
-	 */
+     * Initialize a library for file I/O.
+     */
     fslib_init();
 
     /*
-	 * Mount file systems.
-	 */
+     * Mount file systems.
+     */
     mount_fs();
 
     /*
-	 * Copy some files.
-	 * Note that almost applications including 'init'
-	 * does not have an access right to /boot directory...
-	 */
+     * Copy some files.
+     * Note that almost applications including 'init'
+     * does not have an access right to /boot directory...
+     */
     copy_file("/boot/rc", "/etc/rc");
     copy_file("/boot/fstab", "/etc/fstab");
 
     /*
-	 * Exec first application.
-	 */
+     * Exec first application.
+     */
     exec_init(execobj);
 
     sys_panic("boot: failed to exec init");

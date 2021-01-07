@@ -45,48 +45,51 @@ struct file;
 /*
  * Vnode types.
  */
-enum {
-    VNON, /* no type */
-    VREG, /* regular file  */
-    VDIR, /* directory */
-    VBLK, /* block device */
-    VCHR, /* character device */
-    VLNK, /* symbolic link */
+enum
+{
+    VNON,  /* no type */
+    VREG,  /* regular file  */
+    VDIR,  /* directory */
+    VBLK,  /* block device */
+    VCHR,  /* character device */
+    VLNK,  /* symbolic link */
     VSOCK, /* socks */
-    VFIFO /* FIFO */
+    VFIFO  /* FIFO */
 };
 
 /*
  * Reading or writing any of these items requires holding the
  * appropriate lock.
  */
-struct vnode {
-    struct list v_link; /* link for hash list */
+struct vnode
+{
+    struct list v_link;    /* link for hash list */
     struct mount* v_mount; /* mounted vfs pointer */
-    struct vnops* v_op; /* vnode operations */
-    int v_refcnt; /* reference count */
-    int v_type; /* vnode type */
-    int v_flags; /* vnode flag */
-    mode_t v_mode; /* file mode */
-    size_t v_size; /* file size */
-    mutex_t v_lock; /* lock for this vnode */
-    int v_nrlocks; /* lock count (for debug) */
-    int v_blkno; /* block number */
-    char* v_path; /* pointer to path in fs */
-    void* v_data; /* private data for fs */
+    struct vnops* v_op;    /* vnode operations */
+    int v_refcnt;          /* reference count */
+    int v_type;            /* vnode type */
+    int v_flags;           /* vnode flag */
+    mode_t v_mode;         /* file mode */
+    size_t v_size;         /* file size */
+    mutex_t v_lock;        /* lock for this vnode */
+    int v_nrlocks;         /* lock count (for debug) */
+    int v_blkno;           /* block number */
+    char* v_path;          /* pointer to path in fs */
+    void* v_data;          /* private data for fs */
 };
 typedef struct vnode* vnode_t;
 
 /* flags for vnode */
-#define VROOT 0x0001 /* root of its file system */
-#define VISTTY 0x0002 /* device is tty */
+#define VROOT 0x0001    /* root of its file system */
+#define VISTTY 0x0002   /* device is tty */
 #define VPROTDEV 0x0004 /* protected device */
 
 /*
  * Vnode attribute
  */
-struct vattr {
-    int va_type; /* vnode type */
+struct vattr
+{
+    int va_type;    /* vnode type */
     mode_t va_mode; /* file access mode */
 };
 
@@ -100,7 +103,8 @@ struct vattr {
 /*
  * vnode operations
  */
-struct vnops {
+struct vnops
+{
     int (*vop_open)(vnode_t, int);
     int (*vop_close)(vnode_t, file_t);
     int (*vop_read)(vnode_t, file_t, void*, size_t, size_t*);
@@ -154,8 +158,7 @@ typedef int (*vnop_truncate_t)(vnode_t, off_t);
 #define VOP_LOOKUP(DVP, N, VP) ((DVP)->v_op->vop_lookup)(DVP, N, VP)
 #define VOP_CREATE(DVP, N, M) ((DVP)->v_op->vop_create)(DVP, N, M)
 #define VOP_REMOVE(DVP, VP, N) ((DVP)->v_op->vop_remove)(DVP, VP, N)
-#define VOP_RENAME(DVP1, VP1, N1, DVP2, VP2, N2) \
-    ((DVP1)->v_op->vop_rename)(DVP1, VP1, N1, DVP2, VP2, N2)
+#define VOP_RENAME(DVP1, VP1, N1, DVP2, VP2, N2) ((DVP1)->v_op->vop_rename)(DVP1, VP1, N1, DVP2, VP2, N2)
 #define VOP_MKDIR(DVP, N, M) ((DVP)->v_op->vop_mkdir)(DVP, N, M)
 #define VOP_RMDIR(DVP, VP, N) ((DVP)->v_op->vop_rmdir)(DVP, VP, N)
 #define VOP_GETATTR(VP, VAP) ((VP)->v_op->vop_getattr)(VP, VAP)

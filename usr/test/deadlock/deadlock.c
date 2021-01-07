@@ -54,8 +54,7 @@ static char stack[2][1024];
 static thread_t th_1, th_2;
 static mutex_t mtx_A, mtx_B;
 
-thread_t
-thread_run(void (*start)(void), void* stack)
+thread_t thread_run(void (*start)(void), void* stack)
 {
     thread_t t;
     int error;
@@ -74,26 +73,25 @@ thread_run(void (*start)(void), void* stack)
 /*
  * Thread 1 - Priority = 100
  */
-static void
-thread_1(void)
+static void thread_1(void)
 {
     int error;
 
     printf("thread_1: starting\n");
 
     /*
-	 * 2) Lock mutex B
-	 */
+     * 2) Lock mutex B
+     */
     printf("thread_1: 2) lock B\n");
     error = mutex_lock(&mtx_B);
     if (error)
         printf("error=%d\n", error);
 
     /*
-	 * 3) Lock mutex A
-	 *
-	 * Switch to thread 1.
-	 */
+     * 3) Lock mutex A
+     *
+     * Switch to thread 1.
+     */
     printf("thread_1: 3) lock A\n");
     error = mutex_lock(&mtx_A);
     if (error)
@@ -106,32 +104,31 @@ thread_1(void)
 /*
  * Thread 2 - Priority = 101
  */
-static void
-thread_2(void)
+static void thread_2(void)
 {
     int error;
 
     printf("thread_2: starting\n");
 
     /*
-	 * 1) Lock mutex A
-	 */
+     * 1) Lock mutex A
+     */
     printf("thread_2: 1) lock A\n");
     error = mutex_lock(&mtx_A);
     if (error)
         printf("error=%d\n", error);
 
     /*
-	 * Switch to thread 1
-	 */
+     * Switch to thread 1
+     */
     thread_resume(th_1);
 
     printf("thread_2: running\n");
     /*
-	 * 4) Lock mutex B
-	 *
-	 * Deadlock occurs here!
-	 */
+     * 4) Lock mutex B
+     *
+     * Deadlock occurs here!
+     */
     printf("thread_2: 4) lock B\n");
     error = mutex_lock(&mtx_B);
     if (error)
@@ -148,19 +145,19 @@ int main(int argc, char* argv[])
     printf("Deadlock test program\n");
 
     /*
-	 * Boost priority of this thread
-	 */
+     * Boost priority of this thread
+     */
     thread_setpri(thread_self(), 90);
 
     /*
-	 * Initialize mutexes.
-	 */
+     * Initialize mutexes.
+     */
     mutex_init(&mtx_A);
     mutex_init(&mtx_B);
 
     /*
-	 * Create new threads
-	 */
+     * Create new threads
+     */
     th_1 = thread_run(thread_1, stack[0] + 1024);
     thread_setpri(th_1, 100);
 
@@ -168,13 +165,13 @@ int main(int argc, char* argv[])
     thread_setpri(th_2, 101);
 
     /*
-	 * Start thread 2
-	 */
+     * Start thread 2
+     */
     thread_resume(th_2);
 
     /*
-	 * Wait...
-	 */
+     * Wait...
+     */
     thread_suspend(thread_self());
 
     return 0;

@@ -49,20 +49,15 @@ static struct tss tss;
 /*
  * Interrupt table
  */
-static const trapfn_t intr_table[] = {
-    intr_0, intr_1, intr_2, intr_3, intr_4, intr_5, intr_6,
-    intr_7, intr_8, intr_9, intr_10, intr_11, intr_12, intr_13,
-    intr_14, intr_15
-};
+static const trapfn_t intr_table[] = {intr_0, intr_1, intr_2,  intr_3,  intr_4,  intr_5,  intr_6,  intr_7,
+                                      intr_8, intr_9, intr_10, intr_11, intr_12, intr_13, intr_14, intr_15};
 
 /*
  * Trap table
  */
-static const trapfn_t trap_table[] = {
-    trap_0, trap_1, trap_2, trap_3, trap_4, trap_5, trap_6,
-    trap_7, trap_8, trap_9, trap_10, trap_11, trap_12, trap_13,
-    trap_14, trap_15, trap_16, trap_17, trap_18
-};
+static const trapfn_t trap_table[] = {trap_0,  trap_1,  trap_2,  trap_3,  trap_4,  trap_5,  trap_6,
+                                      trap_7,  trap_8,  trap_9,  trap_10, trap_11, trap_12, trap_13,
+                                      trap_14, trap_15, trap_16, trap_17, trap_18};
 #define NTRAPS (int)(sizeof(trap_table) / sizeof(void*))
 
 /*
@@ -79,8 +74,7 @@ void tss_set(uint32_t kstack)
 /*
  * tss_get() returns current esp0 value for trap handler.
  */
-uint32_t
-tss_get(void)
+uint32_t tss_get(void)
 {
 
     return tss.esp0;
@@ -89,8 +83,7 @@ tss_get(void)
 /*
  * Set GDT (global descriptor table) members into specified vector
  */
-static void
-gdt_set(int vec, void* base, size_t limit, int type, u_int size)
+static void gdt_set(int vec, void* base, size_t limit, int type, u_int size)
 {
     struct seg_desc* seg = &gdt[vec];
 
@@ -110,8 +103,7 @@ gdt_set(int vec, void* base, size_t limit, int type, u_int size)
 /*
  * Set IDT (interrupt descriptor table) members into specified vector
  */
-static void
-idt_set(int vec, trapfn_t off, u_int sel, int type)
+static void idt_set(int vec, trapfn_t off, u_int sel, int type)
 {
     struct gate_desc* gate = &idt[vec];
 
@@ -125,8 +117,7 @@ idt_set(int vec, trapfn_t off, u_int sel, int type)
 /*
  * Setup the GDT and load it.
  */
-static void
-gdt_init(void)
+static void gdt_init(void)
 {
     struct desc_p gdt_p;
 
@@ -154,8 +145,7 @@ gdt_init(void)
  *  0x20 - 0x3f ... H/W interrupt
  *  0x40        ... System call trap
  */
-static void
-idt_init(void)
+static void idt_init(void)
 {
     struct desc_p idt_p;
     int i;
@@ -170,15 +160,13 @@ idt_init(void)
 
     /* Setup interrupt handlers */
     for (i = 0; i < 16; i++)
-        idt_set(0x20 + i, intr_table[i], KERNEL_CS,
-            ST_KERN | ST_INTR_GATE);
+        idt_set(0x20 + i, intr_table[i], KERNEL_CS, ST_KERN | ST_INTR_GATE);
 
     /* Setup debug trap */
     idt_set(3, trap_3, KERNEL_CS, ST_USER | ST_TRAP_GATE);
 
     /* Setup system call handler */
-    idt_set(SYSCALL_INT, syscall_entry, KERNEL_CS,
-        ST_USER | ST_TRAP_GATE);
+    idt_set(SYSCALL_INT, syscall_entry, KERNEL_CS, ST_USER | ST_TRAP_GATE);
 
     /* Load IDT */
     idt_p.limit = (uint16_t)(sizeof(idt) - 1);
@@ -190,12 +178,10 @@ idt_init(void)
  * Initialize the task state segment.
  * Only one static TSS is used for all contexts.
  */
-static void
-tss_init(void)
+static void tss_init(void)
 {
 
-    gdt_set(KERNEL_TSS / 8, &tss, sizeof(struct tss) - 1,
-        ST_KERN | ST_TSS, 0);
+    gdt_set(KERNEL_TSS / 8, &tss, sizeof(struct tss) - 1, ST_KERN | ST_TSS, 0);
     /* Setup TSS */
     memset(&tss, 0, sizeof(struct tss));
     tss.ss0 = KERNEL_DS;
@@ -214,9 +200,9 @@ void cpu_init(void)
 {
 
     /*
-	 * Initialize descriptors.
-	 * Setup segment and interrupt descriptor.
-	 */
+     * Initialize descriptors.
+     * Setup segment and interrupt descriptor.
+     */
     gdt_init();
     idt_init();
     tss_init();

@@ -38,29 +38,28 @@
 /*
  * Setup boot information.
  */
-static void
-bootinfo_init(void)
+static void bootinfo_init(void)
 {
     struct bootinfo* bi = bootinfo;
 
     uint32_t size0 = 0, size1 = 0;
 
     /*
-	 * Screen size
-	 */
+     * Screen size
+     */
     bi->video.text_x = 80;
     bi->video.text_y = 25;
 
     /*
-	 * SDRAM - Autodetect
-	 * Should be 128 MB on RevA/B and 256MB on RevC
-	 */
+     * SDRAM - Autodetect
+     * Should be 128 MB on RevA/B and 256MB on RevC
+     */
 
     size0 = SDRC_MCFG_0 >> 8;
-    size0 &= 0x3FF; /* get bank size in 2-MB chunks */
+    size0 &= 0x3FF;    /* get bank size in 2-MB chunks */
     size0 *= 0x200000; /* compute size */
     size1 = SDRC_MCFG_1 >> 8;
-    size1 &= 0x3FF; /* get bank size in 2-MB chunks */
+    size1 &= 0x3FF;    /* get bank size in 2-MB chunks */
     size1 *= 0x200000; /* compute size */
 
     bi->ram[0].base = 0x80000000;
@@ -68,9 +67,9 @@ bootinfo_init(void)
     bi->ram[0].type = MT_USABLE;
     if (size1 > 0) {
         /*
-	 	* Normally, we are started from U-Boot and
-	 	* it should have made memory banks contiguous...		 	 	
-	 	*/
+         * Normally, we are started from U-Boot and
+         * it should have made memory banks contiguous...
+         */
         bi->ram[1].base = 0x80000000 + size0;
         bi->ram[1].size = size1;
         bi->ram[1].type = MT_USABLE;

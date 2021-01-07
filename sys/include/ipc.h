@@ -36,13 +36,14 @@
 #include <sys/queue.h>
 #include <ipc/ipc.h>
 
-struct object {
-    struct list link; /* linkage for all objects in system */
+struct object
+{
+    struct list link;      /* linkage for all objects in system */
     char name[MAXOBJNAME]; /* object name */
     struct list task_link; /* linkage on object list in task */
-    task_t owner; /* creator of this object */
-    struct queue sendq; /* queue for sender threads */
-    struct queue recvq; /* queue for receiver threads */
+    task_t owner;          /* creator of this object */
+    struct queue sendq;    /* queue for sender threads */
+    struct queue recvq;    /* queue for receiver threads */
 };
 
 __BEGIN_DECLS

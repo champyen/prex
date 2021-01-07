@@ -44,7 +44,8 @@ typedef void* DIR;
 
 #define d_ino d_fileno /* backward compatibility */
 
-struct _dirdesc {
+struct _dirdesc
+{
     int dd_fd; /* file descriptor associated with directory */
     struct dirent dd_ent;
 };

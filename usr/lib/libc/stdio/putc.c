@@ -38,8 +38,7 @@
  * the given file.  Flush the buffer out if it is or becomes full,
  * or if c=='\n' and the file is line buffered.
  */
-int
-    __swbuf(c, fp) int c;
+int __swbuf(c, fp) int c;
 FILE* fp;
 {
     int n;
@@ -49,14 +48,14 @@ FILE* fp;
     c = (unsigned char)c;
 
     /*
-	 * If it is completely full, flush it out.  Then, in any case,
-	 * stuff c into the buffer.  If this causes the buffer to fill
-	 * completely, or if c is '\n' and the file is line buffered,
-	 * flush it (perhaps a second time).  The second flush will always
-	 * happen on unbuffered streams, where _bf._size==1; fflush()
-	 * guarantees that putc() will always call wbuf() by setting _w
-	 * to 0, so we need not do anything else.
-	 */
+     * If it is completely full, flush it out.  Then, in any case,
+     * stuff c into the buffer.  If this causes the buffer to fill
+     * completely, or if c is '\n' and the file is line buffered,
+     * flush it (perhaps a second time).  The second flush will always
+     * happen on unbuffered streams, where _bf._size==1; fflush()
+     * guarantees that putc() will always call wbuf() by setting _w
+     * to 0, so we need not do anything else.
+     */
     n = fp->_p - fp->_bf._base;
     if (n >= fp->_bf._size) {
         if (fflush(fp))
@@ -71,8 +70,7 @@ FILE* fp;
     return (c);
 }
 
-int
-    putc(c, fp) int c;
+int putc(c, fp) int c;
 FILE* fp;
 {
     if (--fp->_w >= 0)

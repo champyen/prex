@@ -36,16 +36,17 @@
 /*
  * Event for sleep/wakeup
  */
-struct event {
+struct event
+{
     struct queue sleepq; /* queue for waiting thread */
-    char* name; /* pointer to event name string */
+    char* name;          /* pointer to event name string */
 };
 
 /* Macro to initialize event dynamically */
-#define event_init(event, evt_name)   \
-    do {                              \
-        queue_init(&(event)->sleepq); \
-        (event)->name = evt_name;     \
+#define event_init(event, evt_name)                                                                                    \
+    do {                                                                                                               \
+        queue_init(&(event)->sleepq);                                                                                  \
+        (event)->name = evt_name;                                                                                      \
     } while (0)
 
 #define event_waiting(event) (!queue_empty(&(event)->sleepq))

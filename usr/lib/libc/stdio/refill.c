@@ -35,8 +35,7 @@
 #include <stdlib.h>
 #include "local.h"
 
-static int
-lflush(FILE* fp)
+static int lflush(FILE* fp)
 {
 
     if ((fp->_flags & (__SLBF | __SWR)) == (__SLBF | __SWR))
@@ -48,9 +47,7 @@ lflush(FILE* fp)
  * Refill a stdio buffer.
  * Return EOF on eof or error, 0 otherwise.
  */
-int
-    __srefill(fp)
-        FILE* fp;
+int __srefill(fp) FILE* fp;
 {
 
     /* make sure stdio is set up */
@@ -79,11 +76,11 @@ int
         fp->_flags |= __SRD;
     } else {
         /*
-		 * We were reading.  If there is an ungetc buffer,
-		 * we must have been reading from that.  Drop it,
-		 * restoring the previous buffer (if any).  If there
-		 * is anything in that buffer, return.
-		 */
+         * We were reading.  If there is an ungetc buffer,
+         * we must have been reading from that.  Drop it,
+         * restoring the previous buffer (if any).  If there
+         * is anything in that buffer, return.
+         */
         if (HASUB(fp)) {
             FREEUB(fp);
             if ((fp->_r = fp->_ur) != 0) {
@@ -97,10 +94,10 @@ int
         __smakebuf(fp);
 
     /*
-	 * Before reading from a line buffered or unbuffered file,
-	 * flush all line buffered output files, per the ANSI C
-	 * standard.
-	 */
+     * Before reading from a line buffered or unbuffered file,
+     * flush all line buffered output files, per the ANSI C
+     * standard.
+     */
     if (fp->_flags & (__SLBF | __SNBF))
         (void)_fwalk(lflush);
     fp->_p = fp->_bf._base;

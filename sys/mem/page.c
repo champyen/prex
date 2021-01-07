@@ -53,15 +53,16 @@
  * The page structure is put on the head of the first page of
  * each free block.
  */
-struct page {
+struct page
+{
     struct page* next;
     struct page* prev;
     vsize_t size; /* number of bytes of this block */
 };
 
 static struct page page_head; /* first free block */
-static psize_t total_size; /* size of memory in the system */
-static psize_t used_size; /* current used size */
+static psize_t total_size;    /* size of memory in the system */
+static psize_t used_size;     /* current used size */
 static psize_t bootdisk_size; /* size of the boot disk */
 
 /*
@@ -72,8 +73,7 @@ static psize_t bootdisk_size; /* size of the boot disk */
  * automatically round up to the page boundary.  The allocated
  * memory is _not_ filled with 0.
  */
-paddr_t
-page_alloc(psize_t psize)
+paddr_t page_alloc(psize_t psize)
 {
     struct page *blk, *tmp;
     vsize_t size;
@@ -83,8 +83,8 @@ page_alloc(psize_t psize)
     sched_lock();
 
     /*
-	 * Find the free block that has enough size.
-	 */
+     * Find the free block that has enough size.
+     */
     size = round_page(psize);
     blk = &page_head;
     do {
@@ -97,11 +97,11 @@ page_alloc(psize_t psize)
     } while (blk->size < size);
 
     /*
-	 * If found block size is exactly same with requested,
-	 * just remove it from a free list. Otherwise, the
-	 * found block is divided into two and first half is
-	 * used for allocation.
-	 */
+     * If found block size is exactly same with requested,
+     * just remove it from a free list. Otherwise, the
+     * found block is divided into two and first half is
+     * used for allocation.
+     */
     if (blk->size == size) {
         blk->prev->next = blk->next;
         blk->next->prev = blk->prev;
@@ -138,16 +138,16 @@ void page_free(paddr_t paddr, psize_t psize)
     blk = ptokv(paddr);
 
     /*
-	 * Find the target position in list.
-	 */
+     * Find the target position in list.
+     */
     for (prev = &page_head; prev->next < blk; prev = prev->next) {
         if (prev->next == &page_head)
             break;
     }
 
     /*
-	 * Insert new block into list.
-	 */
+     * Insert new block into list.
+     */
     blk->size = size;
     blk->prev = prev;
     blk->next = prev->next;
@@ -155,9 +155,9 @@ void page_free(paddr_t paddr, psize_t psize)
     prev->next = blk;
 
     /*
-	 * If the adjoining block is free, it combines and
-	 * is made on block.
-	 */
+     * If the adjoining block is free, it combines and
+     * is made on block.
+     */
     if (blk->next != &page_head && ((vaddr_t)blk + blk->size) == (vaddr_t)blk->next) {
         blk->size += blk->next->size;
         blk->next = blk->next->next;
@@ -189,28 +189,27 @@ int page_reserve(paddr_t paddr, psize_t psize)
     size = end - start;
 
     /*
-	 * Find the block which includes specified block.
-	 */
+     * Find the block which includes specified block.
+     */
     blk = page_head.next;
     for (;;) {
         if (blk == &page_head)
             return ENOMEM;
 
-        if ((vaddr_t)blk <= start
-            && end <= (vaddr_t)blk + blk->size)
+        if ((vaddr_t)blk <= start && end <= (vaddr_t)blk + blk->size)
             break;
         blk = blk->next;
     }
     if ((vaddr_t)blk == start && blk->size == size) {
         /*
-		 * Unlink the block from free list.
-		 */
+         * Unlink the block from free list.
+         */
         blk->prev->next = blk->next;
         blk->next->prev = blk->prev;
     } else {
         /*
-		 * Split this block.
-		 */
+         * Split this block.
+         */
         if ((vaddr_t)blk + blk->size != end) {
             tmp = (struct page*)end;
             tmp->size = (vaddr_t)blk + blk->size - end;
@@ -240,8 +239,8 @@ void page_info(struct meminfo* info)
 
 #ifndef CONFIG_ROMBOOT
     /*
-	 * The boot disk is placed at RAM.
-	 */
+     * The boot disk is placed at RAM.
+     */
     info->free -= bootdisk_size;
 #endif
 }
@@ -264,8 +263,8 @@ void page_init(void)
     page_head.next = page_head.prev = &page_head;
 
     /*
-	 * First, create a free list from the boot information.
-	 */
+     * First, create a free list from the boot information.
+     */
     for (i = 0; i < bi->nr_rams; i++) {
         ram = &bi->ram[i];
         if (ram->type == MT_USABLE) {
@@ -274,8 +273,8 @@ void page_init(void)
         }
     }
     /*
-	 * Then, reserve un-usable memory.
-	 */
+     * Then, reserve un-usable memory.
+     */
     for (i = 0; i < bi->nr_rams; i++) {
         ram = &bi->ram[i];
         switch (ram->type) {

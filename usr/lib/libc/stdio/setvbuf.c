@@ -38,9 +38,7 @@
  * Set one of the three kinds of buffering, optionally including
  * a buffer.
  */
-int
-    setvbuf(fp, buf, mode, size)
-        FILE* fp;
+int setvbuf(fp, buf, mode, size) FILE* fp;
 char* buf;
 int mode;
 size_t size;
@@ -49,20 +47,20 @@ size_t size;
     /*	int ttyflag; */
 
     /*
-	 * Verify arguments.  The `int' limit on `size' is due to this
-	 * particular implementation.  Note, buf and size are ignored
-	 * when setting _IONBF.
-	 */
+     * Verify arguments.  The `int' limit on `size' is due to this
+     * particular implementation.  Note, buf and size are ignored
+     * when setting _IONBF.
+     */
     if (mode != _IONBF)
         if ((mode != _IOFBF && mode != _IOLBF) || (int)size < 0)
             return (EOF);
 
     /*
-	 * Write current buffer, if any.  Discard unread input (including
-	 * ungetc data), cancel line buffering, and free old buffer if
-	 * malloc()ed.  We also clear any eof condition, as if this were
-	 * a seek.
-	 */
+     * Write current buffer, if any.  Discard unread input (including
+     * ungetc data), cancel line buffering, and free old buffer if
+     * malloc()ed.  We also clear any eof condition, as if this were
+     * a seek.
+     */
     ret = 0;
     (void)__sflush(fp);
     if (HASUB(fp))
@@ -74,16 +72,16 @@ size_t size;
     flags &= ~(__SLBF | __SNBF | __SMBF | __SEOF);
 
     /*
-	 * Fix up the FILE fields, and set __cleanup for output flush on
-	 * exit (since we are buffered in some way).
-	 */
+     * Fix up the FILE fields, and set __cleanup for output flush on
+     * exit (since we are buffered in some way).
+     */
     if (mode == _IOLBF)
         flags |= __SLBF;
     fp->_flags = flags;
 
     /*
-	 * If buffer is NULL, we change only buffering mode.
-	 */
+     * If buffer is NULL, we change only buffering mode.
+     */
     if (buf == NULL)
         return 0;
 

@@ -43,8 +43,7 @@ int relocate_rel(Elf32_Rel* rel, Elf32_Addr sym_val, char* target_sect)
         break;
     case R_ARM_ABS32:
         *where += (vaddr_t)ptokv(sym_val);
-        ELFDBG(("R_ARM_ABS32: %lx -> %lx\n",
-            (long)where, (long)*where));
+        ELFDBG(("R_ARM_ABS32: %lx -> %lx\n", (long)where, (long)*where));
         break;
     case R_ARM_PC24:
     case R_ARM_PLT32:
@@ -56,15 +55,13 @@ int relocate_rel(Elf32_Rel* rel, Elf32_Addr sym_val, char* target_sect)
         tmp = sym_val - (Elf32_Addr)where + (addend << 2);
         tmp >>= 2;
         *where = (*where & 0xff000000) | (tmp & 0x00ffffff);
-        ELFDBG(("R_ARM_PC24: %lx -> %lx\n",
-            (long)where, (long)*where));
+        ELFDBG(("R_ARM_PC24: %lx -> %lx\n", (long)where, (long)*where));
         break;
     case R_ARM_V4BX:
         /* nothing to do: bx instruction is supported */
         break;
     default:
-        ELFDBG(("Unkown relocation type=%d\n",
-            ELF32_R_TYPE(rel->r_info)));
+        ELFDBG(("Unkown relocation type=%d\n", ELF32_R_TYPE(rel->r_info)));
         panic("relocation fail");
         return -1;
     }

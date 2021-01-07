@@ -35,29 +35,32 @@
 #include <sys/list.h>
 #include <event.h>
 
-struct sem {
-    struct sem* next; /* linkage on semaphore list in system */
+struct sem
+{
+    struct sem* next;      /* linkage on semaphore list in system */
     struct list task_link; /* linkage on semaphore list in task */
-    task_t owner; /* owner task */
-    struct event event; /* event */
-    u_int value; /* current value */
-    int refcnt; /* reference count */
+    task_t owner;          /* owner task */
+    struct event event;    /* event */
+    u_int value;           /* current value */
+    int refcnt;            /* reference count */
 };
 
-struct mutex {
+struct mutex
+{
     struct list task_link; /* linkage on mutex list in task */
-    task_t owner; /* owner task */
-    struct event event; /* event */
-    struct list link; /* linkage on locked mutex list */
-    thread_t holder; /* thread that holds the mutex */
-    int priority; /* highest priority in waiting threads */
-    int locks; /* counter for recursive lock */
+    task_t owner;          /* owner task */
+    struct event event;    /* event */
+    struct list link;      /* linkage on locked mutex list */
+    thread_t holder;       /* thread that holds the mutex */
+    int priority;          /* highest priority in waiting threads */
+    int locks;             /* counter for recursive lock */
 };
 
-struct cond {
+struct cond
+{
     struct list task_link; /* linkage on cv list in task */
-    task_t owner; /* owner task */
-    struct event event; /* event */
+    task_t owner;          /* owner task */
+    struct event event;    /* event */
 };
 
 /* maximum value for semaphore. */
@@ -67,7 +70,7 @@ struct cond {
 #define MAXINHERIT 10
 
 #define MUTEX_INITIALIZER (mutex_t)0x4d496e69 /* 'MIni' */
-#define COND_INITIALIZER (cond_t)0x43496e69 /* 'CIni' */
+#define COND_INITIALIZER (cond_t)0x43496e69   /* 'CIni' */
 
 __BEGIN_DECLS
 int sem_init(sem_t*, u_int);

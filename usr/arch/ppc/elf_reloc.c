@@ -65,9 +65,7 @@ int relocate_rela(Elf32_Rela* rela, Elf32_Addr sym_val, char* target_sect)
         break;
     case R_PPC_REL24:
         /* printf("R_PPC_REL24\n"); */
-        *(uint32_t*)where = (*(uint32_t*)where & ~0x03fffffc)
-            | ((val - (uint32_t)where)
-                & 0x03fffffc);
+        *(uint32_t*)where = (*(uint32_t*)where & ~0x03fffffc) | ((val - (uint32_t)where) & 0x03fffffc);
         break;
     case R_PPC_REL32:
         /* printf("R_PPC_REL32\n"); */
@@ -75,7 +73,7 @@ int relocate_rela(Elf32_Rela* rela, Elf32_Addr sym_val, char* target_sect)
         break;
     default:
         /* printf("Unkown relocation type=%d\n",
-			ELF32_R_TYPE(rela->r_info)); */
+            ELF32_R_TYPE(rela->r_info)); */
 #ifdef DEBUG
         syslog(LOG_ERR, "relocation fail type=%d\n", ELF32_R_TYPE(rela->r_info));
 #endif

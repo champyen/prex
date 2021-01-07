@@ -59,15 +59,15 @@ int sys_exit(int exitcode)
         return EBUSY;
 
     /*
-	 * Enter zombie state.
-	 */
+     * Enter zombie state.
+     */
     curproc->p_stat = SZOMB;
     curproc->p_exitcode = exitcode;
     p_remove(curproc);
 
     /*
-	 * Set the parent pid of all child processes to 1 (init).
-	 */
+     * Set the parent pid of all child processes to 1 (init).
+     */
     head = &curproc->p_children;
     n = list_first(head);
     while (n != head) {
@@ -80,24 +80,23 @@ int sys_exit(int exitcode)
     }
 
     /*
-	 * Resume parent process which is wating in vfork.
-	 */
+     * Resume parent process which is wating in vfork.
+     */
     parent = curproc->p_parent;
     if (parent != NULL && parent->p_vforked) {
         vfork_end(parent);
 
         /*
-		 * The child task loses its stack data.
-		 * So, it can not run anymore.
-		 */
+         * The child task loses its stack data.
+         * So, it can not run anymore.
+         */
         error = task_terminate(curproc->p_task);
         if (error)
             sys_panic("proc: can not terminate a task for exit");
     }
 
     /* Send a signal to the parent process. */
-    DPRINTF(("proc: exit send SIGCHLD to pid=%d\n",
-        curproc->p_parent->p_pid));
+    DPRINTF(("proc: exit send SIGCHLD to pid=%d\n", curproc->p_parent->p_pid));
     exception_raise(curproc->p_parent->p_task, SIGCHLD);
 
     return 0;
@@ -153,45 +152,45 @@ int sys_waitpid(pid_t pid, int* status, int options, pid_t* retval)
     code = 0;
 
     /*
-	 * Check all processes.
-	 */
+     * Check all processes.
+     */
     p = NULL;
     head = &curproc->p_children;
     for (n = list_first(head); n != head; n = list_next(n)) {
         p = list_entry(n, struct proc, p_sibling);
 
         /*
-		 * Check if pid matches.
-		 */
+         * Check if pid matches.
+         */
         match = 0;
         if (pid > 0) {
             /*
-			 * Wait a specific child process.
-			 */
+             * Wait a specific child process.
+             */
             if (p->p_pid == pid)
                 match = 1;
         } else if (pid == 0) {
             /*
-			 * Wait a process who has same pgid.
-			 */
+             * Wait a process who has same pgid.
+             */
             if (p->p_pgrp->pg_pgid == curproc->p_pgrp->pg_pgid)
                 match = 1;
         } else if (pid != -1) {
             /*
-			 * Wait a specific pgid.
-			 */
+             * Wait a specific pgid.
+             */
             if (p->p_pgrp->pg_pgid == -pid)
                 match = 1;
         } else {
             /*
-			 * pid = -1 means wait any child process.
-			 */
+             * pid = -1 means wait any child process.
+             */
             match = 1;
         }
         if (match) {
             /*
-			 * Get the exit code.
-			 */
+             * Get the exit code.
+             */
             if (p->p_stat == SSTOP) {
                 pid_child = p->p_pid;
                 code = p->p_exitcode;

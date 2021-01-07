@@ -43,8 +43,7 @@
 /* Flag register */
 #define THRE 0x20 /* Transmit FIFO full */
 
-static void
-serial_putc(int c)
+static void serial_putc(int c)
 {
 
     while ((UART_LSR & THRE) == 0)

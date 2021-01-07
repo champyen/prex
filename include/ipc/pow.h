@@ -33,13 +33,13 @@
 /*
  * Messages for power object
  */
-#define POW_SET_POWER 0x00000400 /* set power state */
-#define POW_GET_POLICY 0x00000401 /* get current power policy */
-#define POW_SET_POLICY 0x00000402 /* set power policy */
-#define POW_GET_SUSTMR 0x00000403 /* get suspend timeout */
-#define POW_SET_SUSTMR 0x00000404 /* set suspend timeout */
-#define POW_GET_DIMTMR 0x00000405 /* get dim (lcd off) timeout */
-#define POW_SET_DIMTMR 0x00000406 /* set dim timeout */
+#define POW_SET_POWER 0x00000400   /* set power state */
+#define POW_GET_POLICY 0x00000401  /* get current power policy */
+#define POW_SET_POLICY 0x00000402  /* set power policy */
+#define POW_GET_SUSTMR 0x00000403  /* get suspend timeout */
+#define POW_SET_SUSTMR 0x00000404  /* set suspend timeout */
+#define POW_GET_DIMTMR 0x00000405  /* get dim (lcd off) timeout */
+#define POW_SET_DIMTMR 0x00000406  /* set dim timeout */
 #define POW_BATTERY_LVL 0x00000407 /* get current battery level */
 
 #endif /* !_IPC_POW_H */

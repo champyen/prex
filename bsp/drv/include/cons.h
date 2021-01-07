@@ -32,11 +32,12 @@
 
 #include <sys/cdefs.h>
 
-struct consdev {
-    device_t dev; /* device */
-    struct devops* devops; /* device operations */
-    int (*cngetc)(device_t dev); /* kernel getchar */
-    void (*cnputc)(device_t dev, int ch); /* kernel putchar */
+struct consdev
+{
+    device_t dev;                          /* device */
+    struct devops* devops;                 /* device operations */
+    int (*cngetc)(device_t dev);           /* kernel getchar */
+    void (*cnputc)(device_t dev, int ch);  /* kernel putchar */
     void (*cnpollc)(device_t dev, int on); /* polling control */
 };
 

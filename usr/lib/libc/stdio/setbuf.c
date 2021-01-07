@@ -33,9 +33,7 @@
 #include <stdio.h>
 #include "local.h"
 
-void
-    setbuf(fp, buf)
-        FILE* fp;
+void setbuf(fp, buf) FILE* fp;
 char* buf;
 {
     (void)setvbuf(fp, buf, buf ? _IOFBF : _IONBF, BUFSIZ);

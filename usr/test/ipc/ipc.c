@@ -40,8 +40,7 @@ static char stack[1024];
 /*
  * Run specified thread
  */
-static int
-thread_run(void (*start)(void), void* stack)
+static int thread_run(void (*start)(void), void* stack)
 {
     thread_t t;
     int error;
@@ -64,8 +63,7 @@ thread_run(void (*start)(void), void* stack)
 /*
  * Send thread
  */
-static void
-send_thread(void)
+static void send_thread(void)
 {
     struct msg msg;
     object_t o1, o2;
@@ -74,30 +72,30 @@ send_thread(void)
     printf("Send thread is starting...\n");
 
     /*
-	 * Find objects.
-	 */
+     * Find objects.
+     */
     error = object_lookup("test-A", &o1);
     error = object_lookup("test-B", &o2);
 
     /*
-	 * Wait a sec.
-	 */
+     * Wait a sec.
+     */
     timer_sleep(1000, 0);
 
     /*
-	 * Delete object A.
-	 */
+     * Delete object A.
+     */
     printf("Delete object A\n");
     object_destroy(o1);
 
     /*
-	 * Wait a sec.
-	 */
+     * Wait a sec.
+     */
     timer_sleep(1000, 0);
 
     /*
-	 * Send message to object B.
-	 */
+     * Send message to object B.
+     */
     printf("Send message to object B.\n");
     msg_send(o2, &msg, sizeof(msg));
 
@@ -115,39 +113,39 @@ int main(int argc, char* argv[])
     printf("IPC test program\n");
 
     /*
-	 * Create two objects.
-	 */
+     * Create two objects.
+     */
     error = object_create("test-A", &o1);
     error = object_create("test-B", &o2);
 
     /*
-	 * Create existing object.
-	 * This must be error.
-	 */
+     * Create existing object.
+     * This must be error.
+     */
     error = object_create("test-B", &o3);
     if (error == 0)
         panic("Oops! object exist...");
 
     /*
-	 * Start sender thread.
-	 */
+     * Start sender thread.
+     */
     error = thread_run(send_thread, stack + 1024);
     if (error)
         panic("failed to run thread");
 
     /*
-	 * Wait message from non-existing object
-	 * This must be error.
-	 */
+     * Wait message from non-existing object
+     * This must be error.
+     */
     o3 = 0x12345678;
     error = msg_receive(o3, &msg, sizeof(msg));
     if (error == 0)
         panic("Oops! invalid object...");
 
     /*
-	 * Wait message from object 'A'. However, it will be failed
-	 * because the sender thread will delete the object A.
-	 */
+     * Wait message from object 'A'. However, it will be failed
+     * because the sender thread will delete the object A.
+     */
     printf("Wait message from object A\n");
     error = msg_receive(o1, &msg, sizeof(msg));
     if (error)
@@ -158,8 +156,8 @@ int main(int argc, char* argv[])
     }
 
     /*
-	 * Wait message from object 'B'.
-	 */
+     * Wait message from object 'B'.
+     */
     printf("Wait message from object B\n");
     error = msg_receive(o2, &msg, sizeof(msg));
     if (error)

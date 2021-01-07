@@ -39,7 +39,8 @@
 
 #include <sys/cdefs.h>
 
-struct rtc_ops {
+struct rtc_ops
+{
     int (*gettime)(void* aux, struct timeval* tv);
     int (*settime)(void* aux, struct timeval* tv);
 };
@@ -47,7 +48,8 @@ struct rtc_ops {
 /*
  * "POSIX time" to/from "YY/MM/DD/hh/mm/ss"
  */
-struct clock_ymdhms {
+struct clock_ymdhms
+{
     u_short year;
     u_char mon;
     u_char day;

@@ -47,25 +47,25 @@
  * Trap name.
  */
 static const char* const trap_name[] = {
-    "Divide error", /*  0 */
-    "Debug trap", /*  1 */
-    "NMI", /*  2 */
-    "Breakpoint", /*  3 */
-    "Overflow", /*  4 */
-    "Bounds check", /*  5 */
-    "Invalid opecode", /*  6 */
+    "Divide error",         /*  0 */
+    "Debug trap",           /*  1 */
+    "NMI",                  /*  2 */
+    "Breakpoint",           /*  3 */
+    "Overflow",             /*  4 */
+    "Bounds check",         /*  5 */
+    "Invalid opecode",      /*  6 */
     "Device not available", /*  7 */
-    "Double fault", /*  8 */
-    "Coprocessor overrun", /*  9 */
-    "Invalid TSS", /* 10 */
-    "Segment not present", /* 11 */
-    "Stack bounds", /* 12 */
-    "General Protection", /* 13 */
-    "Page fault", /* 14 */
-    "Reserved", /* 15 */
-    "Coprocessor error", /* 16 */
-    "Alignment check", /* 17 */
-    "Cache flush denied" /* 18 */
+    "Double fault",         /*  8 */
+    "Coprocessor overrun",  /*  9 */
+    "Invalid TSS",          /* 10 */
+    "Segment not present",  /* 11 */
+    "Stack bounds",         /* 12 */
+    "General Protection",   /* 13 */
+    "Page fault",           /* 14 */
+    "Reserved",             /* 15 */
+    "Coprocessor error",    /* 16 */
+    "Alignment check",      /* 17 */
+    "Cache flush denied"    /* 18 */
 };
 #define MAXTRAP (sizeof(trap_name) / sizeof(void*) - 1)
 #endif /* DEBUG */
@@ -76,25 +76,25 @@ static const char* const trap_name[] = {
  * independent exception code.
  */
 static const int exception_map[] = {
-    SIGFPE, /*  0: Divide error */
+    SIGFPE,  /*  0: Divide error */
     SIGTRAP, /*  1: Debug trap */
-    SIGILL, /*  2: NMI */
+    SIGILL,  /*  2: NMI */
     SIGTRAP, /*  3: Breakpoint */
-    SIGFPE, /*  4: Overflow */
-    SIGILL, /*  5: Bounds check */
-    SIGILL, /*  6: Invalid opecode */
-    SIGFPE, /*  7: Device not available */
-    SIGILL, /*  8: Double fault */
-    SIGFPE, /*  9: Coprocessor overrun */
+    SIGFPE,  /*  4: Overflow */
+    SIGILL,  /*  5: Bounds check */
+    SIGILL,  /*  6: Invalid opecode */
+    SIGFPE,  /*  7: Device not available */
+    SIGILL,  /*  8: Double fault */
+    SIGFPE,  /*  9: Coprocessor overrun */
     SIGSEGV, /* 10: Invalid TSS */
     SIGSEGV, /* 11: Segment not present */
     SIGSEGV, /* 12: Stack bounds */
-    SIGILL, /* 13: General Protection fault */
+    SIGILL,  /* 13: General Protection fault */
     SIGSEGV, /* 14: Page fault */
-    SIGILL, /* 15: Reserved */
-    SIGFPE, /* 16: Coprocessor error */
-    SIGILL, /* 17: Alignment check */
-    SIGILL, /* 18: Cache flush denied */
+    SIGILL,  /* 15: Reserved */
+    SIGFPE,  /* 16: Coprocessor error */
+    SIGILL,  /* 17: Alignment check */
+    SIGILL,  /* 18: Cache flush denied */
 };
 
 /*
@@ -111,13 +111,14 @@ void trap_handler(struct cpu_regs* regs)
         panic("NMI");
 
     /*
-	 * Check whether this trap is kernel page fault caused
-	 * by known routine to access user space like copyin().
-	 * If so, we change the return address of this exception.
-	 */
-    if (trap_no == 14 && regs->cs == KERNEL_CS && (regs->eip == (uint32_t)known_fault1 || regs->eip == (uint32_t)known_fault2 || regs->eip == (uint32_t)known_fault3)) {
-        DPRINTF(("\n*** Detect Fault! address=%x task=%s ***\n",
-            get_cr2(), curtask->name));
+     * Check whether this trap is kernel page fault caused
+     * by known routine to access user space like copyin().
+     * If so, we change the return address of this exception.
+     */
+    if (trap_no == 14 && regs->cs == KERNEL_CS &&
+        (regs->eip == (uint32_t)known_fault1 || regs->eip == (uint32_t)known_fault2 ||
+         regs->eip == (uint32_t)known_fault3)) {
+        DPRINTF(("\n*** Detect Fault! address=%x task=%s ***\n", get_cr2(), curtask->name));
         regs->eip = (uint32_t)copy_fault;
         return;
     }
@@ -162,12 +163,9 @@ void trap_dump(struct cpu_regs* r)
         esp = (uint32_t)r;
     }
     printf("Trap frame %08lx error %x\n", (long)r, r->err_code);
-    printf(" eax %08x ebx %08x ecx %08x edx %08x esi %08x edi %08x\n",
-        r->eax, r->ebx, r->ecx, r->edx, r->esi, r->edi);
-    printf(" eip %08x esp %08x ebp %08x eflags %08x\n",
-        r->eip, esp, r->ebp, r->eflags);
-    printf(" cs  %08x ss  %08x ds  %08x es  %08x esp0 %08x\n",
-        r->cs, ss, r->ds, r->es, tss_get());
+    printf(" eax %08x ebx %08x ecx %08x edx %08x esi %08x edi %08x\n", r->eax, r->ebx, r->ecx, r->edx, r->esi, r->edi);
+    printf(" eip %08x esp %08x ebp %08x eflags %08x\n", r->eip, esp, r->ebp, r->eflags);
+    printf(" cs  %08x ss  %08x ds  %08x es  %08x esp0 %08x\n", r->cs, ss, r->ds, r->es, tss_get());
 
     printf(" >> interrupt is %s\n", (spl == 0) ? "enabled" : "disabled");
 

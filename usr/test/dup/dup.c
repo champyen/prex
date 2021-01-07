@@ -36,8 +36,7 @@
 
 static int getafile(void);
 
-static int
-getafile(void)
+static int getafile(void)
 {
     int fd;
 
@@ -76,8 +75,7 @@ int main(int argc, char* argv[])
     /* Do we get the right fd? */
     ++test;
     if (fd2 != fd1 + 1)
-        printf("no ok %d - dup2(2) didn't give us the right fd\n",
-            test);
+        printf("no ok %d - dup2(2) didn't give us the right fd\n", test);
     else
         printf("ok %d - dup2(2) returned a correct fd\n", test);
 
@@ -92,31 +90,31 @@ int main(int argc, char* argv[])
 #endif
 
     /*
-	 * Dup to itself.
-	 *
-	 * We're testing a small tweak in dup2 semantics.
-	 * Normally dup and dup2 will clear the close-on-exec
-	 * flag on the new fd (which appears to be an implementation
-	 * mistake from start and not some planned behavior).
-	 * In todays implementations of dup and dup2 we have to make
-	 * an effort to really clear that flag.  But all tested
-	 * implementations of dup2 have another tweak.  If we
-	 * dup2(old, new) when old == new, the syscall short-circuits
-	 * and returns early (because there is no need to do all the
-	 * work (and there is a risk for serious mistakes)).
-	 * So although the docs say that dup2 should "take 'old',
-	 * close 'new' perform a dup(2) of 'old' into 'new'"
-	 * the docs are not really followed because close-on-exec
-	 * is not cleared on 'new'.
-	 *
-	 * Since everyone has this bug, we pretend that this is
-	 * the way it is supposed to be and test here that it really
-	 * works that way.
-	 *
-	 * This is a fine example on where two separate implementation
-	 * fuckups take out each other and make the end-result the way
-	 * it was meant to be.
-	 */
+     * Dup to itself.
+     *
+     * We're testing a small tweak in dup2 semantics.
+     * Normally dup and dup2 will clear the close-on-exec
+     * flag on the new fd (which appears to be an implementation
+     * mistake from start and not some planned behavior).
+     * In todays implementations of dup and dup2 we have to make
+     * an effort to really clear that flag.  But all tested
+     * implementations of dup2 have another tweak.  If we
+     * dup2(old, new) when old == new, the syscall short-circuits
+     * and returns early (because there is no need to do all the
+     * work (and there is a risk for serious mistakes)).
+     * So although the docs say that dup2 should "take 'old',
+     * close 'new' perform a dup(2) of 'old' into 'new'"
+     * the docs are not really followed because close-on-exec
+     * is not cleared on 'new'.
+     *
+     * Since everyone has this bug, we pretend that this is
+     * the way it is supposed to be and test here that it really
+     * works that way.
+     *
+     * This is a fine example on where two separate implementation
+     * fuckups take out each other and make the end-result the way
+     * it was meant to be.
+     */
     if ((fd2 = dup2(fd1, fd1)) < 0)
         err(1, "dup2");
     printf("ok %d - dup2(2) to itself works\n", ++test);
@@ -124,11 +122,9 @@ int main(int argc, char* argv[])
     /* Do we get the right fd? */
     ++test;
     if (fd2 != fd1)
-        printf("not ok %d - dup2(2) didn't give us the right fd\n",
-            test);
+        printf("not ok %d - dup2(2) didn't give us the right fd\n", test);
     else
-        printf("ok %d - dup2(2) to itself returned a correct fd\n",
-            test);
+        printf("ok %d - dup2(2) to itself returned a correct fd\n", test);
 
 #if 0
 	/* Was close-on-exec cleared? */

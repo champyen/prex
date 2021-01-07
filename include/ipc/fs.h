@@ -85,52 +85,57 @@
 /*
  * Mount message
  */
-struct mount_msg {
+struct mount_msg
+{
     struct msg_header hdr; /* message header */
-    char dev[PATH_MAX]; /* mount device */
-    char dir[PATH_MAX]; /* mount directory */
-    char fs[16]; /* file system name */
-    int flags; /* mount flags */
-    char data[64]; /* file system specific data */
+    char dev[PATH_MAX];    /* mount device */
+    char dir[PATH_MAX];    /* mount directory */
+    char fs[16];           /* file system name */
+    int flags;             /* mount flags */
+    char data[64];         /* file system specific data */
 };
 
 /*
  * File open message
  */
-struct open_msg {
+struct open_msg
+{
     struct msg_header hdr; /* message header */
-    int flags; /* open flag */
-    mode_t mode; /* open mode */
-    char path[PATH_MAX]; /* open file */
-    int fd; /* file descriptor */
+    int flags;             /* open flag */
+    mode_t mode;           /* open mode */
+    char path[PATH_MAX];   /* open file */
+    int fd;                /* file descriptor */
 };
 
 /*
  * I/O request message
  */
-struct io_msg {
+struct io_msg
+{
     struct msg_header hdr; /* message header */
-    int fd; /* file descriptor */
-    char* buf; /* i/o buffer */
-    size_t size; /* read/write size */
+    int fd;                /* file descriptor */
+    char* buf;             /* i/o buffer */
+    size_t size;           /* read/write size */
 };
 
 /*
  * File stat message
  */
-struct stat_msg {
+struct stat_msg
+{
     struct msg_header hdr; /* message header */
-    int fd; /* file descriptor */
-    char path[PATH_MAX]; /* open file */
+    int fd;                /* file descriptor */
+    char path[PATH_MAX];   /* open file */
     struct stat st;
 };
 
 /*
  * Path management message
  */
-struct path_msg {
+struct path_msg
+{
     struct msg_header hdr; /* message header */
-    int fd; /* file descriptor */
+    int fd;                /* file descriptor */
     char path[PATH_MAX];
     char path2[PATH_MAX];
     int data[4];
@@ -139,31 +144,34 @@ struct path_msg {
 /*
  * Directory management message
  */
-struct dir_msg {
+struct dir_msg
+{
     struct msg_header hdr; /* message header */
-    int fd; /* file descriptor */
-    struct dirent dirent; /* directory entry */
+    int fd;                /* file descriptor */
+    struct dirent dirent;  /* directory entry */
 };
 
 /*
  * IO cotrol message
  */
-struct ioctl_msg {
+struct ioctl_msg
+{
     struct msg_header hdr; /* message header */
-    int fd; /* file descriptor */
-    u_long request; /* io control command */
+    int fd;                /* file descriptor */
+    u_long request;        /* io control command */
     char buf[IOCPARM_MAX]; /* parameter buffer */
 };
 
 /*
  * File control message
  */
-struct fcntl_msg {
+struct fcntl_msg
+{
     struct msg_header hdr; /* message header */
-    int fd; /* file descriptor */
-    int cmd; /* command */
-    int arg; /* argument */
-    struct flock lock; /* file lock data */
+    int fd;                /* file descriptor */
+    int cmd;               /* command */
+    int arg;               /* argument */
+    struct flock lock;     /* file lock data */
 };
 
 /* Max size of fs message */

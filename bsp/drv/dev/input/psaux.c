@@ -55,9 +55,10 @@
 
 #define MOUSE_IRQ 12
 
-struct psaux_softc {
-    device_t dev; /* device object */
-    irq_t irq; /* handle for mouse irq */
+struct psaux_softc
+{
+    device_t dev;     /* device object */
+    irq_t irq;        /* handle for mouse irq */
     u_char packet[3]; /* mouse packet */
     int index;
 };
@@ -89,8 +90,7 @@ struct driver psaux_driver = {
 /*
  * Write aux device command
  */
-static void
-kmc_send_auxcmd(u_char val)
+static void kmc_send_auxcmd(u_char val)
 {
 
     DPRINTF(("kmc_send_auxcmd: %x\n", val));
@@ -103,8 +103,7 @@ kmc_send_auxcmd(u_char val)
 /*
  * Returns 0 on success, -1 on failure.
  */
-static int
-kmc_write_aux(u_char val)
+static int kmc_write_aux(u_char val)
 {
     int rc = -1;
     int s;
@@ -135,8 +134,7 @@ kmc_write_aux(u_char val)
 /*
  * Interrupt handler
  */
-static int
-psaux_isr(void* arg)
+static int psaux_isr(void* arg)
 {
     struct psaux_softc* sc = arg;
     u_char dat, id;
@@ -161,16 +159,14 @@ psaux_isr(void* arg)
     if (sc->index < 3)
         return 0;
     sc->index = 0;
-    DPRINTF(("mouse packet %x:%d:%d\n", sc->packet[0],
-        sc->packet[1], sc->packet[2]));
+    DPRINTF(("mouse packet %x:%d:%d\n", sc->packet[0], sc->packet[1], sc->packet[2]));
     return 0;
 }
 
 /*
  * Open
  */
-static int
-psaux_open(device_t dev, int mode)
+static int psaux_open(device_t dev, int mode)
 {
 
     DPRINTF(("psaux_open: dev=%x\n", dev));
@@ -180,8 +176,7 @@ psaux_open(device_t dev, int mode)
 /*
  * Close
  */
-static int
-psaux_close(device_t dev)
+static int psaux_close(device_t dev)
 {
     DPRINTF(("psaux_close: dev=%x\n", dev));
     return 0;
@@ -190,15 +185,13 @@ psaux_close(device_t dev)
 /*
  * Read
  */
-static int
-psaux_read(device_t dev, char* buf, size_t* nbyte, int blkno)
+static int psaux_read(device_t dev, char* buf, size_t* nbyte, int blkno)
 {
 
     return 0;
 }
 
-static int
-psaux_init(struct driver* self)
+static int psaux_init(struct driver* self)
 {
     struct psaux_softc* sc;
     device_t dev;
@@ -213,20 +206,19 @@ psaux_init(struct driver* self)
     sc->index = 0;
 
     /* Allocate IRQ */
-    sc->irq = irq_attach(MOUSE_IRQ, IPL_INPUT, 0, psaux_isr,
-        IST_NONE, sc);
+    sc->irq = irq_attach(MOUSE_IRQ, IPL_INPUT, 0, psaux_isr, IST_NONE, sc);
 
     kmc_wait_ibe();
     bus_write_8(KMC_CMD, 0xa8); /* Enable aux */
 
     kmc_write_aux(0xf3); /* Set sample rate */
-    kmc_write_aux(100); /* 100 samples/sec */
+    kmc_write_aux(100);  /* 100 samples/sec */
 
     kmc_write_aux(0xe8); /* Set resolution */
-    kmc_write_aux(3); /* 8 counts per mm */
+    kmc_write_aux(3);    /* 8 counts per mm */
     kmc_write_aux(0xe7); /* 2:1 scaling */
 
-    kmc_write_aux(0xf4); /* Enable aux device */
+    kmc_write_aux(0xf4);   /* Enable aux device */
     kmc_send_auxcmd(0x47); /* Enable controller ints */
     return 0;
 }

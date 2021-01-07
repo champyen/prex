@@ -39,18 +39,15 @@
  * (the portable versions of) bcopy, memcpy, and memmove.
  */
 #ifdef MEMCOPY
-void*
-    memcpy(dst0, src0, length)
+void* memcpy(dst0, src0, length)
 #else
 #ifdef MEMMOVE
-void*
-    memmove(dst0, src0, length)
+void* memmove(dst0, src0, length)
 #else
-void
-    bcopy(src0, dst0, length)
+void bcopy(src0, dst0, length)
 #endif
 #endif
-        void* dst0;
+    void* dst0;
 const void* src0;
 size_t length;
 {

@@ -44,9 +44,7 @@
  * Seek the given file to the given offset.
  * `Whence' must be one of the three SEEK_* macros.
  */
-int
-    fseek(fp, offset, whence)
-        FILE* fp;
+int fseek(fp, offset, whence) FILE* fp;
 long offset;
 int whence;
 {
@@ -58,17 +56,17 @@ int whence;
         __sinit();
 
     /*
-	 * Change any SEEK_CUR to SEEK_SET, and check `whence' argument.
-	 * After this, whence is either SEEK_SET or SEEK_END.
-	 */
+     * Change any SEEK_CUR to SEEK_SET, and check `whence' argument.
+     * After this, whence is either SEEK_SET or SEEK_END.
+     */
     switch (whence) {
 
     case SEEK_CUR:
         /*
-		 * In order to seek relative to the current stream offset,
-		 * we have to first find the current stream offset a la
-		 * ftell (see ftell for details).
-		 */
+         * In order to seek relative to the current stream offset,
+         * we have to first find the current stream offset a la
+         * ftell (see ftell for details).
+         */
         curoff = __sseek(fp, (fpos_t)0, SEEK_CUR);
         if (curoff == POS_ERR)
             return (EOF);

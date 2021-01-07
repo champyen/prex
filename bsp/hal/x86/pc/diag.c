@@ -48,8 +48,7 @@ static int pos_y;
 static int screen_x;
 static int screen_y;
 
-static void
-screen_scroll_up(void)
+static void screen_scroll_up(void)
 {
     int i;
 
@@ -58,8 +57,7 @@ screen_scroll_up(void)
         vram[screen_x * (screen_y - 1) + i] = ' ';
 }
 
-static void
-screen_move_cursor(void)
+static void screen_move_cursor(void)
 {
     int pos = pos_y * screen_x + pos_x;
 
@@ -70,8 +68,7 @@ screen_move_cursor(void)
     outb(VID_PORT + 1, (u_int)pos & 0xff);
 }
 
-static void
-screen_newline(void)
+static void screen_newline(void)
 {
 
     pos_x = 0;
@@ -82,8 +79,7 @@ screen_newline(void)
     }
 }
 
-static void
-screen_putc(char c)
+static void screen_putc(char c)
 {
 
     switch (c) {
@@ -135,8 +131,7 @@ void diag_init(void)
 #endif /* !CONFIG_DIAG_SCREEN */
 
 #ifdef CONFIG_DIAG_BOCHS
-static void
-bochs_putc(char c)
+static void bochs_putc(char c)
 {
     /* Write to the bochs debug port. */
     outb(0xe9, (u_char)c);
@@ -164,8 +159,7 @@ void diag_init(void)
 #define COM_THR (COM_BASE + 0x00) /* transmit holding register */
 #define COM_LSR (COM_BASE + 0x05) /* line status register */
 
-static void
-serial_putc(char c)
+static void serial_putc(char c)
 {
 
     while (!(inb(COM_LSR) & 0x20))

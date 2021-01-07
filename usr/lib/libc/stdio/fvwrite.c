@@ -41,9 +41,7 @@
  * This routine is large and unsightly, but most of the ugliness due
  * to the three different kinds of output buffering is handled here.
  */
-int
-    __sfvwrite(fp, uio)
-        FILE* fp;
+int __sfvwrite(fp, uio) FILE* fp;
 struct __suio* uio;
 {
     size_t len;
@@ -66,17 +64,17 @@ struct __suio* uio;
     p = iov->iov_base;
     len = iov->iov_len;
     iov++;
-#define GETIOV(extra_work)  \
-    while (len == 0) {      \
-        extra_work;         \
-        p = iov->iov_base;  \
-        len = iov->iov_len; \
-        iov++;              \
+#define GETIOV(extra_work)                                                                                             \
+    while (len == 0) {                                                                                                 \
+        extra_work;                                                                                                    \
+        p = iov->iov_base;                                                                                             \
+        len = iov->iov_len;                                                                                            \
+        iov++;                                                                                                         \
     }
     if (fp->_flags & __SNBF) {
         /*
-		 * Unbuffered: write up to BUFSIZ bytes at a time.
-		 */
+         * Unbuffered: write up to BUFSIZ bytes at a time.
+         */
         do {
             GETIOV(;);
             w = __swrite(fp, p, MIN(len, BUFSIZ));
@@ -87,16 +85,16 @@ struct __suio* uio;
         } while ((uio->uio_resid -= w) != 0);
     } else if ((fp->_flags & __SLBF) == 0) {
         /*
-		 * Fully buffered: fill partially full buffer, if any,
-		 * and then flush.  If there is no partial buffer, write
-		 * one _bf._size byte chunk directly (without copying).
-		 *
-		 * String output is a special case: write as many bytes
-		 * as fit, but pretend we wrote everything.  This makes
-		 * snprintf() return the number of bytes needed, rather
-		 * than the number used, and avoids its write function
-		 * (so that the write function can be invalid).
-		 */
+         * Fully buffered: fill partially full buffer, if any,
+         * and then flush.  If there is no partial buffer, write
+         * one _bf._size byte chunk directly (without copying).
+         *
+         * String output is a special case: write as many bytes
+         * as fit, but pretend we wrote everything.  This makes
+         * snprintf() return the number of bytes needed, rather
+         * than the number used, and avoids its write function
+         * (so that the write function can be invalid).
+         */
         do {
             GETIOV(;);
             w = fp->_w;
@@ -131,12 +129,12 @@ struct __suio* uio;
         } while ((uio->uio_resid -= w) != 0);
     } else {
         /*
-		 * Line buffered: like fully buffered, but we
-		 * must check for newlines.  Compute the distance
-		 * to the first newline (including the newline),
-		 * or `infinity' if there is none, then pretend
-		 * that the amount to write is MIN(len,nldist).
-		 */
+         * Line buffered: like fully buffered, but we
+         * must check for newlines.  Compute the distance
+         * to the first newline (including the newline),
+         * or `infinity' if there is none, then pretend
+         * that the amount to write is MIN(len,nldist).
+         */
         nlknown = 0;
         nldist = 0; /* XXX just to keep gcc happy */
         do {

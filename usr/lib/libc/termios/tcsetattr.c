@@ -34,9 +34,7 @@
 #include <termios.h>
 #include <unistd.h>
 
-int
-    tcsetattr(fd, opt, t) int fd,
-    opt;
+int tcsetattr(fd, opt, t) int fd, opt;
 const struct termios* t;
 {
     struct termios localterm;

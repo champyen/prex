@@ -37,23 +37,24 @@
 /*
  * Buffer header
  */
-struct buf {
+struct buf
+{
     struct list b_link; /* link to block list */
-    int b_flags; /* see defines below */
-    dev_t b_dev; /* device number */
-    int b_blkno; /* block # on device */
-    mutex_t b_lock; /* lock for access */
-    char* b_data; /* pointer to data buffer */
+    int b_flags;        /* see defines below */
+    dev_t b_dev;        /* device number */
+    int b_blkno;        /* block # on device */
+    mutex_t b_lock;     /* lock for access */
+    char* b_data;       /* pointer to data buffer */
 };
 
 /*
  * These flags are kept in b_flags.
  */
-#define B_BUSY 0x00000001 /* I/O in progress. */
+#define B_BUSY 0x00000001   /* I/O in progress. */
 #define B_DELWRI 0x00000002 /* delay I/O until buffer reused. */
-#define B_INVAL 0x00000004 /* does not contain valid info. */
-#define B_READ 0x00000008 /* read buffer. */
-#define B_DONE 0x00000010 /* I/O completed. */
+#define B_INVAL 0x00000004  /* does not contain valid info. */
+#define B_READ 0x00000008   /* read buffer. */
+#define B_DONE 0x00000010   /* I/O completed. */
 
 __BEGIN_DECLS
 struct buf* getblk(dev_t, int);

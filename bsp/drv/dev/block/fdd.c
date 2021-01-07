@@ -74,12 +74,12 @@
 /* Command bytes */
 #define CMD_SPECIFY 0x03 /* specify drive timing */
 #define CMD_DRVSTS 0x04
-#define CMD_WRITE 0xc5 /* sector write, multi-track */
-#define CMD_READ 0xe6 /* sector read */
-#define CMD_RECAL 0x07 /* recalibrate */
-#define CMD_SENSE 0x08 /* sense interrupt status */
-#define CMD_FORMAT 0x4d /* format track */
-#define CMD_SEEK 0x0f /* seek track */
+#define CMD_WRITE 0xc5   /* sector write, multi-track */
+#define CMD_READ 0xe6    /* sector read */
+#define CMD_RECAL 0x07   /* recalibrate */
+#define CMD_SENSE 0x08   /* sense interrupt status */
+#define CMD_FORMAT 0x4d  /* format track */
+#define CMD_SEEK 0x0f    /* seek track */
 #define CMD_VERSION 0x10 /* FDC version */
 
 /* Floppy Drive Geometries */
@@ -90,25 +90,26 @@
 #define FDG_GAP3RW 0x1b
 
 /* FDC state */
-#define FDS_OFF 0 /* motor off */
-#define FDS_ON 1 /* motor on */
+#define FDS_OFF 0   /* motor off */
+#define FDS_ON 1    /* motor on */
 #define FDS_RESET 2 /* reset */
 #define FDS_RECAL 3 /* recalibrate */
-#define FDS_SEEK 4 /* seek */
-#define FDS_IO 5 /* read/write */
+#define FDS_SEEK 4  /* seek */
+#define FDS_IO 5    /* read/write */
 #define FDS_READY 6 /* ready */
 
-struct fdd_softc {
-    device_t dev; /* device object */
-    int isopen; /* number of open counts */
-    int track; /* Current track for read buffer */
-    struct irp irp; /* I/O request packet */
-    dma_t dma; /* DMA handle */
-    irq_t irq; /* interrupt handle */
-    timer_t tmr; /* timer id */
-    int stat; /* current state */
-    void* rbuf; /* DMA buffer for read (1 track) */
-    void* wbuf; /* DMA buffer for write (1 sector) */
+struct fdd_softc
+{
+    device_t dev;     /* device object */
+    int isopen;       /* number of open counts */
+    int track;        /* Current track for read buffer */
+    struct irp irp;   /* I/O request packet */
+    dma_t dma;        /* DMA handle */
+    irq_t irq;        /* interrupt handle */
+    timer_t tmr;      /* timer id */
+    int stat;         /* current state */
+    void* rbuf;       /* DMA buffer for read (1 track) */
+    void* wbuf;       /* DMA buffer for write (1 sector) */
     u_char result[7]; /* result from fdc */
 };
 
@@ -144,8 +145,7 @@ struct driver fdd_driver = {
  * Send data to FDC
  * Return -1 on failure
  */
-static int
-fdc_out(int dat)
+static int fdc_out(int dat)
 {
     int i;
 
@@ -162,8 +162,7 @@ fdc_out(int dat)
 }
 
 /* Return number of result bytes */
-static int
-fdc_result(struct fdd_softc* sc)
+static int fdc_result(struct fdd_softc* sc)
 {
     int i, msr, index = 0;
 
@@ -188,8 +187,7 @@ fdc_result(struct fdd_softc* sc)
 /*
  * Stop motor. (No interrupt)
  */
-static void
-fdc_off(struct fdd_softc* sc)
+static void fdc_off(struct fdd_softc* sc)
 {
     DPRINTF(("fdc: motor off\n"));
 
@@ -202,8 +200,7 @@ fdc_off(struct fdd_softc* sc)
 /*
  * Start motor and wait 250msec. (No interrupt)
  */
-static void
-fdc_on(struct fdd_softc* sc)
+static void fdc_on(struct fdd_softc* sc)
 {
     DPRINTF(("fdc: motor on\n"));
 
@@ -214,8 +211,7 @@ fdc_on(struct fdd_softc* sc)
     timer_callout(&sc->tmr, 250, &fdc_timeout, sc);
 }
 
-static void
-fdc_error(struct fdd_softc* sc, int error)
+static void fdc_error(struct fdd_softc* sc, int error)
 {
     struct irp* irp = &sc->irp;
 
@@ -231,15 +227,14 @@ fdc_error(struct fdd_softc* sc, int error)
  * Reset FDC and wait an intterupt.
  * Timeout is 500msec.
  */
-static void
-fdc_reset(struct fdd_softc* sc)
+static void fdc_reset(struct fdd_softc* sc)
 {
     DPRINTF(("fdc: reset\n"));
 
     sc->stat = FDS_RESET;
     timer_callout(&sc->tmr, 500, &fdc_timeout, sc);
     bus_write_8(FDC_DOR, 0x18); /* motor0 enable, DMA enable */
-    delay_usec(20); /* wait 20 usec while reset */
+    delay_usec(20);             /* wait 20 usec while reset */
     bus_write_8(FDC_DOR, 0x1c); /* clear reset */
     delay_usec(1);
 }
@@ -248,8 +243,7 @@ fdc_reset(struct fdd_softc* sc)
  * Recalibrate FDC and wait an interrupt.
  * Timeout is 5sec.
  */
-static void
-fdc_recal(struct fdd_softc* sc)
+static void fdc_recal(struct fdd_softc* sc)
 {
     DPRINTF(("fdc: recalibrate\n"));
 
@@ -263,8 +257,7 @@ fdc_recal(struct fdd_softc* sc)
  * Seek FDC and wait an interrupt.
  * Timeout is 4sec.
  */
-static void
-fdc_seek(struct fdd_softc* sc)
+static void fdc_seek(struct fdd_softc* sc)
 {
     struct irp* irp = &sc->irp;
     int head, track;
@@ -277,8 +270,8 @@ fdc_seek(struct fdd_softc* sc)
     timer_callout(&sc->tmr, 4000, &fdc_timeout, sc);
 
     fdc_out(CMD_SPECIFY); /* specify command parameter */
-    fdc_out(0xd1); /* Step rate = 3msec, Head unload time = 16msec */
-    fdc_out(0x02); /* Head load time = 2msec, Dma on (0) */
+    fdc_out(0xd1);        /* Step rate = 3msec, Head unload time = 16msec */
+    fdc_out(0x02);        /* Head load time = 2msec, Dma on (0) */
 
     fdc_out(CMD_SEEK);
     fdc_out(head << 2);
@@ -289,8 +282,7 @@ fdc_seek(struct fdd_softc* sc)
  * Read/write data and wait an interrupt.
  * Timeout is 2sec.
  */
-static void
-fdc_io(struct fdd_softc* sc)
+static void fdc_io(struct fdd_softc* sc)
 {
     struct irp* irp = &sc->irp;
     int head, track, sect;
@@ -306,8 +298,7 @@ fdc_io(struct fdd_softc* sc)
     io_size = irp->blksz * SECTOR_SIZE;
     read = (irp->cmd == IO_READ) ? 1 : 0;
 
-    DPRINTF(("fdc: hd=%x trk=%x sec=%x size=%d read=%d\n",
-        head, track, sect, io_size, read));
+    DPRINTF(("fdc: hd=%x trk=%x sec=%x size=%d read=%d\n", head, track, sect, io_size, read));
 
     timer_callout(&sc->tmr, 2000, &fdc_timeout, sc);
 
@@ -329,8 +320,7 @@ fdc_io(struct fdd_softc* sc)
  * Wake up iorequester.
  * FDC motor is set to off after 5sec.
  */
-static void
-fdc_ready(struct fdd_softc* sc)
+static void fdc_ready(struct fdd_softc* sc)
 {
     struct irp* irp = &sc->irp;
 
@@ -344,8 +334,7 @@ fdc_ready(struct fdd_softc* sc)
 /*
  * Timeout handler
  */
-static void
-fdc_timeout(void* arg)
+static void fdc_timeout(void* arg)
 {
     struct fdd_softc* sc = arg;
     struct irp* irp = &sc->irp;
@@ -381,8 +370,7 @@ fdc_timeout(void* arg)
  * Interrupt service routine
  * Do not change the fdc_stat in isr.
  */
-static int
-fdc_isr(void* arg)
+static int fdc_isr(void* arg)
 {
     struct fdd_softc* sc = arg;
     struct irp* irp = &sc->irp;
@@ -417,8 +405,7 @@ fdc_isr(void* arg)
  * Interrupt service thread
  * This is called when command completion.
  */
-static void
-fdc_ist(void* arg)
+static void fdc_ist(void* arg)
 {
     struct fdd_softc* sc = arg;
     struct irp* irp = &sc->irp;
@@ -480,8 +467,7 @@ fdc_ist(void* arg)
     }
 }
 
-static int
-fdd_open(device_t dev, int mode)
+static int fdd_open(device_t dev, int mode)
 {
     struct fdd_softc* sc = device_private(dev);
 
@@ -493,8 +479,7 @@ fdd_open(device_t dev, int mode)
     return 0;
 }
 
-static int
-fdd_close(device_t dev)
+static int fdd_close(device_t dev)
 {
     struct fdd_softc* sc = device_private(dev);
 
@@ -511,14 +496,12 @@ fdd_close(device_t dev)
 /*
  * Common routine for read/write
  */
-static int
-fdd_rw(struct fdd_softc* sc, int cmd, char* buf, u_long blksz, int blkno)
+static int fdd_rw(struct fdd_softc* sc, int cmd, char* buf, u_long blksz, int blkno)
 {
     struct irp* irp = &sc->irp;
     int error;
 
-    DPRINTF(("fdd_rw: cmd=%x buf=%x blksz=%d blkno=%x\n",
-        cmd, buf, blksz, blkno));
+    DPRINTF(("fdd_rw: cmd=%x buf=%x blksz=%d blkno=%x\n", cmd, buf, blksz, blkno));
 
     irp->cmd = cmd;
     irp->ntries = 0;
@@ -551,8 +534,7 @@ fdd_rw(struct fdd_softc* sc, int cmd, char* buf, u_long blksz, int blkno)
  *  ENXIO   ... Write protected
  *  EFAULT  ... No physical memory is mapped to buffer
  */
-static int
-fdd_read(device_t dev, char* buf, size_t* nbyte, int blkno)
+static int fdd_read(device_t dev, char* buf, size_t* nbyte, int blkno)
 {
     struct fdd_softc* sc = device_private(dev);
     char* kbuf;
@@ -577,20 +559,18 @@ fdd_read(device_t dev, char* buf, size_t* nbyte, int blkno)
         sect = blkno % FDG_SECTORS;
 
         /*
-		 * If target sector does not exist in buffer,
-		 * read 1 track (18 sectors) at once.
-		 */
+         * If target sector does not exist in buffer,
+         * read 1 track (18 sectors) at once.
+         */
         if (track != sc->track) {
-            error = fdd_rw(sc, IO_READ, sc->rbuf, FDG_SECTORS,
-                track * FDG_SECTORS);
+            error = fdd_rw(sc, IO_READ, sc->rbuf, FDG_SECTORS, track * FDG_SECTORS);
             if (error != 0) {
                 sc->track = INVALID_TRACK;
                 break;
             }
             sc->track = track;
         }
-        memcpy(kbuf, (char*)sc->rbuf + sect * SECTOR_SIZE,
-            SECTOR_SIZE);
+        memcpy(kbuf, (char*)sc->rbuf + sect * SECTOR_SIZE, SECTOR_SIZE);
         blkno++;
         kbuf += SECTOR_SIZE;
     }
@@ -607,8 +587,7 @@ fdd_read(device_t dev, char* buf, size_t* nbyte, int blkno)
  *  ENXIO   ... Write protected
  *  EFAULT  ... No physical memory is mapped to buffer
  */
-static int
-fdd_write(device_t dev, char* buf, size_t* nbyte, int blkno)
+static int fdd_write(device_t dev, char* buf, size_t* nbyte, int blkno)
 {
     struct fdd_softc* sc = device_private(dev);
     char *kbuf, *wbuf;
@@ -633,9 +612,9 @@ fdd_write(device_t dev, char* buf, size_t* nbyte, int blkno)
         sect = blkno % FDG_SECTORS;
 
         /*
-		 * If target sector exists in read buffer, use it as
-		 * write buffer to keep the cache cohrency.
-		 */
+         * If target sector exists in read buffer, use it as
+         * write buffer to keep the cache cohrency.
+         */
         if (track == sc->track)
             wbuf = (char*)sc->rbuf + sect * SECTOR_SIZE;
         else
@@ -656,8 +635,7 @@ fdd_write(device_t dev, char* buf, size_t* nbyte, int blkno)
     return error;
 }
 
-static int
-fdd_probe(struct driver* self)
+static int fdd_probe(struct driver* self)
 {
 
     if (bus_read_8(FDC_MSR) == 0xff) {
@@ -667,8 +645,7 @@ fdd_probe(struct driver* self)
     return 0;
 }
 
-static int
-fdd_init(struct driver* self)
+static int fdd_init(struct driver* self)
 {
     struct fdd_softc* sc;
     struct irp* irp;
@@ -687,9 +664,9 @@ fdd_init(struct driver* self)
     event_init(&irp->iocomp, "fdd i/o");
 
     /*
-	 * Allocate physical pages for DMA buffer.
-	 * Buffer: 1 track for read, 1 sector for write.
-	 */
+     * Allocate physical pages for DMA buffer.
+     * Buffer: 1 track for read, 1 sector for write.
+     */
     buf = dma_alloc(TRACK_SIZE + SECTOR_SIZE);
     ASSERT(buf != NULL);
     sc->rbuf = buf;
@@ -697,8 +674,8 @@ fdd_init(struct driver* self)
     sc->dma = dma_attach(FDC_DMA);
 
     /*
-	 * Attach IRQ.
-	 */
+     * Attach IRQ.
+     */
     sc->irq = irq_attach(FDC_IRQ, IPL_BLOCK, 0, fdc_isr, fdc_ist, sc);
 
     sc->stat = FDS_OFF;

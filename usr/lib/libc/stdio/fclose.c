@@ -35,9 +35,7 @@
 #include <stdlib.h>
 #include "local.h"
 
-int
-    fclose(fp)
-        FILE* fp;
+int fclose(fp) FILE* fp;
 {
     int r;
 
@@ -52,7 +50,7 @@ int
         free((char*)fp->_bf._base);
     if (HASUB(fp))
         FREEUB(fp);
-    fp->_flags = 0; /* Release this FILE for reuse. */
+    fp->_flags = 0;      /* Release this FILE for reuse. */
     fp->_r = fp->_w = 0; /* Mess up if reaccessed. */
     return (r);
 }

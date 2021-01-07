@@ -63,80 +63,80 @@ extern int null_main(int argc, char* argv[]);
  */
 const struct cmdentry builtin_cmds[] = {
 #ifdef CONFIG_CMD_CAT
-    { "cat", cat_main },
+    {"cat", cat_main},
 #endif
 #ifdef CONFIG_CMD_CLEAR
-    { "clear", clear_main },
+    {"clear", clear_main},
 #endif
 #ifdef CONFIG_CMD_CP
-    { "cp", cp_main },
+    {"cp", cp_main},
 #endif
 #ifdef CONFIG_CMD_DATE
-    { "date", date_main },
+    {"date", date_main},
 #endif
 #ifdef CONFIG_CMD_DMESG
-    { "dmesg", dmesg_main },
+    {"dmesg", dmesg_main},
 #endif
 #ifdef CONFIG_CMD_ECHO
-    { "echo", echo_main },
+    {"echo", echo_main},
 #endif
 #ifdef CONFIG_CMD_FREE
-    { "free", free_main },
+    {"free", free_main},
 #endif
 #ifdef CONFIG_CMD_HEAD
-    { "head", head_main },
+    {"head", head_main},
 #endif
-    { "help", help_main },
+    {"help", help_main},
 #ifdef CONFIG_CMD_HOSTNAME
-    { "hostname", hostname_main },
+    {"hostname", hostname_main},
 #endif
 #ifdef CONFIG_CMD_KILL
-    { "kill", kill_main },
+    {"kill", kill_main},
 #endif
 #ifdef CONFIG_CMD_LS
-    { "ls", ls_main },
+    {"ls", ls_main},
 #endif
 #ifdef CONFIG_CMD_MKDIR
-    { "mkdir", mkdir_main },
+    {"mkdir", mkdir_main},
 #endif
 #ifdef CONFIG_CMD_MORE
-    { "more", more_main },
+    {"more", more_main},
 #endif
 #ifdef CONFIG_CMD_MV
-    { "mv", mv_main },
+    {"mv", mv_main},
 #endif
 #ifdef CONFIG_CMD_NICE
-    { "nice", nice_main },
+    {"nice", nice_main},
 #endif
 #ifdef CONFIG_CMD_PRINTENV
-    { "printenv", printenv_main },
+    {"printenv", printenv_main},
 #endif
 #ifdef CONFIG_CMD_PS
-    { "ps", ps_main },
+    {"ps", ps_main},
 #endif
 #ifdef CONFIG_CMD_PWD
-    { "pwd", pwd_main },
+    {"pwd", pwd_main},
 #endif
 #ifdef CONFIG_CMD_RM
-    { "rm", rm_main },
+    {"rm", rm_main},
 #endif
 #ifdef CONFIG_CMD_RMDIR
-    { "rmdir", rmdir_main },
+    {"rmdir", rmdir_main},
 #endif
 #ifdef CONFIG_CMD_SLEEP
-    { "sleep", sleep_main },
+    {"sleep", sleep_main},
 #endif
 #ifdef CONFIG_CMD_SYNC
-    { "sync", sync_main },
+    {"sync", sync_main},
 #endif
 #ifdef CONFIG_CMD_TEST
-    { "test", test_main },
+    {"test", test_main},
 #endif
 #ifdef CONFIG_CMD_TOUCH
-    { "touch", touch_main },
+    {"touch", touch_main},
 #endif
 #ifdef CONFIG_CMD_UNAME
-    { "uname", uname_main },
+    {"uname", uname_main},
 #endif
-    { NULL, null_main },
+    {NULL, null_main},
 };

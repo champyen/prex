@@ -45,8 +45,8 @@ static thread_t thread_allocate(task_t);
 static void thread_deallocate(thread_t);
 
 static struct thread idle_thread; /* idle thread */
-static thread_t zombie; /* zombie thread */
-static struct list thread_list; /* list of all threads */
+static thread_t zombie;           /* zombie thread */
+static struct list thread_list;   /* list of all threads */
 
 /* global variable */
 thread_t curthread = &idle_thread; /* current thread */
@@ -81,10 +81,10 @@ int thread_create(task_t task, thread_t* tp)
         return EAGAIN;
     }
     /*
-	 * We check the pointer to the return value here.
-	 * This will simplify the error recoveries of the
-	 * subsequent code.
-	 */
+     * We check the pointer to the return value here.
+     * This will simplify the error recoveries of the
+     * subsequent code.
+     */
     if ((curtask->flags & TF_SYSTEM) == 0) {
         t = NULL;
         if (copyout(&t, tp, sizeof(t))) {
@@ -93,8 +93,8 @@ int thread_create(task_t task, thread_t* tp)
         }
     }
     /*
-	 * Make thread entry for new thread.
-	 */
+     * Make thread entry for new thread.
+     */
     if ((t = thread_allocate(task)) == NULL) {
         DPRINTF(("Out of text\n"));
         sched_unlock();
@@ -108,8 +108,8 @@ int thread_create(task_t task, thread_t* tp)
     t->suscnt = task->suscnt + 1;
 
     /*
-	 * No page fault here:
-	 */
+     * No page fault here:
+     */
     if (curtask->flags & TF_SYSTEM)
         *tp = t;
     else
@@ -193,8 +193,7 @@ int thread_load(thread_t t, void (*entry)(void), void* stack)
 /*
  * Return the current thread.
  */
-thread_t
-thread_self(void)
+thread_t thread_self(void)
 {
 
     return curthread;
@@ -302,9 +301,9 @@ int thread_schedparam(thread_t t, int op, int* param)
         return EINVAL;
     }
     /*
-	 * A thread can change the scheduling parameters of the
-	 * threads in the same task or threads in the child task.
-	 */
+     * A thread can change the scheduling parameters of the
+     * threads in the same task or threads in the child task.
+     */
     if (!(t->task == curtask || t->task->parent == curtask) && !task_capable(CAP_NICE)) {
         sched_unlock();
         return EPERM;
@@ -323,30 +322,30 @@ int thread_schedparam(thread_t t, int op, int* param)
             break;
         }
         /*
-		 * Validate the priority range.
-		 */
+         * Validate the priority range.
+         */
         if (pri < 0)
             pri = 0;
         else if (pri >= PRI_IDLE)
             pri = PRI_IDLE - 1;
 
         /*
-		 * If the caller has CAP_NICE capability, it can
-		 * change the thread priority to any level.
-		 * Otherwise, the caller can not set the priority
-		 * to higher above realtime priority.
-		 */
+         * If the caller has CAP_NICE capability, it can
+         * change the thread priority to any level.
+         * Otherwise, the caller can not set the priority
+         * to higher above realtime priority.
+         */
         if (pri <= PRI_REALTIME && !task_capable(CAP_NICE)) {
             error = EPERM;
             break;
         }
         /*
-		 * If a current priority is inherited for mutex,
-		 * we can not change the priority to lower value.
-		 * In this case, only the base priority is changed,
-		 * and a current priority will be adjusted to
-		 * correct value, later.
-		 */
+         * If a current priority is inherited for mutex,
+         * we can not change the priority to lower value.
+         * In this case, only the base priority is changed,
+         * and a current priority will be adjusted to
+         * correct value, later.
+         */
         if (t->priority != t->basepri && pri > t->priority)
             pri = t->priority;
 
@@ -396,8 +395,7 @@ void thread_idle(void)
 /*
  * Allocate a thread.
  */
-static thread_t
-thread_allocate(task_t task)
+static thread_t thread_allocate(task_t task)
 {
     struct thread* t;
     void* stack;
@@ -429,8 +427,7 @@ thread_allocate(task_t task)
  * context. So, the resource deallocation is deferred until
  * another thread calls thread_deallocate() later.
  */
-static void
-thread_deallocate(thread_t t)
+static void thread_deallocate(thread_t t)
 {
 
     list_remove(&t->task_link);
@@ -440,9 +437,9 @@ thread_deallocate(thread_t t)
 
     if (zombie != NULL) {
         /*
-		 * Deallocate a zombie thread which
-		 * was killed in previous request.
-		 */
+         * Deallocate a zombie thread which
+         * was killed in previous request.
+         */
         ASSERT(zombie != curthread);
         kmem_free(zombie->kstack);
         zombie->kstack = NULL;
@@ -451,9 +448,9 @@ thread_deallocate(thread_t t)
     }
     if (t == curthread) {
         /*
-		 * Enter zombie state and wait for
-		 * somebody to be killed us.
-		 */
+         * Enter zombie state and wait for
+         * somebody to be killed us.
+         */
         zombie = t;
         return;
     }
@@ -508,8 +505,7 @@ int thread_info(struct threadinfo* info)
  * immediately when it gets control.
  * This routine assumes the scheduler is already locked.
  */
-thread_t
-kthread_create(void (*entry)(void*), void* arg, int pri)
+thread_t kthread_create(void (*entry)(void*), void* arg, int pri)
 {
     thread_t t;
     vaddr_t sp;
@@ -517,9 +513,9 @@ kthread_create(void (*entry)(void*), void* arg, int pri)
     ASSERT(curthread->locks > 0);
 
     /*
-	 * If there is not enough core for the new thread,
-	 * the caller should just drop to panic().
-	 */
+     * If there is not enough core for the new thread,
+     * the caller should just drop to panic().
+     */
     if ((t = thread_allocate(&kernel_task)) == NULL)
         return NULL;
 

@@ -51,8 +51,7 @@
  * Flush out all the vectors defined by the given uio,
  * then reset it so that it can be reused.
  */
-static int
-__sprint(FILE* fp, struct __suio* uio)
+static int __sprint(FILE* fp, struct __suio* uio)
 {
     int error;
 
@@ -71,8 +70,7 @@ __sprint(FILE* fp, struct __suio* uio)
  * temporary buffer.  We only work on write-only files; this avoids
  * worries about ungetc buffers and so forth.
  */
-static int
-__sbprintf(FILE* fp, const char* fmt, va_list ap)
+static int __sbprintf(FILE* fp, const char* fmt, va_list ap)
 {
     int ret;
     FILE fake;
@@ -108,16 +106,15 @@ __sbprintf(FILE* fp, const char* fmt, va_list ap)
  * Octal numbers can be forced to have a leading zero; hex numbers
  * use the given digits.
  */
-static char*
-__ultoa(u_long val, char* endp, int base, int octzero, char* xdigs)
+static char* __ultoa(u_long val, char* endp, int base, int octzero, char* xdigs)
 {
     char* cp = endp;
     long sval;
 
     /*
-	 * Handle the three cases separately, in the hope of getting
-	 * better/faster code.
-	 */
+     * Handle the three cases separately, in the hope of getting
+     * better/faster code.
+     */
     switch (base) {
     case 10:
         if (val < 10) { /* many numbers are 1 digit */
@@ -125,11 +122,11 @@ __ultoa(u_long val, char* endp, int base, int octzero, char* xdigs)
             return (cp);
         }
         /*
-		 * On many machines, unsigned arithmetic is harder than
-		 * signed arithmetic, so we do at most one unsigned mod and
-		 * divide; this is sufficient to reduce the range of
-		 * the incoming value to where signed arithmetic works.
-		 */
+         * On many machines, unsigned arithmetic is harder than
+         * signed arithmetic, so we do at most one unsigned mod and
+         * divide; this is sufficient to reduce the range of
+         * the incoming value to where signed arithmetic works.
+         */
         if (val > LONG_MAX) {
             *--cp = to_char(val % 10);
             sval = val / 10;
@@ -168,94 +165,92 @@ __ultoa(u_long val, char* endp, int base, int octzero, char* xdigs)
 /*
  * Flags used during conversion.
  */
-#define ALT 0x001 /* alternate form */
+#define ALT 0x001       /* alternate form */
 #define HEXPREFIX 0x002 /* add 0x or 0X prefix */
-#define LADJUST 0x004 /* left adjustment */
-#define LONGDBL 0x008 /* long double; unimplemented */
-#define LONGINT 0x010 /* long integer */
-#define SHORTINT 0x040 /* short integer */
-#define ZEROPAD 0x080 /* zero (as opposed to blank) pad */
-int
-    vfprintf(fp, fmt0, ap)
-        FILE* fp;
+#define LADJUST 0x004   /* left adjustment */
+#define LONGDBL 0x008   /* long double; unimplemented */
+#define LONGINT 0x010   /* long integer */
+#define SHORTINT 0x040  /* short integer */
+#define ZEROPAD 0x080   /* zero (as opposed to blank) pad */
+int vfprintf(fp, fmt0, ap) FILE* fp;
 const char* fmt0;
 va_list ap;
 {
-    char* fmt; /* format string */
-    int ch; /* character from fmt */
-    int n; /* handy integer (short term usage) */
-    char* cp; /* handy char pointer (short term usage) */
+    char* fmt;           /* format string */
+    int ch;              /* character from fmt */
+    int n;               /* handy integer (short term usage) */
+    char* cp;            /* handy char pointer (short term usage) */
     struct __siov* iovp; /* for PRINT macro */
-    int flags; /* flags as above */
-    int ret; /* return value accumulator */
-    int width; /* width from format (%8d), or 0 */
-    int prec; /* precision from format (%.3d), or -1 */
-    char sign; /* sign prefix (' ', '+', '-', or \0) */
-    u_long ulval; /* integer arguments %[diouxX] */
-    int base; /* base for [diouxX] conversion */
-    int dprec; /* a copy of prec if [diouxX], 0 otherwise */
-    int fieldsz; /* field size expanded by sign, etc */
-    int realsz; /* field size expanded by dprec */
-    int size; /* size of converted field or string */
-    char* xdigs = NULL; /* digits for [xX] conversion */
+    int flags;           /* flags as above */
+    int ret;             /* return value accumulator */
+    int width;           /* width from format (%8d), or 0 */
+    int prec;            /* precision from format (%.3d), or -1 */
+    char sign;           /* sign prefix (' ', '+', '-', or \0) */
+    u_long ulval;        /* integer arguments %[diouxX] */
+    int base;            /* base for [diouxX] conversion */
+    int dprec;           /* a copy of prec if [diouxX], 0 otherwise */
+    int fieldsz;         /* field size expanded by sign, etc */
+    int realsz;          /* field size expanded by dprec */
+    int size;            /* size of converted field or string */
+    char* xdigs = NULL;  /* digits for [xX] conversion */
 #define NIOV 8
-    struct __suio uio; /* output information: summary */
+    struct __suio uio;       /* output information: summary */
     struct __siov iov[NIOV]; /* ... and individual io vectors */
-    char buf[BUF]; /* space for %c, %[diouxX], %[eEfgG] */
-    char ox[2]; /* space for 0x hex-prefix */
+    char buf[BUF];           /* space for %c, %[diouxX], %[eEfgG] */
+    char ox[2];              /* space for 0x hex-prefix */
 
     /*
-	 * Choose PADSIZE to trade efficiency vs. size.  If larger printf
-	 * fields occur frequently, increase PADSIZE and make the initialisers
-	 * below longer.
-	 */
+     * Choose PADSIZE to trade efficiency vs. size.  If larger printf
+     * fields occur frequently, increase PADSIZE and make the initialisers
+     * below longer.
+     */
 #define PADSIZE 16 /* pad chunk size */
-    static char blanks[PADSIZE] = { ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ' };
-    static char zeroes[PADSIZE] = { '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0' };
+    static char blanks[PADSIZE] = {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '};
+    static char zeroes[PADSIZE] = {'0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'};
 
     /*
-	 * BEWARE, these `goto error' on error, and PAD uses `n'.
-	 */
-#define PRINT(ptr, len)                 \
-    {                                   \
-        iovp->iov_base = (ptr);         \
-        iovp->iov_len = (len);          \
-        uio.uio_resid += (len);         \
-        iovp++;                         \
-        if (++uio.uio_iovcnt >= NIOV) { \
-            if (__sprint(fp, &uio))     \
-                goto error;             \
-            iovp = iov;                 \
-        }                               \
+     * BEWARE, these `goto error' on error, and PAD uses `n'.
+     */
+#define PRINT(ptr, len)                                                                                                \
+    {                                                                                                                  \
+        iovp->iov_base = (ptr);                                                                                        \
+        iovp->iov_len = (len);                                                                                         \
+        uio.uio_resid += (len);                                                                                        \
+        iovp++;                                                                                                        \
+        if (++uio.uio_iovcnt >= NIOV) {                                                                                \
+            if (__sprint(fp, &uio))                                                                                    \
+                goto error;                                                                                            \
+            iovp = iov;                                                                                                \
+        }                                                                                                              \
     }
-#define PAD(howmany, with)            \
-    {                                 \
-        if ((n = (howmany)) > 0) {    \
-            while (n > PADSIZE) {     \
-                PRINT(with, PADSIZE); \
-                n -= PADSIZE;         \
-            }                         \
-            PRINT(with, n);           \
-        }                             \
+#define PAD(howmany, with)                                                                                             \
+    {                                                                                                                  \
+        if ((n = (howmany)) > 0) {                                                                                     \
+            while (n > PADSIZE) {                                                                                      \
+                PRINT(with, PADSIZE);                                                                                  \
+                n -= PADSIZE;                                                                                          \
+            }                                                                                                          \
+            PRINT(with, n);                                                                                            \
+        }                                                                                                              \
     }
-#define FLUSH()                                  \
-    {                                            \
-        if (uio.uio_resid && __sprint(fp, &uio)) \
-            goto error;                          \
-        uio.uio_iovcnt = 0;                      \
-        iovp = iov;                              \
+#define FLUSH()                                                                                                        \
+    {                                                                                                                  \
+        if (uio.uio_resid && __sprint(fp, &uio))                                                                       \
+            goto error;                                                                                                \
+        uio.uio_iovcnt = 0;                                                                                            \
+        iovp = iov;                                                                                                    \
     }
 
     /*
-	 * To extend shorts properly, we need both signed and unsigned
-	 * argument extraction methods.
-	 */
-#define SARG()                                                                            \
-    (flags & LONGINT ? va_arg(ap, long) : flags & SHORTINT ? (long)(short)va_arg(ap, int) \
-                                                           : (long)va_arg(ap, int))
-#define UARG()                                                                                  \
-    (flags & LONGINT ? va_arg(ap, u_long) : flags & SHORTINT ? (u_long)(u_short)va_arg(ap, int) \
-                                                             : (u_long)va_arg(ap, u_int))
+     * To extend shorts properly, we need both signed and unsigned
+     * argument extraction methods.
+     */
+#define SARG()                                                                                                         \
+    (flags & LONGINT ? va_arg(ap, long) : flags & SHORTINT ? (long)(short)va_arg(ap, int) : (long)va_arg(ap, int))
+#define UARG()                                                                                                         \
+    (flags & LONGINT    ? va_arg(ap, u_long)                                                                           \
+     : flags & SHORTINT ? (u_long)(u_short)va_arg(ap, int)                                                             \
+                        : (u_long)va_arg(ap, u_int))
 
     /* sorry, fprintf(read_only_file, "") returns EOF, not 0 */
     if (cantwrite(fp))
@@ -272,8 +267,8 @@ va_list ap;
     ret = 0;
 
     /*
-	 * Scan the format for conversions (`%' character).
-	 */
+     * Scan the format for conversions (`%' character).
+     */
     for (;;) {
         for (cp = fmt; (ch = *fmt) != '\0' && ch != '%'; fmt++)
             /* void */;
@@ -297,10 +292,10 @@ va_list ap;
         switch (ch) {
         case ' ':
             /*
-			 * ``If the space and + flags both appear, the space
-			 * flag will be ignored.''
-			 *	-- ANSI X3J11
-			 */
+             * ``If the space and + flags both appear, the space
+             * flag will be ignored.''
+             *	-- ANSI X3J11
+             */
             if (!sign)
                 sign = ' ';
             goto rflag;
@@ -309,11 +304,11 @@ va_list ap;
             goto rflag;
         case '*':
             /*
-			 * ``A negative field width argument is taken as a
-			 * - flag followed by a positive field width.''
-			 *	-- ANSI X3J11
-			 * They don't exclude field widths read from args.
-			 */
+             * ``A negative field width argument is taken as a
+             * - flag followed by a positive field width.''
+             *	-- ANSI X3J11
+             * They don't exclude field widths read from args.
+             */
             if ((width = va_arg(ap, int)) >= 0)
                 goto rflag;
             width = -width;
@@ -339,10 +334,10 @@ va_list ap;
             goto reswitch;
         case '0':
             /*
-			 * ``Note that 0 is taken as a flag, not as the
-			 * beginning of a field width.''
-			 *	-- ANSI X3J11
-			 */
+             * ``Note that 0 is taken as a flag, not as the
+             * beginning of a field width.''
+             *	-- ANSI X3J11
+             */
             flags |= ZEROPAD;
             goto rflag;
         case '1':
@@ -401,12 +396,12 @@ va_list ap;
             goto nosign;
         case 'p':
             /*
-			 * ``The argument shall be a pointer to void.  The
-			 * value of the pointer is converted to a sequence
-			 * of printable characters, in an implementation-
-			 * defined manner.''
-			 *	-- ANSI X3J11
-			 */
+             * ``The argument shall be a pointer to void.  The
+             * value of the pointer is converted to a sequence
+             * of printable characters, in an implementation-
+             * defined manner.''
+             *	-- ANSI X3J11
+             */
             ulval = (u_long)va_arg(ap, void*);
             base = 16;
             xdigs = "0123456789abcdef";
@@ -418,10 +413,10 @@ va_list ap;
                 cp = "(null)";
             if (prec >= 0) {
                 /*
-				 * can't use strlen; can only look for the
-				 * NUL in the first `prec' characters, and
-				 * strlen() will go further.
-				 */
+                 * can't use strlen; can only look for the
+                 * NUL in the first `prec' characters, and
+                 * strlen() will go further.
+                 */
                 char* p = memchr(cp, 0, prec);
 
                 if (p != NULL) {
@@ -457,23 +452,22 @@ va_list ap;
         nosign:
             sign = '\0';
             /*
-			 * ``... diouXx conversions ... if a precision is
-			 * specified, the 0 flag will be ignored.''
-			 *	-- ANSI X3J11
-			 */
+             * ``... diouXx conversions ... if a precision is
+             * specified, the 0 flag will be ignored.''
+             *	-- ANSI X3J11
+             */
         number:
             if ((dprec = prec) >= 0)
                 flags &= ~ZEROPAD;
 
             /*
-			 * ``The result of converting a zero value with an
-			 * explicit precision of zero is no characters.''
-			 *	-- ANSI X3J11
-			 */
+             * ``The result of converting a zero value with an
+             * explicit precision of zero is no characters.''
+             *	-- ANSI X3J11
+             */
             cp = buf + BUF;
             if (ulval != 0 || prec != 0)
-                cp = __ultoa(ulval, cp, base,
-                    flags & ALT, xdigs);
+                cp = __ultoa(ulval, cp, base, flags & ALT, xdigs);
             size = buf + BUF - cp;
             break;
         default: /* "%?" prints ?, unless ? is NUL */
@@ -488,19 +482,19 @@ va_list ap;
         }
 
         /*
-		 * All reasonable formats wind up here.  At this point, `cp'
-		 * points to a string which (if not flags&LADJUST) should be
-		 * padded out to `width' places.  If flags&ZEROPAD, it should
-		 * first be prefixed by any sign or other prefix; otherwise,
-		 * it should be blank padded before the prefix is emitted.
-		 * After any left-hand padding and prefixing, emit zeroes
-		 * required by a decimal [diouxX] precision, then print the
-		 * string proper, then emit zeroes required by any leftover
-		 * floating precision; finally, if LADJUST, pad with blanks.
-		 *
-		 * Compute actual size, so we know how much to pad.
-		 * fieldsz excludes decimal prec; realsz includes it.
-		 */
+         * All reasonable formats wind up here.  At this point, `cp'
+         * points to a string which (if not flags&LADJUST) should be
+         * padded out to `width' places.  If flags&ZEROPAD, it should
+         * first be prefixed by any sign or other prefix; otherwise,
+         * it should be blank padded before the prefix is emitted.
+         * After any left-hand padding and prefixing, emit zeroes
+         * required by a decimal [diouxX] precision, then print the
+         * string proper, then emit zeroes required by any leftover
+         * floating precision; finally, if LADJUST, pad with blanks.
+         *
+         * Compute actual size, so we know how much to pad.
+         * fieldsz excludes decimal prec; realsz includes it.
+         */
         fieldsz = size;
         if (sign)
             fieldsz++;

@@ -34,8 +34,7 @@
 #include <sys/prex.h>
 #include <stdio.h>
 
-u_long
-get_time(void)
+u_long get_time(void)
 {
     device_t rtc_dev;
     int error;

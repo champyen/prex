@@ -107,8 +107,8 @@ int execve(const char* path, char* const* argv, char* const* envp)
     } while (error == EINTR);
 
     /*
-	 * If exec() request is done successfully, control never comes here.
-	 */
+     * If exec() request is done successfully, control never comes here.
+     */
     errno = 0;
     if (error)
         errno = EIO;

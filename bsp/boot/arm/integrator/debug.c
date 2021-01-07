@@ -61,12 +61,12 @@
 
 /* Line control register (High) */
 #define LCRH_WLEN8 0x60 /* 8 bits */
-#define LCRH_FEN 0x10 /* Enable FIFO */
+#define LCRH_FEN 0x10   /* Enable FIFO */
 
 /* Control register */
 #define CR_UARTEN 0x0001 /* UART enable */
-#define CR_TXE 0x0100 /* Transmit enable */
-#define CR_RXE 0x0200 /* Receive enable */
+#define CR_TXE 0x0100    /* Transmit enable */
+#define CR_RXE 0x0200    /* Receive enable */
 
 /* Interrupt mask set/clear register */
 #define IMSC_RX 0x10 /* Receive interrupt mask */
@@ -96,14 +96,14 @@ void debug_init(void)
     unsigned int remainder;
     unsigned int fraction;
 
-    UART_CR = 0x0; /* Disable everything */
+    UART_CR = 0x0;     /* Disable everything */
     UART_ICR = 0x07ff; /* Clear all interrupt status */
 
     /*
-	 * Set baud rate:
-	 * IBRD = UART_CLK / (16 * BAUD_RATE)
-	 * FBRD = ROUND((64 * MOD(UART_CLK,(16 * BAUD_RATE))) / (16 * BAUD_RATE))
-	 */
+     * Set baud rate:
+     * IBRD = UART_CLK / (16 * BAUD_RATE)
+     * FBRD = ROUND((64 * MOD(UART_CLK,(16 * BAUD_RATE))) / (16 * BAUD_RATE))
+     */
     divider = UART_CLK / (16 * BAUD_RATE);
     remainder = UART_CLK % (16 * BAUD_RATE);
     fraction = (8 * remainder / BAUD_RATE) >> 1;
@@ -111,7 +111,7 @@ void debug_init(void)
     UART_IBRD = divider;
     UART_FBRD = fraction;
 
-    UART_LCRH = (LCRH_WLEN8 | LCRH_FEN); /* N, 8, 1, FIFO enable */
+    UART_LCRH = (LCRH_WLEN8 | LCRH_FEN);     /* N, 8, 1, FIFO enable */
     UART_CR = (CR_RXE | CR_TXE | CR_UARTEN); /* Enable UART */
 #endif
 }

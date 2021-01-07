@@ -55,8 +55,7 @@ struct driver random_driver = {
     /* shutdown */ NULL,
 };
 
-static int
-random_read(device_t dev, char* buf, size_t* nbyte, int blkno)
+static int random_read(device_t dev, char* buf, size_t* nbyte, int blkno)
 {
 
     /* TODO */
@@ -65,8 +64,7 @@ random_read(device_t dev, char* buf, size_t* nbyte, int blkno)
     return 0;
 }
 
-static int
-random_init(struct driver* self)
+static int random_init(struct driver* self)
 {
 
     device_create(self, "random", D_CHR);

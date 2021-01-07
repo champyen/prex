@@ -30,13 +30,13 @@
 /*
  * Stub to call kernel device interface
  */
-#define STUB(index, func)       \
-    .global func;               \
-    ENTRY(func)                 \
-    lis r11, dki_table @h;      \
-    ori r11, r11, dki_table @l; \
-    lwz r11, 0(r11);            \
-    li r0, index * 4;           \
-    lwzx r11, r11, r0;          \
-    mtctr r11;                  \
+#define STUB(index, func)                                                                                              \
+    .global func;                                                                                                      \
+    ENTRY(func)                                                                                                        \
+    lis r11, dki_table @h;                                                                                             \
+    ori r11, r11, dki_table @l;                                                                                        \
+    lwz r11, 0(r11);                                                                                                   \
+    li r0, index * 4;                                                                                                  \
+    lwzx r11, r11, r0;                                                                                                 \
+    mtctr r11;                                                                                                         \
     bctr

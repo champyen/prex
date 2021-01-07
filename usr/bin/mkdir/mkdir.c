@@ -67,9 +67,7 @@ int main(int argc, char* argv[])
             exitval = 1;
             continue;
         }
-        if (mkdir(*argv,
-                (mode_t)(S_IRWXU | S_IRWXG | S_IRWXO))
-            < 0) {
+        if (mkdir(*argv, (mode_t)(S_IRWXU | S_IRWXG | S_IRWXO)) < 0) {
             warn("%s", *argv);
             exitval = 1;
         }
@@ -78,8 +76,7 @@ int main(int argc, char* argv[])
     /* NOTREACHED */
 }
 
-static int
-    build(path) char* path;
+static int build(path) char* path;
 {
     struct stat sb;
     char* p;
@@ -104,8 +101,7 @@ static int
     return 0;
 }
 
-static void
-usage()
+static void usage()
 {
     (void)fprintf(stderr, "usage: mkdir [-p] directory ...\n");
     exit(1);

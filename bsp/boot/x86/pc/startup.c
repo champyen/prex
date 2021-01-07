@@ -42,14 +42,13 @@ extern paddr_t hi_mem;
  *
  * Note: We already got the memory size via BIOS call in head.S.
  */
-static void
-bootinfo_init(void)
+static void bootinfo_init(void)
 {
     struct bootinfo* bi = bootinfo;
 
     /*
-	 * Screen size
-	 */
+     * Screen size
+     */
 #ifdef SCREEN_80x25
     bi->video.text_x = 80;
     bi->video.text_y = 25;
@@ -59,16 +58,16 @@ bootinfo_init(void)
 #endif
 
     /*
-	 * Main memory
-	 */
+     * Main memory
+     */
     bi->ram[0].base = 0;
     bi->ram[0].size = (size_t)((1024 + hi_mem) * 1024);
     bi->ram[0].type = MT_USABLE;
     bi->nr_rams = 1;
 
     /*
-	 * Add BIOS ROM and VRAM area
-	 */
+     * Add BIOS ROM and VRAM area
+     */
     if (hi_mem != 0) {
         bi->ram[1].base = lo_mem * 1024;
         bi->ram[1].size = (size_t)((1024 - lo_mem) * 1024);

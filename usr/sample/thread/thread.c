@@ -48,8 +48,7 @@ static char stack[3][1024];
 /*
  * Run specified routine as new thread.
  */
-static int
-thread_run(void (*start)(void), void* stack)
+static int thread_run(void (*start)(void), void* stack)
 {
     thread_t t;
 
@@ -70,8 +69,7 @@ thread_run(void (*start)(void), void* stack)
 /*
  * Display 'AAAA...'
  */
-static void
-thread_A(void)
+static void thread_A(void)
 {
     int i;
 
@@ -89,8 +87,7 @@ thread_A(void)
 /*
  * Display 'BBBB...'
  */
-static void
-thread_B(void)
+static void thread_B(void)
 {
     int i;
 
@@ -108,8 +105,7 @@ thread_B(void)
 /*
  * Display 'CCCC...'
  */
-static void
-thread_C(void)
+static void thread_C(void)
 {
     int i;
 
@@ -134,26 +130,26 @@ int main(int argc, char* argv[])
     timer_sleep(1000, 0);
 
     /*
-	 * Raise this thread's priority.
-	 */
+     * Raise this thread's priority.
+     */
     error = thread_setpri(main_th, 100);
 
     /*
-	 * Run threads as normal priority thread.
-	 */
+     * Run threads as normal priority thread.
+     */
     thread_run(thread_A, stack[0] + 1024);
     thread_run(thread_B, stack[1] + 1024);
     thread_run(thread_C, stack[2] + 1024);
 
     /*
-	 * Lower this thread's priority.
-	 */
+     * Lower this thread's priority.
+     */
     error = thread_setpri(main_th, 254);
     /*
-	 * Since other threads have higher priority than
-	 * this thread, the control will come here only when
-	 * all other threads are terminated.
-	 */
+     * Since other threads have higher priority than
+     * this thread, the control will come here only when
+     * all other threads are terminated.
+     */
     printf("test - OK!\n");
     return 0;
 }

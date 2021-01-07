@@ -106,8 +106,7 @@ int vm_allocate(task_t task, void** addr, size_t size, int anywhere)
     return error;
 }
 
-static int
-do_allocate(vm_map_t map, void** addr, size_t size, int anywhere)
+static int do_allocate(vm_map_t map, void** addr, size_t size, int anywhere)
 {
     struct seg* seg;
     vaddr_t start, end;
@@ -118,8 +117,8 @@ do_allocate(vm_map_t map, void** addr, size_t size, int anywhere)
         return ENOMEM;
 
     /*
-	 * Allocate segment, and reserve pages for it.
-	 */
+     * Allocate segment, and reserve pages for it.
+     */
     if (anywhere) {
         size = round_page(size);
         if ((seg = seg_alloc(&map->head, size)) == NULL)
@@ -176,8 +175,7 @@ int vm_free(task_t task, void* addr)
     return error;
 }
 
-static int
-do_free(vm_map_t map, void* addr)
+static int do_free(vm_map_t map, void* addr)
 {
     struct seg* seg;
     vaddr_t va;
@@ -185,15 +183,15 @@ do_free(vm_map_t map, void* addr)
     va = trunc_page((vaddr_t)addr);
 
     /*
-	 * Find the target segment.
-	 */
+     * Find the target segment.
+     */
     seg = seg_lookup(&map->head, va, 1);
     if (seg == NULL || seg->addr != va || (seg->flags & SEG_FREE))
         return EINVAL; /* not allocated */
 
     /*
-	 * Relinquish use of the page if it is not shared and mapped.
-	 */
+     * Relinquish use of the page if it is not shared and mapped.
+     */
     if (!(seg->flags & SEG_SHARED) && !(seg->flags & SEG_MAPPED))
         page_free(seg->phys, seg->size);
 
@@ -239,8 +237,7 @@ int vm_attribute(task_t task, void* addr, int attr)
     return error;
 }
 
-static int
-do_attribute(vm_map_t map, void* addr, int attr)
+static int do_attribute(vm_map_t map, void* addr, int attr)
 {
     struct seg* seg;
     int new_flags = 0;
@@ -249,21 +246,21 @@ do_attribute(vm_map_t map, void* addr, int attr)
     va = trunc_page((vaddr_t)addr);
 
     /*
-	 * Find the target segment.
-	 */
+     * Find the target segment.
+     */
     seg = seg_lookup(&map->head, va, 1);
     if (seg == NULL || seg->addr != va || (seg->flags & SEG_FREE)) {
         return EINVAL; /* not allocated */
     }
     /*
-	 * The attribute of the mapped or shared segment can not be changed.
-	 */
+     * The attribute of the mapped or shared segment can not be changed.
+     */
     if ((seg->flags & SEG_MAPPED) || (seg->flags & SEG_SHARED))
         return EINVAL;
 
     /*
-	 * Check new and old flag.
-	 */
+     * Check new and old flag.
+     */
     if (seg->flags & SEG_WRITE) {
         if (!(attr & PROT_WRITE))
             new_flags = SEG_READ;
@@ -311,8 +308,7 @@ int vm_map(task_t target, void* addr, size_t size, void** alloc)
     return error;
 }
 
-static int
-do_map(vm_map_t map, void* addr, size_t size, void** alloc)
+static int do_map(vm_map_t map, void* addr, size_t size, void** alloc)
 {
     struct seg *seg, *tgt;
     vm_map_t curmap;
@@ -334,16 +330,16 @@ do_map(vm_map_t map, void* addr, size_t size, void** alloc)
     size = (size_t)(end - start);
 
     /*
-	 * Find the segment that includes target address
-	 */
+     * Find the segment that includes target address
+     */
     seg = seg_lookup(&map->head, start, size);
     if (seg == NULL || (seg->flags & SEG_FREE))
         return EINVAL; /* not allocated */
     tgt = seg;
 
     /*
-	 * Create new segment to map
-	 */
+     * Create new segment to map
+     */
     curmap = curtask->map;
     if ((seg = seg_create(&curmap->head, start, size)) == NULL)
         return ENOMEM;
@@ -360,8 +356,7 @@ do_map(vm_map_t map, void* addr, size_t size, void** alloc)
  * No memory is inherited.
  * Must be called with scheduler locked.
  */
-vm_map_t
-vm_create(void)
+vm_map_t vm_create(void)
 {
     struct vm_map* map;
 
@@ -408,12 +403,11 @@ void vm_terminate(vm_map_t map)
 /*
  * Duplicate specified virtual memory space.
  */
-vm_map_t
-vm_dup(vm_map_t org_map)
+vm_map_t vm_dup(vm_map_t org_map)
 {
     /*
-	 * This function is not supported with no MMU system.
-	 */
+     * This function is not supported with no MMU system.
+     */
     return NULL;
 }
 
@@ -450,8 +444,8 @@ int vm_load(vm_map_t map, struct module* mod, void** stack)
     DPRINTF(("Loading task:\'%s\'\n", mod->name));
 
     /*
-	 * Reserve text & data area
-	 */
+     * Reserve text & data area
+     */
     base = mod->text;
     size = mod->textsz + mod->datasz + mod->bsssz;
     if (size == 0)
@@ -470,8 +464,8 @@ int vm_load(vm_map_t map, struct module* mod, void** stack)
         memset((void*)(mod->data + mod->datasz), 0, mod->bsssz);
 
     /*
-	 * Create stack
-	 */
+     * Create stack
+     */
     return do_allocate(map, stack, DFLSTKSZ, 1);
 }
 
@@ -479,8 +473,7 @@ int vm_load(vm_map_t map, struct module* mod, void** stack)
  * Translate virtual address of current task to physical address.
  * Returns physical address on success, or NULL if no mapped memory.
  */
-paddr_t
-vm_translate(vaddr_t addr, size_t size)
+paddr_t vm_translate(vaddr_t addr, size_t size)
 {
 
     return (paddr_t)addr;
@@ -528,8 +521,7 @@ void vm_init(void)
 /*
  * Initialize segment.
  */
-static void
-seg_init(struct seg* seg)
+static void seg_init(struct seg* seg)
 {
 
     seg->next = seg->prev = seg;
@@ -544,8 +536,7 @@ seg_init(struct seg* seg)
  * Create new free segment after the specified segment.
  * Returns segment on success, or NULL on failure.
  */
-static struct seg*
-seg_create(struct seg* prev, vaddr_t addr, size_t size)
+static struct seg* seg_create(struct seg* prev, vaddr_t addr, size_t size)
 {
     struct seg* seg;
 
@@ -569,13 +560,12 @@ seg_create(struct seg* prev, vaddr_t addr, size_t size)
 /*
  * Delete specified segment.
  */
-static void
-seg_delete(struct seg* head, struct seg* seg)
+static void seg_delete(struct seg* head, struct seg* seg)
 {
 
     /*
-	 * If it is shared segment, unlink from shared list.
-	 */
+     * If it is shared segment, unlink from shared list.
+     */
     if (seg->flags & SEG_SHARED) {
         seg->sh_prev->sh_next = seg->sh_next;
         seg->sh_next->sh_prev = seg->sh_prev;
@@ -589,8 +579,7 @@ seg_delete(struct seg* head, struct seg* seg)
 /*
  * Find the segment at the specified address.
  */
-static struct seg*
-seg_lookup(struct seg* head, vaddr_t addr, size_t size)
+static struct seg* seg_lookup(struct seg* head, vaddr_t addr, size_t size)
 {
     struct seg* seg;
 
@@ -607,8 +596,7 @@ seg_lookup(struct seg* head, vaddr_t addr, size_t size)
 /*
  * Allocate free segment for specified size.
  */
-static struct seg*
-seg_alloc(struct seg* head, size_t size)
+static struct seg* seg_alloc(struct seg* head, size_t size)
 {
     struct seg* seg;
     paddr_t pa;
@@ -626,14 +614,13 @@ seg_alloc(struct seg* head, size_t size)
 /*
  * Delete specified free segment.
  */
-static void
-seg_free(struct seg* head, struct seg* seg)
+static void seg_free(struct seg* head, struct seg* seg)
 {
     ASSERT(seg->flags != SEG_FREE);
 
     /*
-	 * If it is shared segment, unlink from shared list.
-	 */
+     * If it is shared segment, unlink from shared list.
+     */
     if (seg->flags & SEG_SHARED) {
         seg->sh_prev->sh_next = seg->sh_next;
         seg->sh_next->sh_prev = seg->sh_prev;
@@ -649,8 +636,7 @@ seg_free(struct seg* head, struct seg* seg)
 /*
  * Reserve the segment at the specified address/size.
  */
-static struct seg*
-seg_reserve(struct seg* head, vaddr_t addr, size_t size)
+static struct seg* seg_reserve(struct seg* head, vaddr_t addr, size_t size)
 {
     struct seg* seg;
     paddr_t pa;

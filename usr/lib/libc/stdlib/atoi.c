@@ -30,9 +30,7 @@
 #include <stdlib.h>
 #include <stddef.h>
 
-int
-    atoi(str)
-        const char* str;
+int atoi(str) const char* str;
 {
     return ((int)strtol(str, (char**)NULL, 10));
 }

@@ -30,8 +30,7 @@
 #include <sys/cdefs.h>
 #include <string.h>
 
-char*
-    strcpy(to, from) char* to;
+char* strcpy(to, from) char* to;
 const char* from;
 {
     char* save = to;

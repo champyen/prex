@@ -72,9 +72,9 @@ int execvp(const char* name, char* const* argv)
         for (p = path; *path != 0 && *path != ':'; path++)
             continue;
         /*
-		 * It's a SHELL path -- double, leading and trailing colons
-		 * mean the current directory.
-		 */
+         * It's a SHELL path -- double, leading and trailing colons
+         * mean the current directory.
+         */
         if (p == path) {
             p = ".";
             lp = 1;
@@ -82,10 +82,10 @@ int execvp(const char* name, char* const* argv)
             lp = path - p;
 
         /*
-		 * If the path is too long complain.  This is a possible
-		 * security issue; given a way to make the path too long
-		 * the user may execute the wrong program.
-		 */
+         * If the path is too long complain.  This is a possible
+         * security issue; given a way to make the path too long
+         * the user may execute the wrong program.
+         */
         if (lp + ln + 2 > sizeof(buf))
             continue;
         memcpy(buf, p, lp);
@@ -110,8 +110,7 @@ int execvp(const char* name, char* const* argv)
             memp[0] = _PATH_BSHELL;
             memp[1] = bp;
             (void)memcpy(&memp[2], &argv[1], cnt * sizeof(*memp));
-            (void)execve(_PATH_BSHELL, (char* const*)memp,
-                environ);
+            (void)execve(_PATH_BSHELL, (char* const*)memp, environ);
             goto done;
         case ETXTBSY:
             if (etxtbsy < 3)

@@ -40,9 +40,7 @@ char* __findenv(const char*, int*);
  *	Set the value of the environmental variable "name" to be
  *	"value".  If rewrite is set, replace any current value.
  */
-int
-    setenv(name, value, rewrite)
-        const char* name;
+int setenv(name, value, rewrite) const char* name;
 const char* value;
 int rewrite;
 {
@@ -68,11 +66,10 @@ int rewrite;
         for (p = environ, cnt = 0; *p; ++p, ++cnt)
             ;
         if (alloced) { /* just increase size */
-            environ = (char**)realloc((char*)environ,
-                (size_t)(sizeof(char*) * (cnt + 2)));
+            environ = (char**)realloc((char*)environ, (size_t)(sizeof(char*) * (cnt + 2)));
             if (!environ)
                 return (-1);
-        } else { /* get new space */
+        } else {         /* get new space */
             alloced = 1; /* copy old entries into it */
             p = malloc((size_t)(sizeof(char*) * (cnt + 2)));
             if (!p)
@@ -84,9 +81,9 @@ int rewrite;
         offset = cnt;
     }
     for (c = (char*)name; *c && *c != '='; ++c)
-        ; /* no `=' in name */
+        ;                   /* no `=' in name */
     if (!(environ[offset] = /* name + `=' + value */
-            malloc((size_t)((int)(c - name) + l_value + 2))))
+          malloc((size_t)((int)(c - name) + l_value + 2))))
         return (-1);
     for (c = environ[offset]; (*c = *name++) && *c != '='; ++c)
         ;
@@ -99,9 +96,7 @@ int rewrite;
  * unsetenv(name) --
  *	Delete environmental variable "name".
  */
-void
-    unsetenv(name)
-        const char* name;
+void unsetenv(name) const char* name;
 {
     char** p;
     int offset;

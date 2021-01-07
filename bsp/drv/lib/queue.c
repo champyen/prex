@@ -46,8 +46,7 @@ void enqueue(queue_t head, queue_t item)
 /*
  * Remove and return element of head of queue
  */
-queue_t
-dequeue(queue_t head)
+queue_t dequeue(queue_t head)
 {
     queue_t item;
 

@@ -34,8 +34,7 @@
 void __assert(const char* file, int line, const char* exp)
 {
 
-    syslog(LOG_ERR, "assertion \"%s\" failed: file \"%s\", line %d\n",
-        exp, file, line);
+    syslog(LOG_ERR, "assertion \"%s\" failed: file \"%s\", line %d\n", exp, file, line);
     abort();
     /* NOTREACHED */
 }

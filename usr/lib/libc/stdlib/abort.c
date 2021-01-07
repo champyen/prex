@@ -41,17 +41,17 @@ void abort()
 
     sigfillset(&mask);
     /*
-	 * don't block SIGABRT to give any handler a chance; we ignore
-	 * any errors -- X311J doesn't allow abort to return anyway.
-	 */
+     * don't block SIGABRT to give any handler a chance; we ignore
+     * any errors -- X311J doesn't allow abort to return anyway.
+     */
     sigdelset(&mask, SIGABRT);
     (void)sigprocmask(SIG_SETMASK, &mask, (sigset_t*)NULL);
     (void)kill(getpid(), SIGABRT);
 
     /*
-	 * if SIGABRT ignored, or caught and the handler returns, do
-	 * it again, only harder.
-	 */
+     * if SIGABRT ignored, or caught and the handler returns, do
+     * it again, only harder.
+     */
     (void)signal(SIGABRT, SIG_DFL);
     (void)sigprocmask(SIG_SETMASK, &mask, (sigset_t*)NULL);
     (void)kill(getpid(), SIGABRT);

@@ -49,9 +49,9 @@
 /*
  * protection flags for vm_attribute()
  */
-#define PROT_READ 0x1 /* pages can be read */
+#define PROT_READ 0x1  /* pages can be read */
 #define PROT_WRITE 0x2 /* pages can be written */
-#define PROT_EXEC 0x4 /* pages can be executed */
+#define PROT_EXEC 0x4  /* pages can be executed */
 
 /*
  * Device open mode for device_open()
@@ -64,8 +64,8 @@
 /*
  * Scheduling policy
  */
-#define SCHED_FIFO 0 /* First In First Out */
-#define SCHED_RR 1 /* Round Robin */
+#define SCHED_FIFO 0  /* First In First Out */
+#define SCHED_RR 1    /* Round Robin */
 #define SCHED_OTHER 2 /* Other */
 
 /* Default exception handler */

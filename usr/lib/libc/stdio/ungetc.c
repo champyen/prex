@@ -35,8 +35,7 @@
 #include <string.h>
 #include "local.h"
 
-int
-    ungetc(c, fp) int c;
+int ungetc(c, fp) int c;
 FILE* fp;
 {
     if (c == EOF)
@@ -45,9 +44,9 @@ FILE* fp;
         __sinit();
     if ((fp->_flags & __SRD) == 0) {
         /*
-		 * Not already reading: no good unless reading-and-writing.
-		 * Otherwise, flush any current write stuff.
-		 */
+         * Not already reading: no good unless reading-and-writing.
+         * Otherwise, flush any current write stuff.
+         */
         if ((fp->_flags & __SRW) == 0)
             return (EOF);
         if (fp->_flags & __SWR) {
@@ -61,8 +60,8 @@ FILE* fp;
     c = (unsigned char)c;
 
     /*
-	 * If we are in the middle of ungetc'ing, just continue.
-	 */
+     * If we are in the middle of ungetc'ing, just continue.
+     */
     if (HASUB(fp)) {
         if (fp->_r >= fp->_ub._size)
             return (EOF);
@@ -73,10 +72,10 @@ FILE* fp;
     fp->_flags &= ~__SEOF;
 
     /*
-	 * If we can handle this by simply backing up, do so,
-	 * but never replace the original character.
-	 * (This makes sscanf() work when scanning `const' data.)
-	 */
+     * If we can handle this by simply backing up, do so,
+     * but never replace the original character.
+     * (This makes sscanf() work when scanning `const' data.)
+     */
     if (fp->_bf._base != NULL && fp->_p > fp->_bf._base && fp->_p[-1] == c) {
         fp->_p--;
         fp->_r++;
@@ -84,9 +83,9 @@ FILE* fp;
     }
 
     /*
-	 * Create an ungetc buffer.
-	 * we will use the `reserve' buffer.
-	 */
+     * Create an ungetc buffer.
+     * we will use the `reserve' buffer.
+     */
     fp->_ur = fp->_r;
     fp->_up = fp->_p;
     fp->_ub._base = fp->_ubuf;

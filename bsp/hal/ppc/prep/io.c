@@ -41,8 +41,7 @@ void outb(int port, u_char val)
     ISA_io[port] = val;
 }
 
-u_char
-inb(int port)
+u_char inb(int port)
 {
 
     return (ISA_io[port]);

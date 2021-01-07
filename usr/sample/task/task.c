@@ -40,8 +40,7 @@
 /*
  * Create new task
  */
-static task_t
-task_run(void (*func)(void))
+static task_t task_run(void (*func)(void))
 {
     char* stack;
     task_t task;
@@ -66,25 +65,24 @@ task_run(void (*func)(void))
 /*
  * Function to be called in new task.
  */
-static void
-hey_yo(void)
+static void hey_yo(void)
 {
     task_t self;
 
     /*
-	 * Display string
-	 */
+     * Display string
+     */
     self = task_self();
     printf("Task %x: Hey, Yo!\n", (u_int)self);
 
     /*
-	 * Wait 5 sec
-	 */
+     * Wait 5 sec
+     */
     timer_sleep(5000, 0);
 
     /*
-	 * Terminate current task.
-	 */
+     * Terminate current task.
+     */
     printf("Task %x: Bye!\n", (u_int)self);
     task_terminate(task_self());
 }

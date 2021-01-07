@@ -48,15 +48,14 @@ static device_t ttydev;
 /*
  * Send TTY signal.
  */
-static void
-tty_signal(int sig)
+static void tty_signal(int sig)
 {
     pid_t pgid;
 
     /*
-	 * Get the process group that was active when
-	 * the TTY signal was invoked.
-	 */
+     * Get the process group that was active when
+     * the TTY signal was invoked.
+     */
     if (device_ioctl(ttydev, TIOCGPGRP, &pgid) != 0)
         return;
 
@@ -68,13 +67,12 @@ tty_signal(int sig)
  * Catch TTY related signals and forward them
  * to the appropriate processes.
  */
-static void
-exception_handler(int sig)
+static void exception_handler(int sig)
 {
 
     /*
-	 * Handle signals from tty input.
-	 */
+     * Handle signals from tty input.
+     */
     switch (sig) {
     case SIGINT:
     case SIGQUIT:
@@ -106,8 +104,8 @@ void tty_init(void)
     task_t self;
 
     /*
-	 * Setup exception to receive signals from tty.
-	 */
+     * Setup exception to receive signals from tty.
+     */
     exception_setup(exception_handler);
 
     if (device_open("tty", 0, &ttydev) != 0) {
@@ -115,9 +113,9 @@ void tty_init(void)
         ttydev = NODEV;
     } else {
         /*
-		 * Notify the TTY driver to send all tty related
-		 * signals in system to this task.
-		 */
+         * Notify the TTY driver to send all tty related
+         * signals in system to this task.
+         */
         self = task_self();
         device_ioctl(ttydev, TIOCSETSIGT, &self);
     }

@@ -30,7 +30,8 @@
 /*
  * Command description
  */
-struct cmdentry {
+struct cmdentry
+{
     char* cmd;
     int (*func)(int, char**);
 };

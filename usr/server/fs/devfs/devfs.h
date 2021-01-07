@@ -41,8 +41,8 @@
 #define DPRINTF(a) dprintf a
 #define ASSERT(e) dassert(e)
 #else
-#define DPRINTF(a) \
-    do {           \
+#define DPRINTF(a)                                                                                                     \
+    do {                                                                                                               \
     } while (0)
 #define ASSERT(e)
 #endif
@@ -51,20 +51,20 @@
 #define malloc(s) malloc_r(s)
 #define free(p) free_r(p)
 #else
-#define mutex_init(m) \
-    do {              \
+#define mutex_init(m)                                                                                                  \
+    do {                                                                                                               \
     } while (0)
-#define mutex_destroy(m) \
-    do {                 \
+#define mutex_destroy(m)                                                                                               \
+    do {                                                                                                               \
     } while (0)
-#define mutex_lock(m) \
-    do {              \
+#define mutex_lock(m)                                                                                                  \
+    do {                                                                                                               \
     } while (0)
-#define mutex_unlock(m) \
-    do {                \
+#define mutex_unlock(m)                                                                                                \
+    do {                                                                                                               \
     } while (0)
-#define mutex_trylock(m) \
-    do {                 \
+#define mutex_trylock(m)                                                                                               \
+    do {                                                                                                               \
     } while (0)
 #endif
 

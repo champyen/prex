@@ -33,8 +33,7 @@
 #include <unistd.h>
 #include <stdio.h>
 
-char*
-    gets(buf) char* buf;
+char* gets(buf) char* buf;
 {
     int c;
     char* s;

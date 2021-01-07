@@ -78,8 +78,7 @@ int main(int argc, char* argv[])
     exit(1);
 }
 
-static void
-usage(void)
+static void usage(void)
 {
     (void)fprintf(stderr, "usage: printenv [name]\n");
     exit(1);

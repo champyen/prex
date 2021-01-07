@@ -96,8 +96,7 @@ int script_probe(struct exec* exec)
     strlcpy(script, exec->path, sizeof(script));
     exec->path = interp;
 
-    DPRINTF(("script_probe: interpreter=%s arg=%s script=%s\n",
-        interp, intarg, script));
+    DPRINTF(("script_probe: interpreter=%s arg=%s script=%s\n", interp, intarg, script));
 
     return PROBE_INDIRECT;
 }

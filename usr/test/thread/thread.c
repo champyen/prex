@@ -36,8 +36,7 @@
 
 static char stack[1024];
 
-static thread_t
-thread_run(void (*start)(void), char* stack)
+static thread_t thread_run(void (*start)(void), char* stack)
 {
     thread_t t;
     int error;
@@ -54,8 +53,7 @@ thread_run(void (*start)(void), char* stack)
     return t;
 }
 
-static void
-test_thread(void)
+static void test_thread(void)
 {
     printf("test thread is starting...\n");
     for (;;)
@@ -72,56 +70,56 @@ int main(int argc, char* argv[])
     self = thread_self();
 
     /*
-	 * Create new thread
-	 */
+     * Create new thread
+     */
     printf("Start test thread\n");
     t = thread_run(test_thread, stack + 1024);
 
     /*
-	 * Wait 1 sec
-	 */
+     * Wait 1 sec
+     */
     timer_sleep(3000, 0);
 
     /*
-	 * Suspend test thread
-	 */
+     * Suspend test thread
+     */
     printf("\nSuspend test thread\n");
     error = thread_suspend(t);
 
     /*
-	 * Wait 2 sec
-	 */
+     * Wait 2 sec
+     */
     timer_sleep(2000, 0);
 
     /*
-	 * Resume test thread
-	 */
+     * Resume test thread
+     */
     printf("\nResume test thread\n");
     error = thread_resume(t);
 
     /*
-	 * Wait 100 msec
-	 */
+     * Wait 100 msec
+     */
     timer_sleep(100, 0);
 
     /*
-	 * Suspend test thread
-	 */
+     * Suspend test thread
+     */
     thread_suspend(t);
 
     /*
-	 * Wait 2 sec
-	 */
+     * Wait 2 sec
+     */
     timer_sleep(2000, 0);
 
     /*
-	 * Resume test thread
-	 */
+     * Resume test thread
+     */
     thread_resume(t);
 
     /*
-	 * We can check this thread can run 10 times than test thread,
-	 */
+     * We can check this thread can run 10 times than test thread,
+     */
     for (;;)
         putchar('!');
 

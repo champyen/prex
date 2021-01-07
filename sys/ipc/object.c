@@ -101,9 +101,9 @@ int object_create(const char* name, object_t* objp)
         return EAGAIN;
     }
     /*
-	 * Check user buffer first. This can reduce the error
-	 * recovery for the subsequence resource allocations.
-	 */
+     * Check user buffer first. This can reduce the error
+     * recovery for the subsequence resource allocations.
+     */
     if (copyout(&obj, objp, sizeof(obj))) {
         sched_unlock();
         return EFAULT;
@@ -162,8 +162,7 @@ int object_valid(object_t obj)
     object_t tmp;
     list_t n;
 
-    for (n = list_first(&object_list); n != &object_list;
-         n = list_next(n)) {
+    for (n = list_first(&object_list); n != &object_list; n = list_next(n)) {
         tmp = list_entry(n, struct object, link);
         if (tmp == obj)
             return 1;
@@ -171,14 +170,12 @@ int object_valid(object_t obj)
     return 0;
 }
 
-static object_t
-object_find(const char* name)
+static object_t object_find(const char* name)
 {
     object_t obj;
     list_t n;
 
-    for (n = list_first(&object_list); n != &object_list;
-         n = list_next(n)) {
+    for (n = list_first(&object_list); n != &object_list; n = list_next(n)) {
         obj = list_entry(n, struct object, link);
         if (!strncmp(obj->name, name, MAXOBJNAME))
             return obj;
@@ -189,8 +186,7 @@ object_find(const char* name)
 /*
  * Deallocate an object-- the internal version of object_destory.
  */
-static void
-object_deallocate(object_t obj)
+static void object_deallocate(object_t obj)
 {
 
     msg_abort(obj);
@@ -231,8 +227,7 @@ void object_cleanup(task_t task)
     object_t obj;
 
     while (!list_empty(&task->objects)) {
-        obj = list_entry(list_first(&task->objects),
-            struct object, task_link);
+        obj = list_entry(list_first(&task->objects), struct object, task_link);
         object_deallocate(obj);
     }
 }

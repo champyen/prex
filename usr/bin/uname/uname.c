@@ -46,8 +46,7 @@
 #define SFLAG 0x08
 #define VFLAG 0x10
 
-static void
-usage(void)
+static void usage(void)
 {
     fprintf(stderr, "usage: uname [-amnsrv]\n");
     exit(1);

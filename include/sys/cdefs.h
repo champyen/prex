@@ -47,16 +47,17 @@
  *	#endif
  */
 #ifdef __GNUC__
-#define __GNUC_PREREQ__(x, y) \
-    ((__GNUC__ == (x) && __GNUC_MINOR__ >= (y)) || (__GNUC__ > (x)))
+#define __GNUC_PREREQ__(x, y) ((__GNUC__ == (x) && __GNUC_MINOR__ >= (y)) || (__GNUC__ > (x)))
 #else
 #define __GNUC_PREREQ__(x, y) 0
 #endif
 
 #if defined(__cplusplus)
-#define __BEGIN_DECLS extern "C" {
-#define __END_DECLS \
-    }               \
+#define __BEGIN_DECLS                                                                                                  \
+    extern "C"                                                                                                         \
+    {
+#define __END_DECLS                                                                                                    \
+    }                                                                                                                  \
     ;
 #else
 #define __BEGIN_DECLS
@@ -78,16 +79,16 @@
 #define __packed __attribute__((__packed__))
 #define __noreturn __attribute__((__noreturn__))
 #elif defined(__lint__)
-#define __packed /* delete */
+#define __packed   /* delete */
 #define __noreturn /* delete */
 #elif defined(__PCC__)
 #define __packed _Pragma("packed")
 #define __noreturn /* delete */
 #elif defined(__SUNPRO_C)
-#define __packed /* delete */
+#define __packed   /* delete */
 #define __noreturn /* delete */
 #else
-#define __packed \
+#define __packed                                                                                                       \
     error: no __packed for this compiler
 #define __noreturn /* delete */
 #endif

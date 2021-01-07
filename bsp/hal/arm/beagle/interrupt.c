@@ -74,14 +74,13 @@ volatile int irq_level;
  * Interrupt mapping table. As the number of interrupts on the
  * Beagle is > 32, we need a 2 dimensions array for the mask table
  */
-static int ipl_table[NIRQS]; /* vector -> level */
+static int ipl_table[NIRQS];                   /* vector -> level */
 static uint32_t mask_table[NIPLS][NIRQS >> 5]; /* level -> mask   */
 
 /*
  * Set mask for current ipl
  */
-static void
-update_mask(void)
+static void update_mask(void)
 {
     int i;
     uint32_t mask;
@@ -106,9 +105,9 @@ void interrupt_unmask(int vector, int level)
     ipl_table[vector] = level;
 
     /*
-	 * Unmask the target interrupt for all
-	 * lower interrupt levels.
-	 */
+     * Unmask the target interrupt for all
+     * lower interrupt levels.
+     */
     for (i = 0; i < level; i++)
         mask_table[i][vector >> 5] |= unmask;
 
@@ -156,7 +155,7 @@ void interrupt_handler(void)
     INTCPS_THRESHOLD = priority;
 
     bits = INTCPS_SIR_IRQ; /* Get interrupt source */
-    if (bits >= NIRQS) /* Ignore spurious interrupts */
+    if (bits >= NIRQS)     /* Ignore spurious interrupts */
         goto out;
     vector = bits & 0x7f; /* Get device firing the interrupt */
 
@@ -168,7 +167,7 @@ void interrupt_handler(void)
     update_mask();
 
     INTCPS_CONTROL = 0x01; /* Allow new IRQ on INTC side */
-    mpu_intc_sync(); /* Data synchronization barrier */
+    mpu_intc_sync();       /* Data synchronization barrier */
 
     /* Allow another interrupt that has higher priority */
     splon();

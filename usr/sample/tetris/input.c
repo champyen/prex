@@ -50,16 +50,15 @@
 #include "tetris.h"
 
 /* return true if the given timeval is positive */
-#define TV_POS(tv) \
-    ((tv)->tv_sec > 0 || ((tv)->tv_sec == 0 && (tv)->tv_usec > 0))
+#define TV_POS(tv) ((tv)->tv_sec > 0 || ((tv)->tv_sec == 0 && (tv)->tv_usec > 0))
 
 /* subtract timeval `sub' from `res' */
-#define TV_SUB(res, sub)              \
-    (res)->tv_sec -= (sub)->tv_sec;   \
-    (res)->tv_usec -= (sub)->tv_usec; \
-    if ((res)->tv_usec < 0) {         \
-        (res)->tv_usec += 1000000;    \
-        (res)->tv_sec--;              \
+#define TV_SUB(res, sub)                                                                                               \
+    (res)->tv_sec -= (sub)->tv_sec;                                                                                    \
+    (res)->tv_usec -= (sub)->tv_usec;                                                                                  \
+    if ((res)->tv_usec < 0) {                                                                                          \
+        (res)->tv_usec += 1000000;                                                                                     \
+        (res)->tv_sec--;                                                                                               \
     }
 
 /*
@@ -86,9 +85,9 @@ int rwait(struct timeval* tvp)
         timeout = 1000;
 
     /*
-	 * We don't have select() or poll() as for now.
-	 * This is replaced by polling TTY input queue via ioctl().
-	 */
+     * We don't have select() or poll() as for now.
+     * This is replaced by polling TTY input queue via ioctl().
+     */
     for (i = 0; i < timeout; i++) {
         ioctl(1, TIOCINQ, &ninq);
         if (ninq > 0)
@@ -151,14 +150,14 @@ int tgetchar(void)
     char c;
 
     /*
-	 * Reset timeleft to fallrate whenever it is not positive.
-	 * In any case, wait to see if there is any input.  If so,
-	 * take it, and update timeleft so that the next call to
-	 * tgetchar() will not wait as long.  If there is no input,
-	 * make timeleft zero or negative, and return -1.
-	 *
-	 * Most of the hard work is done by rwait().
-	 */
+     * Reset timeleft to fallrate whenever it is not positive.
+     * In any case, wait to see if there is any input.  If so,
+     * take it, and update timeleft so that the next call to
+     * tgetchar() will not wait as long.  If there is no input,
+     * make timeleft zero or negative, and return -1.
+     *
+     * Most of the hard work is done by rwait().
+     */
     if (!TV_POS(&timeleft)) {
         faster(); /* go faster */
         timeleft.tv_sec = 0;

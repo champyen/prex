@@ -78,10 +78,8 @@ typedef uint32_t* pte_t; /* page table entry */
 
 #define page_present(pte, virt) (pte[PAGE_TABLE(virt)] & PTE_PRESENT)
 
-#define vtopte(pgd, virt) \
-    (pte_t) ptokv((pgd)[PAGE_DIR(virt)] & PDE_ADDRESS)
+#define vtopte(pgd, virt) (pte_t) ptokv((pgd)[PAGE_DIR(virt)] & PDE_ADDRESS)
 
-#define ptetopg(pte, virt) \
-    ((pte)[PAGE_TABLE(virt)] & PTE_ADDRESS)
+#define ptetopg(pte, virt) ((pte)[PAGE_TABLE(virt)] & PTE_ADDRESS)
 
 #endif /* !_ARM_MMU_H */

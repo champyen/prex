@@ -32,7 +32,8 @@
 
 #include <sys/cdefs.h>
 
-struct queue {
+struct queue
+{
     struct queue* next;
     struct queue* prev;
 };
@@ -47,8 +48,7 @@ typedef struct queue* queue_t;
 #define queue_end(head, q) ((q) == (head))
 
 /* Get the struct for this entry */
-#define queue_entry(q, type, member) \
-    ((type*)((char*)(q) - (unsigned long)(&((type*)0)->member)))
+#define queue_entry(q, type, member) ((type*)((char*)(q) - (unsigned long)(&((type*)0)->member)))
 
 __BEGIN_DECLS
 void enqueue(queue_t, queue_t);

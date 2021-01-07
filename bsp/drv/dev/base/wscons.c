@@ -44,7 +44,8 @@
 #define DPRINTF(a)
 #endif
 
-struct esc_state {
+struct esc_state
+{
     int index;
     int arg1;
     int arg2;
@@ -53,19 +54,20 @@ struct esc_state {
     int saved_row;
 };
 
-struct wscons_softc {
-    device_t dev; /* our device */
-    struct tty tty; /* associated tty */
-    int row; /* current row */
-    int col; /* current col */
-    int nrows; /* number of rows */
-    int ncols; /* number of cols */
-    int attr; /* current attribute */
-    struct esc_state esc; /* escape state */
+struct wscons_softc
+{
+    device_t dev;                     /* our device */
+    struct tty tty;                   /* associated tty */
+    int row;                          /* current row */
+    int col;                          /* current col */
+    int nrows;                        /* number of rows */
+    int ncols;                        /* number of cols */
+    int attr;                         /* current attribute */
+    struct esc_state esc;             /* escape state */
     struct wscons_video_ops* vid_ops; /* video operations */
-    struct wscons_kbd_ops* kbd_ops; /* keyboard operations */
-    void* vid_aux; /* video private data */
-    void* kbd_aux; /* keyboard private data */
+    struct wscons_kbd_ops* kbd_ops;   /* keyboard operations */
+    void* vid_aux;                    /* video private data */
+    void* kbd_aux;                    /* keyboard private data */
 };
 
 static int wscons_init(struct driver*);
@@ -104,55 +106,49 @@ static struct consdev wsconsdev = {
     /* cnpollc */ wscons_cnpollc,
 };
 
-static const u_short ansi_colors[] = { 0, 4, 2, 6, 1, 5, 3, 7 };
+static const u_short ansi_colors[] = {0, 4, 2, 6, 1, 5, 3, 7};
 
 /*
  * Pointer to the wscons state. There can be only one instance.
  */
 static struct wscons_softc* wscons_softc;
 
-static int
-wscons_read(device_t dev, char* buf, size_t* nbyte, int blkno)
+static int wscons_read(device_t dev, char* buf, size_t* nbyte, int blkno)
 {
     struct tty* tty = &wscons_softc->tty;
 
     return tty_read(tty, buf, nbyte);
 }
 
-static int
-wscons_write(device_t dev, char* buf, size_t* nbyte, int blkno)
+static int wscons_write(device_t dev, char* buf, size_t* nbyte, int blkno)
 {
     struct tty* tty = &wscons_softc->tty;
 
     return tty_write(tty, buf, nbyte);
 }
 
-static int
-wscons_ioctl(device_t dev, u_long cmd, void* arg)
+static int wscons_ioctl(device_t dev, u_long cmd, void* arg)
 {
     struct tty* tty = &wscons_softc->tty;
 
     return tty_ioctl(tty, cmd, arg);
 }
 
-static void
-wscons_move_cursor(struct wscons_softc* sc)
+static void wscons_move_cursor(struct wscons_softc* sc)
 {
     struct wscons_video_ops* vops = sc->vid_ops;
 
     vops->cursor(sc->vid_aux, sc->row, sc->col);
 }
 
-static void
-wscons_set_attr(struct wscons_softc* sc)
+static void wscons_set_attr(struct wscons_softc* sc)
 {
     struct wscons_video_ops* vops = sc->vid_ops;
 
     vops->set_attr(sc->vid_aux, sc->attr);
 }
 
-static void
-wscons_clear(struct wscons_softc* sc)
+static void wscons_clear(struct wscons_softc* sc)
 {
     struct wscons_video_ops* vops = sc->vid_ops;
 
@@ -162,8 +158,7 @@ wscons_clear(struct wscons_softc* sc)
     wscons_move_cursor(sc);
 }
 
-static void
-wscons_scrollup(struct wscons_softc* sc)
+static void wscons_scrollup(struct wscons_softc* sc)
 {
     struct wscons_video_ops* vops = sc->vid_ops;
 
@@ -171,8 +166,7 @@ wscons_scrollup(struct wscons_softc* sc)
     vops->eraserows(sc->vid_aux, sc->nrows - 1, 1);
 }
 
-static void
-wscons_newline(struct wscons_softc* sc)
+static void wscons_newline(struct wscons_softc* sc)
 {
 
     sc->col = 0;
@@ -201,8 +195,7 @@ wscons_newline(struct wscons_softc* sc)
  *  ESC[K	: clear to end of line
  *  ESC[#m	: attribute (0=attribure off, 4=underline, 5=blink)
  */
-static int
-wscons_check_escape(struct wscons_softc* sc, char c)
+static int wscons_check_escape(struct wscons_softc* sc, char c)
 {
     struct esc_state* esc = &sc->esc;
     int move = 0;
@@ -368,8 +361,7 @@ reset:
     return 1;
 }
 
-static void
-wscons_putc(int c)
+static void wscons_putc(int c)
 {
     struct wscons_softc* sc = wscons_softc;
     struct wscons_video_ops* vops = sc->vid_ops;
@@ -407,8 +399,7 @@ wscons_putc(int c)
 /*
  * Start output operation.
  */
-static void
-wscons_start(struct tty* tp)
+static void wscons_start(struct tty* tp)
 {
     struct wscons_softc* sc = wscons_softc;
     int c;
@@ -420,8 +411,7 @@ wscons_start(struct tty* tp)
     tty_done(tp);
 }
 
-static int
-wscons_cngetc(device_t dev)
+static int wscons_cngetc(device_t dev)
 {
     struct wscons_softc* sc = wscons_softc;
     struct wscons_kbd_ops* kops = sc->kbd_ops;
@@ -429,8 +419,7 @@ wscons_cngetc(device_t dev)
     return kops->getc(sc->kbd_aux);
 }
 
-static void
-wscons_cnputc(device_t dev, int c)
+static void wscons_cnputc(device_t dev, int c)
 {
     struct wscons_softc* sc = wscons_softc;
 
@@ -438,8 +427,7 @@ wscons_cnputc(device_t dev, int c)
     wscons_move_cursor(sc);
 }
 
-static void
-wscons_cnpollc(device_t dev, int on)
+static void wscons_cnpollc(device_t dev, int on)
 {
     struct wscons_softc* sc = wscons_softc;
     struct wscons_kbd_ops* kops = sc->kbd_ops;
@@ -478,8 +466,7 @@ void wscons_attach_kbd(struct wscons_kbd_ops* ops, void* aux)
     sc->kbd_aux = aux;
 }
 
-static int
-wscons_init(struct driver* self)
+static int wscons_init(struct driver* self)
 {
     struct bootinfo* bi;
     struct wscons_softc* sc;

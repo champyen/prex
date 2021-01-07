@@ -65,8 +65,7 @@ struct rtc_ops pl030_ops = {
     /* settime */ pl030_settime,
 };
 
-static int
-pl030_gettime(void* aux, struct timeval* tv)
+static int pl030_gettime(void* aux, struct timeval* tv)
 {
 
     tv->tv_usec = 0;
@@ -75,14 +74,12 @@ pl030_gettime(void* aux, struct timeval* tv)
     return 0;
 }
 
-static int
-pl030_settime(void* aux, struct timeval* ts)
+static int pl030_settime(void* aux, struct timeval* ts)
 {
     return 0;
 }
 
-static int
-pl030_init(struct driver* self)
+static int pl030_init(struct driver* self)
 {
 
     rtc_attach(&pl030_ops, NULL);

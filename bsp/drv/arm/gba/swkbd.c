@@ -79,21 +79,22 @@
 #define CURSOR_WAIT 100 /* 100 msec */
 #define BUTTON_WAIT 200 /* 200 msec */
 
-struct swkbd_softc {
-    device_t dev; /* device object */
-    irq_t irq; /* irq handle */
+struct swkbd_softc
+{
+    device_t dev;  /* device object */
+    irq_t irq;     /* irq handle */
     timer_t timer; /* timer to prevent chattering */
 
-    int kbd_on; /* 0: direct input, 1: virtual KBD */
-    int kbd_page; /* video page to display keyboard */
-    int ignore_key; /* ignore key input if true */
-    u_int pos_x; /* cursor x position */
-    u_int pos_y; /* cursor y position */
+    int kbd_on;      /* 0: direct input, 1: virtual KBD */
+    int kbd_page;    /* video page to display keyboard */
+    int ignore_key;  /* ignore key input if true */
+    u_int pos_x;     /* cursor x position */
+    u_int pos_y;     /* cursor y position */
     int cursor_type; /* current cursor type */
 
-    int shift; /* shift key state */
-    int alt; /* alt key state */
-    int ctrl; /* control key state */
+    int shift;  /* shift key state */
+    int alt;    /* alt key state */
+    int ctrl;   /* control key state */
     int capslk; /* caps lock key staet */
 };
 
@@ -128,8 +129,7 @@ static struct swkbd_softc* swkbd_softc;
  *   Page1 ... Text & Normal keyboard
  *   Page2 ... Text & Shifted keyboard
  */
-static void
-swkbd_select_page(int page)
+static void swkbd_select_page(int page)
 {
 
     if (page == 0)
@@ -147,8 +147,7 @@ swkbd_select_page(int page)
 /*
  * Toggle keyboard type: normal or shift.
  */
-static void
-swkbd_toggle_shift(void)
+static void swkbd_toggle_shift(void)
 {
     struct swkbd_softc* sc = swkbd_softc;
     int page;
@@ -166,8 +165,7 @@ swkbd_toggle_shift(void)
  * Timer call back handler.
  * Just clear ignoring flag.
  */
-static void
-swkbd_timeout(void* arg)
+static void swkbd_timeout(void* arg)
 {
     struct swkbd_softc* sc = arg;
 
@@ -177,8 +175,7 @@ swkbd_timeout(void* arg)
 /*
  * Move cursor to point key.
  */
-static void
-swkbd_move_cursor(void)
+static void swkbd_move_cursor(void)
 {
     struct swkbd_softc* sc = swkbd_softc;
     uint16_t* oam = OAM;
@@ -232,8 +229,7 @@ swkbd_move_cursor(void)
 /*
  * Process key press
  */
-static void
-swkbd_key_press(void)
+static void swkbd_key_press(void)
 {
     struct swkbd_softc* sc = swkbd_softc;
     struct _key_info* ki;
@@ -288,8 +284,8 @@ swkbd_key_press(void)
     wscons_kbd_input(ac);
 
     /*
-	 * Reset meta key status
-	 */
+     * Reset meta key status
+     */
     if (sc->shift) {
         sc->shift = 0;
         swkbd_toggle_shift();
@@ -390,8 +386,7 @@ out:
 /*
  * Init keyboard image
  */
-static void
-swkbd_init_image(void)
+static void swkbd_init_image(void)
 {
     uint8_t bit;
     uint16_t val1, val2;
@@ -430,7 +425,7 @@ swkbd_init_image(void)
         }
     }
 
-    pal[3] = RGB(0, 0, 31); /* Kbd bg color */
+    pal[3] = RGB(0, 0, 31);     /* Kbd bg color */
     pal[255] = RGB(28, 28, 28); /* Kbd color */
 
     /* Setup video */
@@ -443,8 +438,7 @@ swkbd_init_image(void)
 /*
  * Initialize keyboard cursor
  */
-static void
-swkbd_init_cursor(void)
+static void swkbd_init_cursor(void)
 {
     int i, j;
     uint8_t bit;
@@ -476,7 +470,7 @@ swkbd_init_cursor(void)
     for (i = 0; i < 7; i++) {
         oam[0] = (uint16_t)(0x6000 + 160); /* 256 color, Horizontal */
         oam[1] = (uint16_t)(0x8000 + 240); /* 32x16 */
-        oam[2] = (uint16_t)(i * 16); /* Tile number */
+        oam[2] = (uint16_t)(i * 16);       /* Tile number */
         oam += 4;
     }
     /* for space key */
@@ -490,8 +484,7 @@ swkbd_init_cursor(void)
 /*
  * Initialize
  */
-static int
-swkbd_init(struct driver* self)
+static int swkbd_init(struct driver* self)
 {
     struct swkbd_softc* sc;
     device_t dev;

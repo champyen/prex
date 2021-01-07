@@ -53,17 +53,16 @@ extern void* exception_vector_end;
  */
 struct mmumap mmumap_table[] = {
     /*
-	 * Physical memory
-	 */
-    { 0x80000000, 0x00000000, 0x9000000, VMT_RAM },
+     * Physical memory
+     */
+    {0x80000000, 0x00000000, 0x9000000, VMT_RAM},
 
     /*
-	 * ISA I/O space
-	 */
-    { 0xf0000000, 0x80000000, 0xf000, VMT_IO },
+     * ISA I/O space
+     */
+    {0xf0000000, 0x80000000, 0xf000, VMT_IO},
 
-    { 0, 0, 0, 0 }
-};
+    {0, 0, 0, 0}};
 #endif
 
 /*
@@ -78,8 +77,7 @@ void machine_idle(void)
 /*
  * Cause PReP machine reset.
  */
-static void
-machine_reset(void)
+static void machine_reset(void)
 {
     u_char val;
 
@@ -142,19 +140,19 @@ void machine_startup(void)
     void* vector_offset = 0;
 
     /*
-	 * Reserve system pages.
-	 */
+     * Reserve system pages.
+     */
     page_reserve(kvtop(SYSPAGE), SYSPAGESZ);
 
     /*
-	 * Copy exception vectors.
-	 */
+     * Copy exception vectors.
+     */
     memcpy(vector_offset, &exception_vector, 0x3000);
 
 #ifdef CONFIG_MMU
     /*
-	 * Initialize MMU
-	 */
+     * Initialize MMU
+     */
     mmu_init(mmumap_table);
 #endif
 }

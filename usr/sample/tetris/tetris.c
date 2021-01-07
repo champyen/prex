@@ -55,14 +55,14 @@
 #include "tetris.h"
 
 #ifdef __gba__
-static char keys[6] = { K_LEFT, 'A', K_RGHT, K_DOWN, '\n', '\n' };
+static char keys[6] = {K_LEFT, 'A', K_RGHT, K_DOWN, '\n', '\n'};
 #else
 static char* keys = "jkl pq";
 #endif
 
 cell board[B_SIZE]; /* 1 => occupied, 0 => empty */
-int Rows, Cols; /* current screen size */
-int score; /* the obvious thing */
+int Rows, Cols;     /* current screen size */
+int score;          /* the obvious thing */
 char key_msg[100];
 long fallrate; /* less than 1 million; smaller => faster */
 
@@ -74,8 +74,7 @@ void usage(void);
  * along with another (hidden) row underneath that.  Also, the left and
  * right edges are set.
  */
-static void
-setup_board(void)
+static void setup_board(void)
 {
     int i;
     cell* p;
@@ -88,8 +87,7 @@ setup_board(void)
 /*
  * Elide any full active rows.
  */
-static void
-elide(void)
+static void elide(void)
 {
     int i, j, base;
     cell* p;
@@ -129,9 +127,7 @@ int main(int argc, char* argv[])
         case 'l':
             level = atoi(optarg);
             if (level < MINLEVEL || level > MAXLEVEL) {
-                (void)fprintf(stderr,
-                    "tetris: level must be from %d to %d",
-                    MINLEVEL, MAXLEVEL);
+                (void)fprintf(stderr, "tetris: level must be from %d to %d", MINLEVEL, MAXLEVEL);
                 exit(1);
             }
             break;
@@ -160,10 +156,8 @@ int main(int argc, char* argv[])
         }
     }
 
-    sprintf(key_msg,
-        "%s - left   %s - rotate   %s - right   %s - drop   %s - pause   %s - quit",
-        key_write[0], key_write[1], key_write[2], key_write[3],
-        key_write[4], key_write[5]);
+    sprintf(key_msg, "%s - left   %s - rotate   %s - right   %s - drop   %s - pause   %s - quit", key_write[0],
+            key_write[1], key_write[2], key_write[3], key_write[4], key_write[5]);
 #endif
 
     (void)signal(SIGINT, onintr);
@@ -186,25 +180,25 @@ int main(int argc, char* argv[])
         c = tgetchar();
         if (c < 0) {
             /*
-			 * Timeout.  Move down if possible.
-			 */
+             * Timeout.  Move down if possible.
+             */
             if (fits_in(curshape, pos + B_COLS)) {
                 pos += B_COLS;
                 continue;
             }
 
             /*
-			 * Put up the current shape `permanently',
-			 * bump score, and elide any full rows.
-			 */
+             * Put up the current shape `permanently',
+             * bump score, and elide any full rows.
+             */
             place(curshape, pos, 1);
             score++;
             elide();
 
             /*
-			 * Choose a new shape.  If it does not fit,
-			 * the game is over.
-			 */
+             * Choose a new shape.  If it does not fit,
+             * the game is over.
+             */
             curshape = randshape();
             pos = A_FIRST * B_COLS + (B_COLS / 2) - 1;
             if (!fits_in(curshape, pos))
@@ -213,8 +207,8 @@ int main(int argc, char* argv[])
         }
 
         /*
-		 * Handle command keys.
-		 */
+         * Handle command keys.
+         */
         if (c == keys[5]) {
             /* quit */
             break;
@@ -269,8 +263,7 @@ int main(int argc, char* argv[])
     scr_clear();
     scr_end();
 
-    (void)printf("Your score:  %d point%s  x  level %d  =  %d\n",
-        score, score == 1 ? "" : "s", level, score * level);
+    (void)printf("Your score:  %d point%s  x  level %d  =  %d\n", score, score == 1 ? "" : "s", level, score * level);
     exit(0);
 }
 

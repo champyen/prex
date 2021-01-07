@@ -56,8 +56,7 @@ void thread_run(void (*start)(void), void* stack)
  * The main routine create 10 copy of this thread. But, since the
  * initial semaphore value is 3, only 3 threads can run at same time.
  */
-static void
-new_thread(void)
+static void new_thread(void)
 {
     thread_t t;
 
@@ -66,19 +65,19 @@ new_thread(void)
     thread_yield();
 
     /*
-	 * Acquire semaphore
-	 */
+     * Acquire semaphore
+     */
     sem_wait(&sem, 0);
 
     /*
-	 * Sleep 2000 ms
-	 */
+     * Sleep 2000 ms
+     */
     printf("Running thread=%x\n", (u_int)t);
     timer_sleep(2000, 0);
 
     /*
-	 * Release semaphore
-	 */
+     * Release semaphore
+     */
     sem_post(&sem);
 
     printf("End thread=%x\n", (u_int)t);
@@ -93,24 +92,24 @@ int main(int argc, char* argv[])
     printf("Semaphore sample program\n");
 
     /*
-	 * Initialize semaphore with initial count 3
-	 */
+     * Initialize semaphore with initial count 3
+     */
     sem_init(&sem, 3);
 
     /*
-	 * Boost the priority of this thread
-	 */
+     * Boost the priority of this thread
+     */
     thread_setpri(thread_self(), 100);
 
     /*
-	 * Create 10 threads
-	 */
+     * Create 10 threads
+     */
     for (i = 0; i < 10; i++)
         thread_run(new_thread, stack[i] + 1024);
 
     /*
-	 * Wait...
-	 */
+     * Wait...
+     */
     thread_suspend(thread_self());
 
     return 0;

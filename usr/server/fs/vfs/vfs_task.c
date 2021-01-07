@@ -66,8 +66,7 @@ static mutex_t task_lock = MUTEX_INITIALIZER;
  * Convert task ID to a task structure.
  * Returns locked task. Caller must unlock it after using it.
  */
-struct task*
-task_lookup(task_t task)
+struct task* task_lookup(task_t task)
 {
     list_t head, n;
     struct task* t;
@@ -157,8 +156,7 @@ void task_unlock(struct task* t)
  * Convert a file descriptor into a pointer
  * to a file structre.
  */
-file_t
-task_getfp(struct task* t, int fd)
+file_t task_getfp(struct task* t, int fd)
 {
 
     if (fd < 0 || fd >= OPEN_MAX)
@@ -185,8 +183,8 @@ int task_newfd(struct task* t)
     int fd;
 
     /*
-	 * Find the smallest empty slot in the fd array.
-	 */
+     * Find the smallest empty slot in the fd array.
+     */
     for (fd = 0; fd < OPEN_MAX; fd++) {
         if (t->t_ofile[fd] == NULL)
             break;
@@ -296,8 +294,7 @@ void task_dump(void)
         head = &task_table[i];
         for (n = list_first(head); n != head; n = list_next(n)) {
             t = list_entry(n, struct task, t_link);
-            dprintf(" %08x %7x %s\n", (int)t->t_taskid, t->t_nopens,
-                t->t_cwd);
+            dprintf(" %08x %7x %s\n", (int)t->t_taskid, t->t_nopens, t->t_cwd);
         }
     }
     dprintf("\n");

@@ -34,8 +34,7 @@
 #include <sys/prex.h>
 #include <stdio.h>
 
-static void
-my_exception(int code)
+static void my_exception(int code)
 {
     printf("Get exception code=%x\n", code);
 

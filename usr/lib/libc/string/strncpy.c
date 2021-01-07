@@ -37,8 +37,7 @@
  * Copy src to dst, truncating or null-padding to always copy n bytes.
  * Return dst.
  */
-char*
-    strncpy(dst, src, n) char* dst;
+char* strncpy(dst, src, n) char* dst;
 const char* src;
 size_t n;
 {

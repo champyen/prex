@@ -38,8 +38,7 @@
 
 static void* ptr[NR_ALLOCS];
 
-static char*
-alloc(int buflen)
+static char* alloc(int buflen)
 {
     char *p, *q;
     int i;
@@ -61,8 +60,7 @@ alloc(int buflen)
     return p;
 }
 
-static void
-test_1(void)
+static void test_1(void)
 {
     char* p;
 
@@ -84,8 +82,7 @@ test_1(void)
     printf("test_1 - done\n");
 }
 
-static void
-test_2(void)
+static void test_2(void)
 {
     int i, j;
 
@@ -118,8 +115,7 @@ test_2(void)
     printf("test_2 - done\n");
 }
 
-static void
-test_3(void)
+static void test_3(void)
 {
     char* p;
 

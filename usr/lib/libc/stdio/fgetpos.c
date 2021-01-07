@@ -32,9 +32,7 @@
 
 #include <stdio.h>
 
-int
-    fgetpos(fp, pos)
-        FILE* fp;
+int fgetpos(fp, pos) FILE* fp;
 fpos_t* pos;
 {
     return ((*pos = (fpos_t)ftell(fp)) == (fpos_t)-1);

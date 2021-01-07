@@ -71,16 +71,15 @@ int main(int argc, char* argv[])
     thread_setpri(thread_self(), pri - 1);
 
     task = task_self();
-    error = vm_allocate(task, (void**)&thread,
-        sizeof(thread_t) * NR_THREADS, 1);
+    error = vm_allocate(task, (void**)&thread, sizeof(thread_t) * NR_THREADS, 1);
     if (error)
         panic("vm_allocate is failed");
 
     sys_time(&start);
 
     /*
-	 * Create threads
-	 */
+     * Create threads
+     */
     for (i = 0; i < NR_THREADS; i++) {
         if (thread_create(task, &thread[i]) != 0)
             panic("thread_create is failed");
@@ -93,8 +92,8 @@ int main(int argc, char* argv[])
     }
 
     /*
-	 * Teminate threads
-	 */
+     * Teminate threads
+     */
     for (i = 0; i < NR_THREADS; i++)
         thread_terminate(thread[i]);
 
@@ -102,9 +101,7 @@ int main(int argc, char* argv[])
 
     vm_free(task, thread);
 
-    printf("Complete. The score is %d msec (%d ticks).\n",
-        (int)((end - start) * 1000 / info.hz),
-        (int)(end - start));
+    printf("Complete. The score is %d msec (%d ticks).\n", (int)((end - start) * 1000 / info.hz), (int)(end - start));
 
     return 0;
 }

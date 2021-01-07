@@ -44,8 +44,7 @@
 #define FR_RXFE 0x10 /* Receive FIFO empty */
 #define FR_TXFF 0x20 /* Transmit FIFO full */
 
-static void
-serial_putc(char c)
+static void serial_putc(char c)
 {
 
     while (UART_FR & FR_TXFF)

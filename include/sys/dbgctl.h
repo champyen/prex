@@ -30,11 +30,13 @@
 #ifndef _SYS_DBGCTL_H
 #define _SYS_DBGCTL_H
 
-struct diag_ops {
+struct diag_ops
+{
     void (*puts)(char*);
 };
 
-struct abort_ops {
+struct abort_ops
+{
     void (*abort)(void);
 };
 
@@ -42,12 +44,12 @@ struct abort_ops {
  * Debug control code
  */
 #define DBGC_LOGSIZE 0x0001 /* return log size */
-#define DBGC_GETLOG 0x0002 /* get message log */
-#define DBGC_TRACE 0x0003 /* trace thread */
+#define DBGC_GETLOG 0x0002  /* get message log */
+#define DBGC_TRACE 0x0003   /* trace thread */
 
 #ifdef KERNEL
 #define DBGC_DUMPTRAP 0x8001 /* dump trap frame */
-#define DBGC_SETDIAG 0x8002 /* set diag handler */
+#define DBGC_SETDIAG 0x8002  /* set diag handler */
 #define DBGC_SETABORT 0x8003 /* set abort handler */
 #endif
 #endif /* !_SYS_DBGCTL_H */

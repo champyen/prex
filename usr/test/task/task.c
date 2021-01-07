@@ -39,8 +39,7 @@
 
 static char stack[NR_THREADS][1024];
 
-static void
-test_thread(void)
+static void test_thread(void)
 {
     printf("New thread %x is started\n", (u_int)thread_self());
 
@@ -60,13 +59,13 @@ int main(int argc, char* argv[])
     sys_log("Task test program\n");
 
     /*
-	 * Boost priority of this thread
-	 */
+     * Boost priority of this thread
+     */
     thread_setpri(thread_self(), 90);
 
     /*
-	 * Create test task
-	 */
+     * Create test task
+     */
 #ifdef CONFIG_MMU
     error = task_create(task_self(), VM_COPY, &task);
 #else
@@ -78,8 +77,8 @@ int main(int argc, char* argv[])
     }
 
     /*
-	 * Run threads
-	 */
+     * Run threads
+     */
     for (i = 0; i < NR_THREADS; i++) {
         error = thread_create(task, &t);
         printf("thread_create: error=%d\n", error);
@@ -89,21 +88,21 @@ int main(int argc, char* argv[])
     }
 
     /*
-	 * Sleep for a while
-	 */
+     * Sleep for a while
+     */
     timer_sleep(1000, 0);
 
     /*
-	 * Suspend test task
-	 */
+     * Suspend test task
+     */
     printf("\nSuspend test task.\n");
     error = task_suspend(task);
     if (error)
         panic("task suspend failed");
 
     /*
-	 * Sleep for a while
-	 */
+     * Sleep for a while
+     */
     printf("Sleep\n");
     timer_sleep(500, 0);
 
@@ -113,8 +112,8 @@ int main(int argc, char* argv[])
         panic("task resume failed");
 
     /*
-	 * Sleep for a while
-	 */
+     * Sleep for a while
+     */
     timer_sleep(3000, 0);
 
     printf("\nResume task, again.\n");

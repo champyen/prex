@@ -64,10 +64,11 @@
 #define SAMPLING_TICK mstohz(SAMPLING_RATE)
 #define WEIGHT 3
 
-struct cpufreq_softc {
-    int enable; /* true if enabled */
-    device_t dev; /* device object */
-    struct timer timer; /* performance sampling timer */
+struct cpufreq_softc
+{
+    int enable;              /* true if enabled */
+    device_t dev;            /* device object */
+    struct timer timer;      /* performance sampling timer */
     struct cpufreq_ops* ops; /* low level h/w operations */
 };
 
@@ -99,11 +100,11 @@ struct driver cpufreq_driver = {
  */
 static u_long last_cputicks;
 static u_long last_idleticks;
-static int cur_speed; /* current CPU speed (%) */
-static int max_speed; /* maximum CPU speed (%) */
-static int min_speed; /* minimum CPU speed (%) */
-static u_long avg_workload; /* average workload */
-static u_long avg_deadline; /* average deadline */
+static int cur_speed;        /* current CPU speed (%) */
+static int max_speed;        /* maximum CPU speed (%) */
+static int min_speed;        /* minimum CPU speed (%) */
+static u_long avg_workload;  /* average workload */
+static u_long avg_deadline;  /* average deadline */
 static u_long excess_cycles; /* cycles left over from the last interval */
 
 /*
@@ -123,8 +124,7 @@ static u_long excess_cycles; /* cycles left over from the last interval */
  *   Proc. 1st Int'l Conference on Mobile Computing and Networking,
  *   Nov 1995.
  */
-static void
-cpufreq_predict_max_speed(u_long run_cycles, u_long idle_cycles)
+static void cpufreq_predict_max_speed(u_long run_cycles, u_long idle_cycles)
 {
     u_long new_workload, new_deadline;
 
@@ -138,10 +138,8 @@ cpufreq_predict_max_speed(u_long run_cycles, u_long idle_cycles)
     if (max_speed < 50)
         max_speed = 50;
 
-    DPRINTF(("cpufreq: new_workload=%u new_deadline=%u\n",
-        new_workload, new_deadline));
-    DPRINTF(("cpufreq: avg_workload=%u avg_deadline=%u\n",
-        avg_workload, avg_deadline));
+    DPRINTF(("cpufreq: new_workload=%u new_deadline=%u\n", new_workload, new_deadline));
+    DPRINTF(("cpufreq: avg_workload=%u avg_deadline=%u\n", avg_workload, avg_deadline));
     DPRINTF(("cpufreq: max_speed=%d\n", max_speed));
 }
 
@@ -168,8 +166,7 @@ cpufreq_predict_max_speed(u_long run_cycles, u_long idle_cycles)
  *   1st Symposium on Operating Systems Design and Implementation,
  *   pages 13-23, November 1994.
  */
-static int
-cpufreq_predict_cpu_speed(u_long run_cycles, u_long idle_cycles)
+static int cpufreq_predict_cpu_speed(u_long run_cycles, u_long idle_cycles)
 {
     u_long next_excess;
     u_int run_percent;
@@ -194,8 +191,7 @@ cpufreq_predict_cpu_speed(u_long run_cycles, u_long idle_cycles)
     if (new_speed < min_speed)
         new_speed = min_speed;
 
-    DPRINTF(("cpufreq: run_percent=%d next_excess=%d new_speed=%d\n\n",
-        run_percent, next_excess, new_speed));
+    DPRINTF(("cpufreq: run_percent=%d next_excess=%d new_speed=%d\n\n", run_percent, next_excess, new_speed));
 
     excess_cycles = next_excess;
 
@@ -205,8 +201,7 @@ cpufreq_predict_cpu_speed(u_long run_cycles, u_long idle_cycles)
 /*
  * Timer callback routine.
  */
-static void
-cpufreq_timeout(void* arg)
+static void cpufreq_timeout(void* arg)
 {
     struct cpufreq_softc* sc = arg;
     struct timerinfo info;
@@ -214,23 +209,22 @@ cpufreq_timeout(void* arg)
     u_long idle_cycles, run_cycles;
 
     /*
-	 * Get run/idle cycles.
-	 */
+     * Get run/idle cycles.
+     */
     sysinfo(INFO_TIMER, &info);
     idle_cycles = info.idleticks - last_idleticks;
     run_cycles = info.cputicks - last_cputicks - idle_cycles;
 
-    DPRINTF(("cpufreq: run_cycles=%d idle_cycles=%d cur_speed=%d\n",
-        run_cycles, idle_cycles, cur_speed));
+    DPRINTF(("cpufreq: run_cycles=%d idle_cycles=%d cur_speed=%d\n", run_cycles, idle_cycles, cur_speed));
 
     /*
-	 * Predict max CPU speed.
-	 */
+     * Predict max CPU speed.
+     */
     cpufreq_predict_max_speed(run_cycles, idle_cycles);
 
     /*
-	 * Predict next CPU speed.
-	 */
+     * Predict next CPU speed.
+     */
     new_speed = cpufreq_predict_cpu_speed(run_cycles, idle_cycles);
     if (new_speed != cur_speed) {
         sc->ops->setperf(new_speed);
@@ -246,8 +240,7 @@ cpufreq_timeout(void* arg)
 /*
  * Enable DVS operation
  */
-static void
-cpufreq_enable(struct cpufreq_softc* sc)
+static void cpufreq_enable(struct cpufreq_softc* sc)
 {
     struct timerinfo info;
 
@@ -260,14 +253,14 @@ cpufreq_enable(struct cpufreq_softc* sc)
     sc->enable = 1;
 
     /*
-	 * Initialize DVS parameters.
-	 */
+     * Initialize DVS parameters.
+     */
     sysinfo(INFO_TIMER, &info);
     last_cputicks = info.cputicks;
     last_idleticks = info.idleticks;
 
     max_speed = 100; /* max 100% */
-    min_speed = 5; /* min   5% */
+    min_speed = 5;   /* min   5% */
     cur_speed = sc->ops->getperf();
 
     excess_cycles = 0;
@@ -280,8 +273,7 @@ cpufreq_enable(struct cpufreq_softc* sc)
 /*
  * Disable DVS operation
  */
-static void
-cpufreq_disable(struct cpufreq_softc* sc)
+static void cpufreq_disable(struct cpufreq_softc* sc)
 {
 
     DPRINTF(("cpufreq: disable\n"));
@@ -297,8 +289,7 @@ cpufreq_disable(struct cpufreq_softc* sc)
     cur_speed = 100;
 }
 
-static int
-cpufreq_ioctl(device_t dev, u_long cmd, void* arg)
+static int cpufreq_ioctl(device_t dev, u_long cmd, void* arg)
 {
     struct cpufreq_softc* sc = device_private(dev);
     struct cpufreqinfo info;
@@ -318,8 +309,7 @@ cpufreq_ioctl(device_t dev, u_long cmd, void* arg)
     return 0;
 }
 
-static int
-cpufreq_devctl(device_t dev, u_long cmd, void* arg)
+static int cpufreq_devctl(device_t dev, u_long cmd, void* arg)
 {
     struct cpufreq_softc* sc = device_private(dev);
     int error = 0;
@@ -365,8 +355,7 @@ void cpufreq_attach(struct cpufreq_ops* ops)
         cpufreq_enable(sc);
 }
 
-static int
-cpufreq_init(struct driver* self)
+static int cpufreq_init(struct driver* self)
 {
 
     return 0;

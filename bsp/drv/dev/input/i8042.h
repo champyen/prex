@@ -40,13 +40,13 @@
 #define KMC_STS 0x64
 
 /* Status */
-#define STS_PERR 0x80 /* Parity error */
-#define STS_TMO 0x40 /* Timeout */
+#define STS_PERR 0x80   /* Parity error */
+#define STS_TMO 0x40    /* Timeout */
 #define STS_AUXOBF 0x20 /* Mouse OBF */
-#define STS_INH 0x10 /* 0: inhibit  1: no-inhibit */
-#define STS_SYS 0x04 /* 0: power up  1:Init comp */
-#define STS_IBF 0x02 /* Input (to kbd) buffer full */
-#define STS_OBF 0x01 /* Output (from kbd) buffer full */
+#define STS_INH 0x10    /* 0: inhibit  1: no-inhibit */
+#define STS_SYS 0x04    /* 0: power up  1:Init comp */
+#define STS_IBF 0x02    /* Input (to kbd) buffer full */
+#define STS_OBF 0x01    /* Output (from kbd) buffer full */
 
 /* Command */
 #define CMD_READ_CMD 0x20

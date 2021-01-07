@@ -37,8 +37,7 @@
  * Safer version of strncpy
  * The destination string is always terminated with NULL character.
  */
-size_t
-strlcpy(char* dest, const char* src, size_t count)
+size_t strlcpy(char* dest, const char* src, size_t count)
 {
     char* d = dest;
     const char* s = src;
@@ -76,8 +75,7 @@ int strncmp(const char* src, const char* tgt, size_t count)
 }
 
 /* The returned size does not include the last NULL char */
-size_t
-strnlen(const char* str, size_t count)
+size_t strnlen(const char* str, size_t count)
 {
     const char* tmp;
 

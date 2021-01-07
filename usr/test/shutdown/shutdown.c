@@ -63,8 +63,8 @@ int main(int argc, char* argv[])
         }
     }
     /*
-	 * User confirmation is required for security.
-	 */
+     * User confirmation is required for security.
+     */
     printf("Do you want to shutdown the system now? (y/n) ");
     checkch = ch = getchar();
     while (ch != '\n' && ch != EOF)
@@ -78,8 +78,7 @@ int main(int argc, char* argv[])
     exit(1);
 }
 
-static void
-usage(void)
+static void usage(void)
 {
 
     fprintf(stderr, "usage: shutdown [-r]\n");
@@ -87,8 +86,7 @@ usage(void)
     /* NOTREACHED */
 }
 
-static void
-shutdown(int reboot)
+static void shutdown(int reboot)
 {
     object_t powobj;
     struct msg m;

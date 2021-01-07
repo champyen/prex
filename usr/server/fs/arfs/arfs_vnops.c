@@ -90,22 +90,22 @@ static mutex_t arfs_lock = MUTEX_INITIALIZER;
  * vnode operations
  */
 const struct vnops arfs_vnops = {
-    arfs_open, /* open */
-    arfs_close, /* close */
-    arfs_read, /* read */
-    arfs_write, /* write */
-    arfs_seek, /* seek */
-    arfs_ioctl, /* ioctl */
-    arfs_fsync, /* fsync */
-    arfs_readdir, /* readdir */
-    arfs_lookup, /* lookup */
-    arfs_create, /* create */
-    arfs_remove, /* remove */
-    arfs_rename, /* remame */
-    arfs_mkdir, /* mkdir */
-    arfs_rmdir, /* rmdir */
-    arfs_getattr, /* getattr */
-    arfs_setattr, /* setattr */
+    arfs_open,     /* open */
+    arfs_close,    /* close */
+    arfs_read,     /* read */
+    arfs_write,    /* write */
+    arfs_seek,     /* seek */
+    arfs_ioctl,    /* ioctl */
+    arfs_fsync,    /* fsync */
+    arfs_readdir,  /* readdir */
+    arfs_lookup,   /* lookup */
+    arfs_create,   /* create */
+    arfs_remove,   /* remove */
+    arfs_rename,   /* remame */
+    arfs_mkdir,    /* mkdir */
+    arfs_rmdir,    /* rmdir */
+    arfs_getattr,  /* getattr */
+    arfs_setattr,  /* setattr */
     arfs_inactive, /* inactive */
     arfs_truncate, /* truncate */
 };
@@ -114,15 +114,14 @@ const struct vnops arfs_vnops = {
  * Read blocks.
  * iobuf is filled by read data.
  */
-static int
-arfs_readblk(mount_t mp, int blkno)
+static int arfs_readblk(mount_t mp, int blkno)
 {
     struct buf* bp;
     int error;
 
     /*
-	 * Read two blocks for archive header
-	 */
+     * Read two blocks for archive header
+     */
     if ((error = bread(mp->m_dev, blkno, &bp)) != 0)
         return error;
     memcpy(iobuf, bp->b_data, BSIZE);
@@ -140,8 +139,7 @@ arfs_readblk(mount_t mp, int blkno)
  * Lookup vnode for the specified file/directory.
  * The vnode is filled properly.
  */
-static int
-arfs_lookup(vnode_t dvp, char* name, vnode_t vp)
+static int arfs_lookup(vnode_t dvp, char* name, vnode_t vp)
 {
     struct ar_hdr* hdr;
     int blkno, error;
@@ -202,8 +200,7 @@ out:
     return error;
 }
 
-static int
-arfs_read(vnode_t vp, file_t fp, void* buf, size_t size, size_t* result)
+static int arfs_read(vnode_t vp, file_t fp, void* buf, size_t size, size_t* result)
 {
     off_t off, file_pos, buf_pos;
     int blkno, error;
@@ -231,8 +228,7 @@ arfs_read(vnode_t vp, file_t fp, void* buf, size_t size, size_t* result)
     off = (off_t)vp->v_data;
     nr_read = 0;
     for (;;) {
-        DPRINTF(("arfs_read: file_pos=%d buf=%x size=%d\n",
-            file_pos, buf, size));
+        DPRINTF(("arfs_read: file_pos=%d buf=%x size=%d\n", file_pos, buf, size));
 
         blkno = (off + file_pos) / BSIZE;
         buf_pos = (off + file_pos) % BSIZE;
@@ -248,8 +244,7 @@ arfs_read(vnode_t vp, file_t fp, void* buf, size_t size, size_t* result)
         brelse(bp);
 
         file_pos += nr_copy;
-        DPRINTF(("arfs_read: file_pos=%d nr_copy=%d\n",
-            file_pos, nr_copy));
+        DPRINTF(("arfs_read: file_pos=%d nr_copy=%d\n", file_pos, nr_copy));
 
         nr_read += nr_copy;
         size -= nr_copy;
@@ -270,8 +265,7 @@ out:
 /*
  * Check if the seek offset is valid.
  */
-static int
-arfs_seek(vnode_t vp, file_t fp, off_t oldoff, off_t newoff)
+static int arfs_seek(vnode_t vp, file_t fp, off_t oldoff, off_t newoff)
 {
 
     if (newoff > (off_t)vp->v_size)
@@ -280,8 +274,7 @@ arfs_seek(vnode_t vp, file_t fp, off_t oldoff, off_t newoff)
     return 0;
 }
 
-static int
-arfs_readdir(vnode_t vp, file_t fp, struct dirent* dir)
+static int arfs_readdir(vnode_t vp, file_t fp, struct dirent* dir)
 {
     struct ar_hdr* hdr;
     int blkno, i, error;
@@ -325,8 +318,7 @@ arfs_readdir(vnode_t vp, file_t fp, struct dirent* dir)
     if ((p = memchr(&hdr->ar_name, '/', 16)) != NULL)
         *p = '\0';
 
-    strlcpy((char*)&dir->d_name, (char*)&hdr->ar_name,
-        sizeof(dir->d_name));
+    strlcpy((char*)&dir->d_name, (char*)&hdr->ar_name, sizeof(dir->d_name));
     dir->d_namlen = (uint16_t)strlen(dir->d_name);
     dir->d_fileno = (uint32_t)fp->f_offset;
     dir->d_type = DT_REG;

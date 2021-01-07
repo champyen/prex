@@ -37,28 +37,30 @@
 /*
  * Messages for exec object
  */
-#define EXEC_EXECVE 0x00000300 /* execve() */
+#define EXEC_EXECVE 0x00000300  /* execve() */
 #define EXEC_BINDCAP 0x00000301 /* bind capability */
 
 /*
  * Exec message
  */
-struct exec_msg {
+struct exec_msg
+{
     struct msg_header hdr; /* message header */
-    char path[PATH_MAX]; /* program path */
-    char cwd[PATH_MAX]; /* current directory */
-    int argc; /* number of argment string */
-    int envc; /* number of environment string */
-    size_t bufsz; /* size of buffer */
-    char buf[ARG_MAX]; /* string for arg/env */
+    char path[PATH_MAX];   /* program path */
+    char cwd[PATH_MAX];    /* current directory */
+    int argc;              /* number of argment string */
+    int envc;              /* number of environment string */
+    size_t bufsz;          /* size of buffer */
+    char buf[ARG_MAX];     /* string for arg/env */
 };
 
 /*
  * Capability bind message
  */
-struct bind_msg {
+struct bind_msg
+{
     struct msg_header hdr; /* message header */
-    char path[PATH_MAX]; /* program path */
+    char path[PATH_MAX];   /* program path */
 };
 
 /* Max size of exec message */

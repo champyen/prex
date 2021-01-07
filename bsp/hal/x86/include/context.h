@@ -42,29 +42,31 @@
  * The value of ss & esp are not valid for kernel mode trap
  * because these are set only when privilege level is changed.
  */
-struct cpu_regs {
-    uint32_t ebx; /*  +0 (00) --- s/w trap frame --- */
-    uint32_t ecx; /*  +4 (04) */
-    uint32_t edx; /*  +8 (08) */
-    uint32_t esi; /* +12 (0C) */
-    uint32_t eax; /* +16 (10) */
-    uint32_t edi; /* +20 (14) */
-    uint32_t ebp; /* +24 (18) */
-    uint32_t ds; /* +28 (1C) */
-    uint32_t es; /* +32 (20) */
-    uint32_t trap_no; /* +36 (24) --- h/w trap frame --- */
+struct cpu_regs
+{
+    uint32_t ebx;      /*  +0 (00) --- s/w trap frame --- */
+    uint32_t ecx;      /*  +4 (04) */
+    uint32_t edx;      /*  +8 (08) */
+    uint32_t esi;      /* +12 (0C) */
+    uint32_t eax;      /* +16 (10) */
+    uint32_t edi;      /* +20 (14) */
+    uint32_t ebp;      /* +24 (18) */
+    uint32_t ds;       /* +28 (1C) */
+    uint32_t es;       /* +32 (20) */
+    uint32_t trap_no;  /* +36 (24) --- h/w trap frame --- */
     uint32_t err_code; /* +40 (28) */
-    uint32_t eip; /* +44 (2C) */
-    uint32_t cs; /* +48 (30) */
-    uint32_t eflags; /* +52 (34) */
-    uint32_t esp; /* +56 (38) */
-    uint32_t ss; /* +60 (3C) */
+    uint32_t eip;      /* +44 (2C) */
+    uint32_t cs;       /* +48 (30) */
+    uint32_t eflags;   /* +52 (34) */
+    uint32_t esp;      /* +56 (38) */
+    uint32_t ss;       /* +60 (3C) */
 };
 
 /*
  * Kernel mode context for context switching.
  */
-struct kern_regs {
+struct kern_regs
+{
     uint32_t eip; /*  +0 (00) */
     uint32_t ebx; /*  +4 (04) */
     uint32_t edi; /*  +8 (08) */
@@ -76,7 +78,8 @@ struct kern_regs {
 /*
  * FPU register for fsave/frstor
  */
-struct fpu_regs {
+struct fpu_regs
+{
     uint32_t ctrl_word;
     uint32_t stat_word;
     uint32_t tag_word;
@@ -90,9 +93,10 @@ struct fpu_regs {
 /*
  * Processor context
  */
-struct context {
-    struct kern_regs kregs; /* kernel mode registers */
-    struct cpu_regs* uregs; /* user mode registers */
+struct context
+{
+    struct kern_regs kregs;      /* kernel mode registers */
+    struct cpu_regs* uregs;      /* user mode registers */
     struct cpu_regs* saved_regs; /* saved user mode registers */
 #ifdef CONFIG_FPU
     struct fpu_regs* fregs; /* co-processor registers */

@@ -71,8 +71,7 @@ static mutex_t mount_lock = MUTEX_INITIALIZER;
 /*
  * Lookup file system.
  */
-static const struct vfssw*
-fs_getfs(char* name)
+static const struct vfssw* fs_getfs(char* name)
 {
     const struct vfssw* fs;
 
@@ -126,8 +125,8 @@ int sys_mount(char* dev, char* dir, char* fsname, int flags, void* data)
         }
     }
     /*
-	 * Create VFS mount entry.
-	 */
+     * Create VFS mount entry.
+     */
     if (!(mp = malloc(sizeof(struct mount)))) {
         error = ENOMEM;
         goto err1;
@@ -139,8 +138,8 @@ int sys_mount(char* dev, char* dir, char* fsname, int flags, void* data)
     strlcpy(mp->m_path, dir, sizeof(mp->m_path));
 
     /*
-	 * Get vnode to be covered in the upper file system.
-	 */
+     * Get vnode to be covered in the upper file system.
+     */
     if (*dir == '/' && *(dir + 1) == '\0') {
         /* Ignore if it mounts to global root directory. */
         vp_covered = NULL;
@@ -158,8 +157,8 @@ int sys_mount(char* dev, char* dir, char* fsname, int flags, void* data)
     mp->m_covered = vp_covered;
 
     /*
-	 * Create a root vnode for this file system.
-	 */
+     * Create a root vnode for this file system.
+     */
     if ((vp = vget(mp, "/")) == NULL) {
         error = ENOMEM;
         goto err3;
@@ -170,8 +169,8 @@ int sys_mount(char* dev, char* dir, char* fsname, int flags, void* data)
     mp->m_root = vp;
 
     /*
-	 * Call a file system specific routine.
-	 */
+     * Call a file system specific routine.
+     */
     if ((error = VFS_MOUNT(mp, dev, flags, data)) != 0)
         goto err4;
 
@@ -179,15 +178,15 @@ int sys_mount(char* dev, char* dir, char* fsname, int flags, void* data)
         vp->v_mode &= ~S_IWUSR;
 
     /*
-	 * Keep reference count for root/covered vnode.
-	 */
+     * Keep reference count for root/covered vnode.
+     */
     vn_unlock(vp);
     if (vp_covered)
         vn_unlock(vp_covered);
 
     /*
-	 * Insert to mount list
-	 */
+     * Insert to mount list
+     */
     list_insert(&mount_list, &mp->m_link);
     MOUNT_UNLOCK();
 
@@ -228,8 +227,8 @@ int sys_umount(char* path)
         goto out;
     }
     /*
-	 * Root fs can not be unmounted.
-	 */
+     * Root fs can not be unmounted.
+     */
     if (mp->m_covered == NULL) {
         error = EINVAL;
         goto out;
@@ -277,8 +276,7 @@ int sys_sync(void)
  * @path: target path.
  * @root: vfs root path as mount point.
  */
-static size_t
-count_match(char* path, char* mount_root)
+static size_t count_match(char* path, char* mount_root)
 {
     size_t len = 0;
 

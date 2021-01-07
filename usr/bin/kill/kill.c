@@ -122,8 +122,7 @@ int main(int argc, char* argv[])
     exit(errors);
 }
 
-static int
-    signame_to_signum(sig) char* sig;
+static int signame_to_signum(sig) char* sig;
 {
     int n;
 
@@ -136,8 +135,7 @@ static int
     return -1;
 }
 
-static void
-    nosig(name) char* name;
+static void nosig(name) char* name;
 {
 
     warnx("unknown signal %s; valid signals:", name);
@@ -146,9 +144,7 @@ static void
     /* NOTREACHED */
 }
 
-static void
-    printsignals(fp)
-        FILE* fp;
+static void printsignals(fp) FILE* fp;
 {
     int n;
     const char* name;
@@ -162,8 +158,7 @@ static void
     }
 }
 
-static void
-usage(void)
+static void usage(void)
 {
 
     fprintf(stderr, "usage: kill [-s signal_name] pid ...\n"

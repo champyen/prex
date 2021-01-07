@@ -42,10 +42,10 @@
 #include <busio.h> /* bus_read/bus_write */
 
 #ifdef DEBUG
-#define ASSERT(exp)                           \
-    do {                                      \
-        if (!(exp))                           \
-            assert(__FILE__, __LINE__, #exp); \
+#define ASSERT(exp)                                                                                                    \
+    do {                                                                                                               \
+        if (!(exp))                                                                                                    \
+            assert(__FILE__, __LINE__, #exp);                                                                          \
     } while (0)
 #else
 #define ASSERT(exp) ((void)0)
@@ -54,13 +54,14 @@
 /*
  * I/O request packet
  */
-struct irp {
-    int cmd; /* I/O command */
-    int blkno; /* block number */
-    u_long blksz; /* block size */
-    void* buf; /* I/O buffer */
-    int ntries; /* retry count */
-    int error; /* error status */
+struct irp
+{
+    int cmd;             /* I/O command */
+    int blkno;           /* block number */
+    u_long blksz;        /* block size */
+    void* buf;           /* I/O buffer */
+    int ntries;          /* retry count */
+    int error;           /* error status */
     struct event iocomp; /* I/O completion event */
 };
 

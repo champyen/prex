@@ -33,9 +33,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-char*
-    strdup(str)
-        const char* str;
+char* strdup(str) const char* str;
 {
     size_t len;
     char* copy;

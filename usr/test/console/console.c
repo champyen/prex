@@ -47,22 +47,22 @@ int main(int argc, char* argv[])
         sys_log("device open error!\n");
 
     /*
-	 * Display 'ABCDE'
-	 */
+     * Display 'ABCDE'
+     */
     len = 5;
     device_write(console_dev, buf, &len, 0);
 
     /*
-	 * Display 'AAAA...'
-	 */
+     * Display 'AAAA...'
+     */
     len = 1;
     for (i = 0; i < 100; i++)
         device_write(console_dev, buf, &len, 0);
 
     /*
-	 * Try to pass invalid pointer.
-	 * It will cause a fault, and get EFAULT.
-	 */
+     * Try to pass invalid pointer.
+     * It will cause a fault, and get EFAULT.
+     */
     sys_log("\ntest an invalid pointer.\n");
     len = 100;
     error = device_write(console_dev, 0, &len, 0);

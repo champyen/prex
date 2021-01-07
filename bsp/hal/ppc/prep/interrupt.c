@@ -64,14 +64,13 @@ static volatile int irq_level;
 /*
  * Interrupt mapping table
  */
-static int ipl_table[NIRQS]; /* Vector -> level */
+static int ipl_table[NIRQS];    /* Vector -> level */
 static u_int mask_table[NIPLS]; /* Level -> mask */
 
 /*
  * Set mask for current ipl
  */
-static void
-update_mask(void)
+static void update_mask(void)
 {
     u_int mask = mask_table[irq_level];
 
@@ -92,9 +91,9 @@ void interrupt_unmask(int vector, int level)
     s = splhigh();
     ipl_table[vector] = level;
     /*
-	 * Unmask target interrupt for all
-	 * lower interrupt levels.
-	 */
+     * Unmask target interrupt for all
+     * lower interrupt levels.
+     */
     for (i = 0; i < level; i++)
         mask_table[i] &= unmask;
     update_mask();
@@ -145,8 +144,7 @@ void interrupt_setup(int vector, int mode)
 /*
  * Get interrupt source.
  */
-static int
-interrupt_lookup(void)
+static int interrupt_lookup(void)
 {
     int irq;
 
@@ -215,12 +213,12 @@ void interrupt_init(void)
     for (i = 0; i < NIPLS; i++)
         mask_table[i] = 0xfffb;
 
-    outb(PIC_M, 0x11); /* Start initialization edge, master */
+    outb(PIC_M, 0x11);     /* Start initialization edge, master */
     outb(PIC_M + 1, 0x00); /* Set h/w vector = 0x0 */
     outb(PIC_M + 1, 0x04); /* Chain to slave (IRQ2) */
     outb(PIC_M + 1, 0x01); /* 8086 mode */
 
-    outb(PIC_S, 0x11); /* Start initialization edge, master */
+    outb(PIC_S, 0x11);     /* Start initialization edge, master */
     outb(PIC_S + 1, 0x08); /* Set h/w vector = 0x8 */
     outb(PIC_S + 1, 0x02); /* Slave (cascade) */
     outb(PIC_S + 1, 0x01); /* 8086 mode */

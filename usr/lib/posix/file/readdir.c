@@ -36,8 +36,7 @@
 #include <string.h>
 #include <errno.h>
 
-struct dirent*
-readdir(DIR* dir)
+struct dirent* readdir(DIR* dir)
 {
     struct dir_msg m;
     struct dirent* entry = &dir->dd_ent;

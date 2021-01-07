@@ -36,11 +36,11 @@
 #define _X86_ASM_H
 
 #define _ALIGN_TEXT .align 4
-#define _ENTRY(x)       \
-    .text;              \
-    _ALIGN_TEXT;        \
-    .globl x;           \
-    .type x, @function; \
+#define _ENTRY(x)                                                                                                      \
+    .text;                                                                                                             \
+    _ALIGN_TEXT;                                                                                                       \
+    .globl x;                                                                                                          \
+    .type x, @function;                                                                                                \
     x:
 
 #define _C_LABEL(x) x

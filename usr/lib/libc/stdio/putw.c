@@ -32,8 +32,7 @@
 
 #include <stdio.h>
 
-int
-    putw(w, fp) int w;
+int putw(w, fp) int w;
 FILE* fp;
 {
     int size = sizeof(int);

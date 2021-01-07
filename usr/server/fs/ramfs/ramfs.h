@@ -40,8 +40,8 @@
 #define DPRINTF(a) dprintf a
 #define ASSERT(e) dassert(e)
 #else
-#define DPRINTF(a) \
-    do {           \
+#define DPRINTF(a)                                                                                                     \
+    do {                                                                                                               \
     } while (0)
 #define ASSERT(e)
 #endif
@@ -50,35 +50,36 @@
 #define malloc(s) malloc_r(s)
 #define free(p) free_r(p)
 #else
-#define mutex_init(m) \
-    do {              \
+#define mutex_init(m)                                                                                                  \
+    do {                                                                                                               \
     } while (0)
-#define mutex_destroy(m) \
-    do {                 \
+#define mutex_destroy(m)                                                                                               \
+    do {                                                                                                               \
     } while (0)
-#define mutex_lock(m) \
-    do {              \
+#define mutex_lock(m)                                                                                                  \
+    do {                                                                                                               \
     } while (0)
-#define mutex_unlock(m) \
-    do {                \
+#define mutex_unlock(m)                                                                                                \
+    do {                                                                                                               \
     } while (0)
-#define mutex_trylock(m) \
-    do {                 \
+#define mutex_trylock(m)                                                                                               \
+    do {                                                                                                               \
     } while (0)
 #endif
 
 /*
  * File/directory node for RAMFS
  */
-struct ramfs_node {
-    struct ramfs_node* rn_next; /* next node in the same directory */
+struct ramfs_node
+{
+    struct ramfs_node* rn_next;  /* next node in the same directory */
     struct ramfs_node* rn_child; /* first child node */
-    int rn_type; /* file or directory */
-    char* rn_name; /* name (null-terminated) */
-    size_t rn_namelen; /* length of name not including terminator */
-    size_t rn_size; /* file size */
-    char* rn_buf; /* buffer to the file data */
-    size_t rn_bufsize; /* allocated buffer size */
+    int rn_type;                 /* file or directory */
+    char* rn_name;               /* name (null-terminated) */
+    size_t rn_namelen;           /* length of name not including terminator */
+    size_t rn_size;              /* file size */
+    char* rn_buf;                /* buffer to the file data */
+    size_t rn_bufsize;           /* allocated buffer size */
 };
 
 __BEGIN_DECLS

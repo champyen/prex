@@ -41,20 +41,19 @@
 #include <timer.h>
 #include <sys/signal.h>
 
-static volatile u_long lbolt; /* ticks elapsed since bootup */
+static volatile u_long lbolt;      /* ticks elapsed since bootup */
 static volatile u_long idle_ticks; /* total ticks for idle */
 
 static struct event timer_event; /* event to wakeup a timer thread */
 static struct event delay_event; /* event for the thread delay */
-static struct list timer_list; /* list of active timers */
-static struct list expire_list; /* list of expired timers */
+static struct list timer_list;   /* list of active timers */
+static struct list expire_list;  /* list of expired timers */
 
 /*
  * Get remaining ticks to the expiration time.
  * Return 0 if timer has been expired.
  */
-static u_long
-time_remain(u_long expire)
+static u_long time_remain(u_long expire)
 {
 
     if (time_before(lbolt, expire))
@@ -65,8 +64,7 @@ time_remain(u_long expire)
 /*
  * Activate a timer.
  */
-static void
-timer_add(struct timer* tmr, u_long ticks)
+static void timer_add(struct timer* tmr, u_long ticks)
 {
     list_t head, n;
     struct timer* t;
@@ -78,9 +76,9 @@ timer_add(struct timer* tmr, u_long ticks)
     tmr->state = TM_ACTIVE;
 
     /*
-	 * Insert a timer element into the timer list which
-	 * is sorted by expiration time.
-	 */
+     * Insert a timer element into the timer list which
+     * is sorted by expiration time.
+     */
     head = &timer_list;
     for (n = list_first(head); n != head; n = list_next(n)) {
         t = list_entry(n, struct timer, link);
@@ -141,8 +139,7 @@ void timer_callout(struct timer* tmr, u_long msec, void (*fn)(void*), void* arg)
  * Returns 0 on success, or the remaining time (msec) on
  * failure.
  */
-u_long
-timer_delay(u_long msec)
+u_long timer_delay(u_long msec)
 {
     struct timer* tmr;
     u_long remain = 0;
@@ -182,8 +179,7 @@ int timer_sleep(u_long msec, u_long* remain)
  * Alarm timer expired:
  * Send an alarm exception to the target task.
  */
-static void
-alarm_expire(void* arg)
+static void alarm_expire(void* arg)
 {
     task_t task = (task_t)arg;
 
@@ -207,9 +203,9 @@ int timer_alarm(u_long msec, u_long* remain)
     tmr = &curtask->alarm;
 
     /*
-	 * If the timer is active, save the remaining time
-	 * before we update the timer setting.
-	 */
+     * If the timer is active, save the remaining time
+     * before we update the timer setting.
+     */
     if (tmr->state == TM_ACTIVE)
         left = hztoms(time_remain(tmr->expire));
 
@@ -253,8 +249,8 @@ int timer_periodic(thread_t t, u_long start, u_long period)
     tmr = t->periodic;
     if (start == 0) {
         /*
-		 * Cancel periodic timer.
-		 */
+         * Cancel periodic timer.
+         */
         if (tmr == NULL || tmr->state != TM_ACTIVE) {
             sched_unlock();
             return EINVAL;
@@ -263,10 +259,10 @@ int timer_periodic(thread_t t, u_long start, u_long period)
     } else {
         if (tmr == NULL) {
             /*
-			 * Allocate a timer element at first call.
-			 * This is to save the data area in the thread
-			 * structure.
-			 */
+             * Allocate a timer element at first call.
+             * This is to save the data area in the thread
+             * structure.
+             */
             if ((tmr = kmem_alloc(sizeof(tmr))) == NULL) {
                 sched_unlock();
                 return ENOMEM;
@@ -276,8 +272,8 @@ int timer_periodic(thread_t t, u_long start, u_long period)
             t->periodic = tmr;
         }
         /*
-		 * Program an interval timer.
-		 */
+         * Program an interval timer.
+         */
         s = splhigh();
         tmr->interval = mstohz(period);
         if (tmr->interval == 0)
@@ -308,8 +304,8 @@ int timer_waitperiod(void)
 
     if (time_before(lbolt, tmr->expire)) {
         /*
-		 * Sleep until timer_handler() routine wakes us up.
-		 */
+         * Sleep until timer_handler() routine wakes us up.
+         */
         rc = sched_sleep(&tmr->event);
         if (rc != SLP_SUCCESS)
             return EINTR;
@@ -336,8 +332,7 @@ void timer_cancel(thread_t t)
  * Handle all expired timers. Each callout routine is
  * called with scheduler locked and interrupts enabled.
  */
-static void
-timer_thread(void* dummy)
+static void timer_thread(void* dummy)
 {
     struct timer* tmr;
 
@@ -345,14 +340,14 @@ timer_thread(void* dummy)
 
     for (;;) {
         /*
-		 * Wait until next timer expiration.
-		 */
+         * Wait until next timer expiration.
+         */
         sched_sleep(&timer_event);
 
         while (!list_empty(&expire_list)) {
             /*
-			 * callout
-			 */
+             * callout
+             */
             tmr = timer_next(&expire_list);
             list_remove(&tmr->link);
             tmr->state = TM_STOP;
@@ -361,9 +356,9 @@ timer_thread(void* dummy)
             (*tmr->func)(tmr->arg);
 
             /*
-			 * Unlock scheduler here in order to give
-			 * chance to higher priority threads to run.
-			 */
+             * Unlock scheduler here in order to give
+             * chance to higher priority threads to run.
+             */
             sched_unlock();
             splhigh();
         }
@@ -385,17 +380,17 @@ void timer_handler(void)
     int wakeup = 0;
 
     /*
-	 * Bump time in ticks.
-	 * Note that it is allowed to wrap.
-	 */
+     * Bump time in ticks.
+     * Note that it is allowed to wrap.
+     */
     lbolt++;
     if (curthread->priority == PRI_IDLE)
         idle_ticks++;
 
     while (!list_empty(&timer_list)) {
         /*
-		 * Check timer expiration.
-		 */
+         * Check timer expiration.
+         */
         tmr = timer_next(&timer_list);
         if (time_before(lbolt, tmr->expire))
             break;
@@ -403,15 +398,15 @@ void timer_handler(void)
         list_remove(&tmr->link);
         if (tmr->interval != 0) {
             /*
-			 * Periodic timer - reprogram timer again.
-			 */
+             * Periodic timer - reprogram timer again.
+             */
             ticks = time_remain(tmr->expire + tmr->interval);
             timer_add(tmr, ticks);
             sched_wakeup(&tmr->event);
         } else {
             /*
-			 * One-shot timer
-			 */
+             * One-shot timer
+             */
             list_insert(&expire_list, &tmr->link);
             wakeup = 1;
         }
@@ -425,8 +420,7 @@ void timer_handler(void)
 /*
  * Return ticks since boot.
  */
-u_long
-timer_ticks(void)
+u_long timer_ticks(void)
 {
 
     return lbolt;

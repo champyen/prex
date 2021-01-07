@@ -80,8 +80,7 @@ int main(int argc, char* argv[])
     exit(rval);
 }
 
-static void
-do_more(FILE* fp, int maxlines)
+static void do_more(FILE* fp, int maxlines)
 {
     int c, len, lines = 0;
 

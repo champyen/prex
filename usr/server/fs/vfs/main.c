@@ -75,21 +75,21 @@ int vfs_debug = VFSDB_FLAGS;
 /*
  * Message mapping
  */
-struct msg_map {
+struct msg_map
+{
     int code;
     int (*func)(struct task*, struct msg*);
 };
 
-#define MSGMAP(code, fn)                             \
-    {                                                \
-        code, (int (*)(struct task*, struct msg*))fn \
+#define MSGMAP(code, fn)                                                                                               \
+    {                                                                                                                  \
+        code, (int (*)(struct task*, struct msg*))fn                                                                   \
     }
 
 /* object for file service */
 static object_t fsobj;
 
-static int
-fs_mount(struct task* t, struct mount_msg* msg)
+static int fs_mount(struct task* t, struct mount_msg* msg)
 {
     int error = 0;
 
@@ -98,8 +98,7 @@ fs_mount(struct task* t, struct mount_msg* msg)
         error = EPERM;
 
     if (error == 0) {
-        error = sys_mount(msg->dev, msg->dir, msg->fs, msg->flags,
-            (void*)msg->data);
+        error = sys_mount(msg->dev, msg->dir, msg->fs, msg->flags, (void*)msg->data);
     }
 #ifdef DEBUG
     if (error)
@@ -108,8 +107,7 @@ fs_mount(struct task* t, struct mount_msg* msg)
     return error;
 }
 
-static int
-fs_umount(struct task* t, struct path_msg* msg)
+static int fs_umount(struct task* t, struct path_msg* msg)
 {
 
     /* Check mount capability. */
@@ -119,15 +117,13 @@ fs_umount(struct task* t, struct path_msg* msg)
     return sys_umount(msg->path);
 }
 
-static int
-fs_sync(struct task* t, struct msg* msg)
+static int fs_sync(struct task* t, struct msg* msg)
 {
 
     return sys_sync();
 }
 
-static int
-fs_open(struct task* t, struct open_msg* msg)
+static int fs_open(struct task* t, struct open_msg* msg)
 {
     char path[PATH_MAX];
     file_t fp;
@@ -162,8 +158,7 @@ fs_open(struct task* t, struct open_msg* msg)
     return 0;
 }
 
-static int
-fs_close(struct task* t, struct msg* msg)
+static int fs_close(struct task* t, struct msg* msg)
 {
     file_t fp;
     int fd, error;
@@ -184,8 +179,7 @@ fs_close(struct task* t, struct msg* msg)
     return 0;
 }
 
-static int
-fs_mknod(struct task* t, struct open_msg* msg)
+static int fs_mknod(struct task* t, struct open_msg* msg)
 {
     char path[PATH_MAX];
     int error;
@@ -196,8 +190,7 @@ fs_mknod(struct task* t, struct open_msg* msg)
     return sys_mknod(path, msg->mode);
 }
 
-static int
-fs_lseek(struct task* t, struct msg* msg)
+static int fs_lseek(struct task* t, struct msg* msg)
 {
     file_t fp;
     off_t offset, org;
@@ -213,8 +206,7 @@ fs_lseek(struct task* t, struct msg* msg)
     return error;
 }
 
-static int
-fs_read(struct task* t, struct io_msg* msg)
+static int fs_read(struct task* t, struct io_msg* msg)
 {
     file_t fp;
     void* buf;
@@ -233,8 +225,7 @@ fs_read(struct task* t, struct io_msg* msg)
     return error;
 }
 
-static int
-fs_write(struct task* t, struct io_msg* msg)
+static int fs_write(struct task* t, struct io_msg* msg)
 {
     file_t fp;
     void* buf;
@@ -253,8 +244,7 @@ fs_write(struct task* t, struct io_msg* msg)
     return error;
 }
 
-static int
-fs_ioctl(struct task* t, struct ioctl_msg* msg)
+static int fs_ioctl(struct task* t, struct ioctl_msg* msg)
 {
     file_t fp;
 
@@ -264,8 +254,7 @@ fs_ioctl(struct task* t, struct ioctl_msg* msg)
     return sys_ioctl(fp, msg->request, msg->buf);
 }
 
-static int
-fs_fsync(struct task* t, struct msg* msg)
+static int fs_fsync(struct task* t, struct msg* msg)
 {
     file_t fp;
 
@@ -275,8 +264,7 @@ fs_fsync(struct task* t, struct msg* msg)
     return sys_fsync(fp);
 }
 
-static int
-fs_fstat(struct task* t, struct stat_msg* msg)
+static int fs_fstat(struct task* t, struct stat_msg* msg)
 {
     file_t fp;
     struct stat* st;
@@ -290,8 +278,7 @@ fs_fstat(struct task* t, struct stat_msg* msg)
     return error;
 }
 
-static int
-fs_opendir(struct task* t, struct open_msg* msg)
+static int fs_opendir(struct task* t, struct open_msg* msg)
 {
     char path[PATH_MAX];
     file_t fp;
@@ -312,8 +299,7 @@ fs_opendir(struct task* t, struct open_msg* msg)
     return 0;
 }
 
-static int
-fs_closedir(struct task* t, struct msg* msg)
+static int fs_closedir(struct task* t, struct msg* msg)
 {
     file_t fp;
     int fd, error;
@@ -331,8 +317,7 @@ fs_closedir(struct task* t, struct msg* msg)
     return 0;
 }
 
-static int
-fs_readdir(struct task* t, struct dir_msg* msg)
+static int fs_readdir(struct task* t, struct dir_msg* msg)
 {
     file_t fp;
 
@@ -342,8 +327,7 @@ fs_readdir(struct task* t, struct dir_msg* msg)
     return sys_readdir(fp, &msg->dirent);
 }
 
-static int
-fs_rewinddir(struct task* t, struct msg* msg)
+static int fs_rewinddir(struct task* t, struct msg* msg)
 {
     file_t fp;
 
@@ -353,8 +337,7 @@ fs_rewinddir(struct task* t, struct msg* msg)
     return sys_rewinddir(fp);
 }
 
-static int
-fs_seekdir(struct task* t, struct msg* msg)
+static int fs_seekdir(struct task* t, struct msg* msg)
 {
     file_t fp;
     long loc;
@@ -366,8 +349,7 @@ fs_seekdir(struct task* t, struct msg* msg)
     return sys_seekdir(fp, loc);
 }
 
-static int
-fs_telldir(struct task* t, struct msg* msg)
+static int fs_telldir(struct task* t, struct msg* msg)
 {
     file_t fp;
     long loc;
@@ -383,8 +365,7 @@ fs_telldir(struct task* t, struct msg* msg)
     return 0;
 }
 
-static int
-fs_mkdir(struct task* t, struct open_msg* msg)
+static int fs_mkdir(struct task* t, struct open_msg* msg)
 {
     char path[PATH_MAX];
     int error;
@@ -395,8 +376,7 @@ fs_mkdir(struct task* t, struct open_msg* msg)
     return sys_mkdir(path, msg->mode);
 }
 
-static int
-fs_rmdir(struct task* t, struct path_msg* msg)
+static int fs_rmdir(struct task* t, struct path_msg* msg)
 {
     char path[PATH_MAX];
     int error;
@@ -409,8 +389,7 @@ fs_rmdir(struct task* t, struct path_msg* msg)
     return sys_rmdir(path);
 }
 
-static int
-fs_rename(struct task* t, struct path_msg* msg)
+static int fs_rename(struct task* t, struct path_msg* msg)
 {
     char src[PATH_MAX];
     char dest[PATH_MAX];
@@ -428,8 +407,7 @@ fs_rename(struct task* t, struct path_msg* msg)
     return sys_rename(src, dest);
 }
 
-static int
-fs_chdir(struct task* t, struct path_msg* msg)
+static int fs_chdir(struct task* t, struct path_msg* msg)
 {
     char path[PATH_MAX];
     file_t fp;
@@ -450,8 +428,7 @@ fs_chdir(struct task* t, struct path_msg* msg)
     return 0;
 }
 
-static int
-fs_fchdir(struct task* t, struct msg* msg)
+static int fs_fchdir(struct task* t, struct msg* msg)
 {
     file_t fp;
     int fd;
@@ -466,15 +443,13 @@ fs_fchdir(struct task* t, struct msg* msg)
     return sys_fchdir(fp, t->t_cwd);
 }
 
-static int
-fs_link(struct task* t, struct msg* msg)
+static int fs_link(struct task* t, struct msg* msg)
 {
     /* XXX */
     return EPERM;
 }
 
-static int
-fs_unlink(struct task* t, struct path_msg* msg)
+static int fs_unlink(struct task* t, struct path_msg* msg)
 {
     char path[PATH_MAX];
     int error;
@@ -487,8 +462,7 @@ fs_unlink(struct task* t, struct path_msg* msg)
     return sys_unlink(path);
 }
 
-static int
-fs_stat(struct task* t, struct stat_msg* msg)
+static int fs_stat(struct task* t, struct stat_msg* msg)
 {
     char path[PATH_MAX];
     struct stat* st;
@@ -502,8 +476,7 @@ fs_stat(struct task* t, struct stat_msg* msg)
     return error;
 }
 
-static int
-fs_getcwd(struct task* t, struct path_msg* msg)
+static int fs_getcwd(struct task* t, struct path_msg* msg)
 {
 
     strlcpy(msg->path, t->t_cwd, sizeof(msg->path));
@@ -513,8 +486,7 @@ fs_getcwd(struct task* t, struct path_msg* msg)
 /*
  * Duplicate a file descriptor
  */
-static int
-fs_dup(struct task* t, struct msg* msg)
+static int fs_dup(struct task* t, struct msg* msg)
 {
     file_t fp;
     int old_fd, new_fd;
@@ -540,8 +512,7 @@ fs_dup(struct task* t, struct msg* msg)
 /*
  * Duplicate a file descriptor to a particular value.
  */
-static int
-fs_dup2(struct task* t, struct msg* msg)
+static int fs_dup2(struct task* t, struct msg* msg)
 {
     file_t fp, org;
     int old_fd, new_fd;
@@ -572,8 +543,7 @@ fs_dup2(struct task* t, struct msg* msg)
 /*
  * The file control system call.
  */
-static int
-fs_fcntl(struct task* t, struct fcntl_msg* msg)
+static int fs_fcntl(struct task* t, struct fcntl_msg* msg)
 {
     file_t fp;
     int arg, new_fd;
@@ -617,8 +587,7 @@ fs_fcntl(struct task* t, struct fcntl_msg* msg)
 /*
  * Check permission for file access
  */
-static int
-fs_access(struct task* t, struct path_msg* msg)
+static int fs_access(struct task* t, struct path_msg* msg)
 {
     char path[PATH_MAX];
     int acc, mode, error = 0;
@@ -639,8 +608,7 @@ fs_access(struct task* t, struct path_msg* msg)
 /*
  * Copy parent's cwd & file/directory descriptor to child's.
  */
-static int
-fs_fork(struct task* t, struct msg* msg)
+static int fs_fork(struct task* t, struct msg* msg)
 {
     struct task* newtask;
     file_t fp;
@@ -652,17 +620,17 @@ fs_fork(struct task* t, struct msg* msg)
         return error;
 
     /*
-	 * Copy task related data
-	 */
+     * Copy task related data
+     */
     newtask->t_cwdfp = t->t_cwdfp;
     strlcpy(newtask->t_cwd, t->t_cwd, sizeof(newtask->t_cwd));
     for (i = 0; i < OPEN_MAX; i++) {
         fp = t->t_ofile[i];
         newtask->t_ofile[i] = fp;
         /*
-		 * Increment file reference if it's
-		 * already opened.
-		 */
+         * Increment file reference if it's
+         * already opened.
+         */
         if (fp != NULL) {
             vref(fp->f_vnode);
             fp->f_count++;
@@ -683,8 +651,7 @@ fs_fork(struct task* t, struct msg* msg)
  * It closes all directory stream.
  * File descriptor which is marked close-on-exec are also closed.
  */
-static int
-fs_exec(struct task* t, struct msg* msg)
+static int fs_exec(struct task* t, struct msg* msg)
 {
     task_t old_id, new_id;
     struct task* target;
@@ -719,8 +686,7 @@ fs_exec(struct task* t, struct msg* msg)
 /*
  * fs_exit() cleans up data for task's termination.
  */
-static int
-fs_exit(struct task* t, struct msg* msg)
+static int fs_exit(struct task* t, struct msg* msg)
 {
     file_t fp;
     int fd;
@@ -728,8 +694,8 @@ fs_exit(struct task* t, struct msg* msg)
     DPRINTF(VFSDB_CORE, ("fs_exit\n"));
 
     /*
-	 * Close all files opened by task.
-	 */
+     * Close all files opened by task.
+     */
     for (fd = 0; fd < OPEN_MAX; fd++) {
         fp = t->t_ofile[fd];
         if (fp != NULL)
@@ -745,8 +711,7 @@ fs_exit(struct task* t, struct msg* msg)
  * fs_register() is called by boot tasks.
  * This can be called even when no fs is mounted.
  */
-static int
-fs_register(struct task* t, struct msg* msg)
+static int fs_register(struct task* t, struct msg* msg)
 {
     struct task* tmp;
     int error;
@@ -757,8 +722,7 @@ fs_register(struct task* t, struct msg* msg)
     return error;
 }
 
-static int
-fs_pipe(struct task* t, struct msg* msg)
+static int fs_pipe(struct task* t, struct msg* msg)
 {
 #ifdef CONFIG_FIFOFS
     char path[PATH_MAX];
@@ -803,8 +767,7 @@ out:
 /*
  * Return if specified file is a tty
  */
-static int
-fs_isatty(struct task* t, struct msg* msg)
+static int fs_isatty(struct task* t, struct msg* msg)
 {
     file_t fp;
     int istty = 0;
@@ -818,8 +781,7 @@ fs_isatty(struct task* t, struct msg* msg)
     return 0;
 }
 
-static int
-fs_truncate(struct task* t, struct path_msg* msg)
+static int fs_truncate(struct task* t, struct path_msg* msg)
 {
     char path[PATH_MAX];
     int error;
@@ -832,8 +794,7 @@ fs_truncate(struct task* t, struct path_msg* msg)
     return sys_truncate(path, msg->data[0]);
 }
 
-static int
-fs_ftruncate(struct task* t, struct msg* msg)
+static int fs_ftruncate(struct task* t, struct msg* msg)
 {
     file_t fp;
 
@@ -846,8 +807,7 @@ fs_ftruncate(struct task* t, struct msg* msg)
 /*
  * Prepare for boot
  */
-static int
-fs_boot(struct task* t, struct msg* msg)
+static int fs_boot(struct task* t, struct msg* msg)
 {
     object_t execobj, procobj;
     struct bind_msg bm;
@@ -858,9 +818,9 @@ fs_boot(struct task* t, struct msg* msg)
         return EPERM;
 
     /*
-	 * Request exec server to bind an appropriate
-	 * capability for us.
-	 */
+     * Request exec server to bind an appropriate
+     * capability for us.
+     */
     if (object_lookup("!exec", &execobj) != 0)
         sys_panic("fs: no exec found");
     bm.hdr.code = EXEC_BINDCAP;
@@ -868,8 +828,8 @@ fs_boot(struct task* t, struct msg* msg)
     msg_send(execobj, &bm, sizeof(bm));
 
     /*
-	 * Notify to process server.
-	 */
+     * Notify to process server.
+     */
     if (object_lookup("!proc", &procobj) != 0)
         sys_panic("fs: no proc found");
     m.hdr.code = PS_REGISTER;
@@ -881,8 +841,7 @@ fs_boot(struct task* t, struct msg* msg)
 /*
  * Prepare for shutdown
  */
-static int
-fs_shutdown(struct task* t, struct msg* msg)
+static int fs_shutdown(struct task* t, struct msg* msg)
 {
 
     DPRINTF(VFSDB_CORE, ("fs_shutdown\n"));
@@ -898,8 +857,7 @@ int fs_noop(void)
 /*
  * Dump internal data.
  */
-static int
-fs_debug(struct task* t, struct msg* msg)
+static int fs_debug(struct task* t, struct msg* msg)
 {
 
     dprintf("<File System Server>\n");
@@ -910,30 +868,29 @@ fs_debug(struct task* t, struct msg* msg)
 }
 #endif
 
-static void
-vfs_init(void)
+static void vfs_init(void)
 {
     const struct vfssw* fs;
     struct msg msg;
 
     /*
-	 * Initialize VFS core.
-	 */
+     * Initialize VFS core.
+     */
     task_init();
     bio_init();
     vnode_init();
 
     /*
-	 * Initialize each file system.
-	 */
+     * Initialize each file system.
+     */
     for (fs = vfssw; fs->vs_name; fs++) {
         DPRINTF(VFSDB_CORE, ("VFS: initializing %s\n", fs->vs_name));
         fs->vs_init();
     }
 
     /*
-	 * Create task data for ourselves.
-	 */
+     * Create task data for ourselves.
+     */
     msg.hdr.task = task_self();
     fs_register(NULL, &msg);
 }
@@ -941,8 +898,7 @@ vfs_init(void)
 /*
  * Run specified routine as a thread.
  */
-static int
-run_thread(void (*entry)(void))
+static int run_thread(void (*entry)(void))
 {
     task_t self;
     thread_t t;
@@ -962,8 +918,7 @@ run_thread(void (*entry)(void))
     return thread_resume(t);
 }
 
-static void
-exception_handler(int sig)
+static void exception_handler(int sig)
 {
 
     exception_return();
@@ -1023,8 +978,7 @@ static const struct msg_map fsmsg_map[] = {
 /*
  * File system thread.
  */
-static void
-fs_thread(void)
+static void fs_thread(void)
 {
     struct msg* msg;
     const struct msg_map* map;
@@ -1034,12 +988,12 @@ fs_thread(void)
     msg = malloc(MAX_FSMSG);
 
     /*
-	 * Message loop
-	 */
+     * Message loop
+     */
     for (;;) {
         /*
-		 * Wait for an incoming request.
-		 */
+         * Wait for an incoming request.
+         */
         if ((error = msg_receive(fsobj, msg, MAX_FSMSG)) != 0)
             continue;
 
@@ -1048,8 +1002,8 @@ fs_thread(void)
         while (map->code != 0) {
             if (map->code == msg->hdr.code) {
                 /*
-				 * Handle messages by non-registerd tasks
-				 */
+                 * Handle messages by non-registerd tasks
+                 */
                 if (map->code == STD_BOOT) {
                     error = fs_boot(NULL, msg);
                     break;
@@ -1074,12 +1028,11 @@ fs_thread(void)
         }
 #ifdef DEBUG_VFS
         if (error)
-            dprintf("VFS: task=%x code=%x error=%d\n",
-                msg->hdr.task, map->code, error);
+            dprintf("VFS: task=%x code=%x error=%d\n", msg->hdr.task, map->code, error);
 #endif
         /*
-		 * Reply to the client.
-		 */
+         * Reply to the client.
+         */
         msg->hdr.status = error;
         msg_reply(fsobj, msg, MAX_FSMSG);
     }
@@ -1110,8 +1063,8 @@ int main(int argc, char* argv[])
         sys_panic("VFS: fail to create object");
 
     /*
-	 * Create new server threads.
-	 */
+     * Create new server threads.
+     */
     i = CONFIG_FS_THREADS;
     while (--i > 0) {
         if (run_thread(fs_thread))

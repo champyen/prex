@@ -49,25 +49,21 @@ static void cmd_kill(int argc, char** argv);
 static void cmd_reboot(int argc, char** argv);
 static void cmd_shutdown(int argc, char** argv);
 
-struct cmd_entry {
+struct cmd_entry
+{
     const char* cmd;
     void (*func)(int, char**);
     const char* usage;
 };
 
 static const struct cmd_entry cmd_table[] = {
-    { "ver", cmd_ver, "Version information" },
-    { "mem", cmd_mem, "Show memory usage" },
-    { "clear", cmd_clear, "Clear screen" },
-    { "kill", cmd_kill, "Terminate thread" },
-    { "reboot", cmd_reboot, "Reboot system" },
-    { "shutdown", cmd_shutdown, "Shutdown system" },
-    { "help", cmd_help, "This help" },
-    { NULL, NULL, NULL },
+    {"ver", cmd_ver, "Version information"}, {"mem", cmd_mem, "Show memory usage"},
+    {"clear", cmd_clear, "Clear screen"},    {"kill", cmd_kill, "Terminate thread"},
+    {"reboot", cmd_reboot, "Reboot system"}, {"shutdown", cmd_shutdown, "Shutdown system"},
+    {"help", cmd_help, "This help"},         {NULL, NULL, NULL},
 };
 
-static void
-cmd_help(int argc, char** argv)
+static void cmd_help(int argc, char** argv)
 {
     int i = 0;
 
@@ -77,42 +73,36 @@ cmd_help(int argc, char** argv)
     }
 }
 
-static void
-cmd_ver(int argc, char** argv)
+static void cmd_ver(int argc, char** argv)
 {
     struct kerninfo info;
 
     sys_info(INFO_KERNEL, &info);
 
     printf("Kernel version:\n");
-    printf("%s version %s for %s\n",
-        info.sysname, info.version, info.machine);
+    printf("%s version %s for %s\n", info.sysname, info.version, info.machine);
 }
 
-static void
-cmd_mem(int argc, char** argv)
+static void cmd_mem(int argc, char** argv)
 {
     struct meminfo info;
 
     sys_info(INFO_MEMORY, &info);
 
     printf("Memory usage:\n");
-    printf(" Used     : %8d KB\n",
-        (u_int)((info.total - info.free) / 1024));
+    printf(" Used     : %8d KB\n", (u_int)((info.total - info.free) / 1024));
     printf(" Free     : %8d KB\n", (u_int)(info.free / 1024));
     printf(" Total    : %8d KB\n", (u_int)(info.total / 1024));
     printf(" Bootdisk : %8d KB\n", (u_int)(info.bootdisk / 1024));
 }
 
-static void
-cmd_clear(int argc, char** argv)
+static void cmd_clear(int argc, char** argv)
 {
 
     printf("\33[2J");
 }
 
-static void
-cmd_kill(int argc, char** argv)
+static void cmd_kill(int argc, char** argv)
 {
     thread_t t;
     char* ep;
@@ -128,8 +118,7 @@ cmd_kill(int argc, char** argv)
         printf("Thread %x does not exist\n", (u_int)t);
 }
 
-static void
-cmd_reboot(int argc, char** argv)
+static void cmd_reboot(int argc, char** argv)
 {
     device_t pm_dev;
     int error, state = PWR_REBOOT;
@@ -142,8 +131,7 @@ cmd_reboot(int argc, char** argv)
         printf("Error %d\n", error);
 }
 
-static void
-cmd_shutdown(int argc, char** argv)
+static void cmd_shutdown(int argc, char** argv)
 {
     device_t pm_dev;
     int error, state = PWR_OFF;

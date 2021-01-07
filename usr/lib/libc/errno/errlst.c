@@ -30,53 +30,53 @@
 #include <stdio.h>
 
 const char* const sys_errlist[] = {
-    "Undefined error: 0", /*  0 - ENOERROR */
-    "Operation not permitted", /*  1 - EPERM */
-    "No such file or directory", /*  2 - ENOENT */
-    "No such process", /*  3 - ESRCH */
-    "Interrupted system call", /*  4 - EINTR */
-    "Input/output error", /*  5 - EIO */
-    "Device not configured", /*  6 - ENXIO */
-    "Argument list too long", /*  7 - E2BIG */
-    "Exec format error", /*  8 - ENOEXEC */
-    "Bad file descriptor", /*  9 - EBADF */
-    "No child processes", /* 10 - ECHILD */
-    "Resource deadlock avoided", /* 11 - EDEADLK */
-    "Cannot allocate memory", /* 12 - ENOMEM */
-    "Permission denied", /* 13 - EACCES */
-    "Bad address", /* 14 - EFAULT */
-    "Block device required", /* 15 - ENOTBLK */
-    "Device busy", /* 16 - EBUSY */
-    "File exists", /* 17 - EEXIST */
-    "Cross-device link", /* 18 - EXDEV */
+    "Undefined error: 0",                /*  0 - ENOERROR */
+    "Operation not permitted",           /*  1 - EPERM */
+    "No such file or directory",         /*  2 - ENOENT */
+    "No such process",                   /*  3 - ESRCH */
+    "Interrupted system call",           /*  4 - EINTR */
+    "Input/output error",                /*  5 - EIO */
+    "Device not configured",             /*  6 - ENXIO */
+    "Argument list too long",            /*  7 - E2BIG */
+    "Exec format error",                 /*  8 - ENOEXEC */
+    "Bad file descriptor",               /*  9 - EBADF */
+    "No child processes",                /* 10 - ECHILD */
+    "Resource deadlock avoided",         /* 11 - EDEADLK */
+    "Cannot allocate memory",            /* 12 - ENOMEM */
+    "Permission denied",                 /* 13 - EACCES */
+    "Bad address",                       /* 14 - EFAULT */
+    "Block device required",             /* 15 - ENOTBLK */
+    "Device busy",                       /* 16 - EBUSY */
+    "File exists",                       /* 17 - EEXIST */
+    "Cross-device link",                 /* 18 - EXDEV */
     "Operation not supported by device", /* 19 - ENODEV */
-    "Not a directory", /* 20 - ENOTDIR */
-    "Is a directory", /* 21 - EISDIR */
-    "Invalid argument", /* 22 - EINVAL */
-    "Too many open files in system", /* 23 - ENFILE */
-    "Too many open files", /* 24 - EMFILE */
-    "Inappropriate ioctl for device", /* 25 - ENOTTY */
-    "Text file busy", /* 26 - ETXTBSY */
-    "File too large", /* 27 - EFBIG */
-    "No space left on device", /* 28 - ENOSPC */
-    "Illegal seek", /* 29 - ESPIPE */
-    "Read-only file system", /* 30 - EROFS */
-    "Too many links", /* 31 - EMLINK */
-    "Broken pipe", /* 32 - EPIPE */
+    "Not a directory",                   /* 20 - ENOTDIR */
+    "Is a directory",                    /* 21 - EISDIR */
+    "Invalid argument",                  /* 22 - EINVAL */
+    "Too many open files in system",     /* 23 - ENFILE */
+    "Too many open files",               /* 24 - EMFILE */
+    "Inappropriate ioctl for device",    /* 25 - ENOTTY */
+    "Text file busy",                    /* 26 - ETXTBSY */
+    "File too large",                    /* 27 - EFBIG */
+    "No space left on device",           /* 28 - ENOSPC */
+    "Illegal seek",                      /* 29 - ESPIPE */
+    "Read-only file system",             /* 30 - EROFS */
+    "Too many links",                    /* 31 - EMLINK */
+    "Broken pipe",                       /* 32 - EPIPE */
 
     /* math software */
     "Numerical argument out of domain", /* 33 - EDOM */
-    "Result too large", /* 34 - ERANGE */
+    "Result too large",                 /* 34 - ERANGE */
 
     /* non-blocking and interrupt i/o */
     "Resource temporarily unavailable", /* 35 - EAGAIN */
 
     "Operation timed out", /* 36 - ETIMEDOUT */
-    "File name too long", /* 37 - ENAMETOOLONG */
+    "File name too long",  /* 37 - ENAMETOOLONG */
     "Directory not empty", /* 38 - ENOTEMPTY */
 
     /* quotas & mush */
-    "Too many processes", /* 39 - EPROCLIM */
+    "Too many processes",       /* 39 - EPROCLIM */
     "Function not implemented", /* 40 - ENOSYS */
 };
 const int sys_nerr = sizeof(sys_errlist) / sizeof(sys_errlist[0]);

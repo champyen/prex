@@ -30,8 +30,7 @@
 #include <sys/cdefs.h>
 #include <string.h>
 
-void*
-    memccpy(t, f, c, n) void* t;
+void* memccpy(t, f, c, n) void* t;
 const void* f;
 int c;
 size_t n;

@@ -60,15 +60,14 @@ __END_DECLS
 /*
  * Return true iff the given FILE cannot be written now.
  */
-#define cantwrite(fp) \
-    ((((fp)->_flags & __SWR) == 0 || (fp)->_bf._base == NULL) && __swsetup(fp))
+#define cantwrite(fp) ((((fp)->_flags & __SWR) == 0 || (fp)->_bf._base == NULL) && __swsetup(fp))
 
 /*
  * Test whether the given stdio file has an active ungetc buffer;
  * release such a buffer, without restoring ordinary unread data.
  */
 #define HASUB(fp) ((fp)->_ub._base != NULL)
-#define FREEUB(fp)              \
-    {                           \
-        (fp)->_ub._base = NULL; \
+#define FREEUB(fp)                                                                                                     \
+    {                                                                                                                  \
+        (fp)->_ub._base = NULL;                                                                                        \
     }

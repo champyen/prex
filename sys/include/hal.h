@@ -42,28 +42,29 @@
  */
 #define CTX_KSTACK 0 /* set kernel mode stack address */
 #define CTX_KENTRY 1 /* set kernel mode entry address */
-#define CTX_KARG 2 /* set kernel mode argument */
+#define CTX_KARG 2   /* set kernel mode argument */
 #define CTX_USTACK 3 /* set user mode stack address */
 #define CTX_UENTRY 4 /* set user mode entry addres */
-#define CTX_UARG 5 /* set user mode argument */
+#define CTX_UARG 5   /* set user mode argument */
 
 /*
  * page types for mmu_map()
  */
-#define PG_UNMAP 0 /* no page */
-#define PG_READ 1 /* user - read only */
-#define PG_WRITE 2 /* user - read/write */
+#define PG_UNMAP 0  /* no page */
+#define PG_READ 1   /* user - read only */
+#define PG_WRITE 2  /* user - read/write */
 #define PG_SYSTEM 3 /* system */
-#define PG_IOMEM 4 /* system - no cache */
+#define PG_IOMEM 4  /* system - no cache */
 
 /*
  * Virtual/physical address mapping
  */
-struct mmumap {
+struct mmumap
+{
     vaddr_t virt; /* virtual address */
     paddr_t phys; /* physical address */
     psize_t size; /* size */
-    int type; /* mapping type */
+    int type;     /* mapping type */
 };
 
 #define AUTOSIZE 0
@@ -80,8 +81,8 @@ struct mmumap {
 /*
  * Return value of ISR
  */
-#define INT_DONE 0 /* done */
-#define INT_ERROR 1 /* error */
+#define INT_DONE 0     /* done */
+#define INT_ERROR 1    /* error */
 #define INT_CONTINUE 2 /* continue to IST */
 
 /* No IST for irq_attach() */
@@ -90,7 +91,7 @@ struct mmumap {
 /*
  * Interrupt mode for interrupt_setup()
  */
-#define IMODE_EDGE 0 /* edge trigger */
+#define IMODE_EDGE 0  /* edge trigger */
 #define IMODE_LEVEL 1 /* level trigger */
 
 __BEGIN_DECLS

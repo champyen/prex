@@ -84,8 +84,7 @@ static mutex_t vnode_lock = MUTEX_INITIALIZER;
 /*
  * Get the hash value from the mount point and path name.
  */
-static u_int
-vn_hash(mount_t mp, char* path)
+static u_int vn_hash(mount_t mp, char* path)
 {
     u_int val = 0;
 
@@ -100,8 +99,7 @@ vn_hash(mount_t mp, char* path)
  * Returns locked vnode for specified mount point and path.
  * vn_lock() will increment the reference count of vnode.
  */
-vnode_t
-vn_lookup(mount_t mp, char* path)
+vnode_t vn_lookup(mount_t mp, char* path)
 {
     list_t head, n;
     vnode_t vp;
@@ -153,8 +151,7 @@ void vn_unlock(vnode_t vp)
  * Allocate new vnode for specified path.
  * Increment its reference count and lock it.
  */
-vnode_t
-vget(mount_t mp, char* path)
+vnode_t vget(mount_t mp, char* path)
 {
     vnode_t vp;
     int error;
@@ -179,8 +176,8 @@ vget(mount_t mp, char* path)
     vp->v_nrlocks = 0;
 
     /*
-	 * Request to allocate fs specific data for vnode.
-	 */
+     * Request to allocate fs specific data for vnode.
+     */
     if ((error = VFS_VGET(mp, vp)) != 0) {
         mutex_destroy(&vp->v_lock);
         free(vp->v_path);
@@ -217,8 +214,8 @@ void vput(vnode_t vp)
     VNODE_UNLOCK();
 
     /*
-	 * Deallocate fs specific vnode data
-	 */
+     * Deallocate fs specific vnode data
+     */
     VOP_INACTIVE(vp);
     vfs_unbusy(vp->v_mount);
     vp->v_nrlocks--;
@@ -265,8 +262,8 @@ void vrele(vnode_t vp)
     VNODE_UNLOCK();
 
     /*
-	 * Deallocate fs specific vnode data
-	 */
+     * Deallocate fs specific vnode data
+     */
     VOP_INACTIVE(vp);
     vfs_unbusy(vp->v_mount);
     mutex_destroy(&vp->v_lock);
@@ -410,8 +407,7 @@ void vnode_dump(void)
     list_t head, n;
     vnode_t vp;
     mount_t mp;
-    char type[][6] = { "VNON ", "VREG ", "VDIR ", "VBLK ", "VCHR ",
-        "VLNK ", "VSOCK", "VFIFO" };
+    char type[][6] = {"VNON ", "VREG ", "VDIR ", "VBLK ", "VCHR ", "VLNK ", "VSOCK", "VFIFO"};
 
     VNODE_LOCK();
     dprintf("Dump vnode\n");
@@ -424,11 +420,8 @@ void vnode_dump(void)
             vp = list_entry(n, struct vnode, v_link);
             mp = vp->v_mount;
 
-            dprintf(" %08x %08x %s %6d %8d %s%s\n", (u_int)vp,
-                (u_int)mp, type[vp->v_type], vp->v_refcnt,
-                (u_int)vp->v_blkno,
-                (strlen(mp->m_path) == 1) ? "\0" : mp->m_path,
-                vp->v_path);
+            dprintf(" %08x %08x %s %6d %8d %s%s\n", (u_int)vp, (u_int)mp, type[vp->v_type], vp->v_refcnt,
+                    (u_int)vp->v_blkno, (strlen(mp->m_path) == 1) ? "\0" : mp->m_path, vp->v_path);
         }
     }
     dprintf("\n");

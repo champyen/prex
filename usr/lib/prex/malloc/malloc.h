@@ -38,11 +38,11 @@
 #define MALLOC_LOCK() mutex_lock(&malloc_lock);
 #define MALLOC_UNLOCK() mutex_unlock(&malloc_lock);
 #else
-#define MALLOC_LOCK() \
-    do {              \
+#define MALLOC_LOCK()                                                                                                  \
+    do {                                                                                                               \
     } while (0)
-#define MALLOC_UNLOCK() \
-    do {                \
+#define MALLOC_UNLOCK()                                                                                                \
+    do {                                                                                                               \
     } while (0)
 #endif
 
@@ -50,7 +50,8 @@
 #define ALIGN_MASK (ALIGN_SIZE - 1)
 #define ROUNDUP(size) (((u_long)(size) + ALIGN_MASK) & ~ALIGN_MASK)
 
-struct header {
+struct header
+{
     struct header* next;
     size_t size;
     size_t vm_size;

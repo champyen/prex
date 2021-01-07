@@ -74,7 +74,7 @@
 #define BOOT_PGD_PHYS 0x5000
 #define BOOT_PTE0_PHYS 0x6000
 
-#define INTSTKSZ 0x1000 /* size of interrupt stack */
+#define INTSTKSZ 0x1000  /* size of interrupt stack */
 #define BOOTSTKSZ 0x0c00 /* size of boot stack */
 
 #define INTSTKTOP (INTSTK + INTSTKSZ)

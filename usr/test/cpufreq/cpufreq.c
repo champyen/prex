@@ -42,8 +42,7 @@
 #include <sys/prex.h>
 #include <stdio.h>
 
-static void
-set_0_or_100(void)
+static void set_0_or_100(void)
 {
     u_long t1, t2;
     char index[] = "-\\|/";
@@ -53,8 +52,8 @@ set_0_or_100(void)
     i = 0;
     for (cnt = 0; cnt < 2; cnt++) {
         /*
-		 * Display indicator for 5 sec.
-		 */
+         * Display indicator for 5 sec.
+         */
         printf("\rCPU Busy:");
         sys_time(&t1);
         for (;;) {
@@ -62,23 +61,22 @@ set_0_or_100(void)
             if (t2 > t1 + 5000)
                 break;
             /*
-			 * Update indicator per 100 msec.
-			 */
+             * Update indicator per 100 msec.
+             */
             if ((t2 % 100) == 0) {
                 bar[0] = index[i++ % 4];
                 printf("%s", bar);
             }
         }
         /*
-		 * Sleep 5 sec.
-		 */
+         * Sleep 5 sec.
+         */
         printf("\rCPU Idle  ");
         timer_sleep(5000, 0);
     }
 }
 
-static void
-set_50(void)
+static void set_50(void)
 {
     u_long t1, t2;
     char index[] = "-\\|/";
@@ -89,8 +87,8 @@ set_50(void)
     i = 0;
     for (cnt = 0; cnt < 5000; cnt++) {
         /*
-		 * Update indicator per 100 msec.
-		 */
+         * Update indicator per 100 msec.
+         */
         if ((t2 % 100) == 0) {
             bar[0] = index[i++ % 4];
             printf("%s", bar);
@@ -102,8 +100,8 @@ set_50(void)
                 break;
         }
         /*
-		 * Sleep 1msec.
-		 */
+         * Sleep 1msec.
+         */
         timer_sleep(1, 0);
     }
 }

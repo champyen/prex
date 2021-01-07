@@ -34,9 +34,9 @@
 
 int opterr = 1, /* if error message should be printed */
     optind = 1, /* index into parent argv vector */
-    optopt, /* character checked for validity */
-    optreset; /* reset getopt */
-char* optarg; /* argument associated with option */
+    optopt,     /* character checked for validity */
+    optreset;   /* reset getopt */
+char* optarg;   /* argument associated with option */
 
 #define BADCH (int)'?'
 #define BADARG (int)':'
@@ -52,7 +52,7 @@ int getopt(int nargc, char* const nargv[], const char* ostr)
 	extern char *__progname;
 #endif
     static char* place = EMSG; /* option letter processing */
-    char* oli; /* option letter list index */
+    char* oli;                 /* option letter list index */
 
     if (optreset || !*place) { /* update scanning pointer */
         optreset = 0;
@@ -68,9 +68,9 @@ int getopt(int nargc, char* const nargv[], const char* ostr)
     } /* option letter okay? */
     if ((optopt = (int)*place++) == (int)':' || !(oli = strchr(ostr, optopt))) {
         /*
-		 * if the user didn't specify '-' as an option,
-		 * assume it means -1.
-		 */
+         * if the user didn't specify '-' as an option,
+         * assume it means -1.
+         */
         if (optopt == (int)'-')
             return (-1);
         if (!*place)
@@ -86,7 +86,7 @@ int getopt(int nargc, char* const nargv[], const char* ostr)
         optarg = NULL;
         if (!*place)
             ++optind;
-    } else { /* need an argument */
+    } else {        /* need an argument */
         if (*place) /* no white space */
             optarg = place;
         else if (nargc <= ++optind) { /* no arg */

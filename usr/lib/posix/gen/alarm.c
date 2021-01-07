@@ -29,8 +29,7 @@
 
 #include <sys/prex.h>
 
-unsigned int
-alarm(unsigned int seconds)
+unsigned int alarm(unsigned int seconds)
 {
     unsigned int remain = 0;
 

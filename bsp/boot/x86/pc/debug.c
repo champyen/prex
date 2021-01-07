@@ -59,8 +59,8 @@ void debug_putc(int c)
 
 #if defined(DEBUG) && defined(CONFIG_DIAG_SERIAL)
     /*
-	 * output to serial port.
-	 */
+     * output to serial port.
+     */
     while (!(inb(COM_LSR) & 0x20))
         ;
     outb(COM_THR, c);
@@ -68,8 +68,8 @@ void debug_putc(int c)
 
 #if defined(DEBUG) && defined(CONFIG_DIAG_BOCHS)
     /*
-	 * output to bochs emulater console.
-	 */
+     * output to bochs emulater console.
+     */
     if (inb(0xe9) == 0xe9)
         outb(0xe9, (u_char)c);
 #endif
@@ -83,8 +83,8 @@ void debug_init(void)
 
 #if defined(DEBUG) && defined(CONFIG_DIAG_SERIAL)
     /*
-	 * Initialize serial port.
-	 */
+     * Initialize serial port.
+     */
     if (inb(COM_LSR) == 0xff)
         return; /* Serial port is disabled */
 

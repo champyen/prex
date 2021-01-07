@@ -54,20 +54,19 @@ static int fatfs_vget(mount_t mp, vnode_t vp);
  * File system operations
  */
 struct vfsops fatfs_vfsops = {
-    fatfs_mount, /* mount */
+    fatfs_mount,   /* mount */
     fatfs_unmount, /* unmount */
-    fatfs_sync, /* sync */
-    fatfs_vget, /* vget */
-    fatfs_statfs, /* statfs */
-    &fatfs_vnops, /* vnops */
+    fatfs_sync,    /* sync */
+    fatfs_vget,    /* vget */
+    fatfs_statfs,  /* statfs */
+    &fatfs_vnops,  /* vnops */
 };
 
 /*
  * Read BIOS parameter block.
  * Return 0 on sucess.
  */
-static int
-fat_read_bpb(struct fatfsmount* fmp)
+static int fat_read_bpb(struct fatfsmount* fmp)
 {
     struct fat_bpb* bpb;
     size_t size;
@@ -129,8 +128,7 @@ fat_read_bpb(struct fatfsmount* fmp)
 /*
  * Mount file system.
  */
-static int
-fatfs_mount(mount_t mp, char* dev, int flags, void* data)
+static int fatfs_mount(mount_t mp, char* dev, int flags, void* data)
 {
     struct fatfsmount* fmp;
     vnode_t vp;
@@ -176,8 +174,7 @@ err1:
 /*
  * Unmount the file system.
  */
-static int
-fatfs_unmount(mount_t mp)
+static int fatfs_unmount(mount_t mp)
 {
     struct fatfsmount* fmp;
 
@@ -193,8 +190,7 @@ fatfs_unmount(mount_t mp)
 /*
  * Prepare the FAT specific node and fill the vnode.
  */
-static int
-fatfs_vget(mount_t mp, vnode_t vp)
+static int fatfs_vget(mount_t mp, vnode_t vp)
 {
     struct fatfs_node* np;
 

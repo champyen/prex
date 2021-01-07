@@ -61,8 +61,7 @@ static u_long start_tick;
 /*
  * Re-program alarm timer as count * 200msec.
  */
-static void
-alarm_handler(int code)
+static void alarm_handler(int code)
 {
     u_long tick;
 
@@ -74,8 +73,7 @@ alarm_handler(int code)
         }
         timer_alarm(count * 200, 0);
         sys_time(&tick);
-        printf("Ring! count=%ld time=%d msec\n", count,
-            (u_int)((tick - start_tick) * 1000 / hz));
+        printf("Ring! count=%ld time=%d msec\n", count, (u_int)((tick - start_tick) * 1000 / hz));
     }
     exception_return();
 }
@@ -93,14 +91,14 @@ int main(int argc, char* argv[])
     hz = info.hz;
 
     /*
-	 * Install alarm handler
-	 */
+     * Install alarm handler
+     */
     exception_setup(alarm_handler);
     timer_sleep(2000, 0);
 
     /*
-	 * Kick first alarm timer.
-	 */
+     * Kick first alarm timer.
+     */
     printf("Start alarm timer\n");
     count = 0;
     sys_time(&start_tick);

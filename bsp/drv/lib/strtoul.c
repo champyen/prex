@@ -38,8 +38,7 @@
  *
  * return ULONG_MAX if error.
  */
-unsigned long
-strtoul(const char* nptr, char** endptr, int base)
+unsigned long strtoul(const char* nptr, char** endptr, int base)
 {
     const char* s;
     unsigned long acc, cutoff;
@@ -47,8 +46,8 @@ strtoul(const char* nptr, char** endptr, int base)
     int neg, any, cutlim;
 
     /*
-	 * See strtol for comments as to the logic used.
-	 */
+     * See strtol for comments as to the logic used.
+     */
     s = nptr;
     do {
         c = (unsigned char)*s++;

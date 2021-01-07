@@ -42,8 +42,7 @@
  *
  * If *stringp is NULL, strsep returns NULL.
  */
-char*
-    strsep(stringp, delim) char** stringp;
+char* strsep(stringp, delim) char** stringp;
 const char* delim;
 {
     char* s;

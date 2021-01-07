@@ -98,15 +98,17 @@ static int dma_init(struct driver* self);
 /*
  * DMA descriptor
  */
-struct dma {
-    int chan; /* dma channel */
+struct dma
+{
+    int chan;   /* dma channel */
     int in_use; /* true if used */
 };
 
 /*
  * DMA i/o port
  */
-struct dma_port {
+struct dma_port
+{
     int mask;
     int mode;
     int clear;
@@ -117,14 +119,14 @@ struct dma_port {
 
 static const struct dma_port dma_regs[] = {
     /*	mask,  mode,  clear, addr,  count, page */
-    { 0x0a, 0x0b, 0x0c, 0x00, 0x01, 0x87 }, /* Channel 0 */
-    { 0x0a, 0x0b, 0x0c, 0x02, 0x03, 0x83 }, /* Channel 1 */
-    { 0x0a, 0x0b, 0x0c, 0x04, 0x05, 0x81 }, /* Channel 2 */
-    { 0x0a, 0x0b, 0x0c, 0x06, 0x07, 0x82 }, /* Channel 3 */
-    { 0xd4, 0xd6, 0xd8, 0xc0, 0xc2, 0x8f }, /* Channel 4 (n/a) */
-    { 0xd4, 0xd6, 0xd8, 0xc4, 0xc6, 0x8b }, /* Channel 5 */
-    { 0xd4, 0xd6, 0xd8, 0xc8, 0xca, 0x89 }, /* Channel 6 */
-    { 0xd4, 0xd6, 0xd8, 0xcc, 0xce, 0x8a }, /* Channel 7 */
+    {0x0a, 0x0b, 0x0c, 0x00, 0x01, 0x87}, /* Channel 0 */
+    {0x0a, 0x0b, 0x0c, 0x02, 0x03, 0x83}, /* Channel 1 */
+    {0x0a, 0x0b, 0x0c, 0x04, 0x05, 0x81}, /* Channel 2 */
+    {0x0a, 0x0b, 0x0c, 0x06, 0x07, 0x82}, /* Channel 3 */
+    {0xd4, 0xd6, 0xd8, 0xc0, 0xc2, 0x8f}, /* Channel 4 (n/a) */
+    {0xd4, 0xd6, 0xd8, 0xc4, 0xc6, 0x8b}, /* Channel 5 */
+    {0xd4, 0xd6, 0xd8, 0xc8, 0xca, 0x89}, /* Channel 6 */
+    {0xd4, 0xd6, 0xd8, 0xcc, 0xce, 0x8a}, /* Channel 7 */
 };
 
 static struct dma dma_table[NR_DMAS];
@@ -204,16 +206,16 @@ void dma_setup(dma_t handle, void* addr, u_long count, int read)
     mode = read ? 0x44U : 0x48U;
     count--;
 
-    bus_write_8(regs->mask, bits | 0x04); /* Disable channel */
-    bus_write_8(regs->clear, 0x00); /* Clear byte pointer flip-flop */
-    bus_write_8(regs->mode, bits | mode); /* Set mode */
-    bus_write_8(regs->addr, (u_char)((paddr >> 0) & 0xff)); /* Address low */
-    bus_write_8(regs->addr, (u_char)((paddr >> 8) & 0xff)); /* Address high */
+    bus_write_8(regs->mask, bits | 0x04);                    /* Disable channel */
+    bus_write_8(regs->clear, 0x00);                          /* Clear byte pointer flip-flop */
+    bus_write_8(regs->mode, bits | mode);                    /* Set mode */
+    bus_write_8(regs->addr, (u_char)((paddr >> 0) & 0xff));  /* Address low */
+    bus_write_8(regs->addr, (u_char)((paddr >> 8) & 0xff));  /* Address high */
     bus_write_8(regs->page, (u_char)((paddr >> 16) & 0xff)); /* Page address */
-    bus_write_8(regs->clear, 0x00); /* Clear byte pointer flip-flop */
+    bus_write_8(regs->clear, 0x00);                          /* Clear byte pointer flip-flop */
     bus_write_8(regs->count, (u_char)((count >> 0) & 0xff)); /* Count low */
     bus_write_8(regs->count, (u_char)((count >> 8) & 0xff)); /* Count high */
-    bus_write_8(regs->mask, bits); /* Enable channel */
+    bus_write_8(regs->mask, bits);                           /* Enable channel */
 
     splx(s);
 }
@@ -250,8 +252,8 @@ void* dma_alloc(size_t size)
     sched_lock();
 
     /*
-	 * Try to allocate temporary buffer for enough size (64K + size).
-	 */
+     * Try to allocate temporary buffer for enough size (64K + size).
+     */
     size = round_page(size);
     tmp = page_alloc((size_t)(DMA_MAX + size));
     if (tmp == 0) {
@@ -261,8 +263,8 @@ void* dma_alloc(size_t size)
     page_free(tmp, (size_t)(DMA_MAX + size));
 
     /*
-	 * Now, we know the free address with 64k boundary.
-	 */
+     * Now, we know the free address with 64k boundary.
+     */
     base = DMA_ALIGN(tmp);
     page_reserve(base, size);
 
@@ -270,8 +272,7 @@ void* dma_alloc(size_t size)
     return ptokv(base);
 }
 
-static int
-dma_init(struct driver* self)
+static int dma_init(struct driver* self)
 {
 
     return 0;

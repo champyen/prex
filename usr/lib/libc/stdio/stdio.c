@@ -39,18 +39,14 @@
  * Small standard I/O/seek/close functions.
  * These maintain the `known seek offset' for seek optimisation.
  */
-int
-    __sread(fp, buf, n)
-        FILE* fp;
+int __sread(fp, buf, n) FILE* fp;
 char* buf;
 int n;
 {
     return (read(fp->_file, buf, n));
 }
 
-int
-    __swrite(fp, buf, n)
-        FILE* fp;
+int __swrite(fp, buf, n) FILE* fp;
 char const* buf;
 int n;
 {
@@ -59,18 +55,14 @@ int n;
     return (write(fp->_file, buf, n));
 }
 
-fpos_t
-    __sseek(fp, offset, whence)
-        FILE* fp;
+fpos_t __sseek(fp, offset, whence) FILE* fp;
 fpos_t offset;
 int whence;
 {
     return (lseek(fp->_file, (off_t)offset, whence));
 }
 
-int
-    __sclose(fp)
-        FILE* fp;
+int __sclose(fp) FILE* fp;
 {
     return (close(fp->_file));
 }

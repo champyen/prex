@@ -37,11 +37,11 @@
 
 #define _ALIGN_TEXT .align 0
 #define _ASM_TYPE_FUNCTION #function
-#define _ENTRY(x)                \
-    .text;                       \
-    _ALIGN_TEXT;                 \
-    .globl x;                    \
-    .type x, _ASM_TYPE_FUNCTION; \
+#define _ENTRY(x)                                                                                                      \
+    .text;                                                                                                             \
+    _ALIGN_TEXT;                                                                                                       \
+    .globl x;                                                                                                          \
+    .type x, _ASM_TYPE_FUNCTION;                                                                                       \
     x:
 
 #define _C_LABEL(x) x

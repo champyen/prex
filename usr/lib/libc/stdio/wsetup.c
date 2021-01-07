@@ -39,17 +39,15 @@
  * because either _flags does not include __SWR, or _buf is NULL.
  * _wsetup returns 0 if OK to write, nonzero otherwise.
  */
-int
-    __swsetup(fp)
-        FILE* fp;
+int __swsetup(fp) FILE* fp;
 {
     /* make sure stdio is set up */
     if (!__sdidinit)
         __sinit();
 
     /*
-	 * If we are not writing, we had better be reading and writing.
-	 */
+     * If we are not writing, we had better be reading and writing.
+     */
     if ((fp->_flags & __SWR) == 0) {
         if ((fp->_flags & __SRW) == 0)
             return (EOF);
@@ -65,8 +63,8 @@ int
     }
 
     /*
-	 * Make a buffer if necessary, then set _w.
-	 */
+     * Make a buffer if necessary, then set _w.
+     */
     if (fp->_bf._base == NULL)
         __smakebuf(fp);
 

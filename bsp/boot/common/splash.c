@@ -37,7 +37,7 @@ void splash(void)
 {
 #if defined(CONFIG_SPLASH)
     /*
-	 * TODO: Show the vendor specific logo here...
-	 */
+     * TODO: Show the vendor specific logo here...
+     */
 #endif
 }

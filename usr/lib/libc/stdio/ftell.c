@@ -37,35 +37,33 @@
 /*
  * ftell: return current offset.
  */
-long
-    ftell(fp)
-        FILE* fp;
+long ftell(fp) FILE* fp;
 {
     fpos_t pos;
 
     /*
-	 * Find offset of underlying I/O object, then
-	 * adjust for buffered bytes.
-	 */
+     * Find offset of underlying I/O object, then
+     * adjust for buffered bytes.
+     */
     pos = __sseek(fp, (fpos_t)0, SEEK_CUR);
     if (pos == -(fpos_t)1)
         return (pos);
 
     if (fp->_flags & __SRD) {
         /*
-		 * Reading.  Any unread characters (including
-		 * those from ungetc) cause the position to be
-		 * smaller than that in the underlying object.
-		 */
+         * Reading.  Any unread characters (including
+         * those from ungetc) cause the position to be
+         * smaller than that in the underlying object.
+         */
         pos -= fp->_r;
         if (HASUB(fp))
             pos -= fp->_ur;
     } else if (fp->_flags & __SWR && fp->_p != NULL) {
         /*
-		 * Writing.  Any buffered characters cause the
-		 * position to be greater than that in the
-		 * underlying object.
-		 */
+         * Writing.  Any buffered characters cause the
+         * position to be greater than that in the
+         * underlying object.
+         */
         pos += fp->_p - fp->_bf._base;
     }
     return (pos);

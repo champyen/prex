@@ -39,9 +39,10 @@
 /*
  * Message structure
  */
-struct chat_msg {
+struct chat_msg
+{
     struct msg_header hdr; /* Message header */
-    char str[128]; /* String */
+    char str[128];         /* String */
 };
 
 static char stack[1024];
@@ -49,8 +50,7 @@ static char stack[1024];
 /*
  * Start client task/thread
  */
-static task_t
-start_client(void (*func)(void), char* stack)
+static task_t start_client(void (*func)(void), char* stack)
 {
     task_t task;
     thread_t t;
@@ -89,8 +89,7 @@ void send_message(object_t obj, const char* str)
 /*
  * Client task
  */
-static void
-client_task(void)
+static void client_task(void)
 {
     object_t obj;
     int error;
@@ -98,14 +97,14 @@ client_task(void)
     printf("Client is started\n");
 
     /*
-	 * Find objects.
-	 */
+     * Find objects.
+     */
     if ((error = object_lookup("test", &obj)) != 0)
         panic("can not find object");
 
     /*
-	 * Send message per 2 second.
-	 */
+     * Send message per 2 second.
+     */
     send_message(obj, "Hello!");
     send_message(obj, "This is a client task.");
     send_message(obj, "Who are you?");
@@ -129,36 +128,36 @@ int main(int argc, char* argv[])
     printf("IPC sample program\n");
 
     /*
-	 * Boost priority of this thread
-	 */
+     * Boost priority of this thread
+     */
     thread_setpri(thread_self(), 90);
 
     /*
-	 * Create object
-	 */
+     * Create object
+     */
     if ((error = object_create("test", &obj)) != 0)
         panic("fail to create object");
 
     /*
-	 * Start client task.
-	 */
+     * Start client task.
+     */
     if (start_client(client_task, stack + 1024) == 0)
         panic("fail to create task");
 
     /*
-	 * Message loop
-	 */
+     * Message loop
+     */
     exit = 0;
     while (exit == 0) {
         /*
-		 * Wait for an incoming request.
-		 */
+         * Wait for an incoming request.
+         */
         error = msg_receive(obj, &msg, sizeof(msg));
         if (error)
             continue;
         /*
-		 * Process request.
-		 */
+         * Process request.
+         */
         printf("server: Received \"%s\"\n", msg.str);
         if (!strcmp(msg.str, "Exit"))
             exit = 1;
@@ -171,8 +170,8 @@ int main(int argc, char* argv[])
             strcpy(msg.str, "OK.");
 
         /*
-		 * Reply to the client.
-		 */
+         * Reply to the client.
+         */
         msg_reply(obj, &msg, sizeof(msg));
     }
     timer_sleep(1000, 0);

@@ -35,9 +35,7 @@
 #include "local.h"
 
 /* Flush a single file, or (if fp is NULL) all files.  */
-int
-    fflush(fp)
-        FILE* fp;
+int fflush(fp) FILE* fp;
 {
 
     if (fp == NULL)
@@ -49,9 +47,7 @@ int
     return (__sflush(fp));
 }
 
-int
-    __sflush(fp)
-        FILE* fp;
+int __sflush(fp) FILE* fp;
 {
     unsigned char* p;
     int n, t;
@@ -66,9 +62,9 @@ int
     n = fp->_p - p; /* write this much */
 
     /*
-	 * Set these immediately to avoid problems with longjmp and to allow
-	 * exchange buffering (via setvbuf) in user write function.
-	 */
+     * Set these immediately to avoid problems with longjmp and to allow
+     * exchange buffering (via setvbuf) in user write function.
+     */
     fp->_p = p;
     fp->_w = t & (__SLBF | __SNBF) ? 0 : fp->_bf._size;
 

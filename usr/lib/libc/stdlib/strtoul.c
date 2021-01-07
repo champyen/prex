@@ -38,9 +38,7 @@
  * Ignores `locale' stuff.  Assumes that the upper and lower case
  * alphabets and digits are each contiguous.
  */
-unsigned long
-    strtoul(nptr, endptr, base)
-        const char* nptr;
+unsigned long strtoul(nptr, endptr, base) const char* nptr;
 char** endptr;
 register int base;
 {
@@ -50,8 +48,8 @@ register int base;
     int neg, any, cutlim;
 
     /*
-	 * See strtol for comments as to the logic used.
-	 */
+     * See strtol for comments as to the logic used.
+     */
     s = nptr;
     do {
         c = (unsigned char)*s++;

@@ -45,14 +45,12 @@
 ** add one for integer division truncation;
 ** add one more for a minus sign if the type is signed.
 */
-#define INT_STRLEN_MAXIMUM(type) \
-    ((TYPE_BIT(type) - TYPE_SIGNED(type)) * 302 / 1000 + 1 + TYPE_SIGNED(type))
+#define INT_STRLEN_MAXIMUM(type) ((TYPE_BIT(type) - TYPE_SIGNED(type)) * 302 / 1000 + 1 + TYPE_SIGNED(type))
 #endif /* !defined INT_STRLEN_MAXIMUM */
 
 #define ASCTIME_BUFLEN (3 * 2 + 5 * INT_STRLEN_MAXIMUM(int) + 3 + 2 + 1 + 1)
 
-char*
-    asctime(timeptr) register const struct tm* timeptr;
+char* asctime(timeptr) register const struct tm* timeptr;
 {
     static char result[ASCTIME_BUFLEN];
 

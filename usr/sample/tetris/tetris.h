@@ -129,8 +129,9 @@ extern int Rows, Cols; /* current screen size */
  * the primary shapes, and the remaining 12 represent their various
  * rotated forms.
  */
-struct shape {
-    int rot; /* index of rotated version of this shape */
+struct shape
+{
+    int rot;    /* index of rotated version of this shape */
     int off[3]; /* offsets to other blots if center is at (0,0) */
 };
 

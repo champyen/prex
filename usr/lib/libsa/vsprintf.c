@@ -38,18 +38,17 @@
 
 #define isdigit(c) ((unsigned)((c) - '0') < 10)
 
-static int
-divide(long* n, int base)
+static int divide(long* n, int base)
 {
     int res;
 
     /*
-	 * Note: Optimized for ARM processor which does not support
-	 * divide instructions.
-	 *
-	 * res = ((unsigned long)*n) % (unsigned int)base;
-	 * *n = ((unsigned long)*n) / (unsigned int)base;
-	 */
+     * Note: Optimized for ARM processor which does not support
+     * divide instructions.
+     *
+     * res = ((unsigned long)*n) % (unsigned int)base;
+     * *n = ((unsigned long)*n) / (unsigned int)base;
+     */
 
     if (base == 10) {
         res = (int)(((unsigned long)*n) % 10U);
@@ -61,8 +60,7 @@ divide(long* n, int base)
     return res;
 }
 
-static int
-atoi(const char** s)
+static int atoi(const char** s)
 {
     int i = 0;
     while (isdigit((int)**s))

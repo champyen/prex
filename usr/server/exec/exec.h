@@ -55,23 +55,25 @@
 /*
  * Exec descriptor
  */
-struct exec {
-    char* path; /* path name */
-    void* header; /* buffer for header */
-    char* xarg1; /* extra arguments */
-    char* xarg2; /* extra arguments */
-    task_t task; /* task id */
+struct exec
+{
+    char* path;    /* path name */
+    void* header;  /* buffer for header */
+    char* xarg1;   /* extra arguments */
+    char* xarg2;   /* extra arguments */
+    task_t task;   /* task id */
     vaddr_t entry; /* entry address */
 };
 
 /*
  * Definition for exec loader
  */
-struct exec_loader {
-    const char* el_name; /* name of loader */
-    void (*el_init)(void); /* initialize routine */
+struct exec_loader
+{
+    const char* el_name;           /* name of loader */
+    void (*el_init)(void);         /* initialize routine */
     int (*el_probe)(struct exec*); /* probe routine */
-    int (*el_load)(struct exec*); /* load routine */
+    int (*el_load)(struct exec*);  /* load routine */
 };
 
 /*
@@ -84,8 +86,9 @@ struct exec_loader {
 /*
  * Capability mapping
  */
-struct cap_map {
-    char* c_path; /* application name */
+struct cap_map
+{
+    char* c_path;   /* application name */
     cap_t c_capset; /* capability set */
 };
 

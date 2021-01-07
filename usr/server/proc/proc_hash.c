@@ -42,15 +42,14 @@
 /*
  * Hash tables for ID mapping
  */
-static struct list pid_table[ID_MAXBUCKETS]; /* mapping: pid  -> proc */
+static struct list pid_table[ID_MAXBUCKETS];  /* mapping: pid  -> proc */
 static struct list task_table[ID_MAXBUCKETS]; /* mapping: task -> proc */
 static struct list pgid_table[ID_MAXBUCKETS]; /* mapping: pgid -> pgrp */
 
 /*
  * Locate a process by number
  */
-struct proc*
-p_find(pid_t pid)
+struct proc* p_find(pid_t pid)
 {
     list_t head, n;
     struct proc* p = NULL;
@@ -69,8 +68,7 @@ p_find(pid_t pid)
 /*
  * Locate a process group by number
  */
-struct pgrp*
-pg_find(pid_t pgid)
+struct pgrp* pg_find(pid_t pgid)
 {
     list_t head, n;
     struct pgrp* g = NULL;
@@ -89,8 +87,7 @@ pg_find(pid_t pgid)
 /*
  * Find process by task ID.
  */
-struct proc*
-task_to_proc(task_t task)
+struct proc* task_to_proc(task_t task)
 {
     list_t head, n;
     struct proc* p = NULL;
