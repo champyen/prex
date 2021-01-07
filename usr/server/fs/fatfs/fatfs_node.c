@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2005-2008, Kohsuke Ohtani
+ * Copyright (c) 2021, Champ Yen (champ.yen@gmail.com)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -77,7 +78,8 @@ static int fat_write_dirent(struct fatfsmount* fmp, u_long sec)
 static int fat_lookup_dirent(struct fatfsmount* fmp, u_long sec, char* name, struct fatfs_node* np)
 {
     struct fat_dirent* de;
-    int error, i;
+    u_long i;
+    int error;
 
     error = fat_read_dirent(fmp, sec);
     if (error)
@@ -116,8 +118,8 @@ int fatfs_lookup_node(vnode_t dvp, char* name, struct fatfs_node* np)
 {
     struct fatfsmount* fmp;
     char fat_name[12];
-    u_long cl, sec;
-    int i, error;
+    u_long i, cl, sec, sec_start;
+    int error;
 
     if (name == NULL)
         return ENOENT;
@@ -129,15 +131,18 @@ int fatfs_lookup_node(vnode_t dvp, char* name, struct fatfs_node* np)
 
     fmp = (struct fatfsmount*)dvp->v_mount->m_data;
     cl = dvp->v_blkno;
-    if (cl == CL_ROOT) {
+    if (cl == CL_ROOT && !(FAT32(fmp))) {
         /* Search entry in root directory */
-        for (sec = fmp->root_start; sec < fmp->data_start; sec++) {
+        sec_start = fmp->root_start;
+        for (sec = sec_start; sec < fmp->data_start; sec++) {
             error = fat_lookup_dirent(fmp, sec, fat_name, np);
             if (error != EAGAIN)
                 return error;
         }
     } else {
         /* Search entry in sub directory */
+        if (cl == CL_ROOT) /* CL_ROOT of FAT32 */
+            cl = fmp->root_start;
         while (!IS_EOFCL(fmp, cl)) {
             sec = cl_to_sec(fmp, cl);
             for (i = 0; i < fmp->sec_per_cl; i++) {
@@ -167,7 +172,8 @@ int fatfs_lookup_node(vnode_t dvp, char* name, struct fatfs_node* np)
 static int fat_get_dirent(struct fatfsmount* fmp, u_long sec, int target, int* index, struct fatfs_node* np)
 {
     struct fat_dirent* de;
-    int error, i;
+    u_long i;
+    int error;
 
     error = fat_read_dirent(fmp, sec);
     if (error)
@@ -204,8 +210,8 @@ static int fat_get_dirent(struct fatfsmount* fmp, u_long sec, int target, int* i
 int fatfs_get_node(vnode_t dvp, int index, struct fatfs_node* np)
 {
     struct fatfsmount* fmp;
-    u_long cl, sec;
-    int i, cur_index, error;
+    u_long i, cl, sec, sec_start;
+    int cur_index, error;
 
     fmp = (struct fatfsmount*)dvp->v_mount->m_data;
     cl = dvp->v_blkno;
@@ -213,14 +219,17 @@ int fatfs_get_node(vnode_t dvp, int index, struct fatfs_node* np)
 
     DPRINTF(("fatfs_get_node: index=%d\n", index));
 
-    if (cl == CL_ROOT) {
+    if (cl == CL_ROOT && !(FAT32(fmp))) {
         /* Get entry from the root directory */
-        for (sec = fmp->root_start; sec < fmp->data_start; sec++) {
+        sec_start = fmp->root_start;
+        for (sec = sec_start; sec < fmp->data_start; sec++) {
             error = fat_get_dirent(fmp, sec, index, &cur_index, np);
             if (error != EAGAIN)
                 return error;
         }
     } else {
+        if (cl == CL_ROOT) /* CL_ROOT of FAT32 */
+            cl = fmp->root_start;
         /* Get entry from the sub directory */
         while (!IS_EOFCL(fmp, cl)) {
             sec = cl_to_sec(fmp, cl);
@@ -248,7 +257,8 @@ int fatfs_get_node(vnode_t dvp, int index, struct fatfs_node* np)
 static int fat_add_dirent(struct fatfsmount* fmp, u_long sec, struct fatfs_node* np)
 {
     struct fat_dirent* de;
-    int error, i;
+    u_long i;
+    int error;
 
     error = fat_read_dirent(fmp, sec);
     if (error)
@@ -279,8 +289,8 @@ found:
 int fatfs_add_node(vnode_t dvp, struct fatfs_node* np)
 {
     struct fatfsmount* fmp;
-    u_long cl, sec;
-    int i, error;
+    u_long i, cl, sec, sec_start;
+    int error;
     u_long next;
 
     fmp = (struct fatfsmount*)dvp->v_mount->m_data;
@@ -288,15 +298,18 @@ int fatfs_add_node(vnode_t dvp, struct fatfs_node* np)
 
     DPRINTF(("fatfs_add_node: cl=%d\n", cl));
 
-    if (cl == CL_ROOT) {
+    if (cl == CL_ROOT && !(FAT32(fmp))) {
         /* Add entry in root directory */
-        for (sec = fmp->root_start; sec < fmp->data_start; sec++) {
+        sec_start = fmp->root_start;
+        for (sec = sec_start; sec < fmp->data_start; sec++) {
             error = fat_add_dirent(fmp, sec, np);
             if (error != ENOENT)
                 return error;
         }
     } else {
         /* Search entry in sub directory */
+        if (cl == CL_ROOT) /* CL_ROOT of FAT32 */
+            cl = fmp->root_start;
         while (!IS_EOFCL(fmp, cl)) {
             sec = cl_to_sec(fmp, cl);
             for (i = 0; i < fmp->sec_per_cl; i++) {

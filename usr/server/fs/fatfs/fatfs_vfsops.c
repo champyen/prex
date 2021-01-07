@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2005-2008, Kohsuke Ohtani
+ * Copyright (c) 2021, Champ Yen (champ.yen@gmail.com)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -64,65 +65,102 @@ struct vfsops fatfs_vfsops = {
 
 /*
  * Read BIOS parameter block.
- * Return 0 on sucess.
+ * Return 0 on success.
  */
 static int fat_read_bpb(struct fatfsmount* fmp)
 {
     struct fat_bpb* bpb;
+    struct fat32_bpb* bpb32;
     size_t size;
     int error;
+    uint32_t bootsect, fatsize, totalsect, maxclust, i;
+    uint32_t total_sectors;
+    char* ptr;
+    int sect;
 
     bpb = malloc(SEC_SIZE);
     if (bpb == NULL)
         return ENOMEM;
 
+    bpb32 = (struct fat32_bpb*)bpb;
+    ptr = (char*)bpb;
     /* Read boot sector (block:0) */
     size = SEC_SIZE;
     error = device_read(fmp->dev, bpb, &size, 0);
-    if (error) {
-        free(bpb);
-        return error;
-    }
     if (bpb->bytes_per_sector != SEC_SIZE) {
-        DPRINTF(("fatfs: invalid sector size\n"));
-        free(bpb);
-        return EINVAL;
+        DPRINTF(("fatfs: invalid sector size %d\n", bpb->bytes_per_sector));
+        error = EINVAL;
     }
+    if (bpb->reserved_sectors == 0 || bpb->num_of_fats == 0) {
+        DPRINTF(("fatfs: bad\n"));
+        error = EINVAL;
+    }
+    if (error)
+        goto out;
 
-    /* Build FAT mount data */
-    fmp->fat_start = bpb->hidden_sectors + bpb->reserved_sectors;
-    fmp->root_start = fmp->fat_start + (bpb->num_of_fats * bpb->sectors_per_fat);
-    fmp->data_start = fmp->root_start + (bpb->root_entries / DIR_PER_SEC);
-    fmp->sec_per_cl = bpb->sectors_per_cluster;
+    /* Initialize the file system object */
+    fatsize = bpb->sectors_per_fat; /* Number of sectors per FAT */
+    if (fatsize == 0)
+        fatsize = bpb32->sectors_per_fat32;
+
+    fatsize *= bpb->num_of_fats; /* (Number of sectors in FAT area) */
+
+    fmp->fat_start = bpb->reserved_sectors;
+
+    fmp->sec_per_cl = bpb->sectors_per_cluster; /* Number of sectors per cluster */
     fmp->cluster_size = bpb->sectors_per_cluster * SEC_SIZE;
-    fmp->last_cluster = (bpb->total_sectors - fmp->data_start) / bpb->sectors_per_cluster + CL_FIRST;
-    fmp->free_scan = CL_FIRST;
+    totalsect = bpb->total_sectors; /* Number of sectors on the file system */
+    if (totalsect == 0)
+        totalsect = bpb->big_total_sectors;
+    /* max_clust = Last cluster# + 1 */
+    maxclust =
+        (totalsect - bpb->reserved_sectors - fatsize - (bpb->root_entries / (512 / 32))) / bpb->sectors_per_cluster + 2;
 
-    if (!strncmp((const char*)bpb->file_sys_id, "FAT12   ", 8)) {
-        fmp->fat_type = 12;
-        fmp->fat_mask = FAT12_MASK;
-        fmp->fat_eof = CL_EOF & FAT12_MASK;
-    } else if (!strncmp((const char*)bpb->file_sys_id, "FAT16   ", 8)) {
+    fmp->fat_type = 12;
+    fmp->fat_mask = FAT12_MASK;
+    fmp->fat_eof = CL_EOF & FAT12_MASK;
+    if (maxclust >= 0xFF7) {
         fmp->fat_type = 16;
         fmp->fat_mask = FAT16_MASK;
         fmp->fat_eof = CL_EOF & FAT16_MASK;
-    } else {
-        /* FAT32 is not supported now! */
-        DPRINTF(("fatfs: invalid FAT type\n"));
-        free(bpb);
-        return EINVAL;
     }
+    if (maxclust >= 0xFFF7) {
+        fmp->fat_type = 32;
+        fmp->fat_mask = FAT32_MASK;
+        fmp->fat_eof = CL_EOF & FAT32_MASK;
+    }
+    fmp->data_start = fmp->fat_start + fatsize + (bpb->root_entries / DIR_PER_SEC); /* Data start sector (lba) */
+    if (FAT32(fmp))
+        fmp->root_start = bpb32->root_clust; /* Root directory start cluster */
+    else
+        fmp->root_start = fmp->fat_start + fatsize; /* Root directory start sector (lba) */
+    /* fs->database = fs->fatbase + fatsize + fs->n_rootdir / (SS(fs)/32); */
+    fmp->last_cluster = (totalsect - fmp->data_start) / bpb->sectors_per_cluster + CL_FIRST;
+    fmp->free_scan = CL_FIRST;
+
     free(bpb);
 
-    DPRINTF(("----- FAT info -----\n"));
-    DPRINTF(("drive:%x\n", (int)bpb->physical_drive));
-    DPRINTF(("total_sectors:%d\n", (int)bpb->total_sectors));
-    DPRINTF(("heads       :%d\n", (int)bpb->heads));
-    DPRINTF(("serial      :%x\n", (int)bpb->serial_no));
+    DPRINTF(("----- FAT info ----- \n"));
+    if (fmp->fat_type == 32) {
+        DPRINTF(("drive:%x\n", (int)bpb32->physical_drive));
+        DPRINTF(("total_sectors:%d\n", (int)totalsect));
+        DPRINTF(("heads       :%d\n", (int)bpb->heads));
+        DPRINTF(("serial      :%x\n", (int)bpb32->serial_no));
+    } else {
+        DPRINTF(("drive:%x\n", (int)bpb->physical_drive));
+        DPRINTF(("total_sectors:%d\n", (int)totalsect));
+        DPRINTF(("heads       :%d\n", (int)bpb->heads));
+        DPRINTF(("serial      :%x\n", (int)bpb->serial_no));
+    }
     DPRINTF(("cluster size:%u sectors\n", (int)fmp->sec_per_cl));
+    DPRINTF(("fat_start   :%x\n", (int)fmp->fat_start));
+    DPRINTF(("root_start  :%x\n", (int)fmp->root_start));
+    DPRINTF(("data_start  :%x\n", (int)fmp->data_start));
     DPRINTF(("fat_type    :FAT%u\n", (int)fmp->fat_type));
     DPRINTF(("fat_eof     :0x%x\n\n", (int)fmp->fat_eof));
-    return 0;
+out:
+    free(bpb);
+    return error;
 }
 
 /*
