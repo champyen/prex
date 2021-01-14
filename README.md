@@ -4,7 +4,7 @@
 Prex is an open source, royalty-free, real-time operating system for embedded systems. It is designed and implemented for resource-constrained systems that require predictable timing behavior. The highly portable code of Prex is written in 100% ANSI C based on traditional microkernel architecture.
 
 The Prex microkernel provides only fundamental features for task, thread, memory, IPC, exception, and synchronization. The other basic OS functions - process, file system, application loading, and networking, are provided by the user mode servers. In addition, Prex provides a POSIX emulation layer in order to utilize existing *NIX applications. This design allows the system to perform both of the native real-time task and the generic POSIX process simultaneously without degrading real-time performance. It also helps platform designers to construct OS by choosing suitable system servers for their target requisition.
-[Learn more »](doc/overview.md)
+[Learn more »](doc/README.md)
 
 ## Project Goals
 
