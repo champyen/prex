@@ -1,5 +1,18 @@
 # Prex Power Management
 
+### Table of Contents
+
+- Introduction
+- Architecture Overview
+- System Power Management
+- Power Server
+- PM Driver Interface
+- Idle Thread
+- System Shutdown
+- Processor Power Management
+- Power Management Utilities
+- References
+
 ## Introduction
 
 Prex is designed to be used with battery-powered devices, such as mobile phones or consumer electronics devices. So, Prex provides an integrated and system-wide set of power management features. It helps to extend battery life, save energy and reduce heat and noise.

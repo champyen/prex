@@ -1,5 +1,16 @@
 # Prex Platform Security
 
+### Table of Contents
+
+- Introduction
+- Security Model
+- Task Capabilities
+- File Access Control
+- I/O Access Control
+- Security Policy
+- Secure Servers
+- Other Security Features
+
 ## Introduction
 
 As a recent tendency, security is becoming very important in embedded systems design. So, we identify security as a key goal and design component for Prex.
@@ -377,6 +388,7 @@ The software installer has CAP_SYSFILES capability to copy the applications into
 Are you sure you want to install test? (y/n) y
 [prex:/tmp]#
 ```
+
 
 
 Copyright© 2005-2009 Kohsuke Ohtani

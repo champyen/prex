@@ -1,5 +1,16 @@
 # Prex Technology Overview
 
+### Table of Contents
+
+- Prex Components
+- Microkernel
+- HAL
+- Device Drivers
+- Boot Loader
+- System Servers
+- Emulation Libraries
+- User Applications
+
 ## Prex Components
 
 The following figure illustrates the Prex components.

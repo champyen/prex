@@ -1,5 +1,23 @@
 # Prex Kernel Internals
 
+### Table of Contents
+
+- Introduction
+- Design Philosophies
+- Kernel Overview
+- Task
+- Thread
+- Scheduler
+- Memory Management
+- IPC
+- Exception Handling
+- Interrupt Framework
+- Timer
+- Device I/O Services
+- Synchronous Services
+- Debug
+- Hardware Abstraction Layer
+
 ## Introduction
 
 This document describes the design and implementation of the Prex kernel.
