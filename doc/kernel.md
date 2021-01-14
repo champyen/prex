@@ -50,8 +50,8 @@ All kernel codes are kept clean and simple for the maintenance. All codes are we
 
 The following figure illustrates the Prex kernel components.
 
-![Kernel Components](img/kernel/kernel.png)
- Figure 1. Prex Kernel Components
+![Kernel Components](img/kernel/kernel.png)  
+Figure 1. Prex Kernel Components
 
 Each kernel object belongs in one of the following groups.
 
@@ -63,8 +63,8 @@ Each kernel object belongs in one of the following groups.
 
 These group name are mapped to the directory name of the source tree. The following figure shows the kernel directory structure of Prex.
 
-![Kernel Directory](img/kernel/kdir.png)
- Figure 2. Kernel Directory Structure
+![Kernel Directory](img/kernel/kdir.png)  
+Figure 2. Kernel Directory Structure
 
 ### Naming Convention
 
@@ -108,8 +108,8 @@ Prex tasks contain the capabilities, IPC objects, synchronize objects, and addre
 
 The following figure illustrates contents of the task.
 
-![Prex Task](img/kernel/task.png)
- Figure 3. Prex Task
+![Prex Task](img/kernel/task.png)  
+Figure 3. Prex Task
 
 Table 1 shows kernel interfaces for task operation.
 
@@ -166,8 +166,8 @@ A thread is the unit of execution in the Prex system. A thread is a sequential f
 
 Threads contain the minimal processing state associated with a computation, e.g. a program counter, a stack pointer, and a set of registers. A thread exists within exactly one task; however, one task may contain many threads. The following figure illustrates the Prex thread.
 
-![Prex Thread](img/kernel/thr.png)
- Figure 4. Prex Thread
+![Prex Thread](img/kernel/thr.png)  
+Figure 4. Prex Thread
 
 Table 3 shows kernel interfaces for thread operation.
 
@@ -216,8 +216,8 @@ Each thread has one of the following states.
 
 The following diagram shows the state transition of a thread.
 
-![Memory Structure](img/kernel/thread.png)
- Figure 5. Thread States
+![Memory Structure](img/kernel/thread.png)  
+Figure 5. Thread States
 
 ### Thread Control Block
 
@@ -357,8 +357,8 @@ The machine_idle() routine will program the platform H/W to the low power mode. 
 
 The Prex scheduler is based on the algorithm known as priority based multi level queue. The following diagram shows each thread is linked to the run queue for its priority.
 
-![Run Queue](img/kernel/runq.png)
- Figure 6. Run Queue
+![Run Queue](img/kernel/runq.png)  
+Figure 6. Run Queue
 
 ### Scheduling Policy
 
@@ -439,8 +439,8 @@ Since each event has its own name, it is easy to know which event the thread is 
 
 If a thread must wait some events, it should enter sleep state and release CPU resource for other thread. The thread can sleep by calling the sched_tsleep() kernel function. And then, to wakeup the sleeping thread, the thread can use one of the sched_wakeup() and sched_wakeone(). These functions will insert or remove the thread from the queue in the event object.
 
-![Kernel Event](img/kernel/event.png)
- Figure 7. Thread Queue
+![Kernel Event](img/kernel/event.png)  
+Figure 7. Thread Queue
 
 Table 9 shows kernel services for sleep/wakeup.
 
@@ -486,8 +486,8 @@ Prex does not support cancelling of DPC for now.
 
 The physical page allocator provides the service for page allocation/deallocation/reservation. It works as a bottom layer for other memory managers.
 
-![Memory Structure](img/kernel/memory.png)
- Figure 8. Prex Memory Structure
+![Memory Structure](img/kernel/memory.png)  
+Figure 8. Prex Memory Structure
 
 The important point here is that the Prex kernel does not swap out any pages to the disk devices. This is a significant design policy to obtain real-time performance and system simplicity.
 
@@ -554,7 +554,7 @@ The VM allocator is using the traditional list-based algorithm.
 
 The kernel task is a special task which has the virtual memory mapping for kernel. All other user mode tasks will have the same kernel memory image mapped from the kernel task. So, kernel threads can work with the all user mode task context without switching memory map.
 
-![Memory Mapping](img/kernel/memmap.png)
+![Memory Mapping](img/kernel/memmap.png)  
  Figure 9. Kernel Memory Mapping
 
 Since the Prex kernel does not do page out to an external storage, it is guaranteed that the allocated memory is always continuing and existing. Thereby, a kernel and drivers can be constructed very simply.
@@ -613,14 +613,14 @@ The receiver thread can not receive another message until it replies to the send
 
 A thread can receive a message from the specific object which is created by itself or thread in same task. If the message has not arrived, it blocks until any message comes in. The following figure shows the IPC transmit sequence of Prex.
 
-![ipc queue](http://prex.sourceforge.net/doc/img/msg.gif)
+![ipc queue](http://prex.sourceforge.net/doc/img/msg.gif)  
  Figure 10. IPC Transmit Sequence
 
 ### Message Transfer
 
 The message is copied to task to task directly without kernel buffering. The memory region of sent message is automatically mapped to the receiver's memory within kernel. This mechanism allows to reduce the number of copy time while message transfer. Since there is no page out of memory in Prex, we can copy the message data via physical memory at anytime.
 
-![Message transfer](http://prex.sourceforge.net/doc/img/ipcmap.gif)
+![Message transfer](http://prex.sourceforge.net/doc/img/ipcmap.gif)  
  Figure 11. IPC message transfer
 
 ## Exception Handling
@@ -662,7 +662,7 @@ IST is executed as a normal thread dispatched by the scheduler. So, the interrup
 
 The following figure is the sample of the Prex interrupt processing.
 
-![Interrupt Processing](img/kernel/irq.png)
+![Interrupt Processing](img/kernel/irq.png)  
  Figure 12. Prex Interrupt Processing
 
 ### Disabling Interrupts
@@ -744,8 +744,8 @@ Since the Prex kernel does not have the file system in it, the kernel provides a
 
 The following figure illustrates the Prex device I/O operations.
 
-![Device I/O Processing](img/kernel/devobj.png)
- Figure 13. Device I/O Operations
+![Device I/O Processing](img/kernel/devobj.png)  
+Figure 13. Device I/O Operations
 
 ### Driver Interface
 
@@ -810,8 +810,7 @@ The following table shows the HAL class and its methods.
 
 Table 20. HAL Interface
 
-![Device I/O Processing](img/kernel/tb20.png)
-
+![Device I/O Processing](img/kernel/tb20.png)  
 **) In case of no-MMU system, MMU related routines will be defined as no-operation routine.*
 
 
