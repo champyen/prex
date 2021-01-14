@@ -1,8 +1,10 @@
+# Prex Technology Overview
+
 ## Prex Components
 
 The following figure illustrates the Prex components.
 
-![Prex Overview](img/overview.png)  
+![Prex Overview](img/overview/overview.png)  
 Figure 1. Prex Components
 
 The Prex microkernel provides only fundamental functions to abstract a processor and minimum hardware. In addition, it provides some real-time support functions for real-time tasks. The microkernel also provides kernel primitive services for device drivers. There exists a thin and well-defined interface layer called as "Hardware Abstraction Layer" within a microkernel.
@@ -93,7 +95,7 @@ Note: It's better to use existing boot loader if possible.
 
 The Prex tasks can communicate with each other by sending message to the specific object, as illustrated below.
 
-![Microkernel bus](img/ipc.png)  
+![Microkernel bus](img/overview/ipc.png)  
 Figure 2. Prex message passing
 
 Prex provides some standard server tasks to support generic OS functions that are removed from the kernel. The server tasks include:
@@ -120,7 +122,7 @@ The file system server is designed as a multi-threaded server to give good perfo
 
 Prex provides some libraries to emulate POSIX interfaces. They will include standard UNIX system calls, pthread, and real-time extension. The typical works of these libraries are to pack the application's request into a message, and send it to the appropriate server. It will encapsulate the message structure defined by each server task. For example, an application can use fork() system call as a library routine, which will automatically send the message to the process server. So, there is no need to modify the source code of the existing UNIX applications to run it on Prex.
 
-![OS Emulation](img/emulate.png)  
+![OS Emulation](img/overview/emulate.png)  
 Figure 3. OS Emulation
 
 The emulation libraries can be made not only for POSIX but also for API of other OS. This allows Prex to support the execution of various different OS applications without changing the system servers. The developers will benefit from the source level compatibility of existing applications.
@@ -133,5 +135,9 @@ Prex provides a standard C library (libc) to make user applications. The code in
 
 Prex includes a useful application named CmdBox. Cmdbox is a small binary that includes tiny versions of many UNIX utilities.
 
-![CmdBox](img/cmdbox.png)  
+![CmdBox](img/overview/cmdbox.png)  
 Figure 4. CmdBox Mechanism
+
+
+
+Copyright© 2005-2009 Kohsuke Ohtani
