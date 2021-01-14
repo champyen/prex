@@ -14,7 +14,7 @@
 - [Interrupt Framework](#interrupt-framework)
 - [Timer](#timer)
 - [Device I/O Services](#device-io-services)
-- [Synchronous Services](#synchronous-services)
+- [Synchronous Service](#synchronous-service)
 - [Debug](#debug)
 - [Hardware Abstraction Layer](#hardware-abstraction-layer)
 
