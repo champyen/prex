@@ -1,18 +1,5 @@
 # Prex Platform Security
 
-*For Prex version 0.9.0, 2009/11/08*
-
-### Table of Contents
-
-- [Introduction](http://prex.sourceforge.net/doc/security.html#intro)
-- [Security Model](http://prex.sourceforge.net/doc/security.html#model)
-- [Task Capabilities](http://prex.sourceforge.net/doc/security.html#cap)
-- [File Access Control](http://prex.sourceforge.net/doc/security.html#file)
-- [I/O Access Control](http://prex.sourceforge.net/doc/security.html#io)
-- [Security Policy](http://prex.sourceforge.net/doc/security.html#pol)
-- [Secure Servers](http://prex.sourceforge.net/doc/security.html#serv)
-- [Other Security Features](http://prex.sourceforge.net/doc/security.html#other)
-
 ## Introduction
 
 As a recent tendency, security is becoming very important in embedded systems design. So, we identify security as a key goal and design component for Prex.
@@ -322,7 +309,7 @@ capability      /boot/lock      CAP_USERFILES
 
 The object name started with '!' means that it is a protected object. The protected object can be created only by the task which has CAP_PROTSERV capability. Since this capability is given to the known system servers, the client task can always trust the object owner.
 
-![Protected Objects](img/security/protobj.png)
+![Protected Objects](img/security/protobj.png)  
  Figure 1. Protected Objects
 
 ### Checking Client's Capability
@@ -343,7 +330,7 @@ For example, the power sever always checks whether the client task has CAP_POWER
 
 Figure 2 shows the capability check for shutdown operation.
 
-![Capability Check](img/security/capability.png)
+![Capability Check](img/security/capability.png)  
  Figure 2. Capability Check for Shutdown
 
 The following is a sample code to check the capability of the client task.
