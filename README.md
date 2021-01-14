@@ -15,6 +15,7 @@ The project targets the following goals:
 -   To conform to open standards as much as possible.
 -   To enjoy our life with kernel hacking. ;-)
 
+[See current development status »](doc/devel.md)
 
 ## License
 
