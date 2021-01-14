@@ -18,7 +18,7 @@ The following components work together for power management in Prex.
 - **CPU Driver:** has responsible to control frequency/voltage of the processor.
 - **Device Drivers:** has responsible to adjust power of each device.
 
-![Power Management Overview](img/power/power.png)
+![Power Management Overview](img/power/power.png)  
  Figure 1. Power Management Overview
 
 ## System Power Management
@@ -162,7 +162,7 @@ When the PM driver receives a reset request from users or drivers, it will call 
 
 The following figure illustrates the control flow of shutdown by power button press.
 
-![Shutdown Flow](img/power/shutdown.png)
+![Shutdown Flow](img/power/shutdown.png)  
  Figure 2. Shutdown Flow
 
 1.  If power button driver detects the user's power button press, it will notify the event to pm driver by pm_notify().
@@ -180,7 +180,7 @@ Dynamic voltage scaling (DVS) is widely used with mobile systems to save the pro
 
 The following figure shows how the system executes tasks with lower power consumption.
 
-![DVS logic](img/power/dvs.png)
+![DVS logic](img/power/dvs.png)  
  Figure 3. DVS Control
 
 ### Algorithm
