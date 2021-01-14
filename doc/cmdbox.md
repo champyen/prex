@@ -2,10 +2,10 @@
 
 ### Table of Contents
 
-- Introduction
-- How to use CmdBox?
-- Configuring CmdBox
-- Command Usage
+- [Introduction](#introduction)
+- [How to use CmdBox?](#how-to-use-cmdbox)
+- [Configuring CmdBox](#configuring-cmdbox)
+- [Command Usage](#command-usage)
   - cat
   - clear
   - cp

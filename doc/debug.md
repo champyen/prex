@@ -4,14 +4,14 @@
 
 ### Table of Contents
 
-- Building a Debugging Kernel
-- Kernel Print
-- Kernel Panic
-- Assertion Check
-- Function Trace
-- Kernel Dump
-- Remote debugging with GDB
-- Using GDB with QEMU
+- [Building a Debugging Kernel](#building-a-debugging-kernel)
+- [Kernel Print](#kernel-print)
+- [Kernel Panic](#kernel-panic)
+- [Assertion Check](#assertion-check)
+- [Function Trace](#function-trace)
+- [Kernel Dump](#kernel-dump)
+- [Remote debugging with GDB](#remote-debugging-with-gdb)
+- [Using GDB with QEMU](#using-gdb-with-qemu)
 
 
 

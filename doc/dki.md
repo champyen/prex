@@ -2,19 +2,19 @@
 
 ### Table of Contents
 
-- Introduction
+- [Introduction](#introduction)
 
-- General Information
+- [General Information](#general-information)
   - Header File
   - Data Types
   - Calls from ISR
 
-- Driver Data Structure
+- [Driver Data Structure](#driver-data-structure)
   - Boot Information
   - Device Operations
   - Driver Object
 
-- Device Object
+- [Device Object](#device-object)
   - device_create
   - device_destroy
   - device_lookup
@@ -22,44 +22,44 @@
   - device_broadcast
   - device_private
 
-- Kernel Memory
+- [Kernel Memory](#kernel-memory)
   - kmem_alloc
   - kmem_free
   - kmem_map
 
-- User Memory
+- [User Memory](#user-memory)
   - copyin
   - copyout
   - copyinstr
 
-- Physical Page
+- [Physical Page](#physical-page)
   - page_alloc
   - page_free
   - page_reserve
 
-- Interrupt
+- [Interrupt](#interrupt)
   - irq_attach
   - irq_detach
 
-- Spl
+- [Spl](#spl)
   - spl0
   - splhigh
   - splx
 
-- Scheduler
+- [Scheduler](#scheduler)
   - sched_lock
   - sched_unlock
   - sched_tsleep
   - sched_wakeup
   - sched_dpc
 
-- Timer
+- [Timer](#timer)
   - timer_callout
   - timer_stop
   - timer_delay
   - timer_ticks
 
-- Miscellaneous
+- [Miscellaneous](#miscellaneous)
   - task_capable
   - exception_post
   - machine_bootinfo

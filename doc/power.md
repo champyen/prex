@@ -2,16 +2,16 @@
 
 ### Table of Contents
 
-- Introduction
-- Architecture Overview
-- System Power Management
-- Power Server
-- PM Driver Interface
-- Idle Thread
-- System Shutdown
-- Processor Power Management
-- Power Management Utilities
-- References
+- [Introduction](#introduction)
+- [Architecture Overview](#architecture-overview)
+- [System Power Management](#system-power-management)
+- [Power Server](#power-server)
+- [PM Driver Interface](#pm-driver-interface)
+- [Idle Thread](#idle-thread)
+- [System Shutdown](#system-shutdown)
+- [Processor Power Management](#processor-power-management)
+- [Power Management Utilities](#power-management-utilities)
+- [References](#references)
 
 ## Introduction
 

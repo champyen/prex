@@ -2,15 +2,15 @@
 
 ### Table of Contents
 
-- Getting Source
-- Prerequisite Tools
-- Compiling Prex on Linux
-- Compiling Prex on Windows
-- Compiling Prex on FreeBSD
-- Compiling Prex on MacOS
-- Configuring Prex
-- Installing Prex
-- Customizing OS Image
+- [Getting Source](#getting-source)
+- [Prerequisite Tools](#prerequisite-tools)
+- [Compiling Prex on Linux](#compiling-prex-on-linux)
+- [Compiling Prex on Windows](#compiling-prex-on-windows)
+- [Compiling Prex on FreeBSD](#compiling-prex-on-freebsd)
+- [Compiling Prex on MacOS](#compiling-prex-on-macos)
+- [Configuring Prex](#configuring-prex)
+- [Installing Prex](#installing-prex)
+- [Customizing OS Image](#customizing-os-image)
 
 
 

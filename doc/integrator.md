@@ -4,8 +4,8 @@
 
 **HOWTO**
 
-- How to compile Prex for ARM Integrator?
-- How to run Prex with QEMU?
+- [How to compile Prex for ARM Integrator?](#how-to-compile-prex-for-arm-integrator)
+- [How to run Prex with QEMU?](#how-to-run-prex-with-qemu)
 
 ## How to compile Prex for ARM Integrator?
 
@@ -21,7 +21,7 @@ $ git clone https://github.com/champyen/prex.git
 $ cd prex
 ```
 
-Step 2. Configure
+#### Step 2. Configure
 
 Setup target architecture and platform.
 

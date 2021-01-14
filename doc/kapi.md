@@ -2,21 +2,21 @@
 
 ### Table of Contents
 
-- Introduction
+- [Introduction](#introduction)
 
-- General Information
+- [General Information](#general-information)
   - Header File
   - Data Types
   - Error Numbers
   - Message Header
 
-- Exception
+- [Exception](#exception)
   - exception_setup
   - exception_return
   - exception_raise
   - exception_wait
 
-- Task
+- [Task](#task)
   - task_create
   - task_terminate
   - task_self
@@ -26,7 +26,7 @@
   - task_setcap
   - task_chkcap
 
-- Thread
+- [Thread](#thread)
   - thread_create
   - thread_terminate
   - thread_load
@@ -36,50 +36,50 @@
   - thread_resume
   - thread_schedparam
 
-- Virtual Memory
+- [Virtual Memory](#virtual-memory)
   - vm_allocate
   - vm_free
   - vm_attribute
   - vm_map
 
-- Object
+- [Object](#object)
   - object_create
   - object_destroy
   - object_lookup
 
-- Message
+- [Message](#message)
   - msg_send
   - msg_receive
   - msg_reply
 
-- Timer
+- [Timer](#timer)
   - timer_sleep
   - timer_alarm
   - timer_periodic
   - timer_waitperiod
 
-- Device
+- [Device](#device)
   - device_open
   - device_close
   - device_read
   - device_write
   - device_ioctl
 
-- Mutex
+- [Mutex](#mutex)
   - mutex_init
   - mutex_destroy
   - mutex_trylock
   - mutex_lock
   - mutex_unlock
 
-- Condition Variable
+- [Condition Variable](#condition-variable)
   - cond_init
   - cond_destroy
   - cond_wait
   - cond_signal
   - cond_broadcast
 
-- Semaphore
+- [Semaphore](#semaphore)
   - sem_init
   - sem_destroy
   - sem_wait
@@ -87,7 +87,7 @@
   - sem_post
   - sem_getvalue
 
-- System
+- [System](#system)
   - sys_log
   - sys_panic
   - sys_info

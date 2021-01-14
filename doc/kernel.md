@@ -2,21 +2,21 @@
 
 ### Table of Contents
 
-- Introduction
-- Design Philosophies
-- Kernel Overview
-- Task
-- Thread
-- Scheduler
-- Memory Management
-- IPC
-- Exception Handling
-- Interrupt Framework
-- Timer
-- Device I/O Services
-- Synchronous Services
-- Debug
-- Hardware Abstraction Layer
+- [Introduction](#introduction)
+- [Design Philosophies](#design-philosophies)
+- [Kernel Overview](#kernel-overview)
+- [Task](#task)
+- [Thread](#thread)
+- [Scheduler](#scheduler)
+- [Memory Management](#memory-management)
+- [IPC](#ipc)
+- [Exception Handling](#exception-handling)
+- [Interrupt Framework](#interrupt-framework)
+- [Timer](#timer)
+- [Device I/O Services](#device-io-services)
+- [Synchronous Services](#synchronous-services)
+- [Debug](#debug)
+- [Hardware Abstraction Layer](#hardware-abstraction-layer)
 
 ## Introduction
 

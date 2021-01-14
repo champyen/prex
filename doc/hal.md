@@ -2,53 +2,53 @@
 
 ### Table of Contents
 
-- Introduction
+- [Introduction](#introduction)
 
-- General Information
+- [General Information](#general-information)
   - Data Types
   - Boot Information
 
-- Context
+- [Context](#context)
   - context_set
   - context_switch
   - context_save
   - context_restore
   - context_dump
 
-- MMU
+- [MMU](#mmu)
   - mmu_map
   - mmu_newmap
   - mmu_terminate
   - mmu_switch
   - mmu_extract
 
-- Spl
+- [Spl](#spl)
   - splhigh
   - spl0
   - splx
 
-- Interrupt
+- [Interrupt](#interrupt)
   - interrupt_mask
   - interrupt_unmask
   - interrupt_setup
   - interrupt_init
 
-- Clock
+- [Clock](#clock)
   - clock_init
 
-- User Memory
+- [User Memory](#user-memory)
   - copyin
   - copyou
   - copyinstr
 
-- Machine
+- [Machine](#machine)
   - machine_startup
   - machine_idle
   - machine_powerdown
   - machine_abort
   - machine_bootinfo
 
-- Diagnostic
+- [Diagnostic](#diagnostic)
   - diag_init
   - diag_puts
 

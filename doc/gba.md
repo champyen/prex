@@ -4,16 +4,16 @@
 
 **HOWTO**
 
-- How to run Prex on the Game Boy Advance?
-- How to run Prex with VisualBoy Advance?
-- How to compile Prex for Game Boy Advance?
-- How to use On-screen Keyboard?
+- [How to run Prex on the Game Boy Advance?](#how-to-run-on-the-game-boy-advance)
+- [How to run Prex with VisualBoy Advance?](#how-to-run-prex-with-virtualboy-advance)
+- [How to compile Prex for Game Boy Advance?](#how-to-compile-prex-for-game-boy-advance)
+- [How to use On-screen Keyboard?](#how-to-use-on-screen-keyboard)
 
 **Technical Note**
 
-- Technical Specs
-- Memory Map
-- System Call
+- [Technical Specs](#technical-specs)
+- [Memory Map](#memory-map)
+- [System Call](#system-call)
 
 
 

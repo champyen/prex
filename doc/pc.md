@@ -6,17 +6,17 @@
 
 **HOWTO**
 
-- Quick Hacking Guide
-- How to create a Prex demo floppy?
-- How to run Prex with Bochs?
-- How to run Prex with Qemu?
-- How to modify the OS boot image?
-- How to install the boot sector?
+- [Quick Hacking Guide](#quick-hacking-guide)
+- [How to create a Prex demo floppy?](#how-to-create-a-prex-demo-floppy)
+- [How to run Prex with Bochs?](#how-to-run-prex-with-bochs)
+- [How to run Prex with Qemu?](#how-to-run-prex-with-qemu)
+- [How to modify the OS boot image?](#how-to-modify-the-os-boot-image)
+- [How to install the boot sector?](#how-to-install-the-boot-sector)
 
 **Technical Note**
 
-- Keyboard Interface
-- Debugging with Bochs
+- [Keyboard Interface](#keyboard-interface)
+- [Debugging with Bochs](#debugging-with-bochs)
 
 
 

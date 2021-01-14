@@ -1,13 +1,9 @@
 # Prex POSIX Compliance
 
-*For Prex version 0.9.0, 2009/10/01*
-
-
-
 ### Table of Contents
 
-- [Introduction](http://prex.sourceforge.net/doc/posix.html#intro)
-- [POSIX APIs](http://prex.sourceforge.net/doc/posix.html#api)
+- [Introduction](#introduction)
+- [POSIX APIs](#posix-apis)
 
 ## Introduction
 

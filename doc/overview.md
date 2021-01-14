@@ -2,14 +2,14 @@
 
 ### Table of Contents
 
-- Prex Components
-- Microkernel
-- HAL
-- Device Drivers
-- Boot Loader
-- System Servers
-- Emulation Libraries
-- User Applications
+- [Prex Components](#prex-components)
+- [Microkernel](#microkernel)
+- [HAL](#hal)
+- [Device Drivers](#device-drivers)
+- [Boot Loader](#boot-loader)
+- [System Servers](#system-servers)
+- [Emulation Libraries](#emulation-layers)
+- [User Applications](#user-applications)
 
 ## Prex Components
 
