@@ -4,8 +4,8 @@
 
 **HOWTO**
 
-- [How to run Prex on the Game Boy Advance?](#how-to-run-on-the-game-boy-advance)
-- [How to run Prex with VisualBoy Advance?](#how-to-run-prex-with-virtualboy-advance)
+- [How to run Prex on the Game Boy Advance?](#how-to-run-prex-on-the-game-boy-advance)
+- [How to run Prex with the VisualBoy Advance?](#how-to-run-prex-with-the-virtualboy-advance)
 - [How to compile Prex for Game Boy Advance?](#how-to-compile-prex-for-game-boy-advance)
 - [How to use On-screen Keyboard?](#how-to-use-on-screen-keyboard)
 
