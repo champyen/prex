@@ -8,7 +8,7 @@
 - [Device Drivers](#device-drivers)
 - [Boot Loader](#boot-loader)
 - [System Servers](#system-servers)
-- [Emulation Libraries](#emulation-layers)
+- [Emulation Libraries](#emulation-libraries)
 - [User Applications](#user-applications)
 
 ## Prex Components
