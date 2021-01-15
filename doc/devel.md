@@ -44,10 +44,11 @@ Prex currently supports the following platforms.
 
 | Name           | Arch     | Platform         | Emulator                        | Toolchain          |
 | -------------- | -------- | ---------------- | ------------------------------- | ------------------ |
-| x86-pc         | IA32     | PC               | Bochs, QEMU, VMware, Virtual PC | GCC, PCC, SunCC    |
-| x86-pc         | IA32     | PC (MMU-less)    | Bochs, QEMU, VMware, Virtual PC | GCC, PCC, SunCC    |
-| arm-gba        | ARM7TDMI | Game Boy Advance | VisualBoyAdvance                | GCC, DevKitAdvance |
-| arm-integrator | ARM9     | Integrator/CP    | QEMU                            | GCC, YAGARTO       |
+| x86-pc         | IA32     | PC               | Bochs, QEMU, VMware, Virtual PC | GCC                |
+| x86-pc         | IA32     | PC (MMU-less)    | Bochs, QEMU, VMware, Virtual PC | GCC                |
+| arm-gba        | ARM7TDMI | Game Boy Advance | VisualBoyAdvance                | GCC                |
+| arm-integrator | ARM9     | Integrator/CP    | QEMU                            | GCC                |
+| arm-beagle     | ARMv7    | BeagleBoard Rev.B| QEMU                            | GCC                |
 | ppc-prep       | PowerPC  | PReP (MMU-less)  | QEMU                            | GCC                |
 
 
