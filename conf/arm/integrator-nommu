@@ -89,6 +89,7 @@ device		ramdisk		# RAM disk
 options		ARM_VECTORS=0x00000000
 options		PL011_BASE=0x16000000
 options		PL011_IRQ=1
+options		PL011_CLK=14745600
 options		PL030_BASE=0x15000000
 
 
