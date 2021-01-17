@@ -65,7 +65,7 @@ Prex currently supports the following platforms.
 
 |                                                              |      |
 | ------------------------------------------------------------ | ---- |
-| - Embedded TCP/IP<br>- Network server<br>- USB support<br>- Tick-less kernel<br>- Shared interrupt |      |
+| - Embedded TCP/IP<br>- Network server<br>- USB support<br>- Tick-less kernel<br> | - Shared interrupt<br>- C++ support<br>- Emgo driver model     |
 
 ### Plan for the Future
 
