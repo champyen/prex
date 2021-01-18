@@ -125,6 +125,7 @@ ENTRY(flush_tlb)
 
 #endif /* !CONFIG_MMU */
 
+#ifdef CONFIG_CACHE
 /*
  * Flush all cache
  */
@@ -154,5 +155,6 @@ ENTRY(flush_cache)
 #endif
 	mcr	p15, 0, r1, c7, c10, 4	/* drain write buffer */
 	mov	pc, lr
+#endif /* !CONFIG_CACHE */
 
 	.end

@@ -6,10 +6,8 @@
 # Make options
 #
 #makeoptions	CFLAGS+= -mfpu=neon -mfloat-abi=softfp -mcpu=cortex-a8 -fno-math-errno -fno-tree-vectorize
-#makeoptions	CFLAGS+= -mcpu=arm1176jzf-s -fno-dwarf2-cfi-asm
-makeoptions	CFLAGS+= -march=armv6
-#makeoptions	ASLAGS+= -mcpu=arm1176jzf-s
-makeoptions	ASLAGS+= -march=armv6
+makeoptions	CFLAGS+= -mcpu=arm1176jzf-s -fno-dwarf2-cfi-asm
+makeoptions	ASLAGS+= -mcpu=arm1176jzf-s
 
 #
 # Memory address

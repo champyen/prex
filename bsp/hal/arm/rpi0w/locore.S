@@ -37,6 +37,16 @@
 	.section ".text","ax"
 	.code 32
 
+ENTRY(_mach_putc)
+    ldr r1, =0x20201000
+    ldr r2, =0x20201018
+putc_chk:
+    ldr r3, [r2]
+    ands r3, r3,#0x20
+    bne putc_chk
+    str r0, [r1]
+    mov pc, lr
+
 /*
  * Default exception vectors at 0x4020ffc8 (SRAM)
  * Use VBAR control register to change it
@@ -44,6 +54,4 @@
 ENTRY(set_vbar)
 	mcr	p15, 0, r0, c12, c0, 0
 	mov	pc, lr
-
-
 	.end
