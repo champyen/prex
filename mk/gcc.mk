@@ -7,7 +7,7 @@ OUTPUT_OPTION=	-o $@
 
 DEFINES=	$(addprefix -D,$(DEFS))
 
-CFLAGS+=	-c -Os -ansi -pedantic -Wall -Wundef -Wstrict-prototypes \
+CFLAGS+=	-c -O1 -pedantic -Wall -Wundef -Wstrict-prototypes \
 		-Wpointer-arith -nostdinc -fno-strict-aliasing $(GCCFLAGS)
 CPPFLAGS+=	$(DEFINES) -I. $(addprefix -I,$(INCSDIR))
 ACPPFLAGS+=	-D__ASSEMBLY__

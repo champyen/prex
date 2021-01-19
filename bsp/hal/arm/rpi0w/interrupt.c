@@ -89,8 +89,8 @@ static void update_mask(void)
     ICU_IRQENCLR1 = ~mask1;
     ICU_IRQENCLR2 = ~mask2;
     ICU_IRQENSET = mask;
-    ICU_IRQENSET1 = mask;
-    ICU_IRQENSET2 = mask;
+    ICU_IRQENSET1 = mask1;
+    //ICU_IRQENSET2 = mask2;
 }
 
 /*
@@ -209,13 +209,12 @@ void interrupt_init(void)
         ipl_table[i] = IPL_NONE;
 
     for (i = 0; i < NIPLS; i++){
-        mask_table[i][0] = 0;
+        mask_table[i][0] = 0x30;
         mask_table[i][1] = 0;
         mask_table[i][2] = 0;
     }
 
-    /* Mask all interrupts */
-    ICU_IRQENCLR = 0xffff;
-    ICU_IRQENCLR1 = 0xffff;
-    ICU_IRQENCLR2 = 0xffff;
+    ICU_IRQENCLR = 0xFFFFFFFF;
+    ICU_IRQENCLR1 = 0xFFFFFFFF;
+    ICU_IRQENCLR2 = 0xFFFFFFFF;
 }

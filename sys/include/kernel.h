@@ -50,9 +50,9 @@
 #define VERSION __s(MAJORVERSION) "." __s(MINORVERSION) "." __s(PATCHLEVEL)
 
 #define BANNER                                                                                                         \
-    "Prex version " VERSION PROFILE " for " MACHINE " ("__DATE__                                                       \
-    ")\n"                                                                                                              \
-    "Copyright (c) 2005-2009 Kohsuke Ohtani\n"
+    "Prex version " VERSION PROFILE " for " MACHINE " ("__DATE__")\n"                                                  \
+    "Copyright (c) 2005-2009 Kohsuke Ohtani\n"                                                                         \
+    "Copyright (c) 2021      Champ Yen (champ.yen@gmail.com)\n"
 
 /*
  * Global variables in the kernel.

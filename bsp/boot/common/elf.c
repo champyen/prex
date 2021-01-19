@@ -69,7 +69,6 @@ int load_elf(char* img, struct module* m)
 
     if (nr_img == 0) {
         /*  Initialize the load address */
-        /* load_base = (vaddr_t)ptokv(phdr->p_paddr); */
         load_base = (paddr_t)kvtop(phdr->p_vaddr);
         if (load_base == 0) {
             DPRINTF(("Invalid load address\n"));
