@@ -1,3 +1,6 @@
+This is a github repo, rebased from [Prex site](http://prex.sourceforge.net).
+Maintained and develop by me (champ.yen@gmail.com).
+Feel free to submit pull request.
 
 ## What is Prex?
 
@@ -43,4 +46,11 @@ Prex has the following features:
 -   Libc: C library fully optimized to generate a small executable file
 -   CmdBox: a small binary that includes tiny versions of many UNIX utilities.
 -   Networking: (plan) TCP/IP stack, BSD socket interface
+
+
+### Recent Development Plan
+
+|                                                              |      |
+| ------------------------------------------------------------ | ---- |
+| - Embedded TCP/IP<br>- Network server<br>- USB support<br>- Tick-less kernel<br>- switch to picolibc | - Shared interrupt<br>- C++ support<br>- Emgo driver model<br>- direct mapped kernel functions interface<br>- SMP support    |
 
