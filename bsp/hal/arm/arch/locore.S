@@ -114,7 +114,7 @@ ENTRY(reset_entry)
 	msr	cpsr, r0
 	ldr	sp, boot_stack		/* Set SVC mode stack */
 
-	/* It's svc mode now. */
+	/* It is svc mode now. */
 
 #ifdef CONFIG_MMU
 	/*
@@ -274,7 +274,7 @@ ENTRY(cache_init)
  */
 ENTRY(interrupt_entry)
 #ifdef __gba__
-	ldmfd	sp!, {r0-r3,r12,lr}	/* Discard GBA BIOS's stack */
+	ldmfd	sp!, {r0-r3,r12,lr}	/* Discard GBA BIOS stack */
 #endif
 	stmfd	sp, {r0-r4}		/* Save work registers */
 	sub	r4, sp, #(4*5)		/* r4: Pointer to saved registers */
