@@ -63,7 +63,7 @@ static char* keys = "jkl pq";
 cell board[B_SIZE]; /* 1 => occupied, 0 => empty */
 int Rows, Cols;     /* current screen size */
 int score;          /* the obvious thing */
-char key_msg[100];
+char key_msg[256];
 long fallrate; /* less than 1 million; smaller => faster */
 
 void onintr(int);

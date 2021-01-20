@@ -169,7 +169,7 @@ extern long fallrate; /* less than 1 million; smaller => faster */
  * still be moved or rotated).
  */
 extern int score; /* the obvious thing */
-extern char key_msg[100];
+extern char key_msg[256];
 
 int fits_in(const struct shape*, int);
 void place(const struct shape*, int, cell);

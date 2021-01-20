@@ -63,10 +63,10 @@ void psignal(unsigned int, const char*);
 __END_DECLS
 
 /* List definitions after function declarations, or Reiser cpp gets upset. */
-#define sigaddset(set, signo) (*(set) |= 1 << ((signo)-1), 0)
-#define sigdelset(set, signo) (*(set) &= ~(1 << ((signo)-1)), 0)
-#define sigemptyset(set) (*(set) = 0, 0)
-#define sigfillset(set) (*(set) = ~(sigset_t)0, 0)
+#define sigaddset(set, signo) (*(set) |= 1 << ((signo)-1))
+#define sigdelset(set, signo) (*(set) &= ~(1 << ((signo)-1)))
+#define sigemptyset(set) (*(set) = 0)
+#define sigfillset(set) (*(set) = ~(sigset_t)0)
 #define sigismember(set, signo) ((*(set) & (1 << ((signo)-1))) != 0)
 
 #endif /* !_USER_SIGNAL_H */
