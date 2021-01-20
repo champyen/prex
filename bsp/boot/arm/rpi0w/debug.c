@@ -30,8 +30,8 @@
 #include <sys/param.h>
 #include <boot.h>
 
-#define UART_BASE 0x20201000
-#define UART_CLK 14745600
+#define UART_BASE CONFIG_PL011_BASE
+#define UART_CLK CONFIG_PL011_CLK
 #define BAUD_RATE 115200
 
 /* UART Registers */
@@ -91,7 +91,6 @@ void debug_putc(int c)
 void debug_init(void)
 {
 #if defined(DEBUG) && defined(CONFIG_DIAG_SERIAL)
-    #if 0
     unsigned int divider;
     unsigned int remainder;
     unsigned int fraction;
@@ -110,7 +109,6 @@ void debug_init(void)
     fraction += (8 * remainder / BAUD_RATE) & 1;
     UART_IBRD = divider;
     UART_FBRD = fraction;
-    #endif
 
     UART_LCRH = (LCRH_WLEN8 | LCRH_FEN);     /* N, 8, 1, FIFO enable */
     UART_CR = (CR_RXE | CR_TXE | CR_UARTEN); /* Enable UART */

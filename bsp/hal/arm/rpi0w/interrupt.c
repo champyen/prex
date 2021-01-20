@@ -44,22 +44,20 @@
 /* Number of IRQ lines */
 #define NIRQS 96
 
-
 /* Registers for interrupt control unit - enable/flag/master */
-#define ICU_IRQSTS0     (*(volatile uint32_t*)(ICU_BASE + 0x200))
-#define ICU_IRQSTS1     (*(volatile uint32_t*)(ICU_BASE + 0x204))
-#define ICU_IRQSTS2     (*(volatile uint32_t*)(ICU_BASE + 0x208))
-#define ICU_IRQSTS(idx) (*(volatile uint32_t*)(ICU_BASE + 0x200 + 4*idx))
-#define IRQ_FIQ         (*(volatile uint32_t*)(ICU_BASE + 0x20C))
+#define ICU_IRQSTS0 (*(volatile uint32_t*)(ICU_BASE + 0x200))
+#define ICU_IRQSTS1 (*(volatile uint32_t*)(ICU_BASE + 0x204))
+#define ICU_IRQSTS2 (*(volatile uint32_t*)(ICU_BASE + 0x208))
+#define ICU_IRQSTS(idx) (*(volatile uint32_t*)(ICU_BASE + 0x200 + 4 * idx))
+#define IRQ_FIQ (*(volatile uint32_t*)(ICU_BASE + 0x20C))
 
-#define ICU_IRQENSET1   (*(volatile uint32_t*)(ICU_BASE + 0x210))
-#define ICU_IRQENSET2   (*(volatile uint32_t*)(ICU_BASE + 0x214))
-#define ICU_IRQENSET    (*(volatile uint32_t*)(ICU_BASE + 0x218))
+#define ICU_IRQENSET1 (*(volatile uint32_t*)(ICU_BASE + 0x210))
+#define ICU_IRQENSET2 (*(volatile uint32_t*)(ICU_BASE + 0x214))
+#define ICU_IRQENSET (*(volatile uint32_t*)(ICU_BASE + 0x218))
 
-#define ICU_IRQENCLR1   (*(volatile uint32_t*)(ICU_BASE + 0x21C))
-#define ICU_IRQENCLR2   (*(volatile uint32_t*)(ICU_BASE + 0x220))
-#define ICU_IRQENCLR    (*(volatile uint32_t*)(ICU_BASE + 0x224))
-
+#define ICU_IRQENCLR1 (*(volatile uint32_t*)(ICU_BASE + 0x21C))
+#define ICU_IRQENCLR2 (*(volatile uint32_t*)(ICU_BASE + 0x220))
+#define ICU_IRQENCLR (*(volatile uint32_t*)(ICU_BASE + 0x224))
 
 /*
  * Interrupt Priority Level
@@ -73,7 +71,7 @@ volatile int irq_level;
 /*
  * Interrupt mapping table
  */
-static int ipl_table[NIRQS];       /* vector -> level */
+static int ipl_table[NIRQS];          /* vector -> level */
 static uint32_t mask_table[NIPLS][3]; /* level -> mask */
 
 /*
@@ -90,7 +88,7 @@ static void update_mask(void)
     ICU_IRQENCLR2 = ~mask2;
     ICU_IRQENSET = mask;
     ICU_IRQENSET1 = mask1;
-    //ICU_IRQENSET2 = mask2;
+    ICU_IRQENSET2 = mask2;
 }
 
 /*
@@ -148,29 +146,30 @@ void interrupt_setup(int vector, int mode)
 void interrupt_handler(void)
 {
     uint32_t bits;
-    int vector, old_ipl, new_ipl;
+    uint32_t vector, old_ipl, new_ipl;
 
     /* Get interrupt source */
     bits = ICU_IRQSTS0;
-    for (vector = 0; vector < 8; vector++) {
+    for (vector = 0; vector < 32; vector++) {
         if (bits & (uint32_t)(1 << vector))
             break;
     }
-    switch(vector){
-        case 5:
-        case 4:
-            {
-                int vidx = (vector - 3);
-                bits = ICU_IRQSTS(vidx);
-                for (vector = 0; vector < 32; vector++) {
-                    if (bits & (uint32_t)(1 << vector))
-                        break;
-                }
-                vector += (vidx << 5);
-            }
-            break;
-        case 8:
-            goto out;
+    switch (vector) {
+    case 9:
+    case 8: {
+        int vidx = (vector - 7);
+        bits = ICU_IRQSTS(vidx);
+        for (vector = 0; vector < 32; vector++) {
+            if (bits & (uint32_t)(1 << vector))
+                break;
+        }
+        vector += (vidx << 5);
+    } break;
+    case 19:
+        vector = 89;
+        break;
+    case 32:
+        goto out;
     }
 
     /* Adjust interrupt level */
@@ -208,8 +207,8 @@ void interrupt_init(void)
     for (i = 0; i < NIRQS; i++)
         ipl_table[i] = IPL_NONE;
 
-    for (i = 0; i < NIPLS; i++){
-        mask_table[i][0] = 0x30;
+    for (i = 0; i < NIPLS; i++) {
+        mask_table[i][0] = 0;
         mask_table[i][1] = 0;
         mask_table[i][2] = 0;
     }

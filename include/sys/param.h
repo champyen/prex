@@ -67,12 +67,8 @@
 #define MAXOBJNAME 16  /* max object name */
 #define MAXEVTNAME 12  /* max event name */
 
-#define HZ CONFIG_HZ /* ticks per second */
-#ifdef __beagle__
-#define MAXIRQS 96 /* max number of irq line */
-#else
-#define MAXIRQS 32 /* max number of irq line */
-#endif
+#define HZ CONFIG_HZ   /* ticks per second */
+#define MAXIRQS 256    /* max number of irq line */
 #define PASSWORD_LEN 4 /* fixed length, not counting NULL */
 
 /*

@@ -83,7 +83,6 @@ void machine_idle(void)
  */
 static void machine_reset(void)
 {
-
 }
 
 /*

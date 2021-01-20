@@ -40,6 +40,7 @@
 
 #include "platform.h"
 
+#if 1
 /* Interrupt vector for timer (TMR1) */
 #define CLOCK_IRQ 0
 
@@ -50,16 +51,16 @@
 #define TIMER_COUNT (CLOCK_RATE / HZ)
 
 /* Timer 1 registers */
-#define TMR_LOAD        (*(volatile uint32_t*)(TIMER_BASE + 0x100))
-#define TMR_VAL         (*(volatile uint32_t*)(TIMER_BASE + 0x104))
-#define TMR_CTRL        (*(volatile uint32_t*)(TIMER_BASE + 0x108))
-#define TMR_CLR         (*(volatile uint32_t*)(TIMER_BASE + 0x10C))
+#define TMR_LOAD (*(volatile uint32_t*)(TIMER_BASE + 0x100))
+#define TMR_VAL (*(volatile uint32_t*)(TIMER_BASE + 0x104))
+#define TMR_CTRL (*(volatile uint32_t*)(TIMER_BASE + 0x108))
+#define TMR_CLR (*(volatile uint32_t*)(TIMER_BASE + 0x10C))
 
-#define TMR_RAWIRQ      (*(volatile uint32_t*)(TIMER_BASE + 0x110))
-#define TMR_MASKIRQ     (*(volatile uint32_t*)(TIMER_BASE + 0x114))
-#define TMR_RELOAD      (*(volatile uint32_t*)(TIMER_BASE + 0x118))
-#define TMR_PREDIV      (*(volatile uint32_t*)(TIMER_BASE + 0x11C))
-#define TMR_FREECNT     (*(volatile uint32_t*)(TIMER_BASE + 0x120))
+#define TMR_RAWIRQ (*(volatile uint32_t*)(TIMER_BASE + 0x110))
+#define TMR_MASKIRQ (*(volatile uint32_t*)(TIMER_BASE + 0x114))
+#define TMR_RELOAD (*(volatile uint32_t*)(TIMER_BASE + 0x118))
+#define TMR_PREDIV (*(volatile uint32_t*)(TIMER_BASE + 0x11C))
+#define TMR_FREECNT (*(volatile uint32_t*)(TIMER_BASE + 0x120))
 
 /* Timer control register */
 #define TCTRL_DISABLE 0x00
@@ -108,3 +109,48 @@ void clock_init(void)
 
     DPRINTF(("Clock rate: %d ticks/sec\n", CONFIG_HZ));
 }
+#else
+
+#define TIMER_IDX 1
+#define CLOCK_IRQ (32 + TIMER_IDX)
+
+/* The clock rate per second - 1Mhz */
+#define CLOCK_RATE 1000000L
+
+/* The initial counter value */
+#define TIMER_COUNT (CLOCK_RATE / HZ)
+
+#define STIMER_BASE 0x20003000
+#define STIMER_CS (*(volatile uint32_t*)(STIMER_BASE + 0x00))
+#define STIMER_CLO (*(volatile uint32_t*)(STIMER_BASE + 0x04))
+#define STIMER_CHI (*(volatile uint32_t*)(STIMER_BASE + 0x08))
+#define STIMER_CT(x) (*(volatile uint32_t*)(STIMER_BASE + 0x0C + x * 4))
+#define STIMER_C0 (*(volatile uint32_t*)(STIMER_BASE + 0x0C))
+#define STIMER_C1 (*(volatile uint32_t*)(STIMER_BASE + 0x10))
+#define STIMER_C2 (*(volatile uint32_t*)(STIMER_BASE + 0x14))
+#define STIMER_C3 (*(volatile uint32_t*)(STIMER_BASE + 0x18))
+
+static int clock_isr(void* arg)
+{
+    splhigh();
+    STIMER_CS |= (1 << TIMER_IDX);
+    STIMER_CT(TIMER_IDX) += TIMER_COUNT;
+    timer_handler();
+    spl0();
+    return INT_DONE;
+}
+
+void clock_init(void)
+{
+    irq_t clock_irq;
+
+    /* Setup counter value */
+    STIMER_CT(TIMER_IDX) = STIMER_CLO + TIMER_COUNT;
+
+    /* Install ISR */
+    clock_irq = irq_attach(CLOCK_IRQ, IPL_CLOCK, 0, &clock_isr, IST_NONE, NULL);
+
+    DPRINTF(("%x %x Clock rate: %d ticks/sec\n", STIMER_CLO, STIMER_CT(TIMER_IDX), CONFIG_HZ));
+}
+
+#endif

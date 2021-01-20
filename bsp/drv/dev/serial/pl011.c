@@ -55,9 +55,11 @@
 #define UART_FR (UART_BASE + 0x18)
 #define UART_IBRD (UART_BASE + 0x24)
 #define UART_FBRD (UART_BASE + 0x28)
-#define UART_LCRH (UART_BASE + 0x2c)
+#define UART_LCRH (UART_BASE + 0x2C)
 #define UART_CR (UART_BASE + 0x30)
+#define UART_IFLS (UART_BASE + 0x34)
 #define UART_IMSC (UART_BASE + 0x38)
+#define UART_RIS (UART_BASE + 0X3C)
 #define UART_MIS (UART_BASE + 0x40)
 #define UART_ICR (UART_BASE + 0x44)
 
@@ -85,6 +87,7 @@
 /* Interrupt mask set/clear register */
 #define IMSC_RX 0x10 /* Receive interrupt mask */
 #define IMSC_TX 0x20 /* Transmit interrupt mask */
+#define IMSC_RT 0x40 /* Timeout interrupt mask */
 
 /* Forward functions */
 static int pl011_init(struct driver*);
@@ -156,8 +159,7 @@ static int pl011_isr(void* arg)
         /*
          * Receive interrupt
          */
-        while (bus_read_32(UART_FR) & FR_RXFE)
-            ;
+        // while (bus_read_32(UART_FR) & FR_RXFE);
         do {
             c = bus_read_32(UART_DR);
             serial_rcv_char(sp, c);
@@ -198,7 +200,8 @@ static void pl011_start(struct serial_port* sp)
     bus_write_32(UART_FBRD, fraction);
 
     /* Set N, 8, 1, FIFO enable */
-    bus_write_32(UART_LCRH, (LCRH_WLEN8 | LCRH_FEN));
+    // bus_write_32(UART_LCRH, (LCRH_WLEN8 | LCRH_FEN));
+    bus_write_32(UART_LCRH, (LCRH_WLEN8));
 
     /* Enable UART */
     bus_write_32(UART_CR, (CR_RXE | CR_TXE | CR_UARTEN));
@@ -207,7 +210,7 @@ static void pl011_start(struct serial_port* sp)
     sp->irq = irq_attach(UART_IRQ, IPL_COMM, 0, pl011_isr, IST_NONE, sp);
 
     /* Enable TX/RX interrupt */
-    bus_write_32(UART_IMSC, (IMSC_RX | IMSC_TX));
+    bus_write_32(UART_IMSC, (IMSC_RX | IMSC_TX | IMSC_RT));
 }
 
 static void pl011_stop(struct serial_port* sp)

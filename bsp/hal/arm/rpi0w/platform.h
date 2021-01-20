@@ -40,13 +40,12 @@
 #define CM_IOMEM_BASE 0
 #endif
 
-
 /*
 #define FPGA_BASE (CM_IOMEM_BASE + 0x10000000
 */
-#define ICU_BASE    (CM_IOMEM_BASE + 0x2000B000)
-#define TIMER_BASE  (ICU_BASE + 0x300)
-#define UART_BASE   (CM_IOMEM_BASE + 0x20201000)
+#define ICU_BASE (CM_IOMEM_BASE + 0x2000B000)
+#define TIMER_BASE (ICU_BASE + 0x300)
+#define UART_BASE (CM_IOMEM_BASE + 0x20201000)
 
 __BEGIN_DECLS
 void set_vbar(vaddr_t);
