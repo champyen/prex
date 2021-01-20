@@ -1,5 +1,6 @@
 /*-
  * Copyright (c) 2008-2009, Kohsuke Ohtani
+ * Copyright (c) 2008     , Champ Yen (champ.yen@gmail.com)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
