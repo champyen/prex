@@ -7,8 +7,8 @@ OUTPUT_OPTION=	-o $@
 
 DEFINES=	$(addprefix -D,$(DEFS))
 
-EXTRA_CFLAGS=	-Wno-unused-but-set-variable -fno-delete-null-pointer-checks -Wno-nonnull-compare -Wno-attributes -Wno-sizeof-pointer-memaccess
-CFLAGS+=	-c -O1 -pedantic -Wall -Wundef -Wstrict-prototypes \
+EXTRA_CFLAGS=	-Wno-unused-but-set-variable -fno-delete-null-pointer-checks -Wno-nonnull-compare -Wno-attributes -Wno-sizeof-pointer-memaccess -Wno-pedantic
+CFLAGS+=	-std=c11 -c -O1 -pedantic -Wall -Wundef -Wstrict-prototypes \
 		-Wpointer-arith -nostdinc -fno-strict-aliasing $(GCCFLAGS) $(EXTRA_CFLAGS)
 CPPFLAGS+=	$(DEFINES) -I. $(addprefix -I,$(INCSDIR))
 ACPPFLAGS+=	-D__ASSEMBLY__

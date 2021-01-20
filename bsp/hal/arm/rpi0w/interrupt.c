@@ -59,6 +59,8 @@
 #define ICU_IRQENCLR2 (*(volatile uint32_t*)(ICU_BASE + 0x220))
 #define ICU_IRQENCLR (*(volatile uint32_t*)(ICU_BASE + 0x224))
 
+static uint32_t irq_conv[] = {39, 41, 42, 50, 51, 85, 86, 87, 88, 89, 94};
+
 /*
  * Interrupt Priority Level
  *
@@ -150,26 +152,26 @@ void interrupt_handler(void)
 
     /* Get interrupt source */
     bits = ICU_IRQSTS0;
-    for (vector = 0; vector < 32; vector++) {
+    for (vector = 0; vector < 21; vector++) {
         if (bits & (uint32_t)(1 << vector))
             break;
     }
+
     switch (vector) {
-    case 9:
-    case 8: {
-        int vidx = (vector - 7);
-        bits = ICU_IRQSTS(vidx);
-        for (vector = 0; vector < 32; vector++) {
-            if (bits & (uint32_t)(1 << vector))
-                break;
-        }
-        vector += (vidx << 5);
-    } break;
-    case 19:
-        vector = 89;
-        break;
-    case 32:
-        goto out;
+        case 8 ... 9: {
+                int vidx = (vector - 7);
+                bits = ICU_IRQSTS(vidx);
+                for (vector = 0; vector < 32; vector++) {
+                    if (bits & (uint32_t)(1 << vector))
+                        break;
+                }
+                vector += (vidx << 5);
+            } break;
+        case 10 ... 20:
+            vector = irq_conv[vector - 10];
+            break;
+        case 21:
+            goto out;
     }
 
     /* Adjust interrupt level */
