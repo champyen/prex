@@ -150,7 +150,7 @@ gethost()
 setgccoption()
 {
 	echo "checking $1"
-	if ${prefix}${cc} $1 -S -xc /dev/null -o /dev/null > /dev/null 2>&1; then
+	if ${prefix}-${cc} $1 -S -xc /dev/null -o /dev/null > /dev/null 2>&1; then
 		echo "GCCFLAGS+= $1" >> $CONFIG_MK
 	fi
 }
@@ -202,7 +202,7 @@ settools()
 		cc_type="_SUNPRO_C_"
 		cc="suncc"
 		;;
-	clang*)
+	clang)
 		cc_type="_GNUC_"
 		;;
 	*)
@@ -351,23 +351,20 @@ main()
 			echo "NDEBUG=1"
 		fi
 		echo "${cc_type}=1"
-		case "$cc" in
-			clang*)
-				echo "_CLANG_=1"
-				echo "CC=${cc}"
-				echo "GCC=${prefix}gcc"
-				;;
-			*)
-				echo "CC=${prefix}${cc}"
-				;;
-		esac
-		echo "CPP=${prefix}${cpp}"
-		echo "AS=${prefix}${as}"
-		echo "LD=${prefix}${ld}"
-		echo "AR=${prefix}${ar}"
-		echo "OBJCOPY=${prefix}${objcopy}"
-		echo "OBJDUMP=${prefix}${objdump}"
-		echo "STRIP=${prefix}${strip}"
+		if [ "${cc}" = "clang" ]; then
+			echo "_CLANG_=1"
+			echo "CC=${cc} --target=${prefix}"
+			echo "GCC=${prefix}-gcc"
+		else
+			echo "CC=${prefix}-${cc}"
+		fi
+		echo "CPP=${prefix}-${cpp}"
+		echo "AS=${prefix}-${as}"
+		echo "LD=${prefix}-${ld}"
+		echo "AR=${prefix}-${ar}"
+		echo "OBJCOPY=${prefix}-${objcopy}"
+		echo "OBJDUMP=${prefix}-${objdump}"
+		echo "STRIP=${prefix}-${strip}"
 
 	} >> $CONFIG_MK
 

@@ -111,7 +111,7 @@ Options:
         --help                  print this message
         --target=TARGET         use TARGET for target system
         --profile=PROFILE       use PROFILE for target profile
-        --cross-prefix=PREFIX   use PREFIX for compile tools
+        --cross-prefix=PREFIX   use PREFIX for compile tools (e.g: arm-none-eabi )
         --cc=CC                 use CC as C compiler
         --no-debug              disable all debug features
 

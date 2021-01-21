@@ -107,7 +107,7 @@ $ cd prex-X.X.X
 Setup target architecture and platform.
 
 ```
-$ ./configure --target=arm-gba --cross-compile=arm-elf-
+$ ./configure --target=arm-gba --cross-prefix=arm-elf
 ```
 
 #### Step 6. Make
