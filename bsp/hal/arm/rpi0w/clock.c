@@ -40,7 +40,7 @@
 
 #include "platform.h"
 
-#if 1
+#ifndef CONFIG_SYSTEM_TIMER
 /* Interrupt vector for timer (TMR1) */
 #define CLOCK_IRQ 0
 
