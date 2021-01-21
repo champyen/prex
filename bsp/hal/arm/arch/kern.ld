@@ -39,5 +39,5 @@ SECTIONS
 	. = ALIGN(4);
 	__end = . ;
 
-	/DISCARD/ : { *(.comment .note) }
+	/DISCARD/ : { *(.comment .note .ARM.*) }
 }

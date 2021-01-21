@@ -38,5 +38,5 @@ SECTIONS
 		*(COMMON)
 	}
 
-	/DISCARD/ : { *(.comment .note .debug_*) }
+	/DISCARD/ : { *(.comment .note .debug_* .ARM.*) }
 }

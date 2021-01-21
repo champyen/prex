@@ -29,4 +29,6 @@ SECTIONS {
 	.tail : {
 		*(.tail)
 	}
+
+	/DISCARD/ : { *(.ARM.exidx) }
 }

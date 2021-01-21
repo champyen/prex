@@ -33,5 +33,5 @@ SECTIONS
 		*(COMMON)
 	}
 
-	/DISCARD/ : { *(.comment .note) }
+	/DISCARD/ : { *(.comment .note .ARM.*) }
 }
