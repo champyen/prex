@@ -30,7 +30,11 @@ ifndef _COMMON_MK_
 _COMMON_MK_:=	1
 
 ifdef _GNUC_
+ifdef _CLANG_
+include $(SRCDIR)/mk/clang.mk
+else
 include $(SRCDIR)/mk/gcc.mk
+endif
 endif
 
 ifdef _PCC_

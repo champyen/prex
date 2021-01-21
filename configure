@@ -202,6 +202,9 @@ settools()
 		cc_type="_SUNPRO_C_"
 		cc="suncc"
 		;;
+	clang*)
+		cc_type="_GNUC_"
+		;;
 	*)
 		quit "Unkown compiler: $cc"
 		;;
@@ -348,7 +351,16 @@ main()
 			echo "NDEBUG=1"
 		fi
 		echo "${cc_type}=1"
-		echo "CC=${prefix}${cc}"
+		case "$cc" in
+			clang*)
+				echo "_CLANG_=1"
+				echo "CC=${cc}"
+				echo "GCC=${prefix}gcc"
+				;;
+			*)
+				echo "CC=${prefix}${cc}"
+				;;
+		esac
 		echo "CPP=${prefix}${cpp}"
 		echo "AS=${prefix}${as}"
 		echo "LD=${prefix}${ld}"
