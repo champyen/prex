@@ -49,18 +49,20 @@
 #define ICU_IRQSTS0 (*(volatile uint32_t*)(ICU_BASE + 0x200))
 #define ICU_IRQSTS1 (*(volatile uint32_t*)(ICU_BASE + 0x204))
 #define ICU_IRQSTS2 (*(volatile uint32_t*)(ICU_BASE + 0x208))
-#define ICU_IRQSTS(idx) (*(volatile uint32_t*)(ICU_BASE + 0x200 + 4 * idx))
+#define ICU_IRQSTS(idx) (*(volatile uint32_t*)(ICU_BASE + 0x204 + 4 * idx))
 #define IRQ_FIQ (*(volatile uint32_t*)(ICU_BASE + 0x20C))
 
-#define ICU_IRQENSET1 (*(volatile uint32_t*)(ICU_BASE + 0x210))
-#define ICU_IRQENSET2 (*(volatile uint32_t*)(ICU_BASE + 0x214))
-#define ICU_IRQENSET (*(volatile uint32_t*)(ICU_BASE + 0x218))
+#define ICU_IRQENSET0 (*(volatile uint32_t*)(ICU_BASE + 0x210))
+#define ICU_IRQENSET1 (*(volatile uint32_t*)(ICU_BASE + 0x214))
+#define ICU_IRQENSET2 (*(volatile uint32_t*)(ICU_BASE + 0x218))
+#define ICU_IRQENSET(idx) (*(volatile uint32_t*)(ICU_BASE + 0x210 + 4 * idx))
 
-#define ICU_IRQENCLR1 (*(volatile uint32_t*)(ICU_BASE + 0x21C))
-#define ICU_IRQENCLR2 (*(volatile uint32_t*)(ICU_BASE + 0x220))
-#define ICU_IRQENCLR (*(volatile uint32_t*)(ICU_BASE + 0x224))
+#define ICU_IRQENCLR0 (*(volatile uint32_t*)(ICU_BASE + 0x21C))
+#define ICU_IRQENCLR1 (*(volatile uint32_t*)(ICU_BASE + 0x220))
+#define ICU_IRQENCLR2 (*(volatile uint32_t*)(ICU_BASE + 0x224))
+#define ICU_IRQENCLR(idx) (*(volatile uint32_t*)(ICU_BASE + 0x21C + 4 * idx))
 
-static uint32_t irq_conv[] = {39, 41, 42, 50, 51, 85, 86, 87, 88, 89, 94};
+static uint32_t irq_conv[] = {7, 9, 10, 18, 19, 53, 54, 55, 56, 57, 62};
 
 /*
  * Interrupt Priority Level
@@ -80,18 +82,21 @@ static uint32_t mask_table[NIPLS][3]; /* level -> mask */
 /*
  * Set mask for current ipl
  */
-static void update_mask(void)
+static void update_mask(int old_ipl, int new_ipl)
 {
     u_int mask = mask_table[irq_level][0];
     u_int mask1 = mask_table[irq_level][1];
     u_int mask2 = mask_table[irq_level][2];
 
-    ICU_IRQENCLR = ~mask;
-    ICU_IRQENCLR1 = ~mask1;
-    ICU_IRQENCLR2 = ~mask2;
-    ICU_IRQENSET = mask;
-    ICU_IRQENSET1 = mask1;
-    ICU_IRQENSET2 = mask2;
+    if(old_ipl < new_ipl){
+        ICU_IRQENCLR(0) = ~mask;
+        ICU_IRQENCLR(1) = ~mask1;
+        ICU_IRQENCLR(2) = ~mask2;
+    } else {
+        ICU_IRQENSET(0) = mask;
+        ICU_IRQENSET(1) = mask1;
+        ICU_IRQENSET(2) = mask2;
+    }
 }
 
 /*
@@ -114,7 +119,7 @@ void interrupt_unmask(int vector, int level)
      */
     for (i = 0; i < level; i++)
         mask_table[i][vidx] |= unmask;
-    update_mask();
+    ICU_IRQENSET(vidx) = mask_table[irq_level][vidx];
 }
 
 /*
@@ -130,8 +135,8 @@ void interrupt_mask(int vector)
     level = ipl_table[vector];
     for (i = 0; i < level; i++)
         mask_table[i][vidx] &= mask;
+    ICU_IRQENCLR(vidx) = ~(mask_table[irq_level][vidx]);
     ipl_table[vector] = IPL_NONE;
-    update_mask();
 }
 
 /*
@@ -148,7 +153,7 @@ void interrupt_setup(int vector, int mode)
  */
 void interrupt_handler(void)
 {
-    uint32_t bits;
+    uint32_t bits, vidx;
     uint32_t vector, old_ipl, new_ipl;
 
     /* Get interrupt source */
@@ -159,20 +164,23 @@ void interrupt_handler(void)
     }
 
     switch (vector) {
-        case 8 ... 9: {
-                int vidx = (vector - 7);
-                bits = ICU_IRQSTS(vidx);
-                for (vector = 0; vector < 32; vector++) {
-                    if (bits & (uint32_t)(1 << vector))
-                        break;
-                }
-                vector += (vidx << 5);
-            } break;
-        case 10 ... 20:
-            vector = irq_conv[vector - 10];
-            break;
-        case 21:
-            goto out;
+    case 8 ... 9:
+        vidx = (vector - 8);
+        bits = ICU_IRQSTS(vidx);
+        for (vector = 0; vector < 32; vector++) {
+            if (bits & (uint32_t)(1 << vector))
+                break;
+        }
+        vector += (vidx << 5);
+        break;
+    case 10 ... 20:
+        vector = irq_conv[vector - 10];
+        break;
+    case 21:
+        goto out;
+    default:
+        vector += 64;
+        break;
     }
 
     /* Adjust interrupt level */
@@ -180,7 +188,7 @@ void interrupt_handler(void)
     new_ipl = ipl_table[vector];
     if (new_ipl > old_ipl) /* Ignore spurious interrupt */
         irq_level = new_ipl;
-    update_mask();
+    update_mask(old_ipl, new_ipl);
 
     /* Allow another interrupt that has higher priority */
     splon();
@@ -192,7 +200,7 @@ void interrupt_handler(void)
 
     /* Restore interrupt level */
     irq_level = old_ipl;
-    update_mask();
+    update_mask(new_ipl, old_ipl);
 out:
     return;
 }
@@ -216,7 +224,7 @@ void interrupt_init(void)
         mask_table[i][2] = 0;
     }
 
-    ICU_IRQENCLR = 0xFFFFFFFF;
-    ICU_IRQENCLR1 = 0xFFFFFFFF;
-    ICU_IRQENCLR2 = 0xFFFFFFFF;
+    ICU_IRQENCLR(0) = 0xFFFFFFFF;
+    ICU_IRQENCLR(1) = 0xFFFFFFFF;
+    ICU_IRQENCLR(2) = 0xFFFFFFFF;
 }

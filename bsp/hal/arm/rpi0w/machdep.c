@@ -148,9 +148,7 @@ void machine_startup(void)
      * Setup vector page.
      */
     vector_copy((vaddr_t)ptokv(CONFIG_ARM_VECTORS));
-    /*
     set_vbar((vaddr_t)ptokv(CONFIG_ARM_VECTORS));
-    */
 
 #ifdef CONFIG_MMU
     /*

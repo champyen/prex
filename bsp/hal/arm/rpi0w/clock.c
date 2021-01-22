@@ -42,7 +42,7 @@
 
 #ifndef CONFIG_SYSTEM_TIMER
 /* Interrupt vector for timer (TMR1) */
-#define CLOCK_IRQ 0
+#define CLOCK_IRQ 64
 
 /* The clock rate per second - 1Mhz */
 #define CLOCK_RATE 1000000L
@@ -112,7 +112,7 @@ void clock_init(void)
 #else
 
 #define TIMER_IDX 1
-#define CLOCK_IRQ (32 + TIMER_IDX)
+#define CLOCK_IRQ (0 + TIMER_IDX)
 
 /* The clock rate per second - 1Mhz */
 #define CLOCK_RATE 1000000L

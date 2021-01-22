@@ -88,7 +88,7 @@ device		ramdisk		# RAM disk
 #options		SYSTEM_TIMER    # otherwise ARM timer will be used
 options		ARM_VECTORS=0x00000000
 options		PL011_BASE=0x20201000
-options		PL011_IRQ=89
+options		PL011_IRQ=57
 options		PL011_CLK=47923203
 
 
