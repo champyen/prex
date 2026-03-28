@@ -30,3 +30,5 @@ OBJS+=		fatfs/fatfs.o
 endif
 
 include $(SRCDIR)/mk/prog.mk
+
+$(OBJS): $(SUBDIR)

@@ -7,3 +7,8 @@ SUBDIR+=	sample test
 endif
 
 include $(SRCDIR)/mk/subdir.mk
+
+#
+# Parallel build dependencies
+#
+server bin sbin sample test: lib

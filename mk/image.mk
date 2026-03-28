@@ -12,7 +12,7 @@ include $(SRCDIR)/conf/etc/files.mk
 include $(SRCDIR)/mk/common.mk
 -include $(SRCDIR)/bsp/boot/$(ARCH)/$(PLATFORM)/Makefile.sysgen
 
-$(TARGET): dummy
+$(TARGET): $(SUBDIR)
 	$(call echo-file,PACK   ,$@)
 ifdef FILES
 	$(AR) rcS bootdisk.a $(FILES)

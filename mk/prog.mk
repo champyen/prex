@@ -25,7 +25,7 @@ endif
 
 include $(SRCDIR)/mk/common.mk
 
-$(TARGET): $(LIBS) $(OBJS)
+$(TARGET): $(LIBS) $(OBJS) $(LIBC) $(CRT0)
 	$(call echo-file,LD     ,$@)
 	$(LD) $(LDFLAGS) $(OUTPUT_OPTION) $(CRT0) $(OBJS) $(LIBS) $(LIBC) $(PLATFORM_LIBS)
 	$(ASMGEN)
