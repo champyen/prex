@@ -58,6 +58,7 @@ size_t strcspn(const char*, const char*);
 char* strerror(int);
 size_t strlen(const char*);
 char* strncat(char*, const char*, size_t);
+size_t strnlen(const char*, size_t);
 int strncmp(const char*, const char*, size_t);
 char* strncpy(char*, const char*, size_t);
 char* strpbrk(const char*, const char*);

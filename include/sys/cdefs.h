@@ -93,7 +93,7 @@
 #define __noreturn /* delete */
 #endif
 
-#define __P(protos) ()
+#define __P(protos) protos
 #define __RCSID(_s)
 #define __COPYRIGHT(_s)
 

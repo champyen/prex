@@ -1,6 +1,10 @@
 /*-
- * Copyright (c) 1989, 1993
+ * Copyright (c) 1992, 1993, 1994 Henry Spencer.
+ * Copyright (c) 1992, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
+ *
+ * This code is derived from software contributed to Berkeley by
+ * Henry Spencer.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +14,11 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the University nor the names of its contributors
+ * 3. All advertising materials mentioning features or use of this software
+ *    must display the following acknowledgement:
+ *	This product includes software developed by the University of
+ *	California, Berkeley and its contributors.
+ * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -26,53 +34,27 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	@(#)dirent.h	8.2 (Berkeley) 7/28/94
+ *	@(#)utils.h	8.3 (Berkeley) 3/20/94
  */
 
-#ifndef _DIRENT_H
-#define _DIRENT_H
-
-/*
- * The kernel defines the format of directory entries returned by
- * the getdirentries(2) system call.
- */
-#include <sys/dirent.h>
-
-#ifdef _POSIX_SOURCE
-typedef void* DIR;
-#else
-
-#define d_ino d_fileno /* backward compatibility */
-
-struct _dirdesc
-{
-    int dd_fd; /* file descriptor associated with directory */
-    struct dirent dd_ent;
-};
-typedef struct _dirdesc DIR;
-
-#define dirfd(dirp) ((dirp)->dd_fd)
-
-#ifndef NULL
-#define NULL 0
+/* utility definitions */
+#ifndef _POSIX2_RE_DUP_MAX
+#define _POSIX2_RE_DUP_MAX 255
 #endif
+#define	DUPMAX		_POSIX2_RE_DUP_MAX	/* xxx is this right? */
+#define	INFINITY	(DUPMAX + 1)
+#define	NC		(CHAR_MAX - CHAR_MIN + 1)
+typedef unsigned char uch;
 
-#endif /* _POSIX_SOURCE */
+/* switch off assertions (if not already off) if no REDEBUG */
+#ifndef REDEBUG
+#ifndef NDEBUG
+#define	NDEBUG	/* no assertions please */
+#endif
+#endif
+#include <assert.h>
 
-#include <sys/cdefs.h>
-
-__BEGIN_DECLS
-DIR* opendir(const char*);
-struct dirent* readdir(DIR*);
-void rewinddir(DIR*);
-int closedir(DIR*);
-
-#ifndef _POSIX_SOURCE
-long telldir(const DIR*);
-void seekdir(DIR*, long);
-int scandir(const char*, struct dirent***, int (*)(struct dirent*), int (*)(const void*, const void*));
-int alphasort(const void*, const void*);
-#endif /* not POSIX */
-__END_DECLS
-
-#endif /* !_DIRENT_H */
+/* for old systems with bcopy() but no memmove() */
+#ifdef USEBCOPY
+#define	memmove(d, s, c)	bcopy(s, d, c)
+#endif

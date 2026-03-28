@@ -39,6 +39,11 @@
 #define STDOUT_FILENO 1 /* standard output file descriptor */
 #define STDERR_FILENO 2 /* standard error file descriptor */
 
+#define F_OK 0 /* test for existence of file */
+#define X_OK 0x01 /* test for execute or search permission */
+#define W_OK 0x02 /* test for write permission */
+#define R_OK 0x04 /* test for read permission */
+
 #ifndef NULL
 #define NULL 0 /* null pointer constant */
 #endif
@@ -127,7 +132,7 @@ char* mktemp(char*);
 int nice(int);
 void psignal(unsigned int, const char*);
 extern const char* const sys_siglist[];
-/* int	 readlink(const char *, char *, int); */
+int	 readlink(const char *, char *, size_t);
 /* int	 reboot(int); */
 /* int	 rresvport(int *); */
 /* int	 ruserok(const char *, int, const char *, const char *); */

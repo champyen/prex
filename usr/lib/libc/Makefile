@@ -10,6 +10,7 @@ include $(SRCDIR)/usr/lib/libc/gen/Makefile.inc
 include $(SRCDIR)/usr/lib/libc/stdio/Makefile.inc
 include $(SRCDIR)/usr/lib/libc/stdlib/Makefile.inc
 include $(SRCDIR)/usr/lib/libc/string/Makefile.inc
+include $(SRCDIR)/usr/lib/libc/regex/Makefile.inc
 include $(SRCDIR)/usr/lib/libc/termios/Makefile.inc
 include $(SRCDIR)/usr/lib/libc/time/Makefile.inc
 

@@ -8,4 +8,5 @@ SRCS+=	__libc_init.c assert.c \
 	err.c errx.c verr.c verrx.c \
 	warn.c warnx.c vwarn.c vwarnx.c \
 	getpagesize.c confstr.c getpass.c \
-	getprogname.c setprogname.c fts.c
+	getprogname.c setprogname.c fts.c \
+	fnmatch.c glob.c realpath.c scandir.c

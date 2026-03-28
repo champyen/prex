@@ -1,6 +1,10 @@
 /*-
- * Copyright (c) 1989, 1993
+ * Copyright (c) 1992, 1993, 1994 Henry Spencer.
+ * Copyright (c) 1992, 1993, 1994
  *	The Regents of the University of California.  All rights reserved.
+ *
+ * This code is derived from software contributed to Berkeley by
+ * Henry Spencer.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +14,11 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the University nor the names of its contributors
+ * 3. All advertising materials mentioning features or use of this software
+ *    must display the following acknowledgement:
+ *	This product includes software developed by the University of
+ *	California, Berkeley and its contributors.
+ * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -26,53 +34,46 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	@(#)dirent.h	8.2 (Berkeley) 7/28/94
+ *	@(#)regfree.c	8.3 (Berkeley) 3/20/94
  */
 
-#ifndef _DIRENT_H
-#define _DIRENT_H
+#if defined(LIBC_SCCS) && !defined(lint)
+static char sccsid[] = "@(#)regfree.c	8.3 (Berkeley) 3/20/94";
+#endif /* LIBC_SCCS and not lint */
+
+#include <sys/types.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <regex.h>
+
+#include "utils.h"
+#include "regex2.h"
 
 /*
- * The kernel defines the format of directory entries returned by
- * the getdirentries(2) system call.
+ - regfree - free everything
+ = extern void regfree(regex_t *);
  */
-#include <sys/dirent.h>
-
-#ifdef _POSIX_SOURCE
-typedef void* DIR;
-#else
-
-#define d_ino d_fileno /* backward compatibility */
-
-struct _dirdesc
+void
+regfree(regex_t *preg)
 {
-    int dd_fd; /* file descriptor associated with directory */
-    struct dirent dd_ent;
-};
-typedef struct _dirdesc DIR;
+	register struct re_guts *g;
 
-#define dirfd(dirp) ((dirp)->dd_fd)
+	if (preg->re_magic != MAGIC1)	/* oops */
+		return;			/* nice to complain, but hard */
 
-#ifndef NULL
-#define NULL 0
-#endif
+	g = preg->re_g;
+	if (g == NULL || g->magic != MAGIC2)	/* oops again */
+		return;
+	preg->re_magic = 0;		/* mark it invalid */
+	g->magic = 0;			/* mark it invalid */
 
-#endif /* _POSIX_SOURCE */
-
-#include <sys/cdefs.h>
-
-__BEGIN_DECLS
-DIR* opendir(const char*);
-struct dirent* readdir(DIR*);
-void rewinddir(DIR*);
-int closedir(DIR*);
-
-#ifndef _POSIX_SOURCE
-long telldir(const DIR*);
-void seekdir(DIR*, long);
-int scandir(const char*, struct dirent***, int (*)(struct dirent*), int (*)(const void*, const void*));
-int alphasort(const void*, const void*);
-#endif /* not POSIX */
-__END_DECLS
-
-#endif /* !_DIRENT_H */
+	if (g->strip != NULL)
+		free((char *)g->strip);
+	if (g->sets != NULL)
+		free((char *)g->sets);
+	if (g->setbits != NULL)
+		free((char *)g->setbits);
+	if (g->must != NULL)
+		free(g->must);
+	free((char *)g);
+}
