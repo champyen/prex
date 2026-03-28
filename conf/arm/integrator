@@ -5,8 +5,8 @@
 #
 # Make options
 #
-makeoptions	GCCFLAGS+= -mcpu=arm9tdmi -fno-dwarf2-cfi-asm
-makeoptions	ASFLAGS+= -mcpu=arm9tdmi -mfpu=softfpa
+makeoptions	GCCFLAGS+= -mcpu=arm9tdmi -march=armv4t -fno-dwarf2-cfi-asm
+makeoptions	ASFLAGS+= -mcpu=arm9tdmi -march=armv4t -mfpu=softfpa
 
 #
 # Memory address
