@@ -27,7 +27,7 @@ There exist some hardware to run Prex on the Game Boy Advance. Currently, I am u
 
 ## How to run Prex with the VisualBoy Advance?
 
-VBA - VisualBoy Advance is most popular GBA emulator. You can find the  latest release at  [http://www.vba.ngemu.com](http://vba.ngemu.com). To run Prex with VBA, simply select file->open and open the prex image. There is no need to prepare the original GBA BIOS.
+VBA - VisualBoy Advance is the most popular GBA emulator. You can find the  latest release at  [http://www.vba.ngemu.com](http://vba.ngemu.com). To run Prex with VBA, simply select file->open and open the prex image. There is no need to prepare the original GBA BIOS.
 
 **Important:** You must rename the file name of the image to "prexos.gba". It seems VBA is checking the file extension to validate the image.
 
@@ -55,7 +55,7 @@ You have to download and unpack the following files.
 
 ```
 $ cd /usr/src
-$ tar zxvf binitils-2.15.tar.gz
+$ tar zxvf binutils-2.15.tar.gz
 $ tar zxvf gcc-core-3.4.3.tar.gz
 ```
 
@@ -192,9 +192,9 @@ The driver for on-screen keyboard is provided to emulate a generic keyboard by u
 
 ## System Call
 
-Since the GBA BIOS does not allow to handle the SWI event by the program, we need some trick to handle the system call. The system call will be handled by the following steps.
+Since the GBA BIOS does not allow handling of the SWI event by the program, we need some trick to handle the system call. The system call will be handled by the following steps.
 
-- The application invoke the system call.
+- The application invokes the system call.
 - The system call stub in the library will jump to the SWI exception vector (0x0202007C) in the kernel code.
 
 ```
@@ -221,7 +221,7 @@ ENTRY(syscall_entry)
         mov     lr, r5
 ```
 
-Since a program can not change the ARM processor mode during the USR mode, all applications are always executed in SYS mode in Prex arm-gba port.
+Since a program cannot change the ARM processor mode during the USR mode, all applications are always executed in SYS mode in the Prex arm-gba port.
 
 
 

@@ -59,7 +59,7 @@ There exist two different C libraries for applications.
 
 #### libc
 
-Mmost POSIX services are provided by the system servers running in the user mode. So, an application must send an IPC message to the system servers to access POSIX interface. Prex's libc includes the IPC messaging stub for the POSIX service, and so, applications do not care about IPC transmission (Figure 1).
+Most POSIX services are provided by the system servers running in the user mode. So, an application must send an IPC message to the system servers to access the POSIX interface. Prex's libc includes the IPC messaging stub for the POSIX service, and so, applications do not care about IPC transmission (Figure 1).
 
 ![libc](img/appguide/libc.png)  
 Figure 1. Structure of libc
@@ -105,7 +105,7 @@ Just run make tool at the target source directory.
 $ make
 ```
 
-Note: The detailed information for the Prex tool chain is described in [Prex Build Guide](http://prex.sourceforge.net/doc/build.html).
+Note: The detailed information for the Prex tool chain is described in [Prex Build Guide](build.md).
 
 ## Testing Applications
 
@@ -295,7 +295,7 @@ The task must have an appropriate capability to send an exception.
 
 ### Getting alarm exception
 
-timer_alarm() send a timer exception (SIGALRM) to the caller task at the specified time interval. The following sample programs to send an alarm exception in 500msec interval.
+timer_alarm() sends a timer exception (SIGALRM) to the caller task at the specified time interval. The following sample programs to send an alarm exception in 500msec interval.
 
 ```
         timer_alarm(500, 0);
@@ -318,7 +318,7 @@ main(int argc, char *argv[])
 	/*
 	 * Open device
 	 */
-	if ((device_open("console", 0, &console_dev) != 0)
+	if (device_open("console", 0, &console_dev) != 0)
 		sys_log("device open err!\n");
 
 	/*

@@ -18,9 +18,9 @@ The following figure illustrates the Prex components.
 ![Prex Overview](img/overview/overview.png)  
 Figure 1. Prex Components
 
-The Prex microkernel provides only fundamental functions to abstract a processor and minimum hardware. In addition, it provides some real-time support functions for real-time tasks. The microkernel also provides kernel primitive services for device drivers. There exists a thin and well-defined interface layer called as "Hardware Abstraction Layer" within a microkernel.
+The Prex microkernel provides only fundamental functions to abstract a processor and minimum hardware. In addition, it provides some real-time support functions for real-time tasks. The microkernel also provides kernel primitive services for device drivers. There exists a thin and well-defined interface layer called the "Hardware Abstraction Layer" within a microkernel.
 
-The other basic OS functions like process, file system, networking etc., are provided by system server tasks. There is no characteristic difference between server tasks and normal tasks. The tasks will communicate with other task by using IPC message via a microkernel.
+The other basic OS functions like process, file system, networking etc., are provided by system server tasks. There is no characteristic difference between server tasks and normal tasks. The tasks will communicate with other tasks by using IPC messages via a microkernel.
 
 Prex provides POSIX emulation libraries for application interoperability. It includes standard C library (libc) and a set of UNIX utilities.
 
@@ -31,9 +31,9 @@ The design policies for the Prex kernel are as follows:
 -   Simple & Small: Move OS functions to user mode as much as possible.
 -   Easy to Port: Define common interface for various processor architectures.
 -   POSIX Support: Provide minimum kernel support for POSIX.
--   Real-time Capable: Execute native real-time tasks directory on the Prex kernel.
+-   Real-time Capable: Execute native real-time tasks directly on the Prex kernel.
 
-Kernel has responsibility to handle the following items.
+The kernel has the responsibility to handle the following items.
 
 -   Object: holds a queue of messages.
 -   Message: is used to communicate between threads.
@@ -61,7 +61,7 @@ The Prex HAL defines interface to the following hardware classes:
 -   Machine: Board specific hardware
 -   Diag: Diagnostic port
 
-Currently, Prex support the following processor architectures:
+Currently, Prex supports the following processor architectures:
 
 -   x86
 -   ARM
@@ -81,9 +81,9 @@ The interface between the kernel and drivers are defined clearly as "Driver Kern
 -   Timer service
 -   Debug service
 
-Prex kernel maintains a name space for the device object which represents the physical, logical or virtual devices. A user mode application can access these device objects by using kernel APIs, and the request for the device object will be transferred to the associated device driver by the kernel.
+The Prex kernel maintains a namespace for the device object which represents the physical, logical, or virtual devices. A user mode application can access these device objects by using kernel APIs, and the request for the device object will be transferred to the associated device driver by the kernel.
 
-Each device driver may provide some of the following functions. Since it has very simple driver model, it's easy to develop new device driver for Prex.
+Each device driver may provide some of the following functions. Since it has a very simple driver model, it's easy to develop new device drivers for Prex.
 
 -   Open
 -   Close
@@ -96,7 +96,7 @@ Each device driver may provide some of the following functions. Since it has ver
 Prex provides the OS boot loader if it is required on the target platform. The boot loader will support the following minimum functions:
 
 -   Minimum Setup: Program some essential registers for processor or hardware. e.g. disabling interrupts
--   Boot Information: Collect some boot information if it needed. e.g. memory size
+-   Boot Information: Collect some boot information if needed. e.g. memory size
 -   Program Loading: Copy some programs to RAM if it is needed. e.g. kernel, driver, boot tasks etc.
 
 Since the boot mechanism depends on the hardware of each system, its design is not strictly defined.  

@@ -32,13 +32,13 @@ Here, the difficult step is 2. To write the boot sector, some special  tool will
 
 So, I recommend you to create the bootable demo floppy at first. Then,  you can replace the kernel image to your own kernel in the demo floppy.
 
-The following is the most easy step to hack the Prex kernel on x86-pc.
+The following is the easiest step to hack the Prex kernel on x86-pc.
 
 1. Build your own kernel. Please refer to  ["Prex Build Guide"](build.md).  
 
 2. Create the demo floppy. Please refer to  **"How to create a Prex demo floppy?"**
 
-3. Replace the kernel image (prexos) in the demo floppy by your own   image. You can use mtools to do it.  
+3. Replace the kernel image (prexos) in the demo floppy with your own   image. You can use mtools to do it.  
 
    ```
     $ mcopy prexos a:\
@@ -46,7 +46,7 @@ The following is the most easy step to hack the Prex kernel on x86-pc.
 
      Or, it may be easy to copy it by mounting the FAT file system to the floppy  if your OS supports it.   
 
-4. Boot PC with a created floppy disk.  If the system does not boot with the floppy,  you should check the BIOS settings for the boot device order.  
+4. Boot the PC with the created floppy disk.  If the system does not boot with the floppy,  you should check the BIOS settings for the boot device order.  
 
 ## How to create a Prex demo floppy?
 
@@ -77,11 +77,11 @@ The following is the most easy step to hack the Prex kernel on x86-pc.
 
 ### Installing Bochs
 
-Bochs is an open-source x86 pc emulator, and you can run Prex with Bochs ons Windows/Linux. The Bochs latest release can be downloaded from [ http://bochs.sourceforge.net](http://bochs.sourceforge.net).
+Bochs is an open-source x86 pc emulator, and you can run Prex with Bochs on Windows/Linux. The latest Bochs release can be downloaded from [ http://bochs.sourceforge.net](http://bochs.sourceforge.net).
 
 ### Setting up for Bochs
 
-The Prex demo disk is available for download. The disk image is 1.44M floppy image with FAT file format. And, this image can be used as a Bochs floppy image.
+The Prex demo disk is available for download. The disk image is a 1.44M floppy image with FAT file format. And, this image can be used as a Bochs floppy image.
 
  You can setup Bochs for Prex by the following steps:
 
@@ -114,7 +114,7 @@ The Prex demo disk is available for download. The disk image is 1.44M floppy ima
 
 ## How to run Prex with QEMU?
 
- If you are using QEMU, the same image created for Bochs with above info can be used. You can simply try Prex with QEMU by the following command.
+ If you are using QEMU, the same image created for Bochs with the above info can be used. You can simply try Prex with QEMU by the following command.
 
 ```
 $ qemu -fda (your directory)/prex-X.X.X.i386-pc.img -localtime
@@ -122,9 +122,9 @@ $ qemu -fda (your directory)/prex-X.X.X.i386-pc.img -localtime
 
 ## How to modify the OS boot image?
 
-If you compile the Prex source with "make" command, the OS boot image is created as "prexos" in "img" directory. The file "prexos" must be placed in the root directory of the Prex disk. You can test your own Prex image by replacing the "prexos" in the floppy image.
+If you compile the Prex source with the "make" command, the OS boot image is created as "prexos" in the "img" directory. The file "prexos" must be placed in the root directory of the Prex disk. You can test your own Prex image by replacing the "prexos" in the floppy image.
 
-To replace the file in the floppy image, "mtools" is useful. Before using "mcopy", the drive A must be point to the image file in "mtools.conf" as follows:
+To replace the file in the floppy image, "mtools" is useful. Before using "mcopy", drive A must point to the image file in "mtools.conf" as follows:
 
 ```
 drive a: file="(your directory)/prex-X.X.X.i386-pc.img"
@@ -163,7 +163,7 @@ floppyb: 1_44=(your directory)/prex-X.X.X.i386-pc.img, status=inserted
 a:\>mkboot b:
 ```
 
-Note: You had better download an Prex bootable image rather than this method.
+Note: You had better download a Prex bootable image rather than this method.
 
 ## Keyboard Interface
 
@@ -181,7 +181,7 @@ Some special keys are defined by the keyboard driver.
 
 ## Debugging with Bochs
 
- Bochs has a capability to output the character to the console via i/o port 0xe9. To get your printf() or sys_log() message in the console, you must configure and rebuild Bochs/Prex as follows.
+ Bochs has the capability to output characters to the console via i/o port 0xe9. To get your printf() or sys_log() message in the console, you must configure and rebuild Bochs/Prex as follows.
 
 1. Bochs must be built with "--enable-port-e9-hack" option.
 2. Prex must be built with enabling "BOCHS_OUTPUT" flag in "prex/src/arch/i386/diag.c".

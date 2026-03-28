@@ -2,9 +2,9 @@
 
 In this project, the coding standard has been reformatted to a Webkit derived style.
 
-Please use reformat.sh before sending you pull request.
+Please use reformat.sh before sending your pull request.
 
-In shortly, the coding style is similar to linux kernel coding style.
+In short, the coding style is similar to Linux kernel coding style.
 
 
 

@@ -25,7 +25,7 @@
 | [Prex License](LICENSE) | Explains the license of Prex. |
 | [Coding Standard](standard.md) | Describes the coding guidelines for developers.              |
 | [Prex Build Guide](build.md) | Tells you how to build Prex.                                 |
-| [Applications Programming Guide](appguide.md) | Tells you how to get started writing Prex programs, including            some sample codes. |
+| [Applications Programming Guide](appguide.md) | Tells you how to get started writing Prex programs, including            sample code. |
 | [Sample Applications](sample.md) | Explains the sample application included in Prex.            |
 | [Kernel Debugging Tips and Tricks](debug.md) | Describes how to use the Prex debugging functions.           |
 | Driver Development Guide                                     | Not available...                                             |

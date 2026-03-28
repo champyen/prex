@@ -34,15 +34,15 @@ The following documents may be helpful to understand the security and power mana
 
 ## Design Philosophies
 
-The Prex kernel focuses the following points to be designed.
+The Prex kernel focuses on the following design points.
 
 #### Portability
 
-Portability is the most important point for the kernel design in Prex. The Prex kernel is divided into two different layers - a common kernel layer and a hardware abstraction layer (HAL). Any routine in the common kernel layer must not access to the H/W by itself. Instead, it must use the H/W access services provided by HAL.
+Portability is the most important point for the kernel design in Prex. The Prex kernel is divided into two different layers - a common kernel layer and a hardware abstraction layer (HAL). Any routine in the common kernel layer must not access the H/W by itself. Instead, it must use the H/W access services provided by HAL.
 
 #### Scalability
 
-In order to obtain higher scalability, the kernel does not limit the maximum number of the kernel objects to create. So, the resources for all kernel objects are allocated dynamically after system boot. This can keep the memory prerequisite smaller than the static resource allocation. This means that the kernel can create any numbers of threads, objects, devices, events, mutexes and timers as far as usable memory remains.
+In order to obtain higher scalability, the kernel does not limit the maximum number of the kernel objects to create. So, the resources for all kernel objects are allocated dynamically after system boot. This can keep the memory prerequisite smaller than the static resource allocation. This means that the kernel can create any number of threads, objects, devices, events, mutexes and timers as far as usable memory remains.
 
 The kernel supports both of MMU and MMU-less systems. So, most components of the kernel are designed carefully to work without MMU.
 

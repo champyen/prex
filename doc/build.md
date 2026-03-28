@@ -28,7 +28,7 @@ The following tools are required to build Prex.
 - GNU Binutils 2.14 or later
 - GNU Make
 
-Now, PCC or other compilers can be used for build.
+Now, GCC, Clang, or other compilers can be used for the build.
 
 ## Compiling Prex on Linux
 
@@ -36,15 +36,15 @@ Now, PCC or other compilers can be used for build.
 
 Prepare the following packages.
 
-- GCC (for ARM platform, please get a appropriate toolchain from [ARM GNU Toolchain](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/) website )
-- GNU Binutils (Mostly, it is bundled with toolchain.)
+- GCC or Clang (for ARM platform, please get an appropriate toolchain from [ARM GNU Toolchain](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/) website or use your system's Clang)
+- GNU Binutils (Mostly, it is bundled with the toolchain.)
 - GNU Make
 
-GCC and Binutils should be built appropriately for your target architecture if you cross-compile Prex.
+GCC/Clang and Binutils should be built appropriately for your target architecture if you cross-compile Prex.
 
 #### Step 2. Get Sources
 
-Unpack the sources and move to top level directory of the source tree.
+Unpack the sources and move to the top level directory of the source tree.
 
 ```
 $ cd /usr/src
@@ -54,7 +54,7 @@ $ cd prex
 
 #### Step 2. Configure
 
-Setup target architecture and platform. The following sample shows the setting for x86-pc target.
+Setup target architecture and platform. The following sample shows the setting for the x86-pc target.
 
 ```
 $ ./configure --target=x86-pc
@@ -62,36 +62,43 @@ $ ./configure --target=x86-pc
 
 #### Step 3. Make
 
-Run make.
+Run make. Parallel build is supported (e.g., `make -j4`).
 
 ```
-$ make
+$ make -j4
 ```
 
 #### (Tips)
 
-If you want to run 'make' in the subdirectory, you have to set the SRCDIR as follows:
+- If you want to run 'make' in a subdirectory, you have to set the SRCDIR as follows:
 
 ```
 $ export SRCDIR=/usr/src/prex
 ```
 
+- To use Clang for cross-compilation, you can use the `--cc=clang` and `--cross-prefix` options. For example:
+
+```
+$ ./configure --target=arm-integrator --cc=clang --cross-prefix=arm-none-eabi
+```
+In this case, `configure` will automatically pass `--target=arm-none-eabi` to Clang.
+
 ## Compiling Prex on Windows
 
-For Windows platform, it is suggested to use WSL/WSL2 environment.
+For the Windows platform, it is suggested to use a WSL/WSL2 environment.
 
-The procedure is same as linux.
+The procedure is the same as Linux.
 
 If WSL/WSL2 is not considered, MinGW is suggested for this project.
 
 ## Compiling Prex on FreeBSD
 
-You have to specify the name of the GNU make on FreeBSD.
- It can be done by changing Makefile.inc or using symbolic link.
+You have to specify the name of GNU make on FreeBSD.
+ It can be done by changing Makefile.inc or using a symbolic link.
 
 - make -> gmake
 
-The compiling method is same with compling on Linux. Please refer to the above build step for Linux.
+The compiling method is the same as compiling on Linux. Please refer to the above build step for Linux.
 
 ## Compiling Prex on MacOS
 
@@ -101,10 +108,10 @@ Under construction
 
 ### Configure Script
 
-You can use help option for the configure script.
+You can use the help option for the configure script.
 
 ```
-$ configure --help
+$ ./configure --help
 
 Usage: configure [options]
 Options:
@@ -112,7 +119,7 @@ Options:
         --target=TARGET         use TARGET for target system
         --profile=PROFILE       use PROFILE for target profile
         --cross-prefix=PREFIX   use PREFIX for compile tools (e.g: arm-none-eabi )
-        --cc=CC                 use CC as C compiler
+        --cc=CC                 use CC as C compiler (e.g: gcc, clang, pcc)
         --no-debug              disable all debug features
 
 $ _
@@ -120,24 +127,24 @@ $ _
 
 ### Build Flavors
 
-There some build switches in the Makefile file named /mk/own.mk.
+There are some build switches in the Makefile file named /mk/own.mk.
 
 | Switch   | Description                                         |
 | -------- | --------------------------------------------------- |
 | _DEBUG_  | All debugging features are enabled by default       |
 | _QUICK_  | Sample applications and test tools are not compiled |
 | _STRICT_ | Compiler will check code strictly                   |
-| _SILENT_ | Output message is reduced during build process.     |
+| _SILENT_ | Output message is reduced during the build process.     |
 
 ## Installing Prex
 
-The method to install an OS image depends on the target platform. It may be described in the target specific document listed in the [Prex document](index.md).
+The method to install an OS image depends on the target platform. It may be described in the target specific document listed in the [Prex document](README.md).
 
 ## Customizing OS Image
 
 ### OS Image
 
-If you compile the Prex source with "make" command, the OS boot image is created as "prexos" in the root directory. The file "prexos" must exist in root directory of the Prex disk/ROM. You can test your own Prex image by replacing the "prexos" in the OS boot image. The file "prexos" includes the following files.
+If you compile the Prex source with the "make" command, the OS boot image is created as "prexos" in the root directory. The file "prexos" must exist in the root directory of the Prex disk/ROM. You can test your own Prex image by replacing the "prexos" in the OS boot image. The file "prexos" includes the following files.
 
 - Boot loader
 - Kernel module
@@ -161,7 +168,7 @@ The structure of the Prex source directory is as follows:
 	/ipc		Inter process communication support
 	/kern		Kernel main code
 	/mem		Memory management code
-	/sync		Synchronize related code
+	/sync		Synchronization related code
 
  /bsp			Board support package
 	/boot		Boot loader
@@ -175,7 +182,7 @@ The structure of the Prex source directory is as follows:
 	/lib		User libraries
 	/server		System servers
 	/sbin		System utilities
-	/test		Function test programs
+	/test		Functional test programs
 	/sample		Sample programs
 
  configure ... Configuration script
@@ -185,7 +192,7 @@ The structure of the Prex source directory is as follows:
 
 ### Configuring Build Options
 
-You can change the various options to adjust the image for your target requirement. The configuration file is prepared for the each target platform. You can modify the options described in the following file.
+You can change various options to adjust the image for your target requirement. The configuration file is prepared for each target platform. You can modify the options described in the following file.
 
 - /conf/(arch)/(platform)
 
@@ -205,7 +212,7 @@ memory          BOOTIMG_BASE    0x80100000      # Location of boot image
 memory          SYSPAGE_BASE    0x80000000      # Location of system page
 
 #
-# Tunable paramters
+# Tunable parameters
 #
 options         HZ=1000         # Ticks/second of the clock
 options         TIME_SLICE=50   # Context switch ratio (msec)
@@ -217,7 +224,7 @@ options         FS_THREADS=4    # Number of file system threads
 
 ### Changing Boot Tasks
 
-The boot task is a special task which is loaded by kernel directly at boot time. You can specify your own boot task(s) in "TASKS" option in the following file.
+The boot task is a special task which is loaded by the kernel directly at boot time. You can specify your own boot task(s) in the "TASKS" option in the following file.
 
 - /conf/etc/tasks.mk
 
@@ -236,4 +243,4 @@ TASKS+=     $(SRCDIR)/usr/server/fs/fs
 
 Copyright© 2005-2009 Kohsuke Ohtani
 
-Copyright© 2021 Champ Yen (champ.yen@gmail.com)
+Copyright© 2021-2026 Champ Yen (champ.yen@gmail.com)

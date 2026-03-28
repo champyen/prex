@@ -28,8 +28,14 @@ $ cd prex
 
 Setup target architecture and platform.
 
+To use GCC:
 ```
 $ ./configure --target=arm-integrator --cross-prefix=arm-none-eabi
+```
+
+To use Clang:
+```
+$ ./configure --target=arm-integrator --cc=clang --cross-prefix=arm-none-eabi
 ```
 
 #### Step 3. Make

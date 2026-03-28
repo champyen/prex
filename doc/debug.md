@@ -19,7 +19,7 @@
 
 ## Building a Debugging Kernel
 
-The Prex kernel is compiled with debugging version by default. The debugging version will have the following extra functions compared with the release version.
+The Prex kernel is compiled with a debugging version by default. The debugging version will have the following extra functions compared with the release version.
 
 - printf() to output the debug message.
 - panic() log for the fatal error.
@@ -27,7 +27,7 @@ The Prex kernel is compiled with debugging version by default. The debugging ver
 - Kernel function trace.
 - Dump of the kernel objects.
 
-However, you should care about the following two points.
+However, you should keep in mind the following two points.
 
 - The size of executable image will become larger than      the release version.
 - The execution speed becomes slower than the release version.
@@ -54,7 +54,7 @@ This is the subset of printf() in standard C library. You can use only following
 
 ### What is Kernel Panic?
 
-Panic is used to detect unrecoverable error in the kernel. The kernel code can call panic() routine anytime if it encounters a fatal error. panic() function will stop the system and display the message if output device is available. If the kernel is not compiled with debug mode, panic() will just reset the system without any message. When GDB is connect to the kernel, the control will be dropped to the debugger in panic().
+Panic is used to detect unrecoverable error in the kernel. The kernel code can call panic() routine anytime if it encounters a fatal error. panic() function will stop the system and display the message if output device is available. If the kernel is not compiled with debug mode, panic() will just reset the system without any message. When GDB is connected to the kernel, the control will be dropped to the debugger in panic().
 
 ### Panic Screen
 
@@ -94,7 +94,7 @@ int irq_attach(int vector, int prio, int shared, int (*isr)(int), void (*ist)(in
 	...
 ```
 
-If the kernel detect the invalid argument for isr, it will cause a panic() with the following message.
+If the kernel detects the invalid argument for isr, it will cause a panic() with the following message.
 
 ```
 Assertion failed: irq.c line:120 in irq_attach() 'isr != NULL'
@@ -104,13 +104,13 @@ The important point is ASSERT() macro is only enabled with the kernel debug vers
 
 ### IRQ Assertion
 
-There are some kernel routines that can not be called during an interrupt context. For example, the following functions can not be called by ISR.
+There are some kernel routines that cannot be called during an interrupt context. For example, the following functions cannot be called by ISR.
 
 - IRQ control code. (irq_attach() or irq_detach).
 - The system call code that requires an user mode context.
 - The kernel code that assumes it can synchronize by scheduling lock.      (kmem).
 
-In order to detect the invalid call of these functions, the kernel checks the variable named irq_level. The kernel developer can use this check in the head of the kernel routine which can not be called by ISR. When ISR call such routine, the kernel will report the problem with panic() message.
+In order to detect the invalid call of these functions, the kernel checks the variable named irq_level. The kernel developer can use this check in the head of the kernel routine which cannot be called by ISR. When ISR calls such routine, the kernel will report the problem with panic() message.
 
 ```
 void
@@ -150,13 +150,13 @@ The trace code is using a ring buffer to store the log data. So, older informati
 
 ### Kernel Dump
 
-The kernel dump is used to dump the current status of each kernel objects.
+The kernel dump is used to dump the current status of each kernel object.
 
 If you assign magic keys for the kernel dump, you can get the  kernel dump as far as the keyboard IRQ is enabled. The key assignment of the kernel dump depends on each platform.
 
 ### Dump Sample
 
-The following dump screen was got with Prex-i386pc.
+The following dump screen was obtained with Prex-i386pc.
 
 ```
 Kernel dump usage:
@@ -315,7 +315,7 @@ Continuing.
 
 ## Using GDB with QEMU
 
-QEMU has capability to connect to GDB on the same local machine.
+QEMU has the capability to connect to GDB on the same local machine.
 
 - Preparing gdbinit
 
@@ -334,7 +334,7 @@ QEMU has capability to connect to GDB on the same local machine.
   $ qemu -s -S -fda (your directory)/prex-X.X.X.i386-pc.img -localtime
   ```
 
-  Then, the following message will be appered.
+  Then, the following message will appear.
 
   ```
   Waiting gdb connection on port 1234
