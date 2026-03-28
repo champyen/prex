@@ -669,6 +669,7 @@ backref(register struct match *m, char *start, char *stop, sopno startst, sopno 
 
 	/* "can't happen" */
 	assert(nope);
+	return NULL;
 	/* NOTREACHED */
 }
 

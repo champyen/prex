@@ -103,9 +103,11 @@ static int freezeset(struct parse *p, cset *cs);
 static int firstch(struct parse *p, cset *cs);
 static int nch(struct parse *p, cset *cs);
 static void mcadd(struct parse *p, cset *cs, char *cp);
+#ifdef MULTICHAR_NOT_YET
 static void mcsub(cset *cs, char *cp);
 static int mcin(cset *cs, char *cp);
 static char *mcfind(cset *cs, char *cp);
+#endif
 static void mcinvert(struct parse *p, cset *cs);
 static void mccase(struct parse *p, cset *cs);
 static int isinsets(struct re_guts *g, int c);
@@ -1191,6 +1193,7 @@ mcadd(struct parse *p, cset *cs, char *cp)
 	cs->multis[cs->smultis - 1] = '\0';
 }
 
+#ifdef MULTICHAR_NOT_YET
 /*
  - mcsub - subtract a collating element from a cset
  == static void mcsub(cset *cs, char *cp);
@@ -1242,6 +1245,7 @@ mcfind(cset *cs, char *cp)
 			return(p);
 	return(NULL);
 }
+#endif
 
 /*
  - mcinvert - invert the list of collating elements in a cset
