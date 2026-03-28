@@ -1,5 +1,7 @@
 include $(SRCDIR)/mk/own.mk
 
+SUBDIR+=	tcc
+
 include $(CURDIR)/cmdbox/Makefile.inc
 
 include $(CURDIR)/cat/Makefile.inc
