@@ -69,7 +69,6 @@ static void receive_thread(void)
 {
     struct msg msg;
     object_t obj;
-    int error;
 
     printf("Receiver thread is starting...\n");
 

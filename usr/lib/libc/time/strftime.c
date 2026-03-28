@@ -53,10 +53,7 @@ static int _conv(int, int, int);
 static int _secs(const struct tm*);
 static size_t _fmt(const char*, const struct tm*);
 
-size_t strftime(s, maxsize, format, t) char* s;
-size_t maxsize;
-const char* format;
-const struct tm* t;
+size_t strftime(char* s, size_t maxsize, const char* format, const struct tm* t)
 {
 
     pt = s;
@@ -69,8 +66,7 @@ const struct tm* t;
     return (0);
 }
 
-static size_t _fmt(format, t) const char* format;
-const struct tm* t;
+static size_t _fmt(const char* format, const struct tm* t)
 {
     for (; *format; ++format) {
         if (*format == '%')
@@ -230,7 +226,7 @@ const struct tm* t;
     return (gsize);
 }
 
-static int _secs(t) const struct tm* t;
+static int _secs(const struct tm* t)
 {
     static char buf[15];
     time_t s;
@@ -245,7 +241,7 @@ static int _secs(t) const struct tm* t;
     return (_add(++p));
 }
 
-static int _conv(n, digits, pad) int n, digits, pad;
+static int _conv(int n, int digits, int pad)
 {
     static char buf[10];
     char* p;
@@ -257,7 +253,7 @@ static int _conv(n, digits, pad) int n, digits, pad;
     return (_add(++p));
 }
 
-static int _add(str) const char* str;
+static int _add(const char* str)
 {
     for (;; ++pt, --gsize) {
         if (!gsize)

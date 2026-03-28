@@ -35,7 +35,6 @@
 
 int main(int argc, char* argv[])
 {
-    int c;
     volatile int data; /* prevent optimization from gcc */
     char* ptr;
 
@@ -48,6 +47,7 @@ int main(int argc, char* argv[])
     printf("Try to read from NULL pointer\n");
     ptr = 0;
     data = *ptr;
+    (void)data;
 
     /* Control never comes here */
     panic("Oops!");

@@ -67,7 +67,6 @@ static void send_thread(void)
 {
     struct msg msg;
     object_t o1, o2;
-    int error;
 
     printf("Send thread is starting...\n");
 

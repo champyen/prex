@@ -122,8 +122,6 @@ static void thread_C(void)
 
 int main(int argc, char* argv[])
 {
-    int error;
-
     printf("Thread sample program\n");
     main_th = thread_self();
 
@@ -132,7 +130,7 @@ int main(int argc, char* argv[])
     /*
      * Raise this thread's priority.
      */
-    error = thread_setpri(main_th, 100);
+    thread_setpri(main_th, 100);
 
     /*
      * Run threads as normal priority thread.
@@ -144,7 +142,7 @@ int main(int argc, char* argv[])
     /*
      * Lower this thread's priority.
      */
-    error = thread_setpri(main_th, 254);
+    thread_setpri(main_th, 254);
     /*
      * Since other threads have higher priority than
      * this thread, the control will come here only when
