@@ -125,7 +125,10 @@ static void test_3(void)
     free(p);
 
     printf("test_3 - try to free invalid area...\n");
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wuse-after-free"
     free(p); /* invalid */
+#pragma GCC diagnostic pop
 
     printf("test_3 - done!?\n");
 }

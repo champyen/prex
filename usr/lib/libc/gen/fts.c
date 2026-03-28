@@ -225,14 +225,15 @@ int fts_close(FTS* sp)
         (void)close(sp->fts_rfd);
     }
 
+    /* Set errno and return. */
+    if (!ISSET(FTS_NOCHDIR) && saved_errno)
+        errno = saved_errno;
+
     /* Free up the stream pointer. */
     free(sp);
 
-    /* Set errno and return. */
-    if (!ISSET(FTS_NOCHDIR) && saved_errno) {
-        errno = saved_errno;
+    if (errno)
         return (-1);
-    }
     return (0);
 }
 

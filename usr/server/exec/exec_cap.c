@@ -76,9 +76,6 @@ int exec_bindcap(struct bind_msg* msg)
 
     task = msg->hdr.task;
 
-    if (msg->path == NULL)
-        return EFAULT;
-
     /*
      * Check capability of caller task.
      */

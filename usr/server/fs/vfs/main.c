@@ -381,8 +381,6 @@ static int fs_rmdir(struct task* t, struct path_msg* msg)
     char path[PATH_MAX];
     int error;
 
-    if (msg->path == NULL)
-        return ENOENT;
     if ((error = task_conv(t, msg->path, VWRITE, path)) != 0)
         return error;
 
@@ -395,8 +393,6 @@ static int fs_rename(struct task* t, struct path_msg* msg)
     char dest[PATH_MAX];
     int error;
 
-    if (msg->path == NULL || msg->path2 == NULL)
-        return ENOENT;
 
     if ((error = task_conv(t, msg->path, VREAD, src)) != 0)
         return error;
@@ -413,8 +409,6 @@ static int fs_chdir(struct task* t, struct path_msg* msg)
     file_t fp;
     int error;
 
-    if (msg->path == NULL)
-        return ENOENT;
     if ((error = task_conv(t, msg->path, VREAD, path)) != 0)
         return error;
 
@@ -454,8 +448,6 @@ static int fs_unlink(struct task* t, struct path_msg* msg)
     char path[PATH_MAX];
     int error;
 
-    if (msg->path == NULL)
-        return ENOENT;
     if ((error = task_conv(t, msg->path, VWRITE, path)) != 0)
         return error;
 
@@ -786,8 +778,6 @@ static int fs_truncate(struct task* t, struct path_msg* msg)
     char path[PATH_MAX];
     int error;
 
-    if (msg->path == NULL)
-        return ENOENT;
     if ((error = task_conv(t, msg->path, VWRITE, path)) != 0)
         return error;
 
