@@ -13,5 +13,6 @@ include $(SRCDIR)/usr/lib/libc/string/Makefile.inc
 include $(SRCDIR)/usr/lib/libc/regex/Makefile.inc
 include $(SRCDIR)/usr/lib/libc/termios/Makefile.inc
 include $(SRCDIR)/usr/lib/libc/time/Makefile.inc
+include $(SRCDIR)/usr/lib/libm/Makefile.inc
 
 include $(SRCDIR)/mk/lib.mk
