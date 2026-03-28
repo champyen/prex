@@ -56,9 +56,9 @@
  */
 struct mmumap mmumap_table[] = {
     /*
-     * Internal SRAM (4M)
+     * Internal SRAM (32M)
      */
-    {0x80000000, 0x00000000, 0x400000, VMT_RAM},
+    {0x80000000, 0x00000000, 0x2000000, VMT_RAM},
 
     /*
      * FPGA core control (4K)

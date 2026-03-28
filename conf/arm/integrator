@@ -13,7 +13,7 @@ makeoptions	ASFLAGS+= -mcpu=arm9tdmi -march=armv4t -mfpu=softfpa
 #
 memory		RAM_BASE	0x00000000	# Start of RAM
 memory		LOADER_TEXT	0x00010000	# Start of boot loader
-memory		KERNEL_TEXT	0x80080000	# Start of kernel
+memory		KERNEL_TEXT	0x80200000	# Start of kernel
 memory		BOOTIMG_BASE	0x80012000	# Location of boot image
 memory		SYSPAGE_BASE	0x80000000	# Location of system page
 

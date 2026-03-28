@@ -12,6 +12,8 @@ ifeq ($(CONFIG_CMDBOX),y)
 FILES+= 	$(SRCDIR)/usr/bin/cmdbox/cmdbox
 endif
 
+FILES+= 	$(SRCDIR)/usr/bin/tcc/tcc
+
 ifeq ($(CONFIG_CMD_KTRACE),y)
 FILES+= 	$(SRCDIR)/usr/sbin/ktrace/ktrace
 endif
@@ -64,5 +66,10 @@ endif
 #FILES+= 	$(SRCDIR)/usr/test/umount/umount
 
 FILES+=		$(SRCDIR)/doc/LICENSE
+
+FILES+= 	$(SRCDIR)/usr/lib/crt0.o
+FILES+= 	$(SRCDIR)/usr/lib/libc.a
+FILES+= 	$(SRCDIR)/usr/arch/arm/user.ld
+FILES+= 	$(SRCDIR)/hello_target.c
 
 endif	# !CONFIG_POSIX
