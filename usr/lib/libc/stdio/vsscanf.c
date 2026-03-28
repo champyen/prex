@@ -33,9 +33,7 @@
 #include <stdio.h>
 #include <string.h>
 
-int vsscanf(str, fmt, ap) const char* str;
-const char* fmt;
-va_list ap;
+int vsscanf(const char* str, const char* fmt, va_list ap)
 {
     FILE f;
 

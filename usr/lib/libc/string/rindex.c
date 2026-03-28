@@ -32,12 +32,10 @@
 
 char*
 #ifdef STRRCHR
-    strrchr(p, ch)
+strrchr(const char* p, int ch)
 #else
-    rindex(p, ch)
+rindex(const char* p, int ch)
 #endif
-        const char* p;
-int ch;
 {
     char* save;
 

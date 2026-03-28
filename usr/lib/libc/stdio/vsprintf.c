@@ -33,9 +33,7 @@
 #include <stdio.h>
 #include <limits.h>
 
-int vsprintf(str, fmt, ap) char* str;
-const char* fmt;
-va_list ap;
+int vsprintf(char* str, const char* fmt, va_list ap)
 {
     int ret;
     FILE f;

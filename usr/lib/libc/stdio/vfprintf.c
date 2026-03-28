@@ -172,9 +172,7 @@ static char* __ultoa(u_long val, char* endp, int base, int octzero, char* xdigs)
 #define LONGINT 0x010   /* long integer */
 #define SHORTINT 0x040  /* short integer */
 #define ZEROPAD 0x080   /* zero (as opposed to blank) pad */
-int vfprintf(fp, fmt0, ap) FILE* fp;
-const char* fmt0;
-va_list ap;
+int vfprintf(FILE* fp, const char* fmt0, va_list ap)
 {
     char* fmt;           /* format string */
     int ch;              /* character from fmt */

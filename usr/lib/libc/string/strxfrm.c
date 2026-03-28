@@ -38,9 +38,7 @@
  * strcmp() on transformed strings returns what strcoll()
  * on the original untransformed strings would return.
  */
-size_t strxfrm(dst, src, n) char* dst;
-const char* src;
-size_t n;
+size_t strxfrm(char* dst, const char* src, size_t n)
 {
     size_t srclen, copysize;
 

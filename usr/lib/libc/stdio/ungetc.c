@@ -35,8 +35,7 @@
 #include <string.h>
 #include "local.h"
 
-int ungetc(c, fp) int c;
-FILE* fp;
+int ungetc(int c, FILE* fp)
 {
     if (c == EOF)
         return (EOF);

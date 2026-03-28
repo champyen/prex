@@ -39,7 +39,7 @@
  * because either _flags does not include __SWR, or _buf is NULL.
  * _wsetup returns 0 if OK to write, nonzero otherwise.
  */
-int __swsetup(fp) FILE* fp;
+int __swsetup(FILE* fp)
 {
     /* make sure stdio is set up */
     if (!__sdidinit)

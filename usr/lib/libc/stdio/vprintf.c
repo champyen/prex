@@ -32,8 +32,7 @@
 
 #include <stdio.h>
 
-int vprintf(fmt, ap) char const* fmt;
-va_list ap;
+int vprintf(const char* fmt, va_list ap)
 {
     return (vfprintf(stdout, fmt, ap));
 }

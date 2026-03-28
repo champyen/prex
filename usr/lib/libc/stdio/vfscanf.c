@@ -79,9 +79,7 @@ static u_char* __sccl(char*, u_char*);
 /*
  * vfscanf
  */
-int __svfscanf(fp, fmt0, ap) FILE* fp;
-char const* fmt0;
-va_list ap;
+int __svfscanf(FILE* fp, char const* fmt0, va_list ap)
 {
     u_char* fmt = (u_char*)fmt0;
     int c;         /* character from format, or conversion */
