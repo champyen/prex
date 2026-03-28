@@ -31,3 +31,5 @@
 #include "syscall.h"
 
 SYSCALL1(exception_setup)
+
+.section .note.GNU-stack,"",%progbits

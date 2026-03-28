@@ -55,3 +55,5 @@ _start:
 	subi	r1, r1, 8	/* adjust stack to call C function */
 	b	__prex_main
 
+
+.section .note.GNU-stack,"",%progbits

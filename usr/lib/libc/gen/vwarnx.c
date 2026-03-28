@@ -36,9 +36,9 @@
 #include <string.h>
 #include <stdarg.h>
 
-void vwarnx(fmt, ap) const char* fmt;
-va_list ap;
+void vwarnx(const char* fmt, va_list ap)
 {
+
     if (fmt != NULL)
         vfprintf(stderr, fmt, ap);
     fprintf(stderr, "\n");

@@ -39,15 +39,11 @@
 #define RETURN return
 #define VAL 0
 
-void bzero(dst0, length) void* dst0;
-size_t length;
+void bzero(void* dst0, size_t length)
 #else
 #define RETURN return (dst0)
 #define VAL c0
-
-void* memset(dst0, c0, length) void* dst0;
-int c0;
-size_t length;
+void* memset(void* dst0, int c0, size_t length)
 #endif
 {
     char* dst = dst0;

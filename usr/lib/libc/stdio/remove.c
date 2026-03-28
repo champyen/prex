@@ -37,9 +37,9 @@
 #include <stdio.h>
 #include <unistd.h>
 
-int remove(file) const char* file;
+int remove(const char* file)
 {
-    struct stat sb;
+    struct stat st;
 
     if (lstat(file, &sb) < 0)
         return (-1);

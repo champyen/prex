@@ -31,3 +31,5 @@
 #include "syscall.h"
 
 SYSCALL3(msg_receive)
+
+.section .note.GNU-stack,"",%progbits

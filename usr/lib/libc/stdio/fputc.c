@@ -32,8 +32,7 @@
 
 #include <stdio.h>
 
-int fputc(c, fp) int c;
-FILE* fp;
+int fputc(int c, FILE* fp)
 {
     return (putc(c, fp));
 }

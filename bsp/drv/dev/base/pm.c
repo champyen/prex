@@ -227,28 +227,26 @@ static int pm_ioctl(device_t dev, u_long cmd, void* arg)
 static void pm_stop_timer(void)
 {
     struct pm_softc* sc = pm_softc;
-    int s;
 
     DPRINTF(("pm: stop timer\n"));
 
-    s = splhigh();
+    splhigh();
     if (sc->timer_active) {
         timer_stop(&sc->timer);
         sc->idlecnt = 0;
         sc->timer_active = 0;
     }
-    splx(s);
+    spl0();
 }
 
 static void pm_update_timer(void)
 {
     struct pm_softc* sc = pm_softc;
-    int s;
 
     if (sc->policy != PM_POWERSAVE)
         return;
 
-    s = splhigh();
+    splhigh();
     sc->idlecnt = 0;
     if (sc->timer_active) {
         if (sc->sustime == 0 && sc->dimtime == 0)
@@ -260,6 +258,7 @@ static void pm_update_timer(void)
             sc->timer_active = 1;
         }
     }
+    spl0();
 }
 
 static int pm_suspend(void)
@@ -350,11 +349,11 @@ static void pm_lcd_on(void)
 static void pm_timeout(void* arg)
 {
     struct pm_softc* sc = arg;
-    int s, reload;
+    int reload;
 
-    s = splhigh();
+    splhigh();
     sc->idlecnt++;
-    splx(s);
+    spl0();
 
     DPRINTF(("pm: idlecnt=%d\n", sc->idlecnt));
 
@@ -409,15 +408,14 @@ int pm_set_power(int state)
 void pm_notify(int event)
 {
     struct pm_softc* sc = pm_softc;
-    int s;
 
     if (event == PME_USER_ACTIVITY) {
         /*
          * Reload suspend timer for user activity.
          */
-        s = splhigh();
+        splhigh();
         sc->idlecnt = 0;
-        splx(s);
+        spl0();
 
         if (!sc->lcd_on)
             pm_lcd_on();

@@ -37,7 +37,7 @@
 /*
  * ftell: return current offset.
  */
-long ftell(fp) FILE* fp;
+long ftell(FILE* fp)
 {
     fpos_t pos;
 

@@ -31,3 +31,5 @@
 #include "syscall.h"
 
 SYSCALL1(sys_panic)
+
+.section .note.GNU-stack,"",%progbits

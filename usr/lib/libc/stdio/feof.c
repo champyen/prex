@@ -38,7 +38,7 @@
  */
 #undef feof
 
-int feof(fp) FILE* fp;
+int feof(FILE* fp)
 {
     return (__sfeof(fp));
 }

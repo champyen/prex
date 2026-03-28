@@ -648,3 +648,5 @@ init_done_value:
 	.long	0
 
 	.end
+
+.section .note.GNU-stack,"",%progbits

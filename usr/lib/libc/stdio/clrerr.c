@@ -33,7 +33,7 @@
 #include <stdio.h>
 #undef clearerr
 
-void clearerr(fp) FILE* fp;
+void clearerr(FILE* fp)
 {
     __sclearerr(fp);
 }

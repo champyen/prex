@@ -36,9 +36,10 @@
 /*
  * Compare memory regions.
  */
-int memcmp(s1, s2, n) const void *s1, *s2;
-size_t n;
+int
+memcmp(const void* s1, const void* s2, size_t n)
 {
+
     if (n != 0) {
         const unsigned char *p1 = s1, *p2 = s2;
 

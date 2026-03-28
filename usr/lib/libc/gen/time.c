@@ -34,7 +34,7 @@
 
 #include <time.h>
 
-time_t time(t) time_t* t;
+time_t time(time_t* t)
 {
     struct timeval tt;
 

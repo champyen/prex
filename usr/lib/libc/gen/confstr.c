@@ -33,9 +33,7 @@
 #include <unistd.h>
 #include <errno.h>
 
-size_t confstr(name, buf, len) int name;
-char* buf;
-size_t len;
+size_t confstr(int name, char* buf, size_t len)
 {
     switch (name) {
     case _CS_PATH:

@@ -125,10 +125,14 @@ static void test_3(void)
     free(p);
 
     printf("test_3 - try to free invalid area...\n");
+#if defined(__GNUC__) && __GNUC__ >= 12 && !defined(__clang__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wuse-after-free"
+#endif
     free(p); /* invalid */
+#if defined(__GNUC__) && __GNUC__ >= 12 && !defined(__clang__)
 #pragma GCC diagnostic pop
+#endif
 
     printf("test_3 - done!?\n");
 }

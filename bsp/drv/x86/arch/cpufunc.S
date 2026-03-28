@@ -63,3 +63,5 @@ ENTRY(cpuid)
 	popl	%edi
 	popl	%ebx
 	ret
+
+.section .note.GNU-stack,"",%progbits

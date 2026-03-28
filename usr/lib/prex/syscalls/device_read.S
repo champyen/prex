@@ -31,3 +31,5 @@
 #include "syscall.h"
 
 SYSCALL4(device_read)
+
+.section .note.GNU-stack,"",%progbits

@@ -57,9 +57,7 @@ static __inline void swapfunc(char*, char*, size_t, int);
 #define SWAPINIT(a, es)                                                                                                \
     swaptype = ((char*)a - (char*)0) % sizeof(long) || es % sizeof(long) ? 2 : es == sizeof(long) ? 0 : 1;
 
-static __inline void swapfunc(a, b, n, swaptype) char *a, *b;
-size_t n;
-int swaptype;
+static __inline void swapfunc(char *a, char *b, size_t n, int swaptype)
 {
     if (swaptype <= 1)
         swapcode(long, a, b, n) else swapcode(char, a, b, n)
@@ -77,16 +75,13 @@ int swaptype;
     if ((n) > 0)                                                                                                       \
     swapfunc((a), (b), (size_t)(n), swaptype)
 
-static __inline char *med3(a, b, c, cmp) char *a, *b, *c;
-int (*cmp)(const void*, const void*);
+static __inline char *med3(char *a, char *b, char *c, int (*cmp)(const void*, const void*))
 {
     return cmp(a, b) < 0 ? (cmp(b, c) < 0 ? b : (cmp(a, c) < 0 ? c : a))
                          : (cmp(b, c) > 0 ? b : (cmp(a, c) < 0 ? a : c));
 }
 
-void qsort(a, n, es, cmp) void* a;
-size_t n, es;
-int (*cmp)(const void*, const void*);
+void qsort(void* a, size_t n, size_t es, int (*cmp)(const void*, const void*))
 {
     char *pa, *pb, *pc, *pd, *pl, *pm, *pn;
     int d, r, swaptype, swap_cnt;

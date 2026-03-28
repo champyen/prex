@@ -508,7 +508,6 @@ static int fs_dup2(struct task* t, struct msg* msg)
 {
     file_t fp, org;
     int old_fd, new_fd;
-    int error;
 
     old_fd = msg->data[0];
     new_fd = msg->data[1];
@@ -520,7 +519,7 @@ static int fs_dup2(struct task* t, struct msg* msg)
     org = t->t_ofile[new_fd];
     if (org != NULL) {
         /* Close previous file if it's opened. */
-        error = sys_close(org);
+        sys_close(org);
     }
     t->t_ofile[new_fd] = fp;
 

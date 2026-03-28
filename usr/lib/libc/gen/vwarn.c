@@ -36,9 +36,9 @@
 #include <string.h>
 #include <stdarg.h>
 
-void vwarn(fmt, ap) const char* fmt;
-va_list ap;
+void vwarn(const char* fmt, va_list ap)
 {
+
     int sverrno;
 
     sverrno = errno;

@@ -76,7 +76,7 @@ int main(int argc, char* argv[])
     /* NOTREACHED */
 }
 
-static int build(path) char* path;
+static int build(char* path)
 {
     struct stat sb;
     char* p;
@@ -101,7 +101,7 @@ static int build(path) char* path;
     return 0;
 }
 
-static void usage()
+static void usage(void)
 {
     (void)fprintf(stderr, "usage: mkdir [-p] directory ...\n");
     exit(1);

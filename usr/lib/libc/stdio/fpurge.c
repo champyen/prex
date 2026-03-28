@@ -39,7 +39,7 @@
  * fpurge: like fflush, but without writing anything: leave the
  * given FILE's buffer empty.
  */
-int fpurge(fp) FILE* fp;
+int fpurge(FILE* fp)
 {
     if (!fp->_flags) {
         errno = EBADF;

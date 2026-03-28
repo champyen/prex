@@ -44,8 +44,7 @@
  * ANSI is written such that the original file gets closed if at
  * all possible, no matter what.
  */
-FILE *freopen(file, mode, fp) const char *file, *mode;
-FILE* fp;
+FILE *freopen(const char *file, const char *mode, FILE* fp)
 {
     int f;
     int flags, isopen, oflags, sverrno, wantfd;

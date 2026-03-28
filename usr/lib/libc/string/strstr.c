@@ -36,7 +36,7 @@
 /*
  * Find the first occurrence of find in s.
  */
-char *strstr(s, find) const char *s, *find;
+char *strstr(const char *s, const char *find)
 {
     char c, sc;
     size_t len;

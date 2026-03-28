@@ -138,3 +138,5 @@ botch:
 #endif
 	bl	PIC_SYM(_C_LABEL(abort), PLT)
 	b	. - 8		/* Cannot get here */
+
+.section .note.GNU-stack,"",%progbits

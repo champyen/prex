@@ -33,3 +33,5 @@
 #define SYS__cond_wait  SYS_cond_wait
 
 SYSCALL2(_cond_wait)
+
+.section .note.GNU-stack,"",%progbits

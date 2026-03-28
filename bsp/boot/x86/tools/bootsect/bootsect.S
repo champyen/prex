@@ -438,3 +438,5 @@ err_msg:	.ascii	"Error"
 
 .org	510
 		.word	0xaa55
+
+.section .note.GNU-stack,"",%progbits

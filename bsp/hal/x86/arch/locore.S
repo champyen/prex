@@ -559,3 +559,5 @@ irq_nesting:
  */
 curspl:
 	.long	0
+
+.section .note.GNU-stack,"",%progbits

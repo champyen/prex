@@ -33,12 +33,10 @@
 
 char *
 #ifdef STRCHR
-    strchr(p, ch)
+strchr(const char* p, int ch)
 #else
-    index(p, ch)
+index(const char* p, int ch)
 #endif
-        const char *p,
-    ch;
 {
     for (;; ++p) {
         if (*p == ch)

@@ -31,3 +31,5 @@
 #include "syscall.h"
 
 SYSCALL3(timer_periodic)
+
+.section .note.GNU-stack,"",%progbits

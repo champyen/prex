@@ -33,7 +33,7 @@
 #include <stdio.h>
 #include "local.h"
 
-int getc(fp) FILE* fp;
+int getc(FILE* fp)
 {
     if (--(fp->_r) < 0) {
         if (__srefill(fp) == 0) {

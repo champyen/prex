@@ -32,3 +32,5 @@ ENTRY(longjmp)
 	bnelr				/* return if not 0 */
 	li	%r3,1			/* what's the point? */
 	blr				/* return */
+
+.section .note.GNU-stack,"",%progbits

@@ -32,9 +32,7 @@
 
 #include <stdio.h>
 
-int vscanf(fmt, ap) const char* fmt;
-va_list ap;
+int vscanf(const char* fmt, va_list ap)
 {
-
     return (__svfscanf(stdin, fmt, ap));
 }

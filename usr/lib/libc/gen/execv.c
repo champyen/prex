@@ -32,8 +32,7 @@
 
 extern char** environ;
 
-int execv(name, argv) const char* name;
-char* const* argv;
+int execv(const char* name, char* const* argv)
 {
     int r;
 

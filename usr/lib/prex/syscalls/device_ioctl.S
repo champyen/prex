@@ -31,3 +31,5 @@
 #include "syscall.h"
 
 SYSCALL3(device_ioctl)
+
+.section .note.GNU-stack,"",%progbits

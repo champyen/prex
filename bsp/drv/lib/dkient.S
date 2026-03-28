@@ -71,3 +71,5 @@ STUB(33, sysinfo)
 STUB(34, panic)
 STUB(35, printf)
 STUB(36, dbgctl)
+
+.section .note.GNU-stack,"",%progbits

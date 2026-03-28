@@ -34,8 +34,7 @@
 #include <termios.h>
 #include <unistd.h>
 
-int cfsetspeed(t, speed) struct termios* t;
-speed_t speed;
+int cfsetspeed(struct termios* t, speed_t speed)
 {
 
     t->c_ispeed = t->c_ospeed = speed;

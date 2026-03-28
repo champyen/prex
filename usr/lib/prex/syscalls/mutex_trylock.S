@@ -31,3 +31,5 @@
 #include "syscall.h"
 
 SYSCALL1(mutex_trylock)
+
+.section .note.GNU-stack,"",%progbits

@@ -31,3 +31,5 @@
 #include "syscall.h"
 
 SYSCALL1(mutex_init)
+
+.section .note.GNU-stack,"",%progbits

@@ -185,14 +185,13 @@ static int devfs_ioctl(vnode_t vp, file_t fp, u_long cmd, void* arg)
 static int devfs_lookup(vnode_t dvp, char* name, vnode_t vp)
 {
     struct devinfo info;
-    int error, i;
+    int error;
 
     DPRINTF(("devfs_lookup:%s\n", name));
 
     if (*name == '\0')
         return ENOENT;
 
-    i = 0;
     error = 0;
     info.cookie = 0;
     for (;;) {
@@ -201,7 +200,6 @@ static int devfs_lookup(vnode_t dvp, char* name, vnode_t vp)
             return ENOENT;
         if (!strncmp(info.name, name, MAXDEVNAME))
             break;
-        i++;
     }
     vp->v_type = (info.flags & D_CHR) ? VCHR : VBLK;
     if (info.flags & D_TTY)

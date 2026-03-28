@@ -40,7 +40,6 @@
 int kill(pid_t pid, int sig)
 {
     struct msg m;
-    int error;
 
     /*
      * Request process server to send signal.
@@ -48,7 +47,7 @@ int kill(pid_t pid, int sig)
     m.hdr.code = PS_KILL;
     m.data[0] = pid;
     m.data[1] = sig;
-    error = msg_send(__proc_obj, &m, sizeof(m));
+    msg_send(__proc_obj, &m, sizeof(m));
 
     /*
      * XXX: error is always EINTR, and we can not determine whether

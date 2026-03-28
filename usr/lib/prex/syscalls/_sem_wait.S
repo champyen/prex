@@ -33,3 +33,5 @@
 #define SYS__sem_wait  SYS_sem_wait
 
 SYSCALL2(_sem_wait)
+
+.section .note.GNU-stack,"",%progbits

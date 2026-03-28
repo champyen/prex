@@ -33,3 +33,5 @@
 #define SYS__mutex_lock SYS_mutex_lock
 
 SYSCALL1(_mutex_lock)
+
+.section .note.GNU-stack,"",%progbits

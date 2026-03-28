@@ -39,30 +39,24 @@
  * Small standard I/O/seek/close functions.
  * These maintain the `known seek offset' for seek optimisation.
  */
-int __sread(fp, buf, n) FILE* fp;
-char* buf;
-int n;
+int __sread(FILE* fp, char* buf, int n)
 {
     return (read(fp->_file, buf, n));
 }
 
-int __swrite(fp, buf, n) FILE* fp;
-char const* buf;
-int n;
+int __swrite(FILE* fp, char const* buf, int n)
 {
     if (fp->_flags & __SAPP)
         (void)lseek(fp->_file, (off_t)0, SEEK_END);
     return (write(fp->_file, buf, n));
 }
 
-fpos_t __sseek(fp, offset, whence) FILE* fp;
-fpos_t offset;
-int whence;
+fpos_t __sseek(FILE* fp, fpos_t offset, int whence)
 {
     return (lseek(fp->_file, (off_t)offset, whence));
 }
 
-int __sclose(fp) FILE* fp;
+int __sclose(FILE* fp)
 {
     return (close(fp->_file));
 }

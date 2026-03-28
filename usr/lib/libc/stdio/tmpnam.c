@@ -35,7 +35,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-char* tmpnam(s) char* s;
+char* tmpnam(char* s)
 {
     static u_long tmpcount;
     static char buf[L_tmpnam];

@@ -35,9 +35,9 @@
 #include "local.h"
 
 /* Flush a single file, or (if fp is NULL) all files.  */
-int fflush(fp) FILE* fp;
+int
+fflush(FILE* fp)
 {
-
     if (fp == NULL)
         return (_fwalk(__sflush));
     if ((fp->_flags & (__SWR | __SRW)) == 0) {
@@ -47,7 +47,8 @@ int fflush(fp) FILE* fp;
     return (__sflush(fp));
 }
 
-int __sflush(fp) FILE* fp;
+int
+__sflush(FILE* fp)
 {
     unsigned char* p;
     int n, t;

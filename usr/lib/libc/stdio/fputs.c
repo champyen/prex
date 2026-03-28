@@ -36,8 +36,7 @@
 /*
  * Write the given string to the given file.
  */
-int fputs(s, fp) const char* s;
-FILE* fp;
+int fputs(const char* s, FILE* fp)
 {
     int c, r = 0;
 

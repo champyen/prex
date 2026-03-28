@@ -36,10 +36,7 @@
 #include <string.h>
 #include <stdarg.h>
 
-void verr(eval, fmt, ap) int eval;
-const char* fmt;
-va_list ap;
-
+void verr(int eval, const char* fmt, va_list ap)
 {
     int sverrno;
 

@@ -33,7 +33,7 @@
 #include <termios.h>
 #include <unistd.h>
 
-int tcsendbreak(fd, len) int fd, len;
+int tcsendbreak(int fd, int len)
 {
 #if 0 /* PREX */
 	struct timeval sleepytime;

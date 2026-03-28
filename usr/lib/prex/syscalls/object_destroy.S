@@ -31,3 +31,5 @@
 #include "syscall.h"
 
 SYSCALL1(object_destroy)
+
+.section .note.GNU-stack,"",%progbits

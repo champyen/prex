@@ -31,3 +31,5 @@
 #include "syscall.h"
 
 SYSCALL2(sem_init)
+
+.section .note.GNU-stack,"",%progbits

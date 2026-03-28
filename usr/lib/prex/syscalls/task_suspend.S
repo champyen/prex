@@ -31,3 +31,5 @@
 #include "syscall.h"
 
 SYSCALL1(task_suspend)
+
+.section .note.GNU-stack,"",%progbits

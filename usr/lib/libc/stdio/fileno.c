@@ -37,7 +37,7 @@
  */
 #undef fileno
 
-int fileno(fp) FILE* fp;
+int fileno(FILE* fp)
 {
     return (__sfileno(fp));
 }

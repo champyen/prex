@@ -31,3 +31,5 @@
 #include "syscall.h"
 
 SYSCALL2(vm_free)
+
+.section .note.GNU-stack,"",%progbits

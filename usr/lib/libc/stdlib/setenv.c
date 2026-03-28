@@ -40,9 +40,7 @@ char* __findenv(const char*, int*);
  *	Set the value of the environmental variable "name" to be
  *	"value".  If rewrite is set, replace any current value.
  */
-int setenv(name, value, rewrite) const char* name;
-const char* value;
-int rewrite;
+int setenv(const char* name, const char* value, int rewrite)
 {
     static int alloced; /* if allocated space before */
     char* c;
@@ -96,7 +94,7 @@ int rewrite;
  * unsetenv(name) --
  *	Delete environmental variable "name".
  */
-void unsetenv(name) const char* name;
+void unsetenv(const char* name)
 {
     char** p;
     int offset;

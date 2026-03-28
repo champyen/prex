@@ -122,7 +122,7 @@ int main(int argc, char* argv[])
     exit(errors);
 }
 
-static int signame_to_signum(sig) char* sig;
+static int signame_to_signum(char* sig)
 {
     int n;
 
@@ -135,7 +135,7 @@ static int signame_to_signum(sig) char* sig;
     return -1;
 }
 
-static void nosig(name) char* name;
+static void nosig(char* name)
 {
 
     warnx("unknown signal %s; valid signals:", name);
@@ -144,7 +144,7 @@ static void nosig(name) char* name;
     /* NOTREACHED */
 }
 
-static void printsignals(fp) FILE* fp;
+static void printsignals(FILE* fp)
 {
     int n;
     const char* name;

@@ -30,7 +30,7 @@
 #include <sys/cdefs.h>
 #include <string.h>
 
-size_t strlen(str) const char* str;
+size_t strlen(const char* str)
 {
     const char* s;
 

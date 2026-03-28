@@ -29,7 +29,7 @@
 
 #include <string.h>
 
-char* strerror(num) int num;
+char* strerror(int num)
 {
     extern const int sys_nerr;
     extern const char* sys_errlist[];

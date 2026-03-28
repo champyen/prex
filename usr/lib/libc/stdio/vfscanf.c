@@ -561,8 +561,7 @@ match_failure:
  * closing `]'.  The table has a 1 wherever characters should be
  * considered part of the scanset.
  */
-static u_char* __sccl(tab, fmt) char* tab;
-u_char* fmt;
+static u_char* __sccl(char* tab, u_char* fmt)
 {
     int c, n, v;
 

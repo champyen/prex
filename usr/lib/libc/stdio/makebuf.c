@@ -61,7 +61,7 @@ static int __swhatbuf(FILE* fp, size_t* bufsize, int* couldbetty)
  * As a side effect, we set __SOPT or __SNPT (en/dis-able fseek
  * optimisation) right after the fstat() that finds the buffer size.
  */
-void __smakebuf(fp) FILE* fp;
+void __smakebuf(FILE* fp)
 {
     void* p;
     int flags;

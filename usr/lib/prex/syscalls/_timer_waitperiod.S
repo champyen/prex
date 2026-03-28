@@ -33,3 +33,5 @@
 #define SYS__timer_waitperiod SYS_timer_waitperiod
 
 SYSCALL0(_timer_waitperiod)
+
+.section .note.GNU-stack,"",%progbits

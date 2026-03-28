@@ -32,9 +32,7 @@
 
 #include <stdio.h>
 
-void setbuffer(fp, buf, size) FILE* fp;
-char* buf;
-int size;
+void setbuffer(FILE* fp, char* buf, int size)
 {
 
     (void)setvbuf(fp, buf, buf ? _IOFBF : _IONBF, size);
@@ -43,7 +41,7 @@ int size;
 /*
  * set line buffering
  */
-int setlinebuf(fp) FILE* fp;
+int setlinebuf(FILE* fp)
 {
 
     return (setvbuf(fp, (char*)NULL, _IOLBF, (size_t)0));

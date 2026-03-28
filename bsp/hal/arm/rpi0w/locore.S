@@ -56,3 +56,5 @@ ENTRY(set_vbar)
 	mcr	p15, 0, r0, c12, c0, 0
 	mov	pc, lr
 	.end
+
+.section .note.GNU-stack,"",%progbits

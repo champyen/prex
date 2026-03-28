@@ -32,7 +32,7 @@
 /*
  * ffs -- vax ffs instruction
  */
-int ffs(mask) int mask;
+int ffs(int mask)
 {
     int bit;
 

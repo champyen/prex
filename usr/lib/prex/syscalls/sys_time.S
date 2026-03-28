@@ -31,3 +31,5 @@
 #include "syscall.h"
 
 SYSCALL1(sys_time)
+
+.section .note.GNU-stack,"",%progbits

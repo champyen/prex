@@ -160,10 +160,7 @@ int sys_fork(task_t child, int vfork, pid_t* retval)
  */
 void cleanup(struct proc* p)
 {
-    struct proc* pp;
-
     DPRINTF(("proc: cleanup pid=%d\n", p->p_pid));
-    pp = p->p_parent;
     list_remove(&p->p_sibling);
     list_remove(&p->p_pgrp_link);
     list_remove(&p->p_link);

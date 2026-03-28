@@ -34,9 +34,7 @@
 #include <string.h>
 #include "local.h"
 
-size_t fread(buf, size, count, fp) void* buf;
-size_t size, count;
-FILE* fp;
+size_t fread(void* buf, size_t size, size_t count, FILE* fp)
 {
     size_t resid;
     char* p;

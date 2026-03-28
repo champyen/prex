@@ -31,3 +31,5 @@
 #include "syscall.h"
 
 SYSCALL2(sem_getvalue)
+
+.section .note.GNU-stack,"",%progbits

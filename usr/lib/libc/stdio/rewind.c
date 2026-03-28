@@ -33,7 +33,7 @@
 #include <errno.h>
 #include <stdio.h>
 
-void rewind(fp) FILE* fp;
+void rewind(FILE* fp)
 {
     (void)fseek(fp, 0L, SEEK_SET);
     clearerr(fp);

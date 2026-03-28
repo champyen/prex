@@ -31,3 +31,5 @@
 #include "syscall.h"
 
 SYSCALL2(timer_sleep)
+
+.section .note.GNU-stack,"",%progbits

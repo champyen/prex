@@ -37,8 +37,7 @@
 #include <errno.h>
 #include "local.h"
 
-FILE* fdopen(fd, mode) int fd;
-const char* mode;
+FILE* fdopen(int fd, const char* mode)
 {
     FILE* fp;
     int flags, oflags, fdflags, tmp;

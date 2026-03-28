@@ -38,8 +38,7 @@
  * the given file.  Flush the buffer out if it is or becomes full,
  * or if c=='\n' and the file is line buffered.
  */
-int __swbuf(c, fp) int c;
-FILE* fp;
+int __swbuf(int c, FILE* fp)
 {
     int n;
 
@@ -70,8 +69,7 @@ FILE* fp;
     return (c);
 }
 
-int putc(c, fp) int c;
-FILE* fp;
+int putc(int c, FILE* fp)
 {
     if (--fp->_w >= 0)
         return (*fp->_p++ = c);

@@ -31,3 +31,5 @@
 #include "syscall.h"
 
 SYSCALL2(task_setcap)
+
+.section .note.GNU-stack,"",%progbits

@@ -37,20 +37,19 @@
 
 static int _gettemp(char*, int*);
 
-int mkstemp(path) char* path;
+int mkstemp(char* path)
 {
     int fd;
 
     return (_gettemp(path, &fd) ? fd : -1);
 }
 
-char* mktemp(path) char* path;
+char* mktemp(char* path)
 {
     return (_gettemp(path, (int*)NULL) ? path : (char*)NULL);
 }
 
-static int _gettemp(path, doopen) char* path;
-int* doopen;
+static int _gettemp(char* path, int* doopen)
 {
     extern int errno;
     char *start, *trv;

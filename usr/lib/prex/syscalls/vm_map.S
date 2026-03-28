@@ -31,3 +31,5 @@
 #include "syscall.h"
 
 SYSCALL4(vm_map)
+
+.section .note.GNU-stack,"",%progbits

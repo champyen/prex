@@ -32,10 +32,7 @@
 
 #include <stdio.h>
 
-int vsnprintf(str, n, fmt, ap) char* str;
-size_t n;
-const char* fmt;
-va_list ap;
+int vsnprintf(char* str, size_t n, const char* fmt, va_list ap)
 {
     int ret;
     FILE f;

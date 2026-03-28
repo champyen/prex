@@ -47,7 +47,7 @@ static int lflush(FILE* fp)
  * Refill a stdio buffer.
  * Return EOF on eof or error, 0 otherwise.
  */
-int __srefill(fp) FILE* fp;
+int __srefill(FILE* fp)
 {
 
     /* make sure stdio is set up */

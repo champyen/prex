@@ -32,7 +32,7 @@
 
 #include <stdio.h>
 
-int fgetc(fp) FILE* fp;
+int fgetc(FILE* fp)
 {
     return (getc(fp));
 }

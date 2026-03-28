@@ -43,3 +43,5 @@ ENTRY(__systrap)
 	popl	%ebx
 	popl	%esi
 	ret
+
+.section .note.GNU-stack,"",%progbits

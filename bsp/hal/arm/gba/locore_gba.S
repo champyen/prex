@@ -51,3 +51,5 @@ ENTRY(vba_puts)
 #endif
 
 	.end
+
+.section .note.GNU-stack,"",%progbits

@@ -31,3 +31,5 @@
 #include "syscall.h"
 
 SYSCALL2(object_create)
+
+.section .note.GNU-stack,"",%progbits

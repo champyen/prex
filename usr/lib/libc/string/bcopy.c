@@ -39,17 +39,14 @@
  * (the portable versions of) bcopy, memcpy, and memmove.
  */
 #ifdef MEMCOPY
-void* memcpy(dst0, src0, length)
+void* memcpy(void* dst0, const void* src0, size_t length)
 #else
 #ifdef MEMMOVE
-void* memmove(dst0, src0, length)
+void* memmove(void* dst0, const void* src0, size_t length)
 #else
-void bcopy(src0, dst0, length)
+void bcopy(const void* src0, void* dst0, size_t length)
 #endif
 #endif
-    void* dst0;
-const void* src0;
-size_t length;
 {
     char* dst = dst0;
     const char* src = src0;

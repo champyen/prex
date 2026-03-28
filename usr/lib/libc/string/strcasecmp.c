@@ -33,7 +33,7 @@
 #include <ctype.h>
 #include <string.h>
 
-int strcasecmp(s1, s2) const char *s1, *s2;
+int strcasecmp(const char *s1, const char *s2)
 {
     const unsigned char *us1 = (const unsigned char*)s1, *us2 = (const unsigned char*)s2;
 
@@ -43,8 +43,7 @@ int strcasecmp(s1, s2) const char *s1, *s2;
     return (tolower(*us1) - tolower(*--us2));
 }
 
-int strncasecmp(s1, s2, n) const char *s1, *s2;
-size_t n;
+int strncasecmp(const char *s1, const char *s2, size_t n)
 {
     if (s1 == NULL || s2 == NULL)
         return (0);

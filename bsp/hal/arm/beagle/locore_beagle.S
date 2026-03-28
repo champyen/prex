@@ -75,3 +75,5 @@ ENTRY(machine_reset)
 	b	1b
 
 	.end
+
+.section .note.GNU-stack,"",%progbits

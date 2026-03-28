@@ -37,8 +37,7 @@
 #include <errno.h>
 #include "local.h"
 
-FILE* fopen(file, mode) const char* file;
-const char* mode;
+FILE* fopen(const char* file, const char* mode)
 {
     FILE* fp;
     int f;

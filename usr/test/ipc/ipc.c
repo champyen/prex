@@ -74,8 +74,8 @@ static void send_thread(void)
     /*
      * Find objects.
      */
-    error = object_lookup("test-A", &o1);
-    error = object_lookup("test-B", &o2);
+    object_lookup("test-A", &o1);
+    object_lookup("test-B", &o2);
 
     /*
      * Wait a sec.

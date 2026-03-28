@@ -158,3 +158,5 @@ ENTRY(flush_cache)
 #endif /* !CONFIG_CACHE */
 
 	.end
+
+.section .note.GNU-stack,"",%progbits

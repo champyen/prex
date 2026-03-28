@@ -52,3 +52,5 @@ _start:
 		.long	2 * 18 * 80 - 1 /* partition size in sectors */
 .org	510
 		.word	0x55aa	/* magic */
+
+.section .note.GNU-stack,"",%progbits

@@ -40,7 +40,7 @@ int __atexit_index = 0;
 /*
  * Register a function to be performed at exit.
  */
-int atexit(fn) void (*fn)(void);
+int atexit(void (*fn)(void))
 {
     if (__atexit_index >= ATEXIT_SIZE)
         return -1;

@@ -31,3 +31,5 @@
 #include "syscall.h"
 
 SYSCALL1(task_resume)
+
+.section .note.GNU-stack,"",%progbits

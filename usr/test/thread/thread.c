@@ -60,14 +60,11 @@ static void test_thread(void)
         putchar('@');
 }
 
-int main(int argc, char* argv[])
+int main(void)
 {
-    int error;
-    thread_t self, t;
+    thread_t t;
 
     printf("Thread test program\n");
-
-    self = thread_self();
 
     /*
      * Create new thread
@@ -84,7 +81,7 @@ int main(int argc, char* argv[])
      * Suspend test thread
      */
     printf("\nSuspend test thread\n");
-    error = thread_suspend(t);
+    thread_suspend(t);
 
     /*
      * Wait 2 sec
@@ -95,7 +92,7 @@ int main(int argc, char* argv[])
      * Resume test thread
      */
     printf("\nResume test thread\n");
-    error = thread_resume(t);
+    thread_resume(t);
 
     /*
      * Wait 100 msec

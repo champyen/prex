@@ -180,3 +180,5 @@ dummy:
 	.byte	0xff
 
 .end
+
+.section .note.GNU-stack,"",%progbits

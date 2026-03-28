@@ -54,3 +54,5 @@ _start:
 	mov	fp, #0			/* Clear frame pointer */
 	bl	__prex_main
 
+
+.section .note.GNU-stack,"",%progbits

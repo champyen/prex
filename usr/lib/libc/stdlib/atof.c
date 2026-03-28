@@ -30,7 +30,7 @@
 #include <stdlib.h>
 #include <stddef.h>
 
-double atof(ascii) const char* ascii;
+double atof(const char* ascii)
 {
     return (strtod(ascii, NULL));
 }

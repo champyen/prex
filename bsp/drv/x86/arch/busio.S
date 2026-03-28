@@ -65,3 +65,5 @@ ENTRY(bus_read_32)
 	inl	%dx, %eax
 	ret
 
+
+.section .note.GNU-stack,"",%progbits

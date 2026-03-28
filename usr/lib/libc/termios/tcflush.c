@@ -37,7 +37,7 @@
 #include <termios.h>
 #include <unistd.h>
 
-int tcflush(fd, which) int fd, which;
+int tcflush(int fd, int which)
 {
     int com;
 

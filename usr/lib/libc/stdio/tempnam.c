@@ -35,9 +35,9 @@
 #include <unistd.h>
 #include <paths.h>
 
-char *tempnam(dir, pfx) const char *dir, *pfx;
+char *tempnam(const char *dir, const char *pfx)
 {
-    int sverrno;
+    int f, n;
     char *f, *name;
 
     if (!(name = malloc((size_t)MAXPATHLEN)))

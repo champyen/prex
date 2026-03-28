@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
     printf("Fault test program is staring...\n");
     printf("Waiting for key input.\n");
 
-    c = getchar();
+    getchar();
 
     printf("Key pressed!\n");
     printf("Try to read from NULL pointer\n");

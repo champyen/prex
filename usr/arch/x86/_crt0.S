@@ -63,3 +63,5 @@ _start:
 	pushl	%ecx			/* Set argc */
 	call	__prex_main
 
+
+.section .note.GNU-stack,"",%progbits

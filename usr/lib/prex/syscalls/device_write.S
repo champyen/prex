@@ -31,3 +31,5 @@
 #include "syscall.h"
 
 SYSCALL4(device_write)
+
+.section .note.GNU-stack,"",%progbits

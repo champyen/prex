@@ -44,12 +44,9 @@
  * Seek the given file to the given offset.
  * `Whence' must be one of the three SEEK_* macros.
  */
-int fseek(fp, offset, whence) FILE* fp;
-long offset;
-int whence;
+int fseek(FILE* fp, long offset, int whence)
 {
     fpos_t curoff;
-    int havepos;
 
     /* make sure stdio is set up */
     if (!__sdidinit)
@@ -79,13 +76,11 @@ int whence;
 
         offset += curoff;
         whence = SEEK_SET;
-        havepos = 1;
         break;
 
     case SEEK_SET:
     case SEEK_END:
         curoff = 0; /* XXX just to keep gcc quiet */
-        havepos = 0;
         break;
 
     default:

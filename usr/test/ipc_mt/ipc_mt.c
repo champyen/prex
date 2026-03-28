@@ -78,7 +78,7 @@ static void receive_thread(void)
     /*
      * Find objects.
      */
-    error = object_lookup("test-A", &obj);
+    object_lookup("test-A", &obj);
 
     for (;;) {
         /*

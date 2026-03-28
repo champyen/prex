@@ -36,7 +36,7 @@
 /*
  * Write the given string to stdout, appending a newline.
  */
-int puts(s) char const* s;
+int puts(char const* s)
 {
     char c;
 

@@ -31,3 +31,5 @@
 #include "syscall.h"
 
 SYSCALL3(thread_schedparam)
+
+.section .note.GNU-stack,"",%progbits

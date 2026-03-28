@@ -118,3 +118,5 @@ ENTRY(inb_p)
 	outb	%al, $0x80
 	ret
 
+
+.section .note.GNU-stack,"",%progbits

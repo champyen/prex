@@ -84,7 +84,6 @@ static int clock_isr(void* arg)
  */
 void clock_init(void)
 {
-    irq_t clock_irq;
 
     /* Setup counter value */
     TMR_CTRL = TCTRL_DISABLE;
@@ -92,7 +91,7 @@ void clock_init(void)
     TMR_CTRL |= (TCTRL_ENABLE | TCTRL_PERIODIC);
 
     /* Install ISR */
-    clock_irq = irq_attach(CLOCK_IRQ, IPL_CLOCK, 0, &clock_isr, IST_NONE, NULL);
+    irq_attach(CLOCK_IRQ, IPL_CLOCK, 0, &clock_isr, IST_NONE, NULL);
 
     /* Enable timer interrupt */
     TMR_CTRL |= TCTRL_INTEN;

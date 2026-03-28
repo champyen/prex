@@ -266,3 +266,5 @@ hi_mem:
 	.section .tail,"a"
 dummy:
 	.byte	0xff
+
+.section .note.GNU-stack,"",%progbits

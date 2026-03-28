@@ -36,10 +36,9 @@
 #include <string.h>
 #include <stdarg.h>
 
-void verrx(eval, fmt, ap) int eval;
-const char* fmt;
-va_list ap;
+void verrx(int eval, const char* fmt, va_list ap)
 {
+
     if (fmt != NULL)
         vfprintf(stderr, fmt, ap);
     fprintf(stderr, "\n");

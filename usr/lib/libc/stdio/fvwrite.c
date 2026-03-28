@@ -41,8 +41,7 @@
  * This routine is large and unsightly, but most of the ugliness due
  * to the three different kinds of output buffering is handled here.
  */
-int __sfvwrite(fp, uio) FILE* fp;
-struct __suio* uio;
+int __sfvwrite(FILE* fp, struct __suio* uio)
 {
     size_t len;
     char* p;

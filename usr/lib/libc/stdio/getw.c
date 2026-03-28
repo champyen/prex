@@ -32,7 +32,7 @@
 
 #include <stdio.h>
 
-int getw(fp) FILE* fp;
+int getw(FILE* fp)
 {
     int w;
     int size = sizeof(int);

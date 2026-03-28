@@ -39,9 +39,7 @@
  * Stop when a newline has been read, or the count runs out.
  * Return first argument, or NULL if no characters were read.
  */
-char* fgets(buf, n, fp) char* buf;
-size_t n;
-FILE* fp;
+char* fgets(char* buf, size_t n, FILE* fp)
 {
     int c = -1;
     char* s;

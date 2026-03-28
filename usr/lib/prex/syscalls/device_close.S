@@ -31,3 +31,5 @@
 #include "syscall.h"
 
 SYSCALL1(device_close)
+
+.section .note.GNU-stack,"",%progbits

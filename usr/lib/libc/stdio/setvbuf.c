@@ -38,10 +38,7 @@
  * Set one of the three kinds of buffering, optionally including
  * a buffer.
  */
-int setvbuf(fp, buf, mode, size) FILE* fp;
-char* buf;
-int mode;
-size_t size;
+int setvbuf(FILE* fp, char* buf, int mode, size_t size)
 {
     int ret, flags;
     /*	int ttyflag; */

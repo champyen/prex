@@ -31,3 +31,5 @@
 #include "syscall.h"
 
 SYSCALL1(cond_broadcast)
+
+.section .note.GNU-stack,"",%progbits

@@ -32,8 +32,7 @@
 #include <termios.h>
 #include <unistd.h>
 
-int tcgetattr(fd, t) int fd;
-struct termios* t;
+int tcgetattr(int fd, struct termios* t)
 {
 
     return (ioctl(fd, TIOCGETA, t));

@@ -31,3 +31,5 @@
 #include "syscall.h"
 
 SYSCALL1(sem_trywait)
+
+.section .note.GNU-stack,"",%progbits

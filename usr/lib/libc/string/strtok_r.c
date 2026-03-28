@@ -32,9 +32,7 @@
 #include <sys/cdefs.h>
 #include <string.h>
 
-char* strtok_r(s, delim, lasts) char* s;
-const char* delim;
-char** lasts;
+char* strtok_r(char *s, const char *delim, char **lasts)
 {
     const char* spanp;
     int c, sc;

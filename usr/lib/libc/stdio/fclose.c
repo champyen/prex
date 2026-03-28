@@ -35,7 +35,7 @@
 #include <stdlib.h>
 #include "local.h"
 
-int fclose(fp) FILE* fp;
+int fclose(FILE* fp)
 {
     int r;
 

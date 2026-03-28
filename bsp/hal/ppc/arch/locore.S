@@ -461,3 +461,5 @@ ENTRY(splon)
 	mtmsr	r4
 	blr
 
+
+.section .note.GNU-stack,"",%progbits

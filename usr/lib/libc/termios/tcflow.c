@@ -34,7 +34,7 @@
 #include <termios.h>
 #include <unistd.h>
 
-int tcflow(fd, action) int fd, action;
+int tcflow(int fd, int action)
 {
     struct termios term;
     u_char c;
