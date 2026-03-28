@@ -11,8 +11,7 @@
 ** A la ISO/IEC 9945-1, ANSI/IEEE Std 1003.1, Second Edition, 1996-07-12.
 */
 
-char* asctime_r(timeptr, buf) register const struct tm* timeptr;
-char* buf;
+char* asctime_r(const struct tm* timeptr, char* buf)
 {
     static const char wday_name[][3] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
     static const char mon_name[][3] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",

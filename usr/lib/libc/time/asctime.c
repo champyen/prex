@@ -50,7 +50,7 @@
 
 #define ASCTIME_BUFLEN (3 * 2 + 5 * INT_STRLEN_MAXIMUM(int) + 3 + 2 + 1 + 1)
 
-char* asctime(timeptr) register const struct tm* timeptr;
+char* asctime(const struct tm* timeptr)
 {
     static char result[ASCTIME_BUFLEN];
 
