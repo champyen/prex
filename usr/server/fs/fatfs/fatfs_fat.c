@@ -140,7 +140,7 @@ int fat_next_cluster(struct fatfsmount* fmp, u_long cl, u_long* next)
     if (FAT32(fmp)) {
         offset = (cl * 4) % SEC_SIZE;
         val = *((uint32_t*)(fmp->fat_buf + offset));
-        *next = (u_long)val;
+        *next = (u_long)(val & FAT32_MASK);
     } else {
         if (FAT16(fmp))
             offset = (cl * 2) % SEC_SIZE;

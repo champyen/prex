@@ -253,9 +253,18 @@ static int fatfs_write(vnode_t vp, file_t fp, void* buf, size_t size, size_t* re
     /* Check if file position exceeds the end of file. */
     end_pos = vp->v_size;
     file_pos = (fp->f_flags & O_APPEND) ? end_pos : fp->f_offset;
-    if (file_pos + size > end_pos) {
+    if (file_pos + size > end_pos || vp->v_blkno == 0) {
         /* Expand the file size before writing to it */
         end_pos = file_pos + size;
+        if (vp->v_blkno == 0) {
+            error = fat_alloc_cluster(fmp, 0, &cl);
+            if (error)
+                goto out;
+            error = fat_set_cluster(fmp, cl, fmp->fat_eof);
+            if (error)
+                goto out;
+            vp->v_blkno = cl;
+        }
         error = fat_expand_file(fmp, vp->v_blkno, end_pos);
         if (error) {
             error = EIO;
@@ -266,6 +275,8 @@ static int fatfs_write(vnode_t vp, file_t fp, void* buf, size_t size, size_t* re
         np = vp->v_data;
         de = &np->dirent;
         de->size = end_pos;
+        de->cluster_hi = (vp->v_blkno & 0xFFFF0000) >> 16;
+        de->cluster = vp->v_blkno & 0x0000FFFF;
         error = fatfs_put_node(fmp, np);
         if (error)
             goto out;
@@ -372,7 +383,6 @@ static int fatfs_create(vnode_t dvp, char* name, mode_t mode)
     struct fatfsmount* fmp;
     struct fatfs_node np;
     struct fat_dirent* de;
-    u_long cl;
     int error;
 
     DPRINTF(("fatfs_create: %s\n", name));
@@ -386,24 +396,15 @@ static int fatfs_create(vnode_t dvp, char* name, mode_t mode)
     fmp = dvp->v_mount->m_data;
     mutex_lock(&fmp->lock);
 
-    /* Allocate free cluster for new file. */
-    error = fat_alloc_cluster(fmp, 0, &cl);
-    if (error)
-        goto out;
-
     de = &np.dirent;
     memset(de, 0, sizeof(struct fat_dirent));
     fat_convert_name(name, (char*)de->name);
-    de->cluster_hi = (cl & 0xFFFF0000) >> 16;
-    de->cluster = cl & 0x0000FFFF;
+    de->cluster_hi = 0;
+    de->cluster = 0;
     de->time = TEMP_TIME;
     de->date = TEMP_DATE;
     fat_mode_to_attr(mode, &de->attr);
     error = fatfs_add_node(dvp, &np);
-    if (error)
-        goto out;
-    error = fat_set_cluster(fmp, cl, fmp->fat_eof);
-out:
     mutex_unlock(&fmp->lock);
     return error;
 }
@@ -413,6 +414,7 @@ static int fatfs_remove(vnode_t dvp, vnode_t vp, char* name)
     struct fatfsmount* fmp;
     struct fatfs_node np;
     struct fat_dirent* de;
+    u_long cl;
     int error;
 
     if (*name == '\0')
@@ -435,9 +437,12 @@ static int fatfs_remove(vnode_t dvp, vnode_t vp, char* name)
     }
 
     /* Remove clusters */
-    error = fat_free_clusters(fmp, (de->cluster_hi << 16) | de->cluster);
-    if (error)
-        goto out;
+    cl = (de->cluster_hi << 16) | de->cluster;
+    if (cl != 0) {
+        error = fat_free_clusters(fmp, cl);
+        if (error)
+            goto out;
+    }
 
     /* remove directory */
     de->name[0] = 0xe5;
@@ -614,6 +619,7 @@ static int fatfs_rmdir(vnode_t dvp, vnode_t vp, char* name)
     struct fatfsmount* fmp;
     struct fatfs_node np;
     struct fat_dirent* de;
+    u_long cl;
     int error;
 
     if (*name == '\0')
@@ -633,9 +639,12 @@ static int fatfs_rmdir(vnode_t dvp, vnode_t vp, char* name)
     }
 
     /* Remove clusters */
-    error = fat_free_clusters(fmp, (de->cluster_hi << 16) | de->cluster);
-    if (error)
-        goto out;
+    cl = (de->cluster_hi << 16) | de->cluster;
+    if (cl != 0) {
+        error = fat_free_clusters(fmp, cl);
+        if (error)
+            goto out;
+    }
 
     /* remove directory */
     de->name[0] = 0xe5;
@@ -680,9 +689,14 @@ static int fatfs_truncate(vnode_t vp, off_t length)
 
     if (length == 0) {
         /* Remove clusters */
-        error = fat_free_clusters(fmp, (de->cluster_hi << 16) | de->cluster);
-        if (error)
-            goto out;
+        u_long cl = (de->cluster_hi << 16) | de->cluster;
+        if (cl != 0) {
+            error = fat_free_clusters(fmp, cl);
+            if (error)
+                goto out;
+            de->cluster_hi = 0;
+            de->cluster = 0;
+        }
     } else if (length > vp->v_size) {
         error = fat_expand_file(fmp, vp->v_blkno, length);
         if (error) {

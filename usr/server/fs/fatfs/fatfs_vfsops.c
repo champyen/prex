@@ -119,12 +119,12 @@ static int fat_read_bpb(struct fatfsmount* fmp)
     fmp->fat_type = 12;
     fmp->fat_mask = FAT12_MASK;
     fmp->fat_eof = CL_EOF & FAT12_MASK;
-    if (maxclust >= 0xFF7) {
+    if (maxclust > 4085) {
         fmp->fat_type = 16;
         fmp->fat_mask = FAT16_MASK;
         fmp->fat_eof = CL_EOF & FAT16_MASK;
     }
-    if (maxclust >= 0xFFF7) {
+    if (maxclust > 65525) {
         fmp->fat_type = 32;
         fmp->fat_mask = FAT32_MASK;
         fmp->fat_eof = CL_EOF & FAT32_MASK;
