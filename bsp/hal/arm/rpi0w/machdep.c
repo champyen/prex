@@ -67,6 +67,11 @@ struct mmumap mmumap_table[] = {
      */
     {0xE0201000, 0x20201000, 0x1000, VMT_IO},
 
+    /*
+     * SDHost (4K)
+     */
+    {0xE0202000, 0x20202000, 0x1000, VMT_IO},
+
     {0, 0, 0, 0}};
 #endif
 

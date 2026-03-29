@@ -30,7 +30,11 @@
 #include <sys/param.h>
 #include <boot.h>
 
-#define UART_BASE kvtop(CONFIG_PL011_BASE)
+#ifdef CONFIG_MMU
+#define UART_BASE (CONFIG_PL011_BASE - 0xc0000000)
+#else
+#define UART_BASE CONFIG_PL011_BASE
+#endif
 #define UART_CLK CONFIG_PL011_CLK
 #define BAUD_RATE 115200
 

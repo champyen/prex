@@ -6,8 +6,8 @@
 # Make options
 #
 #makeoptions	CFLAGS+= -mfpu=neon -mfloat-abi=softfp -mcpu=cortex-a8 -fno-math-errno -fno-tree-vectorize
-makeoptions	CFLAGS+= -mcpu=arm1176jzf-s -march=armv6 -fno-dwarf2-cfi-asm
-makeoptions	ASFLAGS+= -mcpu=arm1176jzf-s -march=armv6
+makeoptions	CFLAGS+= -mcpu=arm1176jzf-s  -fno-dwarf2-cfi-asm
+makeoptions	ASFLAGS+= -mcpu=arm1176jzf-s 
 
 #
 # Memory address
@@ -62,7 +62,8 @@ options 	FIFOFS		# FIFO & Pipe
 options 	DEVFS		# Device file system
 options 	RAMFS		# RAM file system
 options 	ARFS		# Archive file system
-#options 	FATFS		# FAT file system
+options 	FATFS		# FAT file system
+options 	LIBM=fdlibm	# Math library
 
 #
 # Power management
@@ -78,6 +79,8 @@ device		pm			# Power management
 device		cons		# System console
 device		serial		# Logical serial
 device  	pl011		# ARM PrimeCell PL011 UART (P:serial)
+device		sdmmc		# SD/MMC stack
+device		bcm2835_sd	# BCM2835 SDHost controller
 device		null		# NULL device
 device		zero		# Zero device
 device		ramdisk		# RAM disk
@@ -89,7 +92,9 @@ device		ramdisk		# RAM disk
 options		ARM_VECTORS=0x00000000
 options		PL011_BASE=0x20201000
 options		PL011_IRQ=57
-options		PL011_CLK=3000000
+options		PL011_CLK=48000000
+options		BCM2835_SD_BASE=0x20202000
+options		BCM2835_SD_IRQ=56
 
 
 #
