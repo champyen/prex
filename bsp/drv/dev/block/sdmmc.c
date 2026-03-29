@@ -57,13 +57,9 @@ struct sdmmc_dev_softc
     struct sdmmc_devinfo* info;
 };
 
-static int sdmmc_open(device_t, int);
-static int sdmmc_close(device_t);
 static int sdmmc_read(device_t, char*, size_t*, int);
 static int sdmmc_write(device_t, char*, size_t*, int);
-static int sdmmc_ioctl(device_t, u_long, void*);
 
-static int sdmmc_probe(struct driver*);
 static int sdmmc_init(struct driver*);
 
 static struct devops sdmmc_devops = {
@@ -75,7 +71,7 @@ static struct devops sdmmc_devops = {
     /* devctl */ no_devctl,
 };
 
-struct driver sdmmc_driver __driver_entry = {
+struct driver sdmmc_driver = {
     /* name */ "sdmmc",
     /* devops */ NULL,
     /* devsz */ 0,
@@ -85,7 +81,7 @@ struct driver sdmmc_driver __driver_entry = {
     /* shutdown */ NULL,
 };
 
-struct driver sdmmc_dev_driver __driver_entry = {
+struct driver sdmmc_dev_driver = {
     /* name */ NULL,
     /* devops */ &sdmmc_devops,
     /* devsz */ sizeof(struct sdmmc_dev_softc),
@@ -96,7 +92,6 @@ struct driver sdmmc_dev_driver __driver_entry = {
 };
 
 struct driver* sdmmc_drv_list[MAX_DEV];
-static timer_t sdmmc_timer;
 static uint32_t sdmmc_freq_tab[] = {0, 10, 12, 13, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80};
 static uint32_t sdmmc_freq_factor[] = {10, 100, 1000, 10000}; /* unit in 1000Hz/10 */
 
@@ -120,8 +115,8 @@ static int sdmmc_wait_ready(struct sdmmc_ops* ops, struct sdmmc_devinfo* info)
 static int sdmmc_read(device_t dev, char* buf, size_t* nbyte, int sect_addr)
 {
 
-    uint32_t sectors, offset, part_idx;
-    uint32_t addr, err;
+    uint32_t sectors, part_idx;
+    uint32_t err;
     uint8_t cmd;
     uint8_t* resp;
     char* kbuf;
@@ -195,8 +190,7 @@ static int sdmmc_read(device_t dev, char* buf, size_t* nbyte, int sect_addr)
 
 static int sdmmc_write(device_t dev, char* buf, size_t* nbyte, int sect_addr)
 {
-    uint32_t sectors, offset, part_idx;
-    uint32_t addr;
+    uint32_t sectors, part_idx;
     uint32_t err;
     uint8_t cmd;
     uint8_t* resp;
@@ -284,11 +278,6 @@ static int sdmmc_write(device_t dev, char* buf, size_t* nbyte, int sect_addr)
     return 0;
 }
 
-static int sdmmc_probe(struct driver* self)
-{
-    return 0;
-}
-
 device_t sdmmc_attach(struct sdmmc_ops* ops, struct sdmmc_devinfo* info)
 {
     struct sdmmc_dev_softc* sc;
@@ -300,7 +289,7 @@ device_t sdmmc_attach(struct sdmmc_ops* ops, struct sdmmc_devinfo* info)
         if (sdmmc_drv_list[i] == NULL)
             break;
         if (i == MAX_DEV)
-            return NULL;
+            return 0;
     }
 
     info->dev_idx = i;
@@ -314,7 +303,7 @@ device_t sdmmc_attach(struct sdmmc_ops* ops, struct sdmmc_devinfo* info)
     dev = device_create(sdmmc_drv_list[i], sdmmc_drv_list[i]->name, D_BLK);
     info->dev = dev;
     info->part_status = 0;
-    if (dev != NULL) {
+    if (dev != 0) {
         sc = device_private(dev);
         sc->dev = dev;
         sc->ops = ops;
@@ -324,7 +313,7 @@ device_t sdmmc_attach(struct sdmmc_ops* ops, struct sdmmc_devinfo* info)
         device_destroy(dev);
         kmem_free(sdmmc_drv_list[i]);
         DPRINTF(("[%s] register %s failed\n", __func__, sdmmc_drv_list[i]->name));
-        dev = NULL;
+        dev = 0;
     }
 
     return dev;
@@ -341,7 +330,7 @@ void sdmmc_insert(device_t dev)
 
     DPRINTF(("%s %X\n", __func__, dev));
 
-    if (dev == NULL) {
+    if (dev == 0) {
         DPRINTF(("%s NULL dev\n", __func__));
         return;
     }
@@ -360,9 +349,10 @@ void sdmmc_insert(device_t dev)
         /* SDC Ver2. The card can work at vdd range of 2.7-3.6V */
         DPRINTF(("[%s] SDC v2\n", __func__));
         do {
+            ops->sendcmd(CMD55, 0, RSP_R1, resp);
             err = ops->sendcmd(ACMD41, 0x40FF8000, RSP_R3, resp);
             if (err != 0)
-                return -1;
+                return;
         } while ((resp[0] & 0x80) == 0);
         DPRINTF(("[%s] SDv2 rsp %X %X %X %X\n", __func__, resp[0], resp[1], resp[2], resp[3]));
 
@@ -374,6 +364,7 @@ void sdmmc_insert(device_t dev)
     } else {
         uint8_t cmd;
         /* SDC Ver1 or MMC */
+        ops->sendcmd(CMD55, 0, RSP_R1, resp);
         if (ops->sendcmd(ACMD41, 0x00FF8000, RSP_R3, resp) == 0) {
             DPRINTF(("[%s] SDC v1\n", __func__));
             /* ACMD41 is accepted -> SDC Ver1 */
@@ -387,6 +378,8 @@ void sdmmc_insert(device_t dev)
         }
 
         do {
+            if (cmd == ACMD41)
+                ops->sendcmd(CMD55, 0, RSP_R1, resp);
             ops->sendcmd(cmd, 0x00FF8000, RSP_R3, resp);
         } while ((resp[0] & 0x80) == 0);
     }
@@ -433,6 +426,7 @@ void sdmmc_insert(device_t dev)
 #if USE_4BIT
     if (info->sdmmc_type & (SDV1_CARD | SDV2_CARD) && info->data_bits >= 4) {
         ops->setwidth(4);
+        ops->sendcmd(CMD55, info->card_rca << 16, RSP_R1, resp);
         err = ops->sendcmd(ACMD6, 2, RSP_R1, resp);
         if (err != 0 || (resp[0] & 0xFD) || (resp[1] & 0xF9)) {
             /* TODO: error state */

@@ -85,6 +85,11 @@ struct mmumap mmumap_table[] = {
      */
     {0xD6000000, 0x16000000, 0x100000, VMT_IO},
 
+    /*
+     * MMCI (PL181) (1M)
+     */
+    {0xDC000000, 0x1C000000, 0x100000, VMT_IO},
+
     {0, 0, 0, 0}};
 #endif
 

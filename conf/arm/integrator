@@ -61,7 +61,8 @@ options 	FIFOFS		# FIFO & Pipe
 options 	DEVFS		# Device file system
 options 	RAMFS		# RAM file system
 options 	ARFS		# Archive file system
-#options 	FATFS		# FAT file system
+options 	FATFS		# FAT file system
+options 	LIBM=fdlibm	# Math library
 
 #
 # Power management
@@ -77,6 +78,8 @@ device		pm		# Power management
 device		cons		# System console
 device		serial		# Logical serial
 device  	pl011		# ARM PrimeCell PL011 UART (P:serial)
+device		sdmmc		# SD/MMC stack (P:block)
+device		pl181		# ARM PrimeCell PL181 MMCI (P:block)
 device		rtc		# Logical RTC
 device 		pl030		# ARM PrimeCell PL030 RTC
 device		null		# NULL device
@@ -90,6 +93,9 @@ options		ARM_VECTORS=0x00000000
 options		PL011_BASE=0xd6000000
 options		PL011_IRQ=1
 options		PL011_CLK=14745600
+options		PL181_BASE=0xdc000000
+options		PL181_IRQ=23
+options		PL181_CLK=24000000
 options		PL030_BASE=0xd5000000
 
 
