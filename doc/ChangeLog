@@ -1,6 +1,11 @@
 
 Version 0.9.0:
 
+ - New: Ported ARM PrimeCell PL181 SD/MMC controller driver.
+ - New: Enhanced SDMMC stack with SDHC support.
+ - New: Added sdmmc_sendcmd() helper to handle ACMD prefix automatically.
+ - New: Added timeout to sdmmc_wait_ready() for better robustness.
+ - New: Added 'math' command support in configure script.
  - New: Enable capability based security by default.
  - New: Support resource limit to prevent DoS attack.
  - New: Add task_chkcap() kernel call to trace the capability violations.
