@@ -301,6 +301,11 @@ parseconfig()
 		command)
 			command $rest
 			;;
+		math)
+			echo "CONFIG_LIBM=$rest"
+			echo "CONFIG_LIBM=$rest" >> $CONFIG_MK
+			echo "#define CONFIG_LIBM $rest" >> $CONFIG_H
+			;;
 		esac
 	done < $1
 }

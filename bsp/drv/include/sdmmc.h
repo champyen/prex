@@ -60,6 +60,16 @@
 #define ACMD42 (42 | APP_CMD) /* SEND_OP_COND (SDC) */
 #define CMD55 (55)            /* APP_CMD */
 
+/* OCR bits */
+#define OCR_BUSY 0x80000000
+#define OCR_HCS 0x40000000 /* Host Capacity Support */
+#define OCR_CCS 0x40000000 /* Card Capacity Status (in response) */
+#define OCR_VOLTAGE_MASK 0x00FF8000
+
+/* CSD versions */
+#define CSD_STRUCT_V1 0
+#define CSD_STRUCT_V2 1
+
 typedef struct part_record
 {
     uint32_t status_chs;
@@ -112,6 +122,7 @@ struct sdmmc_ops
 #define MMC_CARD 0x00010000
 #define SDV1_CARD 0x00020000
 #define SDV2_CARD 0x00040000
+#define SDHC_CARD 0x00080000
 #define BLK_ADDR 0x00000001
 
 typedef enum SDMMC_RSP_TYPE

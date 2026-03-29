@@ -95,18 +95,37 @@ struct driver* sdmmc_drv_list[MAX_DEV];
 static uint32_t sdmmc_freq_tab[] = {0, 10, 12, 13, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80};
 static uint32_t sdmmc_freq_factor[] = {10, 100, 1000, 10000}; /* unit in 1000Hz/10 */
 
+static int sdmmc_sendcmd(struct sdmmc_ops* ops, struct sdmmc_devinfo* info, uint8_t cmd, uint32_t arg, uint8_t rsp_type,
+                        uint8_t* rspbuf)
+{
+    int err;
+
+    if (cmd & APP_CMD) {
+        err = ops->sendcmd(CMD55, info->card_rca << 16, RSP_R1, info->resp);
+        if (err != 0)
+            return err;
+        cmd &= ~APP_CMD;
+    }
+
+    return ops->sendcmd(cmd, arg, rsp_type, rspbuf);
+}
+
 static int sdmmc_wait_ready(struct sdmmc_ops* ops, struct sdmmc_devinfo* info)
 {
     uint8_t* resp;
+    int timeout = 100000;
 
     resp = info->resp;
 
-    /* TODO: timeout */
     do {
         uint32_t err;
-        err = ops->sendcmd(CMD13, info->card_rca << 16, RSP_R1, resp);
+        err = sdmmc_sendcmd(ops, info, CMD13, info->card_rca << 16, RSP_R1, resp);
         if (err != 0)
             return -1;
+        if (--timeout == 0) {
+            DPRINTF(("[%s] timeout\n", __func__));
+            return -1;
+        }
     } while ((resp[2] & 0x1E) != 0x08);
 
     return 0;
@@ -165,7 +184,7 @@ static int sdmmc_read(device_t dev, char* buf, size_t* nbyte, int sect_addr)
     sectors = (*nbyte) / 512;
     cmd = (sectors > 1) ? CMD18 : CMD17;
 
-    err = ops->sendcmd(cmd, sect_addr, RSP_R1, resp);
+    err = sdmmc_sendcmd(ops, info, cmd, sect_addr, RSP_R1, resp);
     if (err != 0 || (resp[0] & 0xC0) || (resp[1] & 0x58)) {
         DPRINTF(("[%s] resp error\n", __func__));
         *nbyte = 0;
@@ -181,7 +200,7 @@ static int sdmmc_read(device_t dev, char* buf, size_t* nbyte, int sect_addr)
     } while (sectors > 0);
 
     if (*nbyte > 512) {
-        err = ops->sendcmd(CMD12, 0, RSP_R1, resp);
+        err = sdmmc_sendcmd(ops, info, CMD12, 0, RSP_R1, resp);
     }
 
     // DPRINTF(("%s end\n",__func__));
@@ -243,14 +262,14 @@ static int sdmmc_write(device_t dev, char* buf, size_t* nbyte, int sect_addr)
         cmd = CMD24;
     } else {
         cmd = (info->sdmmc_type & (SDV1_CARD | SDV2_CARD)) ? ACMD23 : CMD23;
-        err = ops->sendcmd(cmd, sectors, RSP_R1, resp);
+        err = sdmmc_sendcmd(ops, info, cmd, sectors, RSP_R1, resp);
         if (err != 0 || (resp[0] & 0xC0) || (resp[1] & 0x58)) {
             /* TODO: error state */
         }
         cmd = CMD25;
     }
 
-    err = ops->sendcmd(cmd, sect_addr, RSP_R1, resp);
+    err = sdmmc_sendcmd(ops, info, cmd, sect_addr, RSP_R1, resp);
     if (err != 0 || (resp[0] & 0xC0) || (resp[1] & 0x58)) {
         /* TODO: error state */
     }
@@ -265,7 +284,7 @@ static int sdmmc_write(device_t dev, char* buf, size_t* nbyte, int sect_addr)
     } while (sectors > 0);
 
     if (cmd == CMD25 && (info->sdmmc_type & (SDV1_CARD | SDV2_CARD))) {
-        err = ops->sendcmd(CMD12, 0, RSP_R1, resp);
+        err = sdmmc_sendcmd(ops, info, CMD12, 0, RSP_R1, resp);
     }
 
     if (sdmmc_wait_ready(ops, info) != 0) {
@@ -342,30 +361,28 @@ void sdmmc_insert(device_t dev)
     ops->setfreq(0); /* set to lowest freq */
 
     /*---- Card is 'idle' state ----*/
-    ops->sendcmd(CMD0, 0, RSP_R1, NULL);
+    sdmmc_sendcmd(ops, info, CMD0, 0, RSP_R1, NULL);
 
-    err = ops->sendcmd(CMD8, 0x1AA, RSP_R3, resp);
+    err = sdmmc_sendcmd(ops, info, CMD8, 0x1AA, RSP_R3, resp);
     if (err == 0 && ((resp[2] & 0x0F) == 0x1) && (resp[3] == 0xAA)) {
         /* SDC Ver2. The card can work at vdd range of 2.7-3.6V */
         DPRINTF(("[%s] SDC v2\n", __func__));
         do {
-            ops->sendcmd(CMD55, 0, RSP_R1, resp);
-            err = ops->sendcmd(ACMD41, 0x40FF8000, RSP_R3, resp);
+            err = sdmmc_sendcmd(ops, info, ACMD41, OCR_HCS | OCR_VOLTAGE_MASK, RSP_R3, resp);
             if (err != 0)
                 return;
         } while ((resp[0] & 0x80) == 0);
-        DPRINTF(("[%s] SDv2 rsp %X %X %X %X\n", __func__, resp[0], resp[1], resp[2], resp[3]));
+        DPRINTF(("[%s] SDv2 ocr %02X%02X%02X%02X\n", __func__, resp[0], resp[1], resp[2], resp[3]));
 
         info->sdmmc_type = SDV2_CARD;
         if (resp[0] & 0x40) {
-            DPRINTF(("[%s] BLOCK-Address\n", __func__));
-            info->sdmmc_type |= BLK_ADDR;
+            DPRINTF(("[%s] BLOCK-Address (SDHC)\n", __func__));
+            info->sdmmc_type |= BLK_ADDR | SDHC_CARD;
         }
     } else {
         uint8_t cmd;
         /* SDC Ver1 or MMC */
-        ops->sendcmd(CMD55, 0, RSP_R1, resp);
-        if (ops->sendcmd(ACMD41, 0x00FF8000, RSP_R3, resp) == 0) {
+        if (sdmmc_sendcmd(ops, info, ACMD41, 0x00FF8000, RSP_R3, resp) == 0) {
             DPRINTF(("[%s] SDC v1\n", __func__));
             /* ACMD41 is accepted -> SDC Ver1 */
             info->sdmmc_type = SDV1_CARD;
@@ -378,9 +395,7 @@ void sdmmc_insert(device_t dev)
         }
 
         do {
-            if (cmd == ACMD41)
-                ops->sendcmd(CMD55, 0, RSP_R1, resp);
-            ops->sendcmd(cmd, 0x00FF8000, RSP_R3, resp);
+            sdmmc_sendcmd(ops, info, cmd, 0x00FF8000, RSP_R3, resp);
         } while ((resp[0] & 0x80) == 0);
     }
 
@@ -388,7 +403,7 @@ void sdmmc_insert(device_t dev)
     memcpy(info->ocr, resp, 4);
 
     /*---- Card is 'ready' state ----*/
-    if (ops->sendcmd(CMD2, 0, RSP_R2, resp) != 0) {
+    if (sdmmc_sendcmd(ops, info, CMD2, 0, RSP_R2, resp) != 0) {
         // TODO: error state
     }
 
@@ -397,39 +412,37 @@ void sdmmc_insert(device_t dev)
 
     /*---- Card is 'ident' state ----*/
     if (info->sdmmc_type & (SDV1_CARD | SDV2_CARD)) {
-        err = ops->sendcmd(CMD3, 0, RSP_R6, resp);
+        err = sdmmc_sendcmd(ops, info, CMD3, 0, RSP_R6, resp);
         info->card_rca = resp[0] << 8 | resp[1];
     } else {
-        err = ops->sendcmd(CMD3, 1 << 16, RSP_R6, resp);
+        err = sdmmc_sendcmd(ops, info, CMD3, 1 << 16, RSP_R6, resp);
         info->card_rca = 1;
     }
 
     /*---- Card is 'stby' state ----*/
     /* Get CSD and save it */
-    if (ops->sendcmd(CMD9, info->card_rca << 16, RSP_R2, resp) != 0) {
+    if (sdmmc_sendcmd(ops, info, CMD9, info->card_rca << 16, RSP_R2, resp) != 0) {
     }
     memcpy(info->csd, resp, 16);
 
     /* Select card */
-    if (ops->sendcmd(CMD7, info->card_rca << 16, RSP_R1, resp) != 0) {
+    if (sdmmc_sendcmd(ops, info, CMD7, info->card_rca << 16, RSP_R1, resp) != 0) {
     }
 
     /*---- Card is 'tran' state ----*/
     if (!(info->sdmmc_type & BLK_ADDR)) {
         uint32_t err;
         /* Set data block length to 512 (for byte addressing cards) */
-        err = ops->sendcmd(CMD16, 512, RSP_R1, resp);
+        err = sdmmc_sendcmd(ops, info, CMD16, 512, RSP_R1, resp);
         if (err != 0 || (resp[0] & 0xFD) || (resp[1] & 0xF9)) {
             /* TODO: error state */
         }
     }
 #if USE_4BIT
     if (info->sdmmc_type & (SDV1_CARD | SDV2_CARD) && info->data_bits >= 4) {
-        ops->setwidth(4);
-        ops->sendcmd(CMD55, info->card_rca << 16, RSP_R1, resp);
-        err = ops->sendcmd(ACMD6, 2, RSP_R1, resp);
-        if (err != 0 || (resp[0] & 0xFD) || (resp[1] & 0xF9)) {
-            /* TODO: error state */
+        err = sdmmc_sendcmd(ops, info, ACMD6, 2, RSP_R1, resp);
+        if (err == 0 && !(resp[0] & 0xC0) && !(resp[1] & 0x58)) {
+            ops->setwidth(4);
         }
     }
 #endif
@@ -454,14 +467,15 @@ void sdmmc_insert(device_t dev)
         uint8_t i, mbr[BSIZE], *ptr;
         struct sdmmc_dev_softc* part_sc;
 
-        if (info->sdmmc_type & SDV2_CARD && info->sdmmc_type & BLK_ADDR) {
-            info->total_sectors = (csd[9] + (csd[8] << 8) + 1) << 10;
+        if (info->sdmmc_type & SDHC_CARD) {
+            uint32_t csize = ((csd[7] & 0x3F) << 16) | (csd[8] << 8) | csd[9];
+            info->total_sectors = (csize + 1) << 10;
         } else {
             uint32_t shift;
             shift = (csd[5] & 15) + ((csd[10] & 128) >> 7) + ((csd[9] & 3) << 1) + 2;
             info->total_sectors = ((csd[8] >> 6) + (csd[7] << 2) + ((csd[6] & 3) << 10) + 1) << (shift - 9);
         }
-        DPRINTF(("[%s] total sectors:%d\n", __func__, info->total_sectors));
+        DPRINTF(("[%s] total sectors:%u\n", __func__, info->total_sectors));
 
         memset(mbr, 0, BSIZE);
 
