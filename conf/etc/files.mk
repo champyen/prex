@@ -12,7 +12,7 @@ ifeq ($(CONFIG_CMDBOX),y)
 FILES+= 	$(SRCDIR)/usr/bin/cmdbox/cmdbox
 endif
 
-FILES+= 	$(SRCDIR)/usr/bin/tcc/tcc
+#FILES+= 	$(SRCDIR)/usr/bin/tcc/tcc
 
 ifeq ($(CONFIG_CMD_KTRACE),y)
 FILES+= 	$(SRCDIR)/usr/sbin/ktrace/ktrace
