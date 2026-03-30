@@ -6,7 +6,7 @@
 # Make options
 #
 #makeoptions	CFLAGS+= -mfpu=neon -mfloat-abi=softfp -mcpu=cortex-a8 -fno-math-errno -fno-tree-vectorize
-makeoptions	CFLAGS+= -mcpu=arm1176jzf-s  -fno-dwarf2-cfi-asm
+makeoptions	CFLAGS+= -mcpu=arm1176jzf-s  -fno-dwarf2-cfi-asm -mno-unaligned-access
 makeoptions	ASFLAGS+= -mcpu=arm1176jzf-s
 
 #
@@ -92,7 +92,7 @@ options		SYSTEM_TIMER    # otherwise ARM timer will be used
 options     SYSTEM_TIMER_BASE=0x20003000
 options		ARM_VECTORS=0x00000000
 options		PL011_BASE=0x20201000
-options		PL011_IRQ=57
+options		PL011_IRQ=121
 options		PL011_CLK=3000000
 #options		BCM2835_SD_BASE=0x20202000
 #options		BCM2835_SD_IRQ=56

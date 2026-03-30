@@ -207,6 +207,11 @@ ENTRY(reset_entry)
 	ldr	pc, reload_pc_target	/* Reset pc here */
 reload_pc:
 
+#else /* !CONFIG_MMU */
+    mrc p15, 0, r0, c1, c0, 0    /* Read control register */
+    ldr r1,=(CTL_AFLT)
+    bic r0, r0, r1              /* Disable alignment checks */
+    mrc p15, 0, r0, c1, c0, 0
 #endif /* !CONFIG_MMU */
 
 	/*
@@ -439,7 +444,7 @@ ENTRY(trap_common)
 
 ENTRY(unused_entry)
 	b	unused_entry		/* Not support... */
-	
+
 ENTRY(fiq_entry)
 	b	fiq_entry		/* Not support... */
 

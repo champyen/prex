@@ -6,7 +6,7 @@
 # Make options
 #
 #makeoptions	CFLAGS+= -mfpu=neon -mfloat-abi=softfp -mcpu=cortex-a8 -fno-math-errno -fno-tree-vectorize
-makeoptions	CFLAGS+= -mcpu=arm1176jzf-s  -fno-dwarf2-cfi-asm
+makeoptions	CFLAGS+= -mcpu=arm1176jzf-s  -fno-dwarf2-cfi-asm -mno-unaligned-access
 makeoptions	ASFLAGS+= -mcpu=arm1176jzf-s
 
 #
