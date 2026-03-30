@@ -2,9 +2,9 @@ PATH=/boot:/bin
 HOME=/
 export HOME PATH
 uname -msr
-mkdir /mnt/sdcard
-touch /mnt/sdcard/hello.txt
-ls /mnt/sdcard
+#mkdir /mnt/sdcard
+#touch /mnt/sdcard/hello.txt
+#ls /mnt/sdcard
 mem
 date
 exec sh

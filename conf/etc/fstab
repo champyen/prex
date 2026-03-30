@@ -6,7 +6,7 @@ none		/		ramfs
 /dev/ram0	/boot		arfs
 none		/dev		devfs
 none		/mnt/fifo	fifofs
-/dev/sdmmc0p1	/mnt/sdcard	fatfs
+#/dev/sdmmc0p1	/mnt/sdcard	fatfs
 #/dev/fd0	/mnt/floppy	fatfs
 
 #/dev/mtd0	/bin		ffs

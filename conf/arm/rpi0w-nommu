@@ -7,15 +7,15 @@
 #
 #makeoptions	CFLAGS+= -mfpu=neon -mfloat-abi=softfp -mcpu=cortex-a8 -fno-math-errno -fno-tree-vectorize
 makeoptions	CFLAGS+= -mcpu=arm1176jzf-s  -fno-dwarf2-cfi-asm
-makeoptions	ASFLAGS+= -mcpu=arm1176jzf-s 
+makeoptions	ASFLAGS+= -mcpu=arm1176jzf-s
 
 #
 # Memory address
 #
 memory		RAM_BASE		0x00000000	# Start of ram
-memory		LOADER_TEXT		0x00008000	# Start of boot loader
+memory		LOADER_TEXT		0x00010000	# Start of boot loader
 memory		KERNEL_TEXT		0x00200000	# Start of kernel
-memory		BOOTIMG_BASE	0x0000A000	# Location of boot image
+memory		BOOTIMG_BASE	0x00012000	# Location of boot image
 memory		SYSPAGE_BASE	0x00000000	# Location of system page
 
 #
@@ -30,7 +30,7 @@ options 	FS_THREADS=4	# Number of file system threads
 #
 # Platform settings
 #
-#options		ARMV6		# Processor core
+options		ARMV6		# Processor core
 #options 	MMU			# Memory management unit
 #options 	CACHE		# Cache memory
 #options 	FPU			# Floating point unit
@@ -79,8 +79,8 @@ device		pm			# Power management
 device		cons		# System console
 device		serial		# Logical serial
 device  	pl011		# ARM PrimeCell PL011 UART (P:serial)
-device		sdmmc		# SD/MMC stack
-device		bcm2835_sd	# BCM2835 SDHost controller
+#device		sdmmc		# SD/MMC stack
+#device		bcm2835_sd	# BCM2835 SDHost controller
 device		null		# NULL device
 device		zero		# Zero device
 device		ramdisk		# RAM disk
@@ -88,13 +88,14 @@ device		ramdisk		# RAM disk
 #
 # Hardware configuations
 #
-#options		SYSTEM_TIMER    # otherwise ARM timer will be used
+options		SYSTEM_TIMER    # otherwise ARM timer will be used
+options     SYSTEM_TIMER_BASE=0x20003000
 options		ARM_VECTORS=0x00000000
 options		PL011_BASE=0x20201000
 options		PL011_IRQ=57
-options		PL011_CLK=48000000
-options		BCM2835_SD_BASE=0x20202000
-options		BCM2835_SD_IRQ=56
+options		PL011_CLK=3000000
+#options		BCM2835_SD_BASE=0x20202000
+#options		BCM2835_SD_IRQ=56
 
 
 #
@@ -136,4 +137,6 @@ command 	pmctrl
 command 	ktrace
 command 	lock
 command 	debug
-math fdlibm
+
+# Math library
+math		fdlibm

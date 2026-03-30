@@ -55,22 +55,23 @@ struct mmumap mmumap_table[] = {
      * Internal SRAM (4M)
      */
     {0x80000000, 0x00000000, 0x20000000, VMT_RAM},
-
-    /*
-     * Counter/Timers (4K)
-     * Interrupt controller (4K)
-     */
-    {0xE0000000, 0x2000B000, 0x1000, VMT_IO},
-
     /*
      * UART 0 (1M)
      */
     {0xE0201000, 0x20201000, 0x1000, VMT_IO},
-
     /*
      * SDHost (4K)
      */
     {0xE0202000, 0x20202000, 0x1000, VMT_IO},
+    /*
+     * System Timer (4K)
+     */
+    {0xE0003000, 0x20003000, 0x1000, VMT_IO},
+    /*
+     * Counter/Timers (4K)
+     * Interrupt controller (4K)
+     */
+    {0xE000B000, 0x2000B000, 0x1000, VMT_IO},
 
     {0, 0, 0, 0}};
 #endif

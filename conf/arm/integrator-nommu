@@ -5,15 +5,15 @@
 #
 # Make options
 #
-makeoptions	GCCFLAGS+= -mcpu=arm9tdmi -fno-dwarf2-cfi-asm
-makeoptions	ASFLAGS+= -mfpu=softfpa
+makeoptions	GCCFLAGS+= -mcpu=arm9tdmi -march=armv4t -fno-dwarf2-cfi-asm
+makeoptions	ASFLAGS+= -mcpu=arm9tdmi -march=armv4t -mfpu=softfpa
 
 #
 # Memory address
 #
 memory		RAM_BASE	0x00000000	# Start of RAM
 memory		LOADER_TEXT	0x00010000	# Start of boot loader
-memory		KERNEL_TEXT	0x00080000	# Start of kernel
+memory		KERNEL_TEXT	0x00100000	# Start of kernel
 memory		BOOTIMG_BASE	0x00012000	# Location of boot image
 memory		SYSPAGE_BASE	0x00000000	# Location of system page
 
@@ -61,7 +61,7 @@ options 	FIFOFS		# FIFO & Pipe
 options 	DEVFS		# Device file system
 options 	RAMFS		# RAM file system
 options 	ARFS		# Archive file system
-#options 	FATFS		# FAT file system
+options 	FATFS		# FAT file system
 
 #
 # Power management
@@ -77,6 +77,8 @@ options 	ARFS		# Archive file system
 device		cons		# System console
 device		serial		# Generic serial
 device  	pl011		# ARM PrimeCell PL011 UART (P:serial)
+#device		sdmmc		# SD/MMC stack (P:block)
+#device		pl181		# ARM PrimeCell PL181 MMCI (P:block)
 device		rtc		# Logical RTC
 device 		pl030		# ARM PrimeCell PL030 RTC
 device		null		# NULL device
@@ -90,6 +92,9 @@ options		ARM_VECTORS=0x00000000
 options		PL011_BASE=0x16000000
 options		PL011_IRQ=1
 options		PL011_CLK=14745600
+options		PL181_BASE=0xdc000000
+options		PL181_IRQ=23
+options		PL181_CLK=24000000
 options		PL030_BASE=0x15000000
 
 
@@ -132,3 +137,6 @@ command 	pmctrl
 command 	ktrace
 command 	lock
 command 	debug
+
+# Math library
+math		fdlibm
