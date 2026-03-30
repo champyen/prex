@@ -70,10 +70,12 @@
 /* Masked interrupt status register */
 #define MIS_RX 0x10 /* Receive interrupt */
 #define MIS_TX 0x20 /* Transmit interrupt */
+#define MIS_RT 0x40 /* Timeout interrupt */
 
 /* Interrupt clear register */
 #define ICR_RX 0x10 /* Clear receive interrupt */
 #define ICR_TX 0x20 /* Clear transmit interrupt */
+#define ICR_RT 0x40 /* Clear timeout interrupt */
 
 /* Line control register (High) */
 #define LCRH_WLEN8 0x60 /* 8 bits */
@@ -144,7 +146,7 @@ static void pl011_set_poll(struct serial_port* sp, int on)
          */
         bus_write_32(UART_IMSC, 0);
     } else
-        bus_write_32(UART_IMSC, (IMSC_RX | IMSC_TX));
+        bus_write_32(UART_IMSC, (IMSC_RX | IMSC_TX | IMSC_RT));
 }
 
 static int pl011_isr(void* arg)
@@ -155,18 +157,18 @@ static int pl011_isr(void* arg)
 
     mis = bus_read_32(UART_MIS);
 
-    if (mis & MIS_RX) {
+    if (mis & (MIS_RX | MIS_RT)) {
         /*
          * Receive interrupt
          */
         // while (bus_read_32(UART_FR) & FR_RXFE);
         do {
-            c = bus_read_32(UART_DR);
-            serial_rcv_char(sp, c);
+            c = (int)bus_read_32(UART_DR);
+            serial_rcv_char(sp, (char)c);
         } while ((bus_read_32(UART_FR) & FR_RXFE) == 0);
 
         /* Clear interrupt status */
-        bus_write_32(UART_ICR, ICR_RX);
+        bus_write_32(UART_ICR, (ICR_RX | ICR_RT));
     }
     if (mis & MIS_TX) {
         /*
@@ -200,8 +202,7 @@ static void pl011_start(struct serial_port* sp)
     bus_write_32(UART_FBRD, fraction);
 
     /* Set N, 8, 1, FIFO enable */
-    // bus_write_32(UART_LCRH, (LCRH_WLEN8 | LCRH_FEN));
-    bus_write_32(UART_LCRH, (LCRH_WLEN8));
+    bus_write_32(UART_LCRH, (LCRH_WLEN8 | LCRH_FEN));
 
     /* Enable UART */
     bus_write_32(UART_CR, (CR_RXE | CR_TXE | CR_UARTEN));

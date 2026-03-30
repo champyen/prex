@@ -120,7 +120,7 @@ void clock_init(void)
 /* The initial counter value */
 #define TIMER_COUNT (CLOCK_RATE / HZ)
 
-#define STIMER_BASE 0x20003000
+#define STIMER_BASE CONFIG_SYSTEM_TIMER_BASE
 #define STIMER_CS (*(volatile uint32_t*)(STIMER_BASE + 0x00))
 #define STIMER_CLO (*(volatile uint32_t*)(STIMER_BASE + 0x04))
 #define STIMER_CHI (*(volatile uint32_t*)(STIMER_BASE + 0x08))
