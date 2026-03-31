@@ -34,7 +34,7 @@
 #include <driver.h>
 #include <sdmmc.h>
 
-#define DEBUG_SDMMC 1
+#define DEBUG_SDMMC 0
 
 #if DEBUG_SDMMC
 #define DPRINTF(a) printf a
