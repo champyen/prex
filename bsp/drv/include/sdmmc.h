@@ -127,7 +127,9 @@ struct sdmmc_ops
 
 typedef enum SDMMC_RSP_TYPE
 {
-    RSP_R1 = 0,
+    RSP_NONE = 0,
+    RSP_R1,
+    RSP_R1B,
     RSP_R2,
     RSP_R3,
     RSP_R4,
