@@ -73,17 +73,13 @@ static int fat_read_bpb(struct fatfsmount* fmp)
     struct fat32_bpb* bpb32;
     size_t size;
     int error;
-    uint32_t bootsect, fatsize, totalsect, maxclust, i;
-    uint32_t total_sectors;
-    char* ptr;
-    int sect;
+    uint32_t fatsize, totalsect, maxclust;
 
     bpb = malloc(SEC_SIZE);
     if (bpb == NULL)
         return ENOMEM;
 
     bpb32 = (struct fat32_bpb*)bpb;
-    ptr = (char*)bpb;
     /* Read boot sector (block:0) */
     size = SEC_SIZE;
     error = device_read(fmp->dev, bpb, &size, 0);

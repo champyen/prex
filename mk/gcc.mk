@@ -12,7 +12,7 @@ CFLAGS+=	-std=c23 -c -O3 -pedantic -Wall -Wundef -Wstrict-prototypes -Wpointer-a
 		-fno-reorder-functions -fno-reorder-blocks -fno-tree-loop-distribute-patterns -fno-strict-aliasing $(GCCFLAGS) $(EXTRA_CFLAGS)
 CPPFLAGS+=	$(DEFINES) -I. $(addprefix -I,$(INCSDIR))
 ACPPFLAGS+=	-D__ASSEMBLY__
-LDFLAGS+=	-static -nostdlib $(addprefix -L,$(LIBSDIR))
+LDFLAGS+=	-static -nostdlib -z noexecstack --no-warn-rwx-segments $(addprefix -L,$(LIBSDIR))
 
 ifeq ($(_DEBUG_),1)
 CFLAGS+=	-fno-omit-frame-pointer -g
