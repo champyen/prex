@@ -27,7 +27,7 @@ Prex is royalty-free software released under Revised BSD License.
 
 ## Features
 
-Prex has the following features:  
+Prex has the following features:
 
 -   Task & Thread Control: preemptive priority scheduling with 256 priority levels
 -   Memory Management: memory protection, virtual address mapping, shared memory, MMU or MMU-less configuration
@@ -46,11 +46,4 @@ Prex has the following features:
 -   Libc: C library fully optimized to generate a small executable file
 -   CmdBox: a small binary that includes tiny versions of many UNIX utilities.
 -   Networking: (plan) TCP/IP stack, BSD socket interface
-
-
-### Recent Development Plan
-
-|                                                              |      |
-| ------------------------------------------------------------ | ---- |
-| - Embedded TCP/IP<br>- Network server<br>- USB support<br>- Tick-less kernel<br>- switch to picolibc | - Shared interrupt<br>- C++ support<br>- Emgo driver model<br>- direct mapped kernel functions interface<br>- SMP support    |
 

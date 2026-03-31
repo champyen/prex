@@ -32,9 +32,9 @@
 #include <driver.h>
 #include <sdmmc.h>
 
-/* #define DEBUG_PL181 1 */
+#define DEBUG_PL181 0
 
-#ifdef DEBUG_PL181
+#if DEBUG_PL181
 #define DPRINTF(a) printf a
 #else
 #define DPRINTF(a)
@@ -180,8 +180,13 @@ static int pl181_sendcmd(uint8_t cmd, uint32_t arg, uint8_t rsp_type, uint8_t* r
     }
 
     if (status & (MMCI_INT_CMD_TIMEOUT)) {
-        DPRINTF(("pl181_sendcmd: timeout status=%x\n", status));
+        DPRINTF(("pl181_sendcmd: timeout status=%lx\n", (long)status));
         return ETIMEDOUT;
+    }
+
+    if ((status & MMCI_INT_CMD_CRC_FAIL) && (rsp_type != RSP_R3)) {
+        DPRINTF(("pl181_sendcmd: crc fail status=%lx\n", (long)status));
+        return EIO;
     }
 
     if (rspbuf) {
@@ -209,6 +214,7 @@ static int pl181_sendcmd(uint8_t cmd, uint32_t arg, uint8_t rsp_type, uint8_t* r
             rspbuf[0] = (r >> 24) & 0xff;
         } else {
             uint32_t r = bus_read_32(MMCI_RESP0_REG);
+            DPRINTF(("pl181_sendcmd: resp0=%lx\n", (long)r));
             rspbuf[0] = (r >> 24) & 0xff;
             rspbuf[1] = (r >> 16) & 0xff;
             rspbuf[2] = (r >> 8) & 0xff;
@@ -245,7 +251,7 @@ static int pl181_setfreq(uint32_t idx)
 
 static int pl181_setwidth(uint32_t bits)
 {
-    /* PL181 on Integrator CP might not support 4-bit? 
+    /* PL181 on Integrator CP might not support 4-bit?
      * NetBSD driver returns 0 (success) but does nothing.
      */
     return 0;

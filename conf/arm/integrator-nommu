@@ -66,14 +66,14 @@ options 	FATFS		# FAT file system
 #
 # Power management
 #
-#options 	PM		# Power management
+options 	PM		# Power management
 #options 	PM_POWERSAVE	# Power policy: Battery optimized
 #options 	PM_PERFORMANCE	# Power policy: Parformance optimized
 
 #
 # Device drivers (initialization order)
 #
-#device		pm		# Power management
+device		pm		# Power management
 device		cons		# System console
 device		serial		# Generic serial
 device  	pl011		# ARM PrimeCell PL011 UART (P:serial)
@@ -92,7 +92,7 @@ options		ARM_VECTORS=0x00000000
 options		PL011_BASE=0x16000000
 options		PL011_IRQ=1
 options		PL011_CLK=14745600
-options		PL181_BASE=0xdc000000
+options		PL181_BASE=0x1c000000
 options		PL181_IRQ=23
 options		PL181_CLK=24000000
 options		PL030_BASE=0x15000000
