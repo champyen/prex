@@ -102,7 +102,7 @@ static int fs_mount(struct task* t, struct mount_msg* msg)
     }
 #ifdef DEBUG
     if (error)
-        dprintf("VFS: mount failed!\n");
+        dprintf("VFS: mount failed [error:%d]!\n", error);
 #endif
     return error;
 }

@@ -63,7 +63,6 @@ options 	DEVFS		# Device file system
 options 	RAMFS		# RAM file system
 options 	ARFS		# Archive file system
 options 	FATFS		# FAT file system
-options 	LIBM=fdlibm	# Math library
 
 #
 # Power management
@@ -94,8 +93,8 @@ options		ARM_VECTORS=0x00000000
 options		PL011_BASE=0x20201000
 options		PL011_IRQ=57
 options		PL011_CLK=3000000
-#options		BCM2835_SD_BASE=0x20202000
-#options		BCM2835_SD_IRQ=56
+options		BCM2835_SD_BASE=0x20202000
+options		BCM2835_SD_IRQ=56
 
 
 #

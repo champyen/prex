@@ -302,6 +302,7 @@ int device_open(const char* name, int mode, device_t* devp)
     sched_lock();
     if ((dev = device_lookup(str)) == NULL) {
         sched_unlock();
+        DPRINTF(("device lookup not found %s\n", str));
         return ENXIO;
     }
     error = device_reference(dev);
