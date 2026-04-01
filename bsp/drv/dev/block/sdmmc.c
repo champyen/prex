@@ -366,7 +366,7 @@ void sdmmc_insert(device_t dev)
 
     /*---- Card is 'idle' state ----*/
     sdmmc_sendcmd(ops, info, CMD0, 0, RSP_NONE, NULL);
-    delay_usec(10000);
+    delay_usec(1000);
 
     err = sdmmc_sendcmd(ops, info, CMD8, 0x1AA, RSP_R1, resp);
     if (err == 0 && ((resp[2] & 0x0F) == 0x1) && (resp[3] == 0xAA)) {
@@ -514,15 +514,6 @@ void sdmmc_insert(device_t dev)
             return;
         }
 
-#if 0
-		for(count = 0; count < BSIZE; count++){
-			if((count % 16) == 0)
-				DPRINTF(("\n"));
-			DPRINTF((" %X", mbr[count]));
-		}
-		DPRINTF(("\n"));
-#endif
-
         ptr = mbr + 446;
         for (i = 0; i < MAX_PARTI; i++) {
             part_exist = (uint32_t*)(ptr + 4);
@@ -547,6 +538,26 @@ void sdmmc_insert(device_t dev)
                 info->part_status |= (1 << i);
             }
             ptr += 16;
+        }
+
+        if (info->part_status == 0) {
+            DPRINTF(("no partiton found, tread whole card as single partition\n"));
+            device_t part_dev;
+            info->part_info[0].start = 0;
+            info->part_info[0].size = info->total_sectors;
+
+            memcpy(&(info->part_drv[0]), &sdmmc_dev_driver, sizeof(struct driver));
+            info->part_drv[0].name = info->part_dev_name[0];
+            info->part_drv[0].init = NULL; /* Avoid wiping drv_list */
+
+            part_dev = device_create(&(info->part_drv[0]), info->part_drv[0].name, D_BLK);
+            info->part_dev[0] = part_dev;
+
+            part_sc = device_private(part_dev);
+            part_sc->ops = ops;
+            part_sc->info = info;
+
+            info->part_status |= 1;
         }
     }
 

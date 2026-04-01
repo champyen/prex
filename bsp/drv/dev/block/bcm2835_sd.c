@@ -34,7 +34,7 @@
 
 #define DEBUG_SDHOST 0
 
-#ifdef DEBUG_SDHOST
+#if DEBUG_SDHOST
 #define DPRINTF(a) printf a
 #else
 #define DPRINTF(a)
@@ -289,7 +289,7 @@ static int bcm_sd_xmit(struct sdmmc_devinfo* info, char* buf, size_t nbyte)
     }
 
     /* Wait for transfer end */
-    retry = 10000000;
+    retry = 1000000;
     while (!(bus_read_32(SDHSTS) & SDHSTS_BLOCK) && --retry > 0)
         delay_usec(1);
 
@@ -316,7 +316,7 @@ static int bcm_sd_recv(struct sdmmc_devinfo* info, char* buf, size_t nbyte)
     }
 
     /* Wait for transfer end */
-    retry = 100000000;
+    retry = 1000000;
     while (!(bus_read_32(SDHSTS) & SDHSTS_BLOCK) && --retry > 0)
         ;
     return 0;
