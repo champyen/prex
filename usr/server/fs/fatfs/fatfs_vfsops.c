@@ -72,7 +72,7 @@ static int fat_read_bpb(struct fatfsmount* fmp)
     struct fat_bpb* bpb;
     struct fat32_bpb* bpb32;
     size_t size;
-    int error;
+    int error = 0;
     uint32_t fatsize, totalsect, maxclust;
 
     bpb = malloc(SEC_SIZE);
@@ -133,8 +133,6 @@ static int fat_read_bpb(struct fatfsmount* fmp)
     /* fs->database = fs->fatbase + fatsize + fs->n_rootdir / (SS(fs)/32); */
     fmp->last_cluster = (totalsect - fmp->data_start) / bpb->sectors_per_cluster + CL_FIRST;
     fmp->free_scan = CL_FIRST;
-
-    free(bpb);
 
     DPRINTF(("----- FAT info ----- \n"));
     if (fmp->fat_type == 32) {
