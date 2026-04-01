@@ -158,7 +158,7 @@ static int bcm_sd_sendcmd(uint8_t cmd, uint32_t arg, uint8_t rsp_type, uint8_t* 
     bus_write_32(SDHCFG, bcm_sd_hcfg | SDHCFG_BUSY_EN);
 
     /* Clear status */
-    bus_write_32(SDHSTS, 0x7ff);
+    bus_write_32(SDHSTS, 0x7fff);
 
     if (bcm_sd_wait_idle() != 0) {
         DPRINTF(("bcm_sd_sendcmd: device busy\n"));
@@ -282,7 +282,7 @@ static int bcm_sd_xmit(struct sdmmc_devinfo* info, char* buf, size_t nbyte)
         while (((bus_read_32(SDEDM) >> 4) & 0x1f) >= 16 && --retry > 0)
             delay_usec(1);
         if (retry == 0) {
-            return ETIMEDOUT;
+            return ETIMEOUT;
         }
         bus_write_32(SDDATA, *p++);
         count--;
@@ -290,7 +290,7 @@ static int bcm_sd_xmit(struct sdmmc_devinfo* info, char* buf, size_t nbyte)
 
     /* Wait for transfer end */
     retry = 10000000;
-    while (!(bus_read_32(SDHSTS) & SDHSTS_BLOCK) && --retry > 0)
+    while ((!bus_read_32(SDHSTS) & SDHSDS_BLOCK) && --retry > 0)
         delay_usec(1);
 
     return 0;
@@ -312,11 +312,11 @@ static int bcm_sd_recv(struct sdmmc_devinfo* info, char* buf, size_t nbyte)
         }
     }
     if (retry == 0) {
-        return ETIMEDOUT;
+        return ETIMEOUT;
     }
 
     /* Wait for transfer end */
-    retry = 100000000;
+    retry = 10000000;
     while (!(bus_read_32(SDHSTS) & SDHSTS_BLOCK) && --retry > 0)
         ;
     return 0;
@@ -327,18 +327,18 @@ static int bcm_sd_init(struct driver* self)
     uint32_t edm, val;
 
     DPRINTF(("bcm_sd_init\n"));
-    /* GPIO 48~53 to ALTO (100) */
-    val = bus_read_32(GPFSEL4);
-    val &= ~(7 << 24); val |= (4 << 24);    /* GPIO 48 */
-    val &= ~(7 << 27); val |= (4 << 27);    /* GPIO 49 */
-    bus_write_32(GPFSEL4, val);
+    /* GPIO 48~53 to ALTO(100) */
+    val = bus_read_32(GPSEL4);
+    val &= ~(7<<24); val |= (4<<24);    /* GPIO 48 */
+    val &= ~(7<<27); val |= (4<<27);    /* GPIO 49 */
+    bus_write_32(GPSEL4, val);
 
-    val = bus_read_32(GPFSEL5);
-    val &= ~(7 << 0); val |= (4 << 0);      /* GPIO 50 */
-    val &= ~(7 << 3); val |= (4 << 3);      /* GPIO 51 */
-    val &= ~(7 << 6); val |= (4 << 6);      /* GPIO 52 */
-    val &= ~(7 << 9); val |= (4 << 9);      /* GPIO 32 */
-    bus_write_32(GPFSEL5, val);
+    val = bus_read_32(GPSEL5);
+    val &= ~(7<<0); val |= (4<<0);    /* GPIO 50 */
+    val &= ~(7<<3); val |= (4<<3);    /* GPIO 51 */
+    val &= ~(7<<6); val |= (4<<6);    /* GPIO 52 */
+    val &= ~(7<<9); val |= (4<<9);    /* GPIO 32 */
+    bus_write_32(GPSEL5, val);
 
     /* Reset host */
     bus_write_32(SDVDD, 0);
@@ -350,7 +350,7 @@ static int bcm_sd_init(struct driver* self)
     bus_write_32(SDARG, 0);
     bus_write_32(SDTOUT, SDTOUT_DEFAULT);
     bus_write_32(SDCDIV, 0);
-    bus_write_32(SDHSTS, 0x7ff);
+    bus_write_32(SDHSTS, 0x7fff);
     bus_write_32(SDHCFG, 0);
     bus_write_32(SDHBCT, 0);
     bus_write_32(SDHBLC, 0);
@@ -365,7 +365,7 @@ static int bcm_sd_init(struct driver* self)
     bcm_sd_hcfg = SDHCFG_WIDE_INT | SDHCFG_SLOW | SDHCFG_DATA_EN | SDHCFG_BLOCK_EN;
     bus_write_32(SDHCFG, bcm_sd_hcfg);
     bus_write_32(SDCDIV, SDCDIV_MASK);
-    bus_write_32(SDHSTS, 0x7ff);
+    bus_write_32(SDHSTS, 0);
 
     bcm_sd_info.dev_name = "sdmmc0";
     bcm_sd_info.part_dev_name = bcm_sd_part_names;

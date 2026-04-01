@@ -366,7 +366,7 @@ void sdmmc_insert(device_t dev)
 
     /*---- Card is 'idle' state ----*/
     sdmmc_sendcmd(ops, info, CMD0, 0, RSP_NONE, NULL);
-    delay_usec(1000);
+    delay_usec(10000);
 
     err = sdmmc_sendcmd(ops, info, CMD8, 0x1AA, RSP_R1, resp);
     if (err == 0 && ((resp[2] & 0x0F) == 0x1) && (resp[3] == 0xAA)) {
