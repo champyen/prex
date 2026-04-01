@@ -190,7 +190,13 @@ static int sdmmc_read(device_t dev, char* buf, size_t* nbyte, int sect_addr)
         *nbyte = 0;
         return -1;
     }
-
+#if 1
+    err = ops->recv(info, kbuf, BSIZE*sectors);
+    if (err != 0) {
+        DPRINTF(("[%s] recv error %d\n", __func__, err));
+        return err;
+    }
+#else
     do {
         err = ops->recv(info, kbuf, BSIZE);
         if (err != 0) {
@@ -200,6 +206,7 @@ static int sdmmc_read(device_t dev, char* buf, size_t* nbyte, int sect_addr)
         kbuf += BSIZE;
         sectors--;
     } while (sectors > 0);
+#endif
 
     if (*nbyte > 512) {
         err = sdmmc_sendcmd(ops, info, CMD12, 0, RSP_R1, resp);
@@ -276,6 +283,12 @@ static int sdmmc_write(device_t dev, char* buf, size_t* nbyte, int sect_addr)
         /* TODO: error state */
     }
 
+#if 1
+    err = ops->xmit(info, kbuf, BSIZE*sectors);
+    if (err != 0) {
+        /* TODO: error state */
+    }
+#else
     do {
         err = ops->xmit(info, kbuf, BSIZE);
         if (err != 0) {
@@ -284,6 +297,7 @@ static int sdmmc_write(device_t dev, char* buf, size_t* nbyte, int sect_addr)
         kbuf += BSIZE;
         sectors--;
     } while (sectors > 0);
+#endif
 
     if (cmd == CMD25 && (info->sdmmc_type & (SDV1_CARD | SDV2_CARD))) {
         err = sdmmc_sendcmd(ops, info, CMD12, 0, RSP_R1, resp);
