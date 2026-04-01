@@ -290,7 +290,13 @@ __END_DECLS
 #define __sfeof(p) (((p)->_flags & __SEOF) != 0)
 #define __sferror(p) (((p)->_flags & __SERR) != 0)
 #define __sclearerr(p) ((void)((p)->_flags &= ~(__SERR | __SEOF)))
-#define __sfileno(p) ((p)->_file)
+__BEGIN_DECLS
+extern int __sdidinit;
+void __sinit(void);
+__END_DECLS
+
+#define __sfileno(p) \
+    ((!__sdidinit ? __sinit() : (void)0), (p)->_file)
 
 #define feof(p) __sfeof(p)
 #define ferror(p) __sferror(p)

@@ -262,6 +262,7 @@ int main(int argc, char* argv[])
     object_t execobj, procobj, fsobj;
     struct bind_msg bm;
     struct msg m;
+    int fd;
 
     sys_log("Starting bootstrap server\n");
 
@@ -315,6 +316,15 @@ int main(int argc, char* argv[])
      */
     copy_file("/boot/rc", "/etc/rc");
     copy_file("/boot/fstab", "/etc/fstab");
+
+    /*
+     * Open console for stdin/stdout/sterr
+     */
+    fd = open("/dev/console", O_RDWR);
+    if (fd == 0) {
+        dup(0); /* stdout */
+        dup(0); /* stderr */
+    }
 
     /*
      * Exec first application.
