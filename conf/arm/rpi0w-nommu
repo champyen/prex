@@ -75,6 +75,7 @@ options 	FATFS		# FAT file system
 # Device drivers (initialization order)
 #
 device		pm			# Power management
+device		bcm2835_dma	# BCM2835 DMA controller
 device		cons		# System console
 device		serial		# Logical serial
 device  	pl011		# ARM PrimeCell PL011 UART (P:serial)
@@ -91,6 +92,7 @@ options		SYSTEM_TIMER    # otherwise ARM timer will be used
 options     SYSTEM_TIMER_BASE=0x20003000
 options		ARM_VECTORS=0x00000000
 options		GPIO_BASE=0x20200000
+options		BCM2835_DMA_BASE=0x20007000
 options		PL011_BASE=0x20201000
 options		PL011_IRQ=57
 options		PL011_CLK=3000000

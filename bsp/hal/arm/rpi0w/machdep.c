@@ -56,6 +56,10 @@ struct mmumap mmumap_table[] = {
      */
     {0x80000000, 0x00000000, 0x20000000, VMT_RAM},
     /*
+     * DMA (4K)
+     */
+    {0xE0007000, 0x20007000, 0x1000, VMT_IO},
+    /*
      * GPIO (4K)
      */
     {0xE0200000, 0x20200000, 0x1000, VMT_IO},
