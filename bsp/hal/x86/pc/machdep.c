@@ -51,7 +51,7 @@ static struct mmumap mmumap_table[] = {
     /*
      * RAM
      */
-    {0x80000000, 0x00000000, AUTOSIZE, VMT_RAM},
+    {CONFIG_SYSPAGE_BASE, CONFIG_SYSPAGE_PHY_BASE, AUTOSIZE, VMT_RAM},
 
     {0, 0, 0, 0}};
 #endif

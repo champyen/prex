@@ -47,6 +47,10 @@ Step 1: Prepare Toolchain
   - GNU Binutils 2.15 or later
   - GNU Make 3.81 or later
 
+  Note: If you are building the x86 target on an x86_64 Linux host,
+  you must install the following multilib packages:
+  $ sudo apt install gcc-multilib g++-multilib libc6-dev-i386
+
   The toolchain should be built appropriately for your target
   architecture to cross-compile Prex.
 

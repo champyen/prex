@@ -66,6 +66,6 @@ void diag_init(void)
 {
 
 #ifdef CONFIG_MMU
-    mmu_premap(0x16000000, UART_BASE);
+    mmu_premap(CONFIG_PL011_PHY_BASE, UART_BASE);
 #endif
 }

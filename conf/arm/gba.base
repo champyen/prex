@@ -8,13 +8,15 @@
 makeoptions	GCCFLAGS+= -mcpu=arm7tdmi -mtune=arm7tdmi -fno-dwarf2-cfi-asm
 makeoptions	ASFLAGS+= -mfpu=softfpa
 
+mmu		SYSPAGE_BASE	0x03002000 0x03002000	# Location of system page
+mmu		IOMEM_BASE	    0x00000000 0x00000000	# Location of system page
+
 #
 # Memory address
 #
 memory		LOADER_TEXT	0x03000000	# Start of boot loader
 memory		KERNEL_TEXT	0x02000000	# Start of kernel
 memory		BOOTIMG_BASE	0x08002000	# Location of boot image
-memory		SYSPAGE_BASE	0x03002000	# Location of system page
 
 #
 # Tunable paramters
@@ -122,3 +124,6 @@ command 	uname
 #command 	ktrace
 #command 	lock
 #command 	debug
+
+# Math library
+math		fdlibm

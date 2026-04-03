@@ -33,6 +33,6 @@
 #define STUB(index, func)                                                                                              \
     .global func;                                                                                                      \
     ENTRY(func)                                                                                                        \
-    movl dki_table, % eax;                                                                                             \
-    add $(index * 4), % eax;                                                                                           \
-    jmp*(% eax);
+    movl dki_table, %eax;                                                                                              \
+    add $(index * 4), %eax;                                                                                            \
+    jmp *(%eax)

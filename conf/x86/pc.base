@@ -5,17 +5,24 @@
 #
 # Make options
 #
-makeoptions	GCCFLAGS+= -mcpu=arm9tdmi -march=armv4t -fno-dwarf2-cfi-asm
-makeoptions	ASFLAGS+= -mcpu=arm9tdmi -march=armv4t -mfpu=softfpa
+makeoptions	GCCFLAGS+= -march=i386
+makeoptions	GCCFLAGS+= -m32
+makeoptions	GCCFLAGS+= -mpreferred-stack-boundary=2
+makeoptions LDFLAGS+= -m elf_i386
+
+#
+# Make options
+#
+
+mmu		SYSPAGE_BASE	0x80000000  0x00000000	# Location of system page
+mmu     IOMEM_BASE      0x00000000  0x00000000
 
 #
 # Memory address
 #
-memory		RAM_BASE	0x00000000	# Start of RAM
-memory		LOADER_TEXT	0x00010000	# Start of boot loader
-memory		KERNEL_TEXT	0x00100000	# Start of kernel
-memory		BOOTIMG_BASE	0x00012000	# Location of boot image
-memory		SYSPAGE_BASE	0x00000000	# Location of system page
+memory		LOADER_TEXT	0x00004000	# Start of boot loader
+memory		KERNEL_TEXT	0x00010000	# Start of kernel
+memory		BOOTIMG_BASE	0x00100000	# Location of boot image
 
 #
 # Tunable paramters
@@ -29,7 +36,7 @@ options 	FS_THREADS=4	# Number of file system threads
 #
 # Platform settings
 #
-options		ARM926EJS	# Processor core
+options		I386		# Processor type
 #options 	MMU		# Memory management unit
 options 	CACHE		# Cache memory
 #options 	FPU		# Floating point unit
@@ -41,18 +48,20 @@ options 	BOOTDISK	# Disk for /boot directory
 #
 options 	POSIX		# POSIX support
 options 	CMDBOX		# Core utilities
-options 	TINY		# Optimize for size
+#options 	TINY		# Optimize for size
 
 #
 # Kernel hacking
 #
-#options 	KD		# Kernel debugger
+options 	KD		# Kernel debugger
 #options 	AUDIT		# Security auditing
 
 #
 # Diagnostic options
 #
+#options 	DIAG_SCREEN	# Diagnostic via screen
 options 	DIAG_SERIAL	# Diagnostic via serial port
+#options 	DIAG_BOCHS	# Diagnostic via Bochs emulater
 
 #
 # File systems
@@ -67,36 +76,37 @@ options 	FATFS		# FAT file system
 # Power management
 #
 options 	PM		# Power management
-#options 	PM_POWERSAVE	# Power policy: Battery optimized
+options 	PM_POWERSAVE	# Power policy: Battery optimized
 #options 	PM_PERFORMANCE	# Power policy: Parformance optimized
+options 	DVS_EMULATION	# Dynamic voltage scaling emulation
 
 #
 # Device drivers (initialization order)
 #
 device		pm		# Power management
+device		i8237		# I8237 DMA controller
 device		cons		# System console
-device		serial		# Generic serial
-device  	pl011		# ARM PrimeCell PL011 UART (P:serial)
-#device		sdmmc		# SD/MMC stack (P:block)
-#device		pl181		# ARM PrimeCell PL181 MMCI (P:block)
+device		wscons		# Workstation console
+device		pckbd	    	# PC/AT Keyboard (P:wscons)
+device		vga	    	# VGA video (P:wscons)
+#device		serial		# Logical serial
+#device		ns16550	    	# NS16550 serial port (P:serial)
+#device		psaux		# PS/2 Mouse
+device		cpufreq		# CPU frequency controll
+device		est	    	# Intel enhanced speedstep (P:cpufreq)
 device		rtc		# Logical RTC
-device 		pl030		# ARM PrimeCell PL030 RTC
+device		mc146818	# MC146818 Real time clock
 device		null		# NULL device
 device		zero		# Zero device
 device		ramdisk		# RAM disk
+device		fdd		# Floppy disk drive
 
 #
 # Hardware configuations
 #
-options		ARM_VECTORS=0x00000000
-options		PL011_BASE=0x16000000
-options		PL011_IRQ=1
-options		PL011_CLK=14745600
-options		PL181_BASE=0x1c000000
-options		PL181_IRQ=23
-options		PL181_CLK=24000000
-options		PL030_BASE=0x15000000
-
+options		NS16550_BASE=0x3f8
+options		NS16550_IRQ=4
+options		MC146818_BASE=0x70
 
 #
 # Command box
@@ -137,6 +147,5 @@ command 	pmctrl
 command 	ktrace
 command 	lock
 command 	debug
-
-# Math library
 math		fdlibm
+options 	DIAG_SERIAL

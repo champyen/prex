@@ -34,7 +34,11 @@ So, I recommend you to create the bootable demo floppy at first. Then,  you can 
 
 The following is the easiest step to hack the Prex kernel on x86-pc.
 
-1. Build your own kernel. Please refer to  ["Prex Build Guide"](build.md).  
+1. Build your own kernel. Please refer to  ["Prex Build Guide"](build.md).
+   Note: If you are building on an x86_64 Linux host, you must install the following multilib packages:
+   ```
+   $ sudo apt install gcc-multilib g++-multilib libc6-dev-i386
+   ```
 
 2. Create the demo floppy. Please refer to  **"How to create a Prex demo floppy?"**
 
@@ -117,7 +121,7 @@ The Prex demo disk is available for download. The disk image is a 1.44M floppy i
  If you are using QEMU, the same image created for Bochs with the above info can be used. You can simply try Prex with QEMU by the following command.
 
 ```
-$ qemu -fda (your directory)/prex-X.X.X.i386-pc.img -localtime
+$ qemu-system-i386 -fda (your directory)/prex-X.X.X.i386-pc.img -nographic -serial mon:stdio -m 32M
 ```
 
 ## How to modify the OS boot image?
@@ -188,11 +192,7 @@ Some special keys are defined by the keyboard driver.
 
 The Bochs console is useful to debug kernel because you can browse or find the log message in the console window.
 
-The Bochs internal debugger is also useful to debug kernel. It can be enabled with the following configuration.
-
-```
-$ ./configure --enable-debugger --enable-disasm --enable-port-e9-hack
-```
+The Bochs internal debugger is also useful to debug kernel. It can be enabled by changing the configuration file.
 
 
 

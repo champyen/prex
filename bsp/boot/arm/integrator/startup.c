@@ -47,8 +47,8 @@ static void bootinfo_init(void)
     /*
      * On-board SSRAM - 32M
      */
-    bi->ram[0].base = 0;
-    bi->ram[0].size = 0x2000000;
+    bi->ram[0].base = CONFIG_RAM_BASE;
+    bi->ram[0].size = CONFIG_RAM_SIZE;
     bi->ram[0].type = MT_USABLE;
 
     bi->nr_rams = 1;

@@ -9,4 +9,4 @@ include $(SRCDIR)/mk/image.mk
 #
 sys: bsp
 usr: sys
-$(TARGET): $(SUBDIR)
+$(TARGET): bsp $(SUBDIR)

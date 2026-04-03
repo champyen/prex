@@ -31,21 +31,17 @@
 #ifndef _RPI0W_PLATFORM_H
 #define _RPI0W_PLATFORM_H
 
+#include <conf/config.h>
+
 /* number of interrupt vectors */
 #define NIRQS 96
-
-#ifdef CONFIG_MMU
-#define CM_IOMEM_BASE 0xc0000000
-#else
-#define CM_IOMEM_BASE 0
-#endif
 
 /*
 #define FPGA_BASE (CM_IOMEM_BASE + 0x10000000
 */
-#define ICU_BASE (CM_IOMEM_BASE + 0x2000B000)
+#define ICU_BASE (CONFIG_IOMEM_BASE + 0x2000B000)
 #define TIMER_BASE (ICU_BASE + 0x300)
-#define UART_BASE (CM_IOMEM_BASE + 0x20201000)
+#define UART_BASE (CONFIG_PL011_BASE)
 
 __BEGIN_DECLS
 void set_vbar(vaddr_t);

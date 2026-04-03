@@ -58,37 +58,37 @@ struct mmumap mmumap_table[] = {
     /*
      * Internal SRAM (32M)
      */
-    {0x80000000, 0x00000000, 0x2000000, VMT_RAM},
+    {CONFIG_SYSPAGE_BASE, CONFIG_RAM_BASE, CONFIG_RAM_SIZE, VMT_RAM},
 
     /*
      * FPGA core control (4K)
      */
-    {0xD0000000, 0x10000000, 0x1000, VMT_IO},
+    {CONFIG_FPGA_BASE, CONFIG_FPGA_PHY_BASE, 0x1000, VMT_IO},
 
     /*
      * Counter/Timers (1M)
      */
-    {0xD3000000, 0x13000000, 0x100000, VMT_IO},
+    {CONFIG_TIMER_BASE, CONFIG_TIMER_PHY_BASE, 0x100000, VMT_IO},
 
     /*
      * Interrupt controller (1M)
      */
-    {0xD4000000, 0x14000000, 0x100000, VMT_IO},
+    {CONFIG_ICU_BASE, CONFIG_ICU_PHY_BASE, 0x100000, VMT_IO},
 
     /*
      * Real-time clock (1M)
      */
-    {0xD5000000, 0x15000000, 0x100000, VMT_IO},
+    {CONFIG_PL030_BASE, CONFIG_PL030_PHY_BASE, 0x100000, VMT_IO},
 
     /*
      * UART 0 (1M)
      */
-    {0xD6000000, 0x16000000, 0x100000, VMT_IO},
+    {CONFIG_PL011_BASE, CONFIG_PL011_PHY_BASE, 0x100000, VMT_IO},
 
     /*
      * MMCI (PL181) (1M)
      */
-    {0xDC000000, 0x1C000000, 0x100000, VMT_IO},
+    {CONFIG_PL181_BASE, CONFIG_PL181_PHY_BASE, 0x100000, VMT_IO},
 
     {0, 0, 0, 0}};
 #endif

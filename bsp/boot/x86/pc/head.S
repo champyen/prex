@@ -188,7 +188,7 @@ setup_screen:
 	pushw	%es
 	pushw	%ds
 	pushw	%bp
-	movb	$0x2e, %al		/* print '.' for verify */
+	movb	$0x42, %al		/* print 'B' for verify */
 	movb	$0x0e, %ah
 	movw	$0x07, %bx
 	int	$0x10

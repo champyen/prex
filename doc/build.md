@@ -40,6 +40,11 @@ Prepare the following packages.
 - GNU Binutils (Mostly, it is bundled with the toolchain.)
 - GNU Make
 
+To build the x86 target on an x86_64 Linux host, you must install the following multilib packages:
+```
+$ sudo apt install gcc-multilib g++-multilib libc6-dev-i386
+```
+
 GCC/Clang and Binutils should be built appropriately for your target architecture if you cross-compile Prex.
 
 #### Step 2. Get Sources
@@ -115,12 +120,12 @@ $ ./configure --help
 
 Usage: configure [options]
 Options:
-        --help                  print this message
-        --target=TARGET         use TARGET for target system
-        --profile=PROFILE       use PROFILE for target profile
-        --cross-prefix=PREFIX   use PREFIX for compile tools (e.g: arm-none-eabi )
-        --cc=CC                 use CC as C compiler (e.g: gcc, clang, pcc)
-        --no-debug              disable all debug features
+	--help			print this message
+	--target=TARGET		use TARGET for target system
+	--cross-prefix=PREFIX	use PREFIX for compile tools
+	--cc=CC			use CC as C compiler
+	--enable-mmu		enable MMU support
+	--no-debug		disable all debug features
 
 $ _
 ```

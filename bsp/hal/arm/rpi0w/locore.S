@@ -39,8 +39,8 @@
 	.code 32
 
 ENTRY(_mach_putc)
-    ldr r1, =0x20201000
-    ldr r2, =0x20201018
+    ldr r1, =CONFIG_PL011_PHY_BASE
+    ldr r2, =(CONFIG_PL011_PHY_BASE+0x18)
 putc_chk:
     ldr r3, [r2]
     ands r3, r3,#0x20

@@ -56,15 +56,12 @@ extern u_char inb(int);
  */
 void debug_putc(int c)
 {
-
-#if defined(DEBUG) && defined(CONFIG_DIAG_SERIAL)
     /*
      * output to serial port.
      */
     while (!(inb(COM_LSR) & 0x20))
         ;
     outb(COM_THR, c);
-#endif
 
 #if defined(DEBUG) && defined(CONFIG_DIAG_BOCHS)
     /*
@@ -80,8 +77,6 @@ void debug_putc(int c)
  */
 void debug_init(void)
 {
-
-#if defined(DEBUG) && defined(CONFIG_DIAG_SERIAL)
     /*
      * Initialize serial port.
      */
@@ -97,5 +92,4 @@ void debug_init(void)
     outb(COM_FCR, 0x00); /* Disable FIFO */
     inb(COM_RBR);
     inb(COM_RBR);
-#endif
 }

@@ -47,8 +47,8 @@ static void bootinfo_init(void)
     /*
      * On-Board DRAM - 512M
      */
-    bi->ram[0].base = 0x00000000;
-    bi->ram[0].size = 0x20000000;
+    bi->ram[0].base = CONFIG_RAM_BASE;
+    bi->ram[0].size = CONFIG_RAM_SIZE;
     bi->ram[0].type = MT_USABLE;
 
     bi->nr_rams = 1;

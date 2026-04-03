@@ -54,27 +54,27 @@ struct mmumap mmumap_table[] = {
     /*
      * Internal SRAM (4M)
      */
-    {0x80000000, 0x00000000, 0x20000000, VMT_RAM},
+    {CONFIG_SYSPAGE_BASE, CONFIG_SYSPAGE_PHY_BASE, CONFIG_RAM_SIZE, VMT_RAM},
     /*
      * DMA (4K)
      */
-    {0xE0007000, 0x20007000, 0x1000, VMT_IO},
+    {CONFIG_BCM2835_DMA_BASE, CONFIG_BCM2835_DMA_PHY_BASE, 0x1000, VMT_IO},
     /*
      * GPIO (4K)
      */
-    {0xE0200000, 0x20200000, 0x1000, VMT_IO},
+    {CONFIG_GPIO_BASE, CONFIG_GPIO_PHY_BASE, 0x1000, VMT_IO},
     /*
      * UART 0 (4K)
      */
-    {0xE0201000, 0x20201000, 0x1000, VMT_IO},
+    {CONFIG_PL011_BASE, CONFIG_PL011_PHY_BASE, 0x1000, VMT_IO},
     /*
      * SDHost (4K)
      */
-    {0xE0202000, 0x20202000, 0x1000, VMT_IO},
+    {CONFIG_BCM2835_SD_BASE, CONFIG_BCM2835_SD_PHY_BASE, 0x1000, VMT_IO},
     /*
      * System Timer (4K)
      */
-    {0xE0003000, 0x20003000, 0x1000, VMT_IO},
+    {CONFIG_SYSTEM_TIMER_BASE, CONFIG_SYSTEM_TIMER_PHY_BASE, 0x1000, VMT_IO},
     /*
      * Counter/Timers (4K)
      * Interrupt controller (4K)

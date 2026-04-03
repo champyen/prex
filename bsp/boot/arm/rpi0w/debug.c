@@ -30,11 +30,7 @@
 #include <sys/param.h>
 #include <boot.h>
 
-#ifdef CONFIG_MMU
-#define UART_BASE (CONFIG_PL011_BASE - 0xc0000000)
-#else
-#define UART_BASE CONFIG_PL011_BASE
-#endif
+#define UART_BASE CONFIG_PL011_PHY_BASE
 #define UART_CLK CONFIG_PL011_CLK
 #define BAUD_RATE 115200
 

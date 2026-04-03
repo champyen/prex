@@ -12,6 +12,9 @@ CFLAGS+=	-std=c23 -c -O3 -pedantic -Wall -Wundef -Wstrict-prototypes -Wpointer-a
 		-fno-reorder-functions -fno-reorder-blocks -fno-tree-loop-distribute-patterns -fno-strict-aliasing $(GCCFLAGS) $(EXTRA_CFLAGS)
 CPPFLAGS+=	$(DEFINES) -I. $(addprefix -I,$(INCSDIR))
 ACPPFLAGS+=	-D__ASSEMBLY__
+ifneq ($(filter -m32,$(GCCFLAGS)),)
+ASFLAGS+=	--32
+endif
 LDFLAGS+=	-static -nostdlib -z noexecstack --no-warn-rwx-segments $(addprefix -L,$(LIBSDIR))
 
 ifeq ($(_DEBUG_),1)
@@ -42,7 +45,7 @@ LDFLAGS+=	-r -d
 endif
 
 ifndef LIBGCC_PATH
-LIBGCC_PATH := $(dir $(shell $(RAWCC) -print-libgcc-file-name))
+LIBGCC_PATH := $(dir $(shell $(RAWCC) $(GCCFLAGS) -print-libgcc-file-name))
 export LIBGCC_PATH
 endif
 PLATFORM_LIBS+=	-L$(LIBGCC_PATH) -lgcc

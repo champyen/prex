@@ -30,18 +30,14 @@
 #ifndef _INTEGRATOR_PLATFORM_H
 #define _INTEGRATOR_PLATFORM_H
 
+#include <conf/config.h>
+
 /* number of interrupt vectors */
 #define NIRQS 29
 
-#ifdef CONFIG_MMU
-#define CM_IOMEM_BASE 0xc0000000
-#else
-#define CM_IOMEM_BASE 0
-#endif
-
-#define FPGA_BASE (CM_IOMEM_BASE + 0x10000000)
-#define TIMER_BASE (CM_IOMEM_BASE + 0x13000000)
-#define ICU_BASE (CM_IOMEM_BASE + 0x14000000)
-#define UART_BASE (CM_IOMEM_BASE + 0x16000000)
+#define FPGA_BASE (CONFIG_FPGA_BASE)
+#define TIMER_BASE (CONFIG_TIMER_BASE)
+#define ICU_BASE (CONFIG_ICU_BASE)
+#define UART_BASE (CONFIG_PL011_BASE)
 
 #endif /* !_INTEGRATOR_PLATFORM_H */

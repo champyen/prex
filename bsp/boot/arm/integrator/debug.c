@@ -30,8 +30,8 @@
 #include <sys/param.h>
 #include <boot.h>
 
-#define UART_BASE 0x16000000
-#define UART_CLK 14745600
+#define UART_BASE CONFIG_PL011_PHY_BASE
+#define UART_CLK CONFIG_PL011_CLK
 #define BAUD_RATE 115200
 
 /* UART Registers */
