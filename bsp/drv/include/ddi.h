@@ -82,10 +82,28 @@ void delay_usec(u_long usec);
 int enodev(void);
 int nullop(void);
 
+/*
+ * DMA transfer request
+ */
+struct dma_xfer_req
+{
+    void*   addr;       /* memory address */
+    paddr_t dev_addr;   /* device address */
+    u_long  size;       /* transfer size */
+    int     dir;        /* direction */
+    int     dreq;       /* dreq line */
+};
+
+/* DMA directions */
+#define DMA_READ  0 /* device -> memory */
+#define DMA_WRITE 1 /* memory -> device */
+#define DMA_COPY  2 /* memory -> memory */
+
 dma_t dma_attach(int chan);
 void dma_detach(dma_t handle);
-void dma_setup(dma_t handle, void* addr, u_long count, int read);
+void dma_xfer(dma_t handle, struct dma_xfer_req* req);
 void dma_stop(dma_t handle);
+void dma_wait(dma_t handle, int32_t timeout_ms);
 void* dma_alloc(size_t size);
 
 long atol(const char* str);

@@ -302,7 +302,13 @@ static void fdc_io(struct fdd_softc* sc)
 
     timer_callout(&sc->tmr, 2000, &fdc_timeout, sc);
 
-    dma_setup(sc->dma, irp->buf, io_size, read);
+    struct dma_xfer_req req;
+    req.addr = irp->buf;
+    req.size = io_size;
+    req.dir = read ? DMA_READ : DMA_WRITE;
+    req.dev_addr = 0;
+    req.dreq = 0;
+    dma_xfer(sc->dma, &req);
 
     /* Send command */
     fdc_out(read ? CMD_READ : CMD_WRITE);

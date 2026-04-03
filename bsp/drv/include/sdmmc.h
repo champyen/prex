@@ -32,6 +32,7 @@
 
 #include <sys/cdefs.h>
 #include <sys/ioctl.h>
+#include <ddi.h>
 
 #define MAX_PARTI 4
 
@@ -102,11 +103,14 @@ struct sdmmc_devinfo
     uint8_t ocr[4];
     uint32_t card_rca;
 
-    /* TODO: multi-partition support */
+    /* multi-partition support */
     uint32_t part_status;
     part_record part_info[MAX_PARTI];
     device_t part_dev[MAX_PARTI];
     struct driver part_drv[MAX_PARTI];
+
+    struct irp irp;   /* I/O request packet */
+
 };
 
 struct sdmmc_ops

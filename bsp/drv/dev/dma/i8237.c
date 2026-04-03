@@ -184,7 +184,7 @@ void dma_detach(dma_t handle)
     splx(s);
 }
 
-void dma_setup(dma_t handle, void* addr, u_long count, int read)
+void dma_xfer(dma_t handle, struct dma_xfer_req* req)
 {
     struct dma* dma = (struct dma*)handle;
     const struct dma_port* regs;
@@ -193,7 +193,7 @@ void dma_setup(dma_t handle, void* addr, u_long count, int read)
     int s;
 
     ASSERT(handle);
-    paddr = kvtop(addr);
+    paddr = kvtop(req->addr);
 
     /* dma address must be under 16M. */
     ASSERT(paddr < 0xffffff);
@@ -203,7 +203,8 @@ void dma_setup(dma_t handle, void* addr, u_long count, int read)
     chan = (u_int)dma->chan;
     regs = &dma_regs[chan];
     bits = (chan < 4) ? chan : chan >> 2;
-    mode = read ? 0x44U : 0x48U;
+    mode = (req->dir == DMA_READ) ? 0x44U : 0x48U;
+    u_long count = req->size;
     count--;
 
     bus_write_8(regs->mask, bits | 0x04);                    /* Disable channel */

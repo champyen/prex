@@ -33,6 +33,7 @@
 #include <sdmmc.h>
 
 #define DEBUG_SDHOST 0
+#define BCM2835_SD_DMA 1
 
 #if DEBUG_SDHOST
 #define DPRINTF(a) printf a
@@ -101,6 +102,11 @@
 #define GPFSEL4     (GPIO_BASE + 0x10)
 #define GPFSEL5     (GPIO_BASE + 0x14)
 
+#if BCM2835_SD_DMA
+#define SDHOST_DREQ 13
+static dma_t bcm_sd_dma = NODMA;
+#endif
+
 static int bcm_sd_init(struct driver*);
 static int bcm_sd_sendcmd(uint8_t cmd, uint32_t arg, uint8_t rsp_type, uint8_t* rspbuf);
 static int bcm_sd_setfreq(uint32_t idx);
@@ -127,20 +133,27 @@ static struct sdmmc_ops bcm_sd_ops = {
     /* recv */ bcm_sd_recv,
 };
 
-static struct sdmmc_devinfo bcm_sd_info;
 static char* bcm_sd_part_names[] = {"sdmmc0p1", "sdmmc0p2", "sdmmc0p3", "sdmmc0p4"};
 static uint32_t bcm_sd_freq_tab[] = {400, 10000, 20000, 25000};
 static uint32_t bcm_sd_hcfg = 0;
+static struct sdmmc_devinfo bcm_sd_info = {
+    .dev_name = "sdmmc0",
+    .part_dev_name = bcm_sd_part_names,
+    .blk_size = 512,
+    .data_bits = 1,
+    .freq_levels = 4,
+    .freq_tab = bcm_sd_freq_tab,
+};
 
 /* Reference frequency for RPi0 is typically 250MHz for SDHost?
  * NetBSD driver gets it from FDT. For RPi it's usually around 250MHz.
  */
 static uint32_t bcm_sd_ref_clk = 250000000;
 
-static int bcm_sd_wait_idle(void)
+static int bcm_sd_wait_idle(int timeout)
 {
-    int i;
-    for (i = 0; i < 1000000; i++) {
+    int retry = timeout * 1000;
+    while(--retry > 0) {
         if (!(bus_read_32(SDCMD) & SDCMD_NEW))
             return 0;
         delay_usec(1);
@@ -160,7 +173,7 @@ static int bcm_sd_sendcmd(uint8_t cmd, uint32_t arg, uint8_t rsp_type, uint8_t* 
     /* Clear status */
     bus_write_32(SDHSTS, 0x7ff);
 
-    if (bcm_sd_wait_idle() != 0) {
+    if (bcm_sd_wait_idle(5000) != 0) {
         DPRINTF(("bcm_sd_sendcmd: device busy\n"));
         return EBUSY;
     }
@@ -190,7 +203,7 @@ static int bcm_sd_sendcmd(uint8_t cmd, uint32_t arg, uint8_t rsp_type, uint8_t* 
     bus_write_32(SDARG, arg);
     bus_write_32(SDCMD, cmdval);
 
-    error = bcm_sd_wait_idle();
+    error = bcm_sd_wait_idle(5000);
     if (error != 0) {
         DPRINTF(("bcm_sd_sendcmd: wait idle timeout\n"));
         return error;
@@ -274,9 +287,26 @@ static int bcm_sd_setwidth(uint32_t bits)
 static int bcm_sd_xmit(struct sdmmc_devinfo* info, char* buf, size_t nbyte)
 {
     uint32_t* p = (uint32_t*)buf;
+
+#if BCM2835_SD_DMA
+    struct dma_xfer_req req;
+    req.addr = buf;
+    req.size = nbyte;
+    req.dir = DMA_WRITE;
+    req.dev_addr = 0x20202040;
+    req.dreq = SDHOST_DREQ;
+    dma_xfer(bcm_sd_dma, &req);
+
+    bus_write_32(SDHCFG, bcm_sd_hcfg);
+    dma_wait(bcm_sd_dma, 1000);
+
+    /* Wait for transfer end */
+    int retry = 1000000;
+    while (!(bus_read_32(SDHSTS) & SDHSTS_BLOCK) && --retry > 0)
+        delay_usec(1);
+#else
     int count = nbyte / 4;
     int retry;
-
     while (count > 0) {
         retry = 1000000;
         while (((bus_read_32(SDEDM) >> 4) & 0x1f) >= 16 && --retry > 0)
@@ -292,13 +322,31 @@ static int bcm_sd_xmit(struct sdmmc_devinfo* info, char* buf, size_t nbyte)
     retry = 1000000;
     while (!(bus_read_32(SDHSTS) & SDHSTS_BLOCK) && --retry > 0)
         delay_usec(1);
-
+#endif
     return 0;
 }
 
 static int bcm_sd_recv(struct sdmmc_devinfo* info, char* buf, size_t nbyte)
 {
     uint32_t* p = (uint32_t*)buf;
+
+#if BCM2835_SD_DMA
+    struct dma_xfer_req req;
+    req.addr = buf;
+    req.size = nbyte;
+    req.dir = DMA_READ;
+    req.dev_addr = 0x20202040;
+    req.dreq = SDHOST_DREQ;
+    dma_xfer(bcm_sd_dma, &req);
+
+    bus_write_32(SDHCFG, bcm_sd_hcfg);
+    dma_wait(bcm_sd_dma, 1000);
+
+    /* Wait for transfer end */
+    int retry = 1000000;
+    while (!(bus_read_32(SDHSTS) & SDHSTS_BLOCK) && --retry > 0)
+        ;
+#else
     int count = nbyte / 4;
     int retry = 10000000;
 
@@ -319,6 +367,7 @@ static int bcm_sd_recv(struct sdmmc_devinfo* info, char* buf, size_t nbyte)
     retry = 1000000;
     while (!(bus_read_32(SDHSTS) & SDHSTS_BLOCK) && --retry > 0)
         ;
+#endif
     return 0;
 }
 
@@ -367,12 +416,18 @@ static int bcm_sd_init(struct driver* self)
     bus_write_32(SDCDIV, SDCDIV_MASK);
     bus_write_32(SDHSTS, 0x7ff);
 
-    bcm_sd_info.dev_name = "sdmmc0";
-    bcm_sd_info.part_dev_name = bcm_sd_part_names;
-    bcm_sd_info.blk_size = 512;
-    bcm_sd_info.data_bits = 1;
-    bcm_sd_info.freq_levels = 4;
-    bcm_sd_info.freq_tab = bcm_sd_freq_tab;
+#if BCM2835_SD_DMA
+    bcm_sd_dma = dma_attach(2);
+    if (bcm_sd_dma == NODMA) {
+        printf("bcm2835_sd: failed to attach DMA channel 2\n");
+    }
+#endif
+
+#if BCM2835_SD_DMA
+    struct irp* irp = &bcm_sd_info.irp;
+    irp->cmd = IO_NONE;
+    event_init(&irp->iocomp, "BCM2835 SDHC I/O");
+#endif
 
     /* Initialize clock to identification frequency */
     bcm_sd_setfreq(0);
