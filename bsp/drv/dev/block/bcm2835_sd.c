@@ -34,6 +34,7 @@
 
 #define DEBUG_SDHOST 0
 #define BCM2835_SD_DMA 1
+#define BCM2835_SD_BUSY_WAIT 0
 
 #if DEBUG_SDHOST
 #define DPRINTF(a) printf a
@@ -97,6 +98,43 @@
 #define SDHBCT		(SD_BASE + 0x3c)
 #define SDDATA		(SD_BASE + 0x40)
 #define SDHBLC		(SD_BASE + 0x50)
+
+static struct event bcm_sd_event;
+static volatile uint32_t bcm_sd_status;
+
+static int bcm_sd_isr(void* arg)
+{
+    uint32_t sts = bus_read_32(SDHSTS);
+    bus_write_32(SDHSTS, sts);
+    if (sts & (SDHSTS_BUSY | SDHSTS_BLOCK | SDHSTS_SDIO | SDHSTS_DATA)) {
+        bcm_sd_status |= sts;
+        /* Clear status bits */
+        return INT_CONTINUE;
+    } else {
+        DPRINTF(("BCM2835 SDHC error %02X\n", __func__, sts));
+    }
+    return 0;
+}
+
+static void bcm_sd_ist(void* arg)
+{
+    sched_wakeup(&bcm_sd_event);
+}
+
+static int bcm_sd_wait_int(uint32_t mask, int timeout_ms)
+{
+    int error = 0;
+
+    while (!(bcm_sd_status & mask)) {
+        if (sched_tsleep(&bcm_sd_event, (u_long)timeout_ms) == SLP_TIMEOUT) {
+            DPRINTF(("%s timeout ############\n", __func__));
+            error = ETIMEDOUT;
+            break;
+        }
+    }
+    bcm_sd_status &= ~mask;
+    return error;
+}
 
 #define GPIO_BASE   CONFIG_GPIO_BASE
 #define GPFSEL4     (GPIO_BASE + 0x10)
@@ -164,7 +202,7 @@ static int bcm_sd_wait_idle(int timeout)
 static int bcm_sd_sendcmd(uint8_t cmd, uint32_t arg, uint8_t rsp_type, uint8_t* rspbuf)
 {
     uint32_t cmdval = SDCMD_NEW | (cmd & 0x3f);
-    int error;
+    int error = 0;
 
     DPRINTF(("bcm_sd_sendcmd: cmd=%d arg=%x rsp_type=%d\n", cmd, arg, rsp_type));
 
@@ -172,6 +210,9 @@ static int bcm_sd_sendcmd(uint8_t cmd, uint32_t arg, uint8_t rsp_type, uint8_t* 
 
     /* Clear status */
     bus_write_32(SDHSTS, 0x7ff);
+#if !BCM2835_SD_BUSY_WAIT
+    bcm_sd_status = 0;
+#endif
 
     if (bcm_sd_wait_idle(5000) != 0) {
         DPRINTF(("bcm_sd_sendcmd: device busy\n"));
@@ -203,7 +244,17 @@ static int bcm_sd_sendcmd(uint8_t cmd, uint32_t arg, uint8_t rsp_type, uint8_t* 
     bus_write_32(SDARG, arg);
     bus_write_32(SDCMD, cmdval);
 
+#if BCM2835_SD_BUSY_WAIT
     error = bcm_sd_wait_idle(5000);
+#else
+    sched_lock();
+    if (rsp_type == RSP_R1B)
+        error = bcm_sd_wait_int(SDHSTS_BUSY, 5000);
+    else
+        error = bcm_sd_wait_idle(5000);
+    sched_unlock();
+#endif
+
     if (error != 0) {
         DPRINTF(("bcm_sd_sendcmd: wait idle timeout\n"));
         return error;
@@ -286,7 +337,13 @@ static int bcm_sd_setwidth(uint32_t bits)
 
 static int bcm_sd_xmit(struct sdmmc_devinfo* info, char* buf, size_t nbyte)
 {
-    uint32_t* p = (uint32_t*)buf;
+    int error = 0;
+    sched_lock();
+#if BCM2835_SD_BUSY_WAIT
+    int retry = 1000000;
+#else
+    bcm_sd_status = 0;
+#endif
 
 #if BCM2835_SD_DMA
     struct dma_xfer_req req;
@@ -300,13 +357,9 @@ static int bcm_sd_xmit(struct sdmmc_devinfo* info, char* buf, size_t nbyte)
     bus_write_32(SDHCFG, bcm_sd_hcfg);
     dma_wait(bcm_sd_dma, 1000);
 
-    /* Wait for transfer end */
-    int retry = 1000000;
-    while (!(bus_read_32(SDHSTS) & SDHSTS_BLOCK) && --retry > 0)
-        delay_usec(1);
 #else
+    uint32_t* p = (uint32_t*)buf;
     int count = nbyte / 4;
-    int retry;
     while (count > 0) {
         retry = 1000000;
         while (((bus_read_32(SDEDM) >> 4) & 0x1f) >= 16 && --retry > 0)
@@ -317,18 +370,29 @@ static int bcm_sd_xmit(struct sdmmc_devinfo* info, char* buf, size_t nbyte)
         bus_write_32(SDDATA, *p++);
         count--;
     }
+#endif
 
     /* Wait for transfer end */
+#if BCM2835_SD_BUSY_WAIT
     retry = 1000000;
-    while (!(bus_read_32(SDHSTS) & SDHSTS_BLOCK) && --retry > 0)
-        delay_usec(1);
+    while (!(bus_read_32(SDHSTS) & (SDHSTS_BLOCK | SDHSTS_DATA)) && --retry > 0)
+        ;
+#else
+    error = bcm_sd_wait_int(SDHSTS_BLOCK | SDHSTS_DATA, 1000);
 #endif
-    return 0;
+    sched_unlock();
+    return error;
 }
 
 static int bcm_sd_recv(struct sdmmc_devinfo* info, char* buf, size_t nbyte)
 {
-    uint32_t* p = (uint32_t*)buf;
+    int error = 0;
+    sched_lock();
+#if BCM2835_SD_BUSY_WAIT
+    int retry = 1000000;
+#else
+    bcm_sd_status = 0;
+#endif
 
 #if BCM2835_SD_DMA
     struct dma_xfer_req req;
@@ -342,13 +406,10 @@ static int bcm_sd_recv(struct sdmmc_devinfo* info, char* buf, size_t nbyte)
     bus_write_32(SDHCFG, bcm_sd_hcfg);
     dma_wait(bcm_sd_dma, 1000);
 
-    /* Wait for transfer end */
-    int retry = 1000000;
-    while (!(bus_read_32(SDHSTS) & SDHSTS_BLOCK) && --retry > 0)
-        ;
 #else
+    uint32_t* p = (uint32_t*)buf;
     int count = nbyte / 4;
-    int retry = 10000000;
+    retry = 10000000;
 
     while (count > 0 && --retry > 0) {
         if (bus_read_32(SDHSTS) & SDHSTS_DATA) {
@@ -362,13 +423,21 @@ static int bcm_sd_recv(struct sdmmc_devinfo* info, char* buf, size_t nbyte)
     if (retry == 0) {
         return ETIMEDOUT;
     }
+#endif
 
     /* Wait for transfer end */
+#if BCM2835_SD_BUSY_WAIT
     retry = 1000000;
-    while (!(bus_read_32(SDHSTS) & SDHSTS_BLOCK) && --retry > 0)
+    while (!(bus_read_32(SDHSTS) & (SDHSTS_BLOCK | SDHSTS_DATA)) && --retry > 0)
         ;
+    if (retry == 0) {
+        DPRINTF(("%s timeout ################", __func__));
+    }
+#else
+    error = bcm_sd_wait_int(SDHSTS_BLOCK | SDHSTS_DATA, 1000);
 #endif
-    return 0;
+    sched_unlock();
+    return error;
 }
 
 static int bcm_sd_init(struct driver* self)
@@ -423,10 +492,10 @@ static int bcm_sd_init(struct driver* self)
     }
 #endif
 
-#if BCM2835_SD_DMA
-    struct irp* irp = &bcm_sd_info.irp;
-    irp->cmd = IO_NONE;
-    event_init(&irp->iocomp, "BCM2835 SDHC I/O");
+#if !BCM2835_SD_BUSY_WAIT
+    bcm_sd_status = 0;
+    event_init(&bcm_sd_event, "bcm2835_sd");
+    irq_attach(SD_IRQ, IPL_BLOCK, 0, bcm_sd_isr, bcm_sd_ist, 0);
 #endif
 
     /* Initialize clock to identification frequency */
