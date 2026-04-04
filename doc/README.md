@@ -29,7 +29,7 @@
 | [Applications Programming Guide](appguide.md) | Tells you how to get started writing Prex+ programs, including            sample code. |
 | [Sample Applications](sample.md) | Explains the sample application included in Prex+.            |
 | [Kernel Debugging Tips and Tricks](debug.md) | Describes how to use the Prex+ debugging functions.           |
-| Driver Development Guide                                     | Not available...                                             |
+| [Driver Development Guide](driver.md) | Describes how to write a device driver for Prex+. |
 
 ## Target-specific Howtos
 
