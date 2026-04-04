@@ -83,8 +83,8 @@ This document describes the Driver-Kernel Interface (DKI) that can be used by de
 
 The Prex+ driver header file provides common driver services in the kernel. A device driver must include this header file to use the driver-kernel interface.
 
-```
-#include <driver.h>
+```c
+#include <dki.h>
 ```
 
 ### Data Types
@@ -128,7 +128,7 @@ The boot infomation keeps various system informations and they are filled by the
 
  The format of the boot information is as follows:
 
-```
+```c
 struct bootinfo
 {
         struct vidinfo  video;
@@ -148,7 +148,7 @@ Each device instance has its associated device operations defined by devops stru
 
 The definition of device operations is as follows:
 
-```
+```c
 struct devops {
         int (*open)     (device_t dev, int mode);
         int (*close)    (device_t dev);
@@ -165,7 +165,7 @@ Each driver must define its own driver object to identify it.
 
 The definition of drver object is as follows:
 
-```
+```c
 struct driver {
         const char      *name;          /* name of device driver */
         struct devops   *devops;        /* device operations */
@@ -181,7 +181,7 @@ struct driver {
 
 The device object is created by the driver to communicate to the application. Usually, the driver creates a device object for an existing physical device. And, it can also be used to handle logical or virtual devices.
 
-```
+```c
 device_t device_create(struct driver *drv, const char *name, int flags);
 int      device_destroy(device_t dev);
 device_t device_lookup(const char *name);
@@ -192,7 +192,15 @@ void    *device_private(device_t dev);
 
 - device_create()
 
-  Creates device object with the specified name in *name*. The *drv* argument points to the driver object. This function returns the ID of the created device object on success, or 0 on failure. The *flags* argument is the combination of the following device flags. `#define D_CHR           0x00000001      /* character device */ #define D_BLK           0x00000002      /* block device */ #define D_REM           0x00000004      /* removable device */ #define D_PROT          0x00000008      /* protected device */ #define D_TTY           0x00000010      /* tty device */ `
+  Creates device object with the specified name in *name*. The *drv* argument points to the driver object. This function returns the ID of the created device object on success, or 0 on failure. The *flags* argument is the combination of the following device flags. 
+  
+```c
+#define D_CHR           0x00000001      /* character device */ 
+#define D_BLK           0x00000002      /* block device */ 
+#define D_REM           0x00000004      /* removable device */ 
+#define D_PROT          0x00000008      /* protected device */ 
+#define D_TTY           0x00000010      /* tty device */ 
+```
 
 - device_destroy()
 
@@ -218,7 +226,7 @@ void    *device_private(device_t dev);
 
 The kernel provides the following memory allocation services for drivers. Please note that it can not allocate lager buffer than one page. If the driver needs larger buffer, it should use page_alloc() instead of kmem_alloc().
 
-```
+```c
 void *kmem_alloc(size_t size);
 void  kmem_free(void *ptr);
 void *kmem_map(void *addr, size_t size);
@@ -240,10 +248,10 @@ void *kmem_map(void *addr, size_t size);
 
 Since an access to user memory may cause a page fault, the user buffer manipulation is handled by the kernel core code. The driver should not access the user buffer directly. Instead,  it should use the following kernel services.
 
-```
+```c
 int copyin(const void *uaddr, void *kaddr, size_t len);
 int copyout(const void *kaddr, void *uaddr, size_t len);
-int copyinstr(const char *uaddr, void *kaddr, size_t len);
+int copyinstr(const void *uaddr, void *kaddr, size_t len);
 ```
 
 - copyin()
@@ -260,10 +268,10 @@ int copyinstr(const char *uaddr, void *kaddr, size_t len);
 
 ## Physical Page
 
-```
+```c
 paddr_t page_alloc(psize_t size);
 void    page_free(paddr_t addr, psize_t size);
-int     page_reserve(paddr_t addr, psize_t size);
+void    page_reserve(paddr_t addr, psize_t size);
 ```
 
 - page_alloc()
@@ -276,13 +284,13 @@ int     page_reserve(paddr_t addr, psize_t size);
 
 - page_reserve()
 
-  Reserves pages in the specified address. This function returns 0 on success, or -1 on failure.
+  Reserves pages in the specified address.
 
 ## Spl
 
 The spl() function familly controls the interrupt priority level of CPU.
 
-```
+```c
 int  splhigh(void);
 int  spl0(void);
 void splx(int level);
@@ -302,7 +310,7 @@ void splx(int level);
 
 ## Interrupt
 
-```
+```c
 irq_t irq_attach(int irqno, int prio, int shared, int (*isr)(void *), void (*ist)(void *), void *data);
 void  irq_detach(irq_t handle);
 ```
@@ -336,7 +344,7 @@ The following table shows the logical interrupt priority level for various devic
 
 The thread can sleep/wakeup for the specific event. The event works as the queue of the sleeping threads.
 
-```
+```c
 void sched_lock(void);
 void sched_unlock(void);
 int  sched_tsleep(struct event *evt, u_long timeout);
@@ -354,7 +362,14 @@ void sched_dpc(struct dpc *dpc, void (*func)(void *), void *arg);
 
 - sched_tsleep()
 
-  Sleep the current thread until specified event occurs. The caller can specify *timeout* value in msec. If the *timeout* value is 0, the timeout timer does not work. The definition of the event for sleep/wakeup is as follows: `struct event {        struct queue    sleepq;         /* Queue for waiting thread */        char            *name;          /* Event name */ }; `
+  Sleep the current thread until specified event occurs. The caller can specify *timeout* value in msec. If the *timeout* value is 0, the timeout timer does not work. The definition of the event for sleep/wakeup is as follows:
+  
+```c
+struct event {
+        struct queue    sleepq;         /* Queue for waiting thread */
+        char            *name;          /* Event name */
+};
+```
 
 - sched_wakeup()
 
@@ -362,12 +377,18 @@ void sched_dpc(struct dpc *dpc, void (*func)(void *), void *arg);
 
 - sched_dpc()
 
-  Programs DPC (Deferred Procedure Call). The definition of the DPC object is as follows: `struct dpc {        void    *_data[5]; }; `
+  Programs DPC (Deferred Procedure Call). The definition of the DPC object is as follows: 
+  
+```c
+struct dpc {
+        void    *_data[5];
+};
+```
 
 ## Timer
 
-```
-void   timer_callout(timer_t *tmr, void (*func)(u_long), u_long arg, u_long msec);
+```c
+void   timer_callout(timer_t *tmr, u_long msec, void (*func)(void *), void *arg);
 void   timer_stop(timer_t *tmr);
 u_long timer_delay(u_long msec);
 u_long timer_ticks(void);
@@ -391,13 +412,13 @@ u_long timer_ticks(void);
 
 ## Miscellaneous
 
-```
+```c
 int   task_capable(cap_t cap);
 int   exception_post(task_t task, int excno);
 void  machine_bootinfo(struct bootinfo **pbi);
 void  machine_powerdown(int state);
-void  sysinfo(int type, void *buf);
-void  panic(const char *fmt, ...);
+int   sysinfo(int type, void *buf);
+void  panic(const char *fmt);
 void  printf(const char *fmt, ...);
 void  dbgctl(int cmd, void *data);
 ```
@@ -420,7 +441,7 @@ void  dbgctl(int cmd, void *data);
 
 - sysinfo()
 
-  Attaches to the external output routine for the printf().
+  Returns system information to the buffer based on the type.
 
 - panic()
 

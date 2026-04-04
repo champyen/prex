@@ -15,6 +15,7 @@
 | [Kernel API Reference](kapi.md) | Describes the programming interface for the Prex+ applications. |
 | [Hardware Abstraction Layer](hal.md) | Describes the interface to abstract processor and hardware in the Prex+ kernel. |
 | [Driver Kernel Interface](dki.md) | Describes the driver helper functions provided by the Prex+ kernel. |
+| [Device Driver Interface](ddi.md) | Describes the device driver interface provided by the Prex+ kernel. |
 | [POSIX Compliance](posix.md) | Provides the list of the POSIX features supported by Prex+.   |
 | [CmdBox User's Guide](cmdbox.md) | Describes how to use the Unix commands supported in CmdBox.  |
 
