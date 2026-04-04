@@ -14,24 +14,25 @@ SECTIONS
 {
 	. = SIZEOF_HEADERS ;
 
-	.text : {
+	.text . : {
 		*(.text)
 	} : text = 0x9090
 
 	. = ALIGN(32);
-	.rodata : {
+	.rodata . : {
 		*(.rodata*)
 		*(.rodata.*)
 	} : text
 
 	. = ALIGN(32);
-	.data : {
+	.data . : {
 		*(.data*)
 	} : data
 
 	.bss . : {
 		*(.bss*)
 		*(COMMON)
-	}
-	/DISCARD/ : { *(.comment .note) }
+	} : data
+	/DISCARD/ : { *(.comment .note .eh_frame .rel.eh_frame) }
 }
+

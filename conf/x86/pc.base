@@ -8,7 +8,9 @@
 makeoptions	GCCFLAGS+= -march=i386
 makeoptions	GCCFLAGS+= -m32
 makeoptions	GCCFLAGS+= -mpreferred-stack-boundary=2
-makeoptions LDFLAGS+= -m elf_i386
+makeoptions	GCCFLAGS+= -fno-PIC -fno-pic -fno-stack-protector -fno-pie -fno-PIE
+makeoptions	ASFLAGS+= --32
+makeoptions	LDFLAGS+= -m elf_i386
 
 #
 # Make options
@@ -20,8 +22,9 @@ mmu     IOMEM_BASE      0x00000000  0x00000000
 #
 # Memory address
 #
+memory		RAM_BASE	0x00000000	# Start of RAM
 memory		LOADER_TEXT	0x00004000	# Start of boot loader
-memory		KERNEL_TEXT	0x00010000	# Start of kernel
+memory		KERNEL_TEXT	0x00200000	# Start of kernel
 memory		BOOTIMG_BASE	0x00100000	# Location of boot image
 
 #
@@ -61,6 +64,7 @@ options 	KD		# Kernel debugger
 #
 #options 	DIAG_SCREEN	# Diagnostic via screen
 options 	DIAG_SERIAL	# Diagnostic via serial port
+
 #options 	DIAG_BOCHS	# Diagnostic via Bochs emulater
 
 #
@@ -86,11 +90,11 @@ options 	DVS_EMULATION	# Dynamic voltage scaling emulation
 device		pm		# Power management
 device		i8237		# I8237 DMA controller
 device		cons		# System console
-device		wscons		# Workstation console
-device		pckbd	    	# PC/AT Keyboard (P:wscons)
-device		vga	    	# VGA video (P:wscons)
-#device		serial		# Logical serial
-#device		ns16550	    	# NS16550 serial port (P:serial)
+#device		wscons		# Workstation console
+#device		pckbd	    	# PC/AT Keyboard (P:wscons)
+#device		vga	    	# VGA video (P:wscons)
+device		serial		# Logical serial
+device		ns16550	    	# NS16550 serial port (P:serial)
 #device		psaux		# PS/2 Mouse
 device		cpufreq		# CPU frequency controll
 device		est	    	# Intel enhanced speedstep (P:cpufreq)
@@ -148,4 +152,4 @@ command 	ktrace
 command 	lock
 command 	debug
 math		fdlibm
-options 	DIAG_SERIAL
+options        DIAG_SERIAL

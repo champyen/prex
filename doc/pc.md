@@ -8,6 +8,7 @@
 
 - [Quick Hacking Guide](#quick-hacking-guide)
 - [How to create a Prex demo floppy?](#how-to-create-a-prex-demo-floppy)
+- [How to create a bootable floppy image on Linux?](#how-to-create-a-bootable-floppy-image-on-linux)
 - [How to run Prex with Bochs?](#how-to-run-prex-with-bochs)
 - [How to run Prex with Qemu?](#how-to-run-prex-with-qemu)
 - [How to modify the OS boot image?](#how-to-modify-the-os-boot-image)
@@ -76,6 +77,33 @@ The following is the easiest step to hack the Prex kernel on x86-pc.
      ```
      >rawritewin (your directory)/prex-X.X.X.i386-pc.img a:
      ```
+
+## How to create a bootable floppy image on Linux?
+
+You can create a bootable Prex floppy image from scratch on Linux using the following steps. This requires `mtools` and `dosfstools` installed on your system.
+
+1. Create a 1.44MB blank image file:
+   ```
+   $ dd if=/dev/zero of=floppy.img bs=1024 count=1440
+   ```
+
+2. Format the image with FAT12 file system:
+   ```
+   $ mkfs.fat -F 12 floppy.img
+   ```
+
+3. Write the Prex boot sector (`bootsect.bin`) to the image. Note that we must preserve the BIOS Parameter Block (BPB) created by `mkfs.fat`.
+   ```
+   $ dd if=bsp/boot/x86/tools/bootsect/bootsect.bin of=floppy.img bs=1 count=3 conv=notrunc
+   $ dd if=bsp/boot/x86/tools/bootsect/bootsect.bin of=floppy.img bs=1 skip=62 seek=62 conv=notrunc
+   ```
+
+4. Copy the Prex kernel image (`prexos`) to the floppy image using `mtools`:
+   ```
+   $ mcopy -i floppy.img -o prexos ::/PREXOS
+   ```
+
+Now you can use `floppy.img` with QEMU or Bochs.
 
 ## How to run Prex with Bochs?
 

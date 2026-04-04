@@ -67,9 +67,4 @@ endif
 
 FILES+=		$(SRCDIR)/doc/LICENSE
 
-FILES+= 	$(SRCDIR)/usr/lib/crt0.o
-FILES+= 	$(SRCDIR)/usr/lib/libc.a
-FILES+= 	$(SRCDIR)/usr/arch/arm/user.ld
-FILES+= 	$(SRCDIR)/hello_target.c
-
 endif	# !CONFIG_POSIX

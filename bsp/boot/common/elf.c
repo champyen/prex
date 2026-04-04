@@ -115,6 +115,9 @@ static int load_executable(char* img, struct module* m)
     phys_base = load_base;
     ELFDBG(("phys addr=%lx\n", phys_base));
 
+    m->text = 0;
+    m->data = 0;
+
     for (i = 0; i < (int)ehdr->e_phnum; i++, phdr++) {
         if (phdr->p_type != PT_LOAD)
             continue;
@@ -123,36 +126,41 @@ static int load_executable(char* img, struct module* m)
         ELFDBG(("p_align=%x\n", (int)phdr->p_align));
         ELFDBG(("p_paddr=%x\n", phdr->p_paddr));
 
-        if (i >= 2) {
-            ELFDBG(("skipping extra phdr\n"));
-            continue;
-        }
-        if (phdr->p_flags & PF_X) {
-            /* Text */
-            m->text = phdr->p_vaddr;
-            m->textsz = (size_t)phdr->p_memsz;
+        if (!(phdr->p_flags & PF_W)) {
+            /* Text / RO data */
+            if (m->text == 0) {
+                m->text = phdr->p_vaddr;
+                m->textsz = (size_t)phdr->p_memsz;
+            } else {
+                m->textsz = (size_t)((phdr->p_vaddr + phdr->p_memsz) - m->text);
+            }
+            if (phdr->p_filesz > 0) {
+                memcpy((char*)phys_base + (phdr->p_vaddr - m->text), img + phdr->p_offset, (size_t)phdr->p_filesz);
+            }
         } else {
             /* Data & BSS */
-            m->data = phdr->p_vaddr;
-            m->datasz = (size_t)phdr->p_filesz;
-            m->bsssz = (size_t)(phdr->p_memsz - phdr->p_filesz);
-            load_base = phys_base + (m->data - m->text);
-        }
-        if (phdr->p_filesz > 0) {
-            memcpy((char*)load_base, img + phdr->p_offset, (size_t)phdr->p_filesz);
-            ELFDBG(("load: offset=%lx size=%x\n", load_base, (int)phdr->p_filesz));
-        }
-        if (!(phdr->p_flags & PF_X)) {
-            if (m->bsssz > 0) {
-                /* Zero fill BSS */
-                memset((char*)load_base + m->datasz, 0, m->bsssz);
+            if (m->data == 0) {
+                m->data = phdr->p_vaddr;
+                load_base = phys_base + (m->data - m->text);
             }
-            load_base += phdr->p_memsz;
+            m->datasz = (size_t)((phdr->p_vaddr + phdr->p_filesz) - m->data);
+            m->bsssz = (size_t)((phdr->p_vaddr + phdr->p_memsz) - m->data) - m->datasz;
+            
+            if (phdr->p_filesz > 0) {
+                memcpy((char*)load_base + (phdr->p_vaddr - m->data), img + phdr->p_offset, (size_t)phdr->p_filesz);
+            }
+            if (phdr->p_memsz > phdr->p_filesz) {
+                /* Zero fill BSS */
+                memset((char*)load_base + (phdr->p_vaddr - m->data) + phdr->p_filesz, 0, (size_t)(phdr->p_memsz - phdr->p_filesz));
+            }
         }
     }
-    /* workaround for data/bss size is 0 */
-    if (m->data == 0)
+    
+    if (m->data != 0) {
+        load_base = phys_base + (m->data - m->text) + m->datasz + m->bsssz;
+    } else {
         load_base = phys_base + m->textsz;
+    }
 
     load_base = round_page(load_base);
     m->size = (size_t)(load_base - m->phys);

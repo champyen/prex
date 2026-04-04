@@ -61,40 +61,73 @@ static int load_exec(Elf32_Ehdr* ehdr, task_t task, int fd, vaddr_t* entry)
     void *addr, *mapped;
     size_t size = 0;
     int i;
+    vaddr_t text_start = (vaddr_t)-1, text_end = 0;
+    vaddr_t data_start = (vaddr_t)-1, data_end = 0;
 
     phdr = (Elf32_Phdr*)((u_long)ehdr + ehdr->e_phoff);
     if (phdr == NULL)
         return ENOEXEC;
 
     for (i = 0; i < (int)ehdr->e_phnum; i++, phdr++) {
-        if (phdr->p_type != PT_LOAD)
+        if (phdr->p_type != PT_LOAD || phdr->p_memsz == 0)
             continue;
+            
+        if (!(phdr->p_flags & PF_W)) {
+            /* Text / RO data */
+            if (phdr->p_vaddr < text_start)
+                text_start = phdr->p_vaddr;
+            if (phdr->p_vaddr + phdr->p_memsz > text_end)
+                text_end = phdr->p_vaddr + phdr->p_memsz;
+        } else {
+            /* Data / BSS */
+            if (phdr->p_vaddr < data_start)
+                data_start = phdr->p_vaddr;
+            if (phdr->p_vaddr + phdr->p_memsz > data_end)
+                data_end = phdr->p_vaddr + phdr->p_memsz;
+        }
+    }
 
-        addr = (void*)phdr->p_vaddr;
-        size = phdr->p_memsz;
-        if (size == 0)
-            continue;
-
+    if (text_end > text_start) {
+        addr = (void*)trunc_page(text_start);
+        size = (size_t)(round_page(text_end) - (vaddr_t)addr);
         if (vm_allocate(task, &addr, size, 0) != 0)
             return ENOMEM;
+    }
 
-        if (vm_map(task, (void*)phdr->p_vaddr, size, &mapped) != 0)
+    if (data_end > data_start) {
+        addr = (void*)trunc_page(data_start);
+        size = (size_t)(round_page(data_end) - (vaddr_t)addr);
+        /* Ensure we don't overlap with text */
+        if ((vaddr_t)addr < round_page(text_end)) {
+            addr = (void*)round_page(text_end);
+            size = (size_t)(round_page(data_end) - (vaddr_t)addr);
+        }
+        if (size > 0 && vm_allocate(task, &addr, size, 0) != 0)
+            return ENOMEM;
+    }
+
+    phdr = (Elf32_Phdr*)((u_long)ehdr + ehdr->e_phoff);
+    for (i = 0; i < (int)ehdr->e_phnum; i++, phdr++) {
+        if (phdr->p_type != PT_LOAD || phdr->p_memsz == 0)
+            continue;
+
+        if (vm_map(task, (void*)phdr->p_vaddr, phdr->p_memsz, &mapped) != 0)
             return ENOEXEC;
+            
         if (phdr->p_filesz > 0) {
             if (lseek(fd, (off_t)phdr->p_offset, SEEK_SET) == -(off_t)1)
                 goto err;
             if (read(fd, mapped, phdr->p_filesz) < 0)
                 goto err;
         }
-
         vm_free(task_self(), mapped);
-
-        /* Set read-only to text */
-        if (phdr->p_flags & PF_X) {
-            if (vm_attribute(task, addr, PROT_READ) != 0)
-                return ENOEXEC;
-        }
     }
+
+    if (text_end > text_start) {
+        if (vm_attribute(task, (void*)trunc_page(text_start), PROT_READ) != 0)
+            return ENOEXEC;
+    }
+
     *entry = (vaddr_t)ehdr->e_entry;
     return 0;
 
