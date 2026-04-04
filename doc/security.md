@@ -1,4 +1,4 @@
-# Prex Platform Security
+# Prex+ Platform Security
 
 ### Table of Contents
 
@@ -13,11 +13,11 @@
 
 ## Introduction
 
-As a recent tendency, security is becoming very important in embedded systems design. So, we identify security as a key goal and design component for Prex.
+As a recent tendency, security is becoming very important in embedded systems design. So, we identify security as a key goal and design component for Prex+.
 
-Prex supports installation and execution of the user applications by the end user. This design has higher security risk compared with other RTOS that can execute only pre-defined applications. So, Prex provides system-wide security features to protect the system from the threat.
+Prex+ supports installation and execution of the user applications by the end user. This design has higher security risk compared with other RTOS that can execute only pre-defined applications. So, Prex+ provides system-wide security features to protect the system from the threat.
 
-This document describes the design and implementation of the platform security of Prex.
+This document describes the design and implementation of the platform security of Prex+.
 
 ## Security Model
 
@@ -27,11 +27,11 @@ To achieve the effective security described in this document, it requires MMU su
 
 ### Unit of Trust
 
-Unlike generic desktop OS used on PC, Prex is designed for a single user (We can not assume that the user "login" to the Phone or MP3 player at every power-on). So, the task is unit of trust with Prex. The system designer can manage the security permission of each task.
+Unlike generic desktop OS used on PC, Prex+ is designed for a single user (We can not assume that the user "login" to the Phone or MP3 player at every power-on). So, the task is unit of trust with Prex+. The system designer can manage the security permission of each task.
 
 ### Key Features
 
-The key security features of Prex are as follows:
+The key security features of Prex+ are as follows:
 
 - Task Capabilities
 - File Access Control
@@ -41,7 +41,7 @@ The key security features of Prex are as follows:
 
 ## Task Capabilities
 
-Prex supports a security framework named "capability" which was derived from POSIX.1e capabilities. Each task will have its own capabilities for various operations. When a task tries to do a privileged operation, the kernel, device drivers and system servers will check the appropriate bit in the task's capability.
+Prex+ supports a security framework named "capability" which was derived from POSIX.1e capabilities. Each task will have its own capabilities for various operations. When a task tries to do a privileged operation, the kernel, device drivers and system servers will check the appropriate bit in the task's capability.
 
 ### Types of Capability
 
@@ -147,7 +147,7 @@ When the audit option is enabled, the kernel marks the audit flag for all tasks.
 
 ### Pre-defined Directories
 
-Prex supports the file access permission based on the path name. It means that the applications have access to only certain area of the file system.
+Prex+ supports the file access permission based on the path name. It means that the applications have access to only certain area of the file system.
 
 The file system has the following structure:
 
@@ -184,9 +184,9 @@ The file system has the following structure:
 The following is a sample to test copying a file to /etc directory without CAP_SYSFILES capability.
 
 ```
-[prex:/etc]# ls
+[prex+:/etc]# ls
 rc        fstab
-[prex:/etc]# cat rc
+[prex+:/etc]# cat rc
 PATH=/boot:/bin
 HOME=/
 export HOME PATH
@@ -194,7 +194,7 @@ uname -msr
 mem
 date
 exec sh
-[prex:/etc]# cp rc rc.2
+[prex+:/etc]# cp rc rc.2
 Denying capability by fs: task=cp cap=00000800
 Kernel panic: audit failed
 ```
@@ -384,9 +384,9 @@ The kernel and system servers will limit the maximum count of the resource to cr
 The software installer has CAP_SYSFILES capability to copy the applications into the /bin and /etc directories. It always requests user confirmation before installing software.
 
 ```
-[prex:/tmp]# install test
+[prex+:/tmp]# install test
 Are you sure you want to install test? (y/n) y
-[prex:/tmp]#
+[prex+:/tmp]#
 ```
 
 

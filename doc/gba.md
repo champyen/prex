@@ -1,12 +1,12 @@
-# Prex Game Boy Advance - HOWTO
+# Prex+ Game Boy Advance - HOWTO
 
 ### Table of Contents
 
 **HOWTO**
 
-- [How to run Prex on the Game Boy Advance?](#how-to-run-prex-on-the-game-boy-advance)
-- [How to run Prex with the VisualBoy Advance?](#how-to-run-prex-with-the-visualboy-advance)
-- [How to compile Prex for Game Boy Advance?](#how-to-compile-prex-for-game-boy-advance)
+- [How to run Prex+ on the Game Boy Advance?](#how-to-run-prex+-on-the-game-boy-advance)
+- [How to run Prex+ with the VisualBoy Advance?](#how-to-run-prex+-with-the-visualboy-advance)
+- [How to compile Prex+ for Game Boy Advance?](#how-to-compile-prex+-for-game-boy-advance)
 - [How to use On-screen Keyboard?](#how-to-use-on-screen-keyboard)
 
 **Technical Note**
@@ -17,17 +17,17 @@
 
 
 
-## How to run Prex on the Game Boy Advance?
+## How to run Prex+ on the Game Boy Advance?
 
-There exist some hardware to run Prex on the Game Boy Advance. Currently, I am using "Boot Cable USB" which is sold by [Optimize](http://optimize.ath.cx/shopv2_2/chuumon.html). And, its control software is available for download from this [page](http://optimize.ath.cx/bootcable/btusb.html). Unfortunately, these are only japanese page... :-( 
+There exist some hardware to run Prex+ on the Game Boy Advance. Currently, I am using "Boot Cable USB" which is sold by [Optimize](http://optimize.ath.cx/shopv2_2/chuumon.html). And, its control software is available for download from this [page](http://optimize.ath.cx/bootcable/btusb.html). Unfortunately, these are only japanese page... :-( 
  You may find other useful information to run your program on GBA at  http://www.gbadev.org.
 
 ![USB Boot Cable](img/gba/usbcable.png)  
  Figure 1. Boot Cable USB
 
-## How to run Prex with the VisualBoy Advance?
+## How to run Prex+ with the VisualBoy Advance?
 
-VBA - VisualBoy Advance is the most popular GBA emulator. You can find the  latest release at  [http://www.vba.ngemu.com](http://vba.ngemu.com). To run Prex with VBA, simply select file->open and open the prex image. There is no need to prepare the original GBA BIOS.
+VBA - VisualBoy Advance is the most popular GBA emulator. You can find the  latest release at  [http://www.vba.ngemu.com](http://vba.ngemu.com). To run Prex+ with VBA, simply select file->open and open the prex+ image. There is no need to prepare the original GBA BIOS.
 
 **Important:** You must rename the file name of the image to "prexos.gba". It seems VBA is checking the file extension to validate the image.
 
@@ -45,7 +45,7 @@ The default keyboard setting of VBA is as follows:
 | Enter       | Start                 |
 | Backspace   | Select                |
 
-## How to compile Prex for Game Boy Advance?
+## How to compile Prex+ for Game Boy Advance?
 
 At first, you have to prepare the toolchain for cross compiling ARM code. And then, the shell variables must be set for the arm-gba target.
 
@@ -98,8 +98,8 @@ Unpack the sources and move to top level directory of the source tree.
 
 ```
 $ cd /usr/src
-$ tar zxvf prex-X.X.X.tar.gz
-$ cd prex-X.X.X
+$ tar zxvf prex+-X.X.X.tar.gz
+$ cd prex+-X.X.X
 ```
 
 #### Step 5. Configure
@@ -118,7 +118,7 @@ Run make.
 $ make
 ```
 
-Note: There is a cross-compiling kit for GBA named  [DevKit Advance](http://devkitadv.sourceforge.net). It may be usable for compiling Prex.
+Note: There is a cross-compiling kit for GBA named  [DevKit Advance](http://devkitadv.sourceforge.net). It may be usable for compiling Prex+.
 
 ## How to use On-Screen Keyboard?
 
@@ -178,7 +178,7 @@ The driver for on-screen keyboard is provided to emulate a generic keyboard by u
 | 07000000 - 070003FF | Object Attributes |
 |                     |                   |
 
-### Prex VRAM Usage
+### Prex+ VRAM Usage
 
 | 06000000 - 06003FFF | Tile 1 - Font                         |
 | ------------------- | ------------------------------------- |
@@ -221,7 +221,7 @@ ENTRY(syscall_entry)
         mov     lr, r5
 ```
 
-Since a program cannot change the ARM processor mode during the USR mode, all applications are always executed in SYS mode in the Prex arm-gba port.
+Since a program cannot change the ARM processor mode during the USR mode, all applications are always executed in SYS mode in the Prex+ arm-gba port.
 
 
 

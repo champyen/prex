@@ -1,4 +1,4 @@
-# Prex Kernel Internals
+# Prex+ Kernel Internals
 
 ### Table of Contents
 
@@ -20,25 +20,25 @@
 
 ## Introduction
 
-This document describes the design and implementation of the Prex kernel.
+This document describes the design and implementation of the Prex+ kernel.
 
-For a full description of the Prex kernel interface, see the following documents.
+For a full description of the Prex+ kernel interface, see the following documents.
 
-- [Prex Kernel API reference](kapi.md)
+- [Prex+ Kernel API reference](kapi.md)
 - [Hardware Abstraction Layer](hal.md)
 
-The following documents may be helpful to understand the security and power management features of Prex.
+The following documents may be helpful to understand the security and power management features of Prex+.
 
-- [Prex Platform Security](security.md)
-- [Prex Power Management](power.md)
+- [Prex+ Platform Security](security.md)
+- [Prex+ Power Management](power.md)
 
 ## Design Philosophies
 
-The Prex kernel focuses on the following design points.
+The Prex+ kernel focuses on the following design points.
 
 #### Portability
 
-Portability is the most important point for the kernel design in Prex. The Prex kernel is divided into two different layers - a common kernel layer and a hardware abstraction layer (HAL). Any routine in the common kernel layer must not access the H/W by itself. Instead, it must use the H/W access services provided by HAL.
+Portability is the most important point for the kernel design in Prex+. The Prex+ kernel is divided into two different layers - a common kernel layer and a hardware abstraction layer (HAL). Any routine in the common kernel layer must not access the H/W by itself. Instead, it must use the H/W access services provided by HAL.
 
 #### Scalability
 
@@ -50,13 +50,13 @@ The kernel supports both of MMU and MMU-less systems. So, most components of the
 
 When the remaining memory is exhausted, what should OS do? If the system can stop with panic() there, we can prevent many error checks in the kernel. But obviously, this is not allowed on the reliable system. Even if the memory is exhausted, a kernel must continue to do its jobs. So, all kernel codes are always checking the error status returned by the memory allocation routine.
 
-In addition, the kernel must not crush anytime even if any invalid parameter is passed via kernel API. Basically, the Prex kernel code is written with "garbage in, error out" principle. The Prex kernel never stops even if any malicious program is loaded.
+In addition, the kernel must not crush anytime even if any invalid parameter is passed via kernel API. Basically, the Prex+ kernel code is written with "garbage in, error out" principle. The Prex+ kernel never stops even if any malicious program is loaded.
 
 #### Interoperability
 
-Although the Prex kernel was written from scratch, its applications will be brought from the other operating systems like BSD. So, the system call interface is designed with consideration to support generic OS API like POSIX or APIs for generic RTOS.
+Although the Prex+ kernel was written from scratch, its applications will be brought from the other operating systems like BSD. So, the system call interface is designed with consideration to support generic OS API like POSIX or APIs for generic RTOS.
 
-The error code for the Prex system call is defined as the same name with POSIX. For example, EINVAL for "Invalid argument", or ENOMEM for "Out of memory". So, peoples do not have to study new error codes if they already have skills about POSIX programming. This is important point to write applications and to read the kernel code because study of a new error scheme will cause pain for developers. In addition, it simplifies the POSIX emulation library because it does not have to remap the error code.
+The error code for the Prex+ system call is defined as the same name with POSIX. For example, EINVAL for "Invalid argument", or ENOMEM for "Out of memory". So, peoples do not have to study new error codes if they already have skills about POSIX programming. This is important point to write applications and to read the kernel code because study of a new error scheme will cause pain for developers. In addition, it simplifies the POSIX emulation library because it does not have to remap the error code.
 
 #### Maintainability
 
@@ -66,10 +66,10 @@ All kernel codes are kept clean and simple for the maintenance. All codes are we
 
 ### Kernel Structure
 
-The following figure illustrates the Prex kernel components.
+The following figure illustrates the Prex+ kernel components.
 
 ![Kernel Components](img/kernel/kernel.png)  
-Figure 1. Prex Kernel Components
+Figure 1. Prex+ Kernel Components
 
 Each kernel object belongs in one of the following groups.
 
@@ -79,14 +79,14 @@ Each kernel object belongs in one of the following groups.
 - **sync**: synchronize objects
 - **hal**: hardware abstraction layer
 
-These group name are mapped to the directory name of the source tree. The following figure shows the kernel directory structure of Prex.
+These group name are mapped to the directory name of the source tree. The following figure shows the kernel directory structure of Prex+.
 
 ![Kernel Directory](img/kernel/kdir.png)  
 Figure 2. Kernel Directory Structure
 
 ### Naming Convention
 
-The name of "group/object" in figure 1 is mapped to "directory/file" in the Prex source tree. For example, the thread related functions are located in "kern/thread.c", and the functions for semaphore are placed in "sync/sem.c".
+The name of "group/object" in figure 1 is mapped to "directory/file" in the Prex+ source tree. For example, the thread related functions are located in "kern/thread.c", and the functions for semaphore are placed in "sync/sem.c".
 
 ```
 /kern/debug.c
@@ -106,7 +106,7 @@ In addition, there is a standard naming convention about kernel routines. The me
 
 ### Features
 
-The Prex microkernel provides the following kernel services:
+The Prex+ microkernel provides the following kernel services:
 
 - threads and tasks
 - message passing (IPC)
@@ -122,12 +122,12 @@ The Prex microkernel provides the following kernel services:
 
 ### Major Concepts
 
-Prex tasks contain the capabilities, IPC objects, synchronize objects, and address space of a running entity. Tasks perform no computation; they are a framework for running threads.
+Prex+ tasks contain the capabilities, IPC objects, synchronize objects, and address space of a running entity. Tasks perform no computation; they are a framework for running threads.
 
 The following figure illustrates contents of the task.
 
-![Prex Task](img/kernel/task.png)  
-Figure 3. Prex Task
+![Prex+ Task](img/kernel/task.png)  
+Figure 3. Prex+ Task
 
 Table 1 shows kernel interfaces for task operation.
 
@@ -174,18 +174,18 @@ A kernel task is the special task that has only an idle thread and the interrupt
 
 ### Task Capabilities
 
-Prex supports a security framework named "task capability". Each task will be assigned its own capabilities for various operations. When a task tries to do a privileged operation, the kernel, device drivers and system servers will check the appropriate bit in the task capability. For example, the task must have CAP_KILL capability to send an exception to another task. Or, CAP_NICE is required to adjust the scheduling parameter of the thread in another task.
+Prex+ supports a security framework named "task capability". Each task will be assigned its own capabilities for various operations. When a task tries to do a privileged operation, the kernel, device drivers and system servers will check the appropriate bit in the task capability. For example, the task must have CAP_KILL capability to send an exception to another task. Or, CAP_NICE is required to adjust the scheduling parameter of the thread in another task.
 
 ## Thread
 
 ### Major Cocepts
 
-A thread is the unit of execution in the Prex system. A thread is a sequential flow of control and is characterized by a thread context corresponding to the state of the processor at any given point during the execution of the thread.
+A thread is the unit of execution in the Prex+ system. A thread is a sequential flow of control and is characterized by a thread context corresponding to the state of the processor at any given point during the execution of the thread.
 
-Threads contain the minimal processing state associated with a computation, e.g. a program counter, a stack pointer, and a set of registers. A thread exists within exactly one task; however, one task may contain many threads. The following figure illustrates the Prex thread.
+Threads contain the minimal processing state associated with a computation, e.g. a program counter, a stack pointer, and a set of registers. A thread exists within exactly one task; however, one task may contain many threads. The following figure illustrates the Prex+ thread.
 
-![Prex Thread](img/kernel/thr.png)  
-Figure 4. Prex Thread
+![Prex+ Thread](img/kernel/thr.png)  
+Figure 4. Prex+ Thread
 
 Table 3 shows kernel interfaces for thread operation.
 
@@ -299,7 +299,7 @@ Creating a thread and loading its register state are isolated in different routi
 | exec()           | X               | O             |
 | pthread_create() | O               | O             |
 
-The address for the stack pointer is also set by thread_load(). Since the Prex kernel does not allocate any stack buffer for user mode threads, the parent thread has responsible to allocate it.
+The address for the stack pointer is also set by thread_load(). Since the Prex+ kernel does not allocate any stack buffer for user mode threads, the parent thread has responsible to allocate it.
 
 ### Thread Termination
 
@@ -313,7 +313,7 @@ In general, there is a known issue about the thread termination. If the terminat
 2. Add condition check in thread switching code
 3. Defer termination until next termination request
 
-The Prex kernel is using #3.
+The Prex+ kernel is using #3.
 
 ### Thread Suspension
 
@@ -373,7 +373,7 @@ The machine_idle() routine will program the platform H/W to the low power mode. 
 
 ### Scheduling Queue
 
-The Prex scheduler is based on the algorithm known as priority based multi level queue. The following diagram shows each thread is linked to the run queue for its priority.
+The Prex+ scheduler is based on the algorithm known as priority based multi level queue. The following diagram shows each thread is linked to the run queue for its priority.
 
 ![Run Queue](img/kernel/runq.png)  
 Figure 6. Run Queue
@@ -386,7 +386,7 @@ There are following three types of scheduling policy.
 - **SCHED_RR**: Round Robin (SCHED_FIFO + timeslice)  
 - **SCHED_OTHER**: Not supported
 
-In early Prex development phase, SCHED_OTHER was implemented as a traditional BSD scheduler. Since this scheduler changes the thread priority dynamically, it is unpredictable and does not fit the real-time system. Recently, SCHED_OTHER policy was dropped from Prex to focus on real-time platform.
+In early Prex+ development phase, SCHED_OTHER was implemented as a traditional BSD scheduler. Since this scheduler changes the thread priority dynamically, it is unpredictable and does not fit the real-time system. Recently, SCHED_OTHER policy was dropped from Prex+ to focus on real-time platform.
 
 There are following 4 events to switch thread:
 
@@ -439,7 +439,7 @@ timer_init(void)
 Since each event has its own name, it is easy to know which event the thread is waiting for. The ps command can show this event name as WCHAN (wait channel).
 
 ```
-[prex:/]# ps -l
+[prex+:/]# ps -l
   PID  PPID PRI STAT POL      TIME WCHAN       CMD
     0     0 125 R    RR          9 ipc         proc
     3     0 127 R    RR         14 ipc         exec
@@ -450,7 +450,7 @@ Since each event has its own name, it is easy to know which event the thread is 
     1     0 253 R    RR          3 exception   init
     4     1 199 R    RR          7 exception   cmdbox
    10     4 200 R    RR          2 -           ps
-[prex:/]#
+[prex+:/]#
 ```
 
 ### Sleep & Wakeup
@@ -496,7 +496,7 @@ Each DPC routine is called by the DPC thread which works as a kernel thread. The
 
 Since all DPC requests are maintained in single DPC queue,  request is processed in FIFO order. When the previous DPC request is still pending and its DPC object is used again, the kernel just over-ride the first request. This design allows the kernel to prevent the overflow of the DPC queue, but the device driver may need to maintain its DPC state by itself.
 
-Prex does not support cancelling of DPC for now.
+Prex+ does not support cancelling of DPC for now.
 
 ## Memory Management
 
@@ -505,9 +505,9 @@ Prex does not support cancelling of DPC for now.
 The physical page allocator provides the service for page allocation/deallocation/reservation. It works as a bottom layer for other memory managers.
 
 ![Memory Structure](img/kernel/memory.png)  
-Figure 8. Prex Memory Structure
+Figure 8. Prex+ Memory Structure
 
-The important point here is that the Prex kernel does not swap out any pages to the disk devices. This is a significant design policy to obtain real-time performance and system simplicity.
+The important point here is that the Prex+ kernel does not swap out any pages to the disk devices. This is a significant design policy to obtain real-time performance and system simplicity.
 
 Table 10 shows kernel services for page allocator.
 
@@ -551,9 +551,9 @@ free_blks[2] = list for 48 byte block
 free_blks[255] = list for 4096 byte block
 ```
 
-In general, only one list is used to search the free block for a first fit algorithm. However, the Prex kernel memory allocator is using multiple lists corresponding to each block size. A search is started from the list of the requested size. So, it is not necessary to search smaller block's list wastefully.
+In general, only one list is used to search the free block for a first fit algorithm. However, the Prex+ kernel memory allocator is using multiple lists corresponding to each block size. A search is started from the list of the requested size. So, it is not necessary to search smaller block's list wastefully.
 
-In most of the "buddy" based memory allocators, their algorithm are using **2^n** bytes as block size. But, this logic will throw away much memory in case the block size is not fit. So, this is not suitable for the embedded systems that Prex aims to.
+In most of the "buddy" based memory allocators, their algorithm are using **2^n** bytes as block size. But, this logic will throw away much memory in case the block size is not fit. So, this is not suitable for the embedded systems that Prex+ aims to.
 
 ### Virtual Memory Manager
 
@@ -575,15 +575,15 @@ The kernel task is a special task which has the virtual memory mapping for kerne
 ![Memory Mapping](img/kernel/memmap.png)  
  Figure 9. Kernel Memory Mapping
 
-Since the Prex kernel does not do page out to an external storage, it is guaranteed that the allocated memory is always continuing and existing. Thereby, a kernel and drivers can be constructed very simply.
+Since the Prex+ kernel does not do page out to an external storage, it is guaranteed that the allocated memory is always continuing and existing. Thereby, a kernel and drivers can be constructed very simply.
 
-*Note: "Copy-on-write" feature was supported with the Prex kernel before. But, it was dropped to increase the real-time performance.*
+*Note: "Copy-on-write" feature was supported with the Prex+ kernel before. But, it was dropped to increase the real-time performance.*
 
 ## IPC
 
-The message passing model of Prex is very simple compared with other modern microkernel. The Prex message is sent to the "object" from thread to thread. The "object" is similar concept that is called as "port" in other microkernel.
+The message passing model of Prex+ is very simple compared with other modern microkernel. The Prex+ message is sent to the "object" from thread to thread. The "object" is similar concept that is called as "port" in other microkernel.
 
-Since all messages in Prex are transferred among threads, the name of "IPC" is not appropriate. However, "IPC" is still used as a general term of the message transfer via the kernel, in Prex.
+Since all messages in Prex+ are transferred among threads, the name of "IPC" is not appropriate. However, "IPC" is still used as a general term of the message transfer via the kernel, in Prex+.
 
 ### Object
 
@@ -595,7 +595,7 @@ An object represents service, state, or policies etc. For the purpose of object 
 | object_lookup()  | Search an object in the object name space |
 | object_destroy() | Destroy an existing object                |
 
-The Prex task will create an object to publish its interface to other tasks. For example, server tasks will create objects like "!proc", "!fs", "!exec" to allow clients to access their services. And then, client tasks will send a request message to these objects.
+The Prex+ task will create an object to publish its interface to other tasks. For example, server tasks will create objects like "!proc", "!fs", "!exec" to allow clients to access their services. And then, client tasks will send a request message to these objects.
 
 An actual entity of the object is stored in kernel space, and it is protected from user mode code. The object data is managed with the hash table by using its name string. Usually, an object has a unique name within a system. To send a message to the specific object, the sender must obtain the ID of the target object by using object_lookup().
 
@@ -629,16 +629,16 @@ Messages are sent to the specific object using msg_send(). The transmission of a
 
 The receiver thread can not receive another message until it replies to the sender. In short, a thread can receive only one message at once. Once the thread receives message, it can send another message to different object. This mechanism allows threads to redirect the sender's request to another thread.
 
-A thread can receive a message from the specific object which is created by itself or thread in same task. If the message has not arrived, it blocks until any message comes in. The following figure shows the IPC transmit sequence of Prex.
+A thread can receive a message from the specific object which is created by itself or thread in same task. If the message has not arrived, it blocks until any message comes in. The following figure shows the IPC transmit sequence of Prex+.
 
-![ipc queue](http://prex.sourceforge.net/doc/img/msg.gif)  
+![ipc queue](http://prex+.sourceforge.net/doc/img/msg.gif)  
  Figure 10. IPC Transmit Sequence
 
 ### Message Transfer
 
-The message is copied to task to task directly without kernel buffering. The memory region of sent message is automatically mapped to the receiver's memory within kernel. This mechanism allows to reduce the number of copy time while message transfer. Since there is no page out of memory in Prex, we can copy the message data via physical memory at anytime.
+The message is copied to task to task directly without kernel buffering. The memory region of sent message is automatically mapped to the receiver's memory within kernel. This mechanism allows to reduce the number of copy time while message transfer. Since there is no page out of memory in Prex+, we can copy the message data via physical memory at anytime.
 
-![Message transfer](http://prex.sourceforge.net/doc/img/ipcmap.gif)  
+![Message transfer](http://prex+.sourceforge.net/doc/img/ipcmap.gif)  
  Figure 11. IPC message transfer
 
 ## Exception Handling
@@ -658,11 +658,11 @@ Kernel supports 32 types of exception. The following pre-defined exceptions are 
 | SIGSEGV   | H/W  | Invalid memory access |
 | SIGALRM   | S/W  | Alarm event           |
 
-POSIX emulation library will setup its own exception handler to convert the Prex exceptions into UNIX signals. It will maintain its own signal mask. And, it transfer control to the actual POSIX signal handler that is defined by the user mode process.
+POSIX emulation library will setup its own exception handler to convert the Prex+ exceptions into UNIX signals. It will maintain its own signal mask. And, it transfer control to the actual POSIX signal handler that is defined by the user mode process.
 
 ##  Interrupt Framework
 
-Prex defines two different types of interrupt service to optimize the response time of real-time operation.
+Prex+ defines two different types of interrupt service to optimize the response time of real-time operation.
 
 ### Interrupt Service Routine (ISR)
 
@@ -678,10 +678,10 @@ Each ISR has its logical priority level, with 0 being the lowest priority. While
 
 IST is executed as a normal thread dispatched by the scheduler. So, the interrupt thread which has higher priority is executed first. The driver writer can specify the thread priority of IST when IST is attached to the specific interrupt line. The important point is that even a user mode task can be performed prior to an interrupt thread.
 
-The following figure is the sample of the Prex interrupt processing.
+The following figure is the sample of the Prex+ interrupt processing.
 
 ![Interrupt Processing](img/kernel/irq.png)  
- Figure 12. Prex Interrupt Processing
+ Figure 12. Prex+ Interrupt Processing
 
 ### Disabling Interrupts
 
@@ -735,7 +735,7 @@ The thread can become a periodic thread by calling timer_periodic() kernel API. 
 
 ### Timer Thread
 
-If the callout routines are called from the clock interrupt handler, it will degrade real-time performance of the system because the interrupt priority for clock is very high. So, all callout routines in Prex are called by a timer thread  which runs at timer priority level.
+If the callout routines are called from the clock interrupt handler, it will degrade real-time performance of the system because the interrupt priority for clock is very high. So, all callout routines in Prex+ are called by a timer thread  which runs at timer priority level.
 
 Each active timer is inserted to the kernel timer list. The timer list is sorted by expiration time. The timer thread is sleeping at most time. If a clock interrupt occurs, the timer interrupt handler will check the timer list and process the expired timer to be called by the timer thread later.
 
@@ -745,11 +745,11 @@ The periodic timer is designed to minimize the deviation between desired and act
 
 ## Device I/O Services
 
-The Prex device driver module is separated from the kernel, and this module is linked with the kernel at the boot time. The kernel provides only simple and minimum services to help the  communication between applications and drivers.
+The Prex+ device driver module is separated from the kernel, and this module is linked with the kernel at the boot time. The kernel provides only simple and minimum services to help the  communication between applications and drivers.
 
 ### Device Object
 
-Since the Prex kernel does not have the file system in it, the kernel provides a device object service for I/O interface. The device object is created by the device driver to communicate to the application. Usually, the driver creates a device object for an existing physical device. But, it can be used to handle logical or virtual devices. A kernel provides the following device object services for device drivers.
+Since the Prex+ kernel does not have the file system in it, the kernel provides a device object service for I/O interface. The device object is created by the device driver to communicate to the application. Usually, the driver creates a device object for an existing physical device. But, it can be used to handle logical or virtual devices. A kernel provides the following device object services for device drivers.
 
 | Function           | Description                                    |
 | ------------------ | ---------------------------------------------- |
@@ -760,7 +760,7 @@ Since the Prex kernel does not have the file system in it, the kernel provides a
 | device_broadcast() | Broadcast devctl command to all device objects |
 | device_private()   | Get the private data of the device object      |
 
-The following figure illustrates the Prex device I/O operations.
+The following figure illustrates the Prex+ device I/O operations.
 
 ![Device I/O Processing](img/kernel/devobj.png)  
 Figure 13. Device I/O Operations
@@ -779,7 +779,7 @@ The interface between kernel and drivers are defined clearly as "Driver Kernel I
 
 ### Application I/O Interface
 
-The kernel device I/O interfaces are provided to access the specific device object which is handled by a driver.  The Prex kernel provides the following 5 functions for applications.
+The kernel device I/O interfaces are provided to access the specific device object which is handled by a driver.  The Prex+ kernel provides the following 5 functions for applications.
 
 | Function       | Description        |
 | -------------- | ------------------ |
@@ -791,7 +791,7 @@ The kernel device I/O interfaces are provided to access the specific device obje
 
 ## Synchronous Service
 
-The Prex kernel provides three different synchronization primitives:
+The Prex+ kernel provides three different synchronization primitives:
 
 - Mutex
 - Condition Variable
@@ -805,7 +805,7 @@ The thread priority is automatically changed at one of the following conditions.
 2.   When the current thread unlocks the mutex and its priority  has already been boosted, kernel recomputes the current priority.  In this case, the priority is set to the highest  priority among the threads waiting for the mutexes locked by the  current thread.  
 3.    When the priority is changed by the user request, the related (inherited)   thread's priority is also changed.  
 
-There are following limitations about priority inheritance with Prex mutex.
+There are following limitations about priority inheritance with Prex+ mutex.
 
 1.   If the priority is changed by the user request, the priority  recomputation is done only when the new priority is higher  than old priority. The inherited priority is reset to base  priority when the mutex is unlocked.  
 2.   Even if thread is killed with mutex waiting, the related  priority is not adjusted.  
@@ -822,7 +822,7 @@ The output routine for printf() is initially set to the function in HAL. However
 
 ## Hardware Abstraction Layer
 
-The interface to the hardware abstraction layer is strictly defined by the Prex kernel. This interface is designed carefully to support various different architectures with minimum code changes. So, it is easy to port the Prex kernel to different architecture.
+The interface to the hardware abstraction layer is strictly defined by the Prex+ kernel. This interface is designed carefully to support various different architectures with minimum code changes. So, it is easy to port the Prex+ kernel to different architecture.
 
 The following table shows the HAL class and its methods.
 

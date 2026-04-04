@@ -8,7 +8,7 @@
 
 ## Roadmap
 
-The prex development phase is divided into the following 3 stages:
+The prex+ development phase is divided into the following 3 stages:
 
 ### 1) Version 0.1 - 0.4
 
@@ -40,7 +40,7 @@ Focus: Network Connectivity
 
 ## Current Ports
 
-Prex currently supports the following platforms.
+Prex+ currently supports the following platforms.
 
 | Name           | Arch     | Platform         | Emulator                        | Toolchain          |
 | -------------- | -------- | ---------------- | ------------------------------- | ------------------ |

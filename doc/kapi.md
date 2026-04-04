@@ -1,4 +1,4 @@
-# Prex Kernel API Reference
+# Prex+ Kernel API Reference
 
 ### Table of Contents
 
@@ -96,23 +96,23 @@
 
 ## Introduction
 
-The Prex Kernel API Reference defines a programming interface for the Prex applications. This document includes the complete set of kernel services and the detailed description.
+The Prex+ Kernel API Reference defines a programming interface for the Prex+ applications. This document includes the complete set of kernel services and the detailed description.
 
 ## General Information
 
 ### Header File
 
-The Prex kernel header file (/include/sys/prex.h) provides external interfaces for the kernel objects. An application must include this header file to use the kernel interface.
+The Prex+ kernel header file (/include/sys/prex+.h) provides external interfaces for the kernel objects. An application must include this header file to use the kernel interface.
 
 ```
-#include <sys/prex.h>
+#include <sys/prex+.h>
 ```
 
 Note: If an application uses POSIX emulation library and does not touch kernel interface, it does not have to include this header.
 
 ### Data Types
 
-The following data types are supported by the Prex kernel. Each type represents ID of the kernel element.
+The following data types are supported by the Prex+ kernel. Each type represents ID of the kernel element.
 
 | Data type | Description                            |
 | --------- | -------------------------------------- |
@@ -127,7 +127,7 @@ The following data types are supported by the Prex kernel. Each type represents 
 
 ### Error Numbers
 
-The definition of the Prex kernel error is compatible with the POSIX error number. However, unlike POSIX, Prex does not use an errno variable because errno is not MT-safe. So, most functions in kernel API will provide an error number as a return value.
+The definition of the Prex+ kernel error is compatible with the POSIX error number. However, unlike POSIX, Prex+ does not use an errno variable because errno is not MT-safe. So, most functions in kernel API will provide an error number as a return value.
 
 The following error names are used as the possible error number.
 
@@ -209,7 +209,7 @@ The following error names are used as the possible error number.
 
 ### Message Header
 
-A Prex message consists of a fixed header, followed by a variable amount of data. The format of the message header is as follows:
+A Prex+ message consists of a fixed header, followed by a variable amount of data. The format of the message header is as follows:
 
 ```
 struct msg_header {

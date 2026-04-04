@@ -1,6 +1,6 @@
-# Prex Kernel Debugging Tips and Tricks
+# Prex+ Kernel Debugging Tips and Tricks
 
-*For Prex version 0.8.2, 2009/04/11*
+*For Prex+ version 0.8.2, 2009/04/11*
 
 ### Table of Contents
 
@@ -19,7 +19,7 @@
 
 ## Building a Debugging Kernel
 
-The Prex kernel is compiled with a debugging version by default. The debugging version will have the following extra functions compared with the release version.
+The Prex+ kernel is compiled with a debugging version by default. The debugging version will have the following extra functions compared with the release version.
 
 - printf() to output the debug message.
 - panic() log for the fatal error.
@@ -156,7 +156,7 @@ If you assign magic keys for the kernel dump, you can get the  kernel dump as fa
 
 ### Dump Sample
 
-The following dump screen was obtained with Prex-i386pc.
+The following dump screen was obtained with Prex+-i386pc.
 
 ```
 Kernel dump usage:
@@ -232,7 +232,7 @@ task=8002a574 map=8002a5e4 name=kmon
 
 ### Installing the GDB remote stub
 
-To install GDB stub into the Prex kernel, you must uncomment the following line in config.h.
+To install GDB stub into the Prex+ kernel, you must uncomment the following line in config.h.
 
 ```
 #define CONFIG_GDB 1
@@ -245,7 +245,7 @@ The GDB support is disabled by default.
 You should specify the path to the symbol file.
 
 ```
-(gdb) symbol-file /usr/src/prex/sys/prex.sym
+(gdb) symbol-file /usr/src/prex+/sys/prex+.sym
 (gdb) set remotebaud 115200
 (gdb) target remote /dev/ttyS0
 ```
@@ -261,8 +261,8 @@ welcome to change it and/or distribute copies of it under certain conditions.
 Type "show copying" to see the conditions.
 There is absolutely no warranty for GDB.  Type "show warranty" for details.
 This GDB was configured as "--host=i686-pc-cygwin --target=i386-elf".
-(gdb) symbol-file /usr/src/prex-0.1.2/sys/prex.sym
-Reading symbols from /usr/src/prex-0.1.2/sys/prex.sym...done.
+(gdb) symbol-file /usr/src/prex+-0.1.2/sys/prex+.sym
+Reading symbols from /usr/src/prex+-0.1.2/sys/prex+.sym...done.
 (gdb) set remotebaud 115200
 (gdb) target remote /dev/ttyS0
 Remote debugging using /dev/ttyS0
@@ -322,7 +322,7 @@ QEMU has the capability to connect to GDB on the same local machine.
   You have to prepare the following "gdbqemu" for gdb.
 
   ```
-  symbol-file /usr/src/prex/sys/prex.sym
+  symbol-file /usr/src/prex+/sys/prex+.sym
   target remote localhost:1234
   ```
 
@@ -331,7 +331,7 @@ QEMU has the capability to connect to GDB on the same local machine.
   Execute the following command:
 
   ```
-  $ qemu -s -S -fda (your directory)/prex-X.X.X.i386-pc.img -localtime
+  $ qemu -s -S -fda (your directory)/prex+-X.X.X.i386-pc.img -localtime
   ```
 
   Then, the following message will appear.

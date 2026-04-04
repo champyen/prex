@@ -37,7 +37,7 @@
 
 ## Introduction
 
-CmdBox (Command Box) is a small application which includes tiny versions of many UNIX utilities - A.K.A. the Swiss Army Knife of Prex.
+CmdBox (Command Box) is a small application which includes tiny versions of many UNIX utilities - A.K.A. the Swiss Army Knife of Prex+.
 
 This document describes the usage of each command and how to customize commands.
 
@@ -58,10 +58,10 @@ command [arguments...]
 The following example shows the usage of the some major UNIX commands.
 
 ```
-[prex:/]# cd boot
-[prex:/boot]# cmdbox pwd
+[prex+:/]# cd boot
+[prex+:/boot]# cmdbox pwd
 /boot
-[prex:/boot]# cmdbox ps
+[prex+:/boot]# cmdbox ps
   PID     TIME CMD
     0        5 proc
     3       20 exec
@@ -69,18 +69,18 @@ The following example shows the usage of the some major UNIX commands.
     1        2 init
     4        4 cmdbox
     6        6 cmdbox
-[prex:/boot]# cmdbox sh
-[prex:/boot]# uname -?
+[prex+:/boot]# cmdbox sh
+[prex+:/boot]# uname -?
 usage: uname [-amnsrv]
-[prex:/boot]# uname -a
-Prex 0.8.2 Feb  4 2009 i386-pc preky
-[prex:/boot]# exit
-[prex:/boot]# _
+[prex+:/boot]# uname -a
+Prex+ 0.8.2 Feb  4 2009 i386-pc preky
+[prex+:/boot]# exit
+[prex+:/boot]# _
 ```
 
 ## Configuring CmdBox
 
-You can select the available commands included in CmdBox utility. This can be done by changing 'command' options in the configuration file - */conf/$(arch)/$(platform)*. You must change this file before running the configure script to compile the Prex source tree.
+You can select the available commands included in CmdBox utility. This can be done by changing 'command' options in the configuration file - */conf/$(arch)/$(platform)*. You must change this file before running the configure script to compile the Prex+ source tree.
 
 ```
 command         cat
@@ -101,7 +101,7 @@ command         mkdir
 The 'help' command will display the list of supported built-in commands. So, you can identify which commands are included in CmdBox.
 
 ```
-[prex:/]# help
+[prex+:/]# help
 usage: cmdbox [command] [arguments]...
 builtin commands:
     cat, clear, cp, date, dmesg, echo, free, head, help, hostname,
@@ -109,7 +109,7 @@ builtin commands:
     rmdir, sleep, sync, touch, uname, cd, exec, exit, export,
     mem, set, unset
 use `-?` to find out more about each command.
-[prex:/]# _
+[prex+:/]# _
 ```
 
 ## Command Usage

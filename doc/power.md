@@ -1,4 +1,4 @@
-# Prex Power Management
+# Prex+ Power Management
 
 ### Table of Contents
 
@@ -15,13 +15,13 @@
 
 ## Introduction
 
-Prex is designed to be used with battery-powered devices, such as mobile phones or consumer electronics devices. So, Prex provides an integrated and system-wide set of power management features. It helps to extend battery life, save energy and reduce heat and noise.
+Prex+ is designed to be used with battery-powered devices, such as mobile phones or consumer electronics devices. So, Prex+ provides an integrated and system-wide set of power management features. It helps to extend battery life, save energy and reduce heat and noise.
 
-This document describes the design and implementation of the power management features of Prex.
+This document describes the design and implementation of the power management features of Prex+.
 
 ## Architecture Overview
 
-The following components work together for power management in Prex.
+The following components work together for power management in Prex+.
 
 - **PM Utility:** handles the user's power management request.
 - **Power Server:** maintains the power policy and maps each power event to the power action.
@@ -38,7 +38,7 @@ The following components work together for power management in Prex.
 
 ### Power States
 
-Prex supports the following power states.
+Prex+ supports the following power states.
 
 - **Power On**
 - **Suspend** 
@@ -48,13 +48,13 @@ In the suspend state, the system powers down devices that are not needed in orde
 
 ### Power Management Timer
 
-Prex provides the power management timer which sets the system to the suspend state after a period of inactivity. If a device driver detects some user activities (e.g. keyboard input), the driver should notify it to the PM driver by using pm_notify() function to reload the PM timer.
+Prex+ provides the power management timer which sets the system to the suspend state after a period of inactivity. If a device driver detects some user activities (e.g. keyboard input), the driver should notify it to the PM driver by using pm_notify() function to reload the PM timer.
 
 LCD off timer is also provided by PM driver, and LCD driver can support automatic LCD off if it has the h/w capability.
 
 ### Power Policy
 
-The Power Server maintains a system-wide policy setting for its power operations. A user application can change the power policy appropriately for the user environment. Prex supports the following two power policies.
+The Power Server maintains a system-wide policy setting for its power operations. A user application can change the power policy appropriately for the user environment. Prex+ supports the following two power policies.
 
 | PM Policy      | Frequency/Voltage Control | Suspend Timer | LCD Off Timer | Device Performance |
 | -------------- | ------------------------- | ------------- | ------------- | ------------------ |
@@ -291,7 +291,7 @@ struct cpufreq_ops {
 pmctrl is an utility to manage the various power management state in the system.
 
 ```
-[prex:/boot]# pmctrl -?
+[prex+:/boot]# pmctrl -?
 usage: pmctrl command
 commands:
  off      -- Power off.
@@ -303,7 +303,7 @@ commands:
  dimtime  -- Set timeout for dim timer.
  battery  -- Show current battery level.
  -?       -- This help.
-[prex:/boot]#
+[prex+:/boot]#
 ```
 
 pmctrl will translate the user request to the IPC message to the power server. pmctrl utility must have CAP_POWERMGMT capability in security setting.

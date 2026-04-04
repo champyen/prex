@@ -1,19 +1,19 @@
 
-                       Prex Operating System
+                       Prex+ Operating System
 
 
-What is Prex?
+What is Prex+?
 =============
 
-The Prex project is an open source initiative to provide a portable
-real-time operating system for embedded systems. Prex is designed
+The Prex+ project is an open source initiative to provide a portable
+real-time operating system for embedded systems. Prex+ is designed
 specifically for small footprint platforms. It is written in C language
 from scratch based on a traditional micro kernel architecture.
 
-The Prex kernel provides only fundamental features for task, thread, memory,
+The Prex+ kernel provides only fundamental features for task, thread, memory,
 ipc, exception, and synchronization. The other basic OS functions such
 like process, file system, application loading, and networking are provided
-by user mode servers on top of the Prex kernel. This design allows systems
+by user mode servers on top of the Prex+ kernel. This design allows systems
 to execute both of native real-time task and generic UNIX process
 simultaneously, without degrading the real-time performance. Futhermore, it
 helps the platform designer to construct OS by choosing appropriate server
@@ -23,7 +23,7 @@ tasks for their target requirements.
 Licensing
 =========
 
-Prex is royalty-free software released under BSD License.
+Prex+ is royalty-free software released under BSD License.
 
 
 Current Port
@@ -42,7 +42,7 @@ How to Build?
 
 Step 1: Prepare Toolchain
 
-  The following packages are required for compiling Prex.
+  The following packages are required for compiling Prex+.
   - GCC 2.95.3 or later
   - GNU Binutils 2.15 or later
   - GNU Make 3.81 or later
@@ -52,15 +52,15 @@ Step 1: Prepare Toolchain
   $ sudo apt install gcc-multilib g++-multilib libc6-dev-i386
 
   The toolchain should be built appropriately for your target
-  architecture to cross-compile Prex.
+  architecture to cross-compile Prex+.
 
 Step 2: Prepare Sources
 
   Unpack the sources and move to the top level directory of the source tree.
 
   $ cd /usr/src
-  $ tar zxvf prex-X.X.X.tar.gz
-  $ cd prex-X.X.X
+  $ tar zxvf prex+-X.X.X.tar.gz
+  $ cd prex+-X.X.X
 
 Step 3: Configure
 
@@ -69,7 +69,7 @@ Step 3: Configure
 
   $ ./configure --target=x86-pc
 
-  If you cross compile Prex from a different architecture and/or OS,
+  If you cross compile Prex+ from a different architecture and/or OS,
   you have to set --cross-prefix option. Please check other options
   with --help option for 'configure'.
 
@@ -83,13 +83,13 @@ Step 4: Build
 Note) If you want to run 'make' at the subdirectory, you have to set the
       SRCDIR as follow.
 
-  $ export SRCDIR=/usr/src/prex-X.X.X
+  $ export SRCDIR=/usr/src/prex+-X.X.X
 
 
 Directory Structure
 ===================
 
-Prex source code is divided into the following directories:
+Prex+ source code is divided into the following directories:
 
  /conf			System configuration files
 
@@ -97,7 +97,7 @@ Prex source code is divided into the following directories:
 
  /include		Common include files
 
- /sys			Prex microkernel
+ /sys			Prex+ microkernel
 	/include	Kernel headers
 	/lib		Common kernel library
 	/ipc		Inter process communication support
@@ -124,9 +124,9 @@ Prex source code is divided into the following directories:
 Project Website
 ===============
 
-More information about Prex can be found at:
+More information about Prex+ can be found at:
 
-  http://prex.sourceforge.net
+  http://prex+.sourceforge.net
 
 
 Author

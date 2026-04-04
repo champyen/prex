@@ -1,4 +1,4 @@
-# Prex Application Programming Guide
+# Prex+ Application Programming Guide
 
 ### Table of Contents
 
@@ -17,19 +17,19 @@
 
 ## Introduction
 
-This document describes how to make a user application for Prex.
+This document describes how to make a user application for Prex+.
 
-For a full description of the Prex application interface, see the following documents.
+For a full description of the Prex+ application interface, see the following documents.
 
-- [Prex Kernel API reference](kapi.md)
+- [Prex+ Kernel API reference](kapi.md)
 - [POSIX Compliance](posix.md)
-- [Prex Sample Applications](sample.md)
+- [Prex+ Sample Applications](sample.md)
 
 ## Application Overview
 
 ### Application Type
 
-Prex supports the following two different types of application:
+Prex+ supports the following two different types of application:
 
 - Native Real-time Tasks
 - UNIX Processes
@@ -59,12 +59,12 @@ There exist two different C libraries for applications.
 
 #### libc
 
-Most POSIX services are provided by the system servers running in the user mode. So, an application must send an IPC message to the system servers to access the POSIX interface. Prex's libc includes the IPC messaging stub for the POSIX service, and so, applications do not care about IPC transmission (Figure 1).
+Most POSIX services are provided by the system servers running in the user mode. So, an application must send an IPC message to the system servers to access the POSIX interface. Prex+'s libc includes the IPC messaging stub for the POSIX service, and so, applications do not care about IPC transmission (Figure 1).
 
 ![libc](img/appguide/libc.png)  
 Figure 1. Structure of libc
 
-Prex's libc is derived from *BSD, but it's fully optimized for low footprint system.
+Prex+'s libc is derived from *BSD, but it's fully optimized for low footprint system.
 
 #### libsa
 
@@ -105,7 +105,7 @@ Just run make tool at the target source directory.
 $ make
 ```
 
-Note: The detailed information for the Prex tool chain is described in [Prex Build Guide](build.md).
+Note: The detailed information for the Prex+ tool chain is described in [Prex+ Build Guide](build.md).
 
 ## Testing Applications
 
@@ -150,11 +150,11 @@ FILES+=     $(SRCDIR)/usr/test/hello/hello
 The registered files in the boot file system will appear under the directory named "/boot" on the target system. Then, the "hello" application can be executed from the shell.
 
 ```
-[prex:/boot]# ls
+[prex+:/boot]# ls
 init cmdbox hello
-[prex:/boot]# hello
+[prex+:/boot]# hello
 Hello World!
-[prex:/boot]#
+[prex+:/boot]#
 ```
 
 ### Setting Task Capability
@@ -246,7 +246,7 @@ main()
 
 ### Exception handler
 
-The Prex task can provide one exception handler for each task. The exception handler must call exception_return() at the end of the handler.
+The Prex+ task can provide one exception handler for each task. The exception handler must call exception_return() at the end of the handler.
 
 ```
 static void
@@ -303,7 +303,7 @@ timer_alarm() sends a timer exception (SIGALRM) to the caller task at the specif
 
 ## Device Access
 
-The Prex kernel provides some raw I/O operations for devices. It includes open/close/read/write/ioctl.
+The Prex+ kernel provides some raw I/O operations for devices. It includes open/close/read/write/ioctl.
 
 The following code shows how to access the device from the application.
 
@@ -339,7 +339,7 @@ main(int argc, char *argv[])
 
 ## Log Service
 
-The Prex kernel supports the message log service for applications. The following service will display a message to the diagnostic port via the kernel.
+The Prex+ kernel supports the message log service for applications. The following service will display a message to the diagnostic port via the kernel.
 
 ```
 int     sys_log(const char *msg);
@@ -349,9 +349,9 @@ Note: This service is available only when the kernel is built with a debug optio
 
 ## Panic Service
 
-The panic service is generally used in the kernel mode to process unrecoverable errors. In case of Prex, this service is exported to the user mode applications in order to track the fatal condition caused by system tasks.
+The panic service is generally used in the kernel mode to process unrecoverable errors. In case of Prex+, this service is exported to the user mode applications in order to track the fatal condition caused by system tasks.
 
-Prex provides the following kernel API.
+Prex+ provides the following kernel API.
 
 ```
 void    sys_panic(const char *msg);

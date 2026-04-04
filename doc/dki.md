@@ -1,4 +1,4 @@
-# Prex Driver-Kernel Interface
+# Prex+ Driver-Kernel Interface
 
 ### Table of Contents
 
@@ -73,7 +73,7 @@
 
 ## Introduction
 
-The Prex kernel provides the minimum service for the device drivers. Since the driver module is separated from the kernel module, the drivers can not access other kernel functions beyond this interface. This mechanism helps to isolate the kernel from the driver codes.
+The Prex+ kernel provides the minimum service for the device drivers. Since the driver module is separated from the kernel module, the drivers can not access other kernel functions beyond this interface. This mechanism helps to isolate the kernel from the driver codes.
 
 This document describes the Driver-Kernel Interface (DKI) that can be used by device drivers.
 
@@ -81,7 +81,7 @@ This document describes the Driver-Kernel Interface (DKI) that can be used by de
 
 ### Header File
 
-The Prex driver header file provides common driver services in the kernel. A device driver must include this header file to use the driver-kernel interface.
+The Prex+ driver header file provides common driver services in the kernel. A device driver must include this header file to use the driver-kernel interface.
 
 ```
 #include <driver.h>

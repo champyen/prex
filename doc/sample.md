@@ -1,4 +1,4 @@
-# Prex Sample Applications
+# Prex+ Sample Applications
 
 ### Table of Contents
 
@@ -18,7 +18,7 @@
 
 ## Introduction
 
-Prex includes a number of sample programs for using Prex application interface. The source code for these programs are generally found in /usr/sample directory of the Prex distribution.
+Prex+ includes a number of sample programs for using Prex+ application interface. The source code for these programs are generally found in /usr/sample directory of the Prex+ distribution.
 
 This document describes the purpose and the screenshot for each sample program.
 
@@ -29,9 +29,9 @@ This document describes the purpose and the screenshot for each sample program.
 - Description: A simple program to print "Hello World!"
 
 ```
-[prex:/boot]# hello
+[prex+:/boot]# hello
 Hello World!
-[prex:/boot]#
+[prex+:/boot]#
 ```
 
 ## Alarm Timer

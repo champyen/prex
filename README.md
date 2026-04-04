@@ -1,12 +1,24 @@
-This is a github repo, rebased from [Prex site](http://prex.sourceforge.net).
-Maintained and develop by me (champ.yen@gmail.com).
-Feel free to submit pull request.
+This is a github repo, originally rebased from [Prex site](http://prex.sourceforge.net).
+Maintained and developed by me (champ.yen@gmail.com).
+Feel free to submit pull requests.
 
-## What is Prex?
+## Prex+ 2604 Release
 
-Prex is an open source, royalty-free, real-time operating system for embedded systems. It is designed and implemented for resource-constrained systems that require predictable timing behavior. The highly portable code of Prex is written in 100% ANSI C based on traditional microkernel architecture.
+Since the original Prex 0.9.0 release, this project has been significantly enhanced and is now released as **Prex+ (2604 release)**. Key developments include:
 
-The Prex microkernel provides only fundamental features for task, thread, memory, IPC, exception, and synchronization. The other basic OS functions - process, file system, application loading, and networking, are provided by the user mode servers. In addition, Prex provides a POSIX emulation layer in order to utilize existing *NIX applications. This design allows the system to perform both of the native real-time task and the generic POSIX process simultaneously without degrading real-time performance. It also helps platform designers to construct OS by choosing suitable system servers for their target requisition.
+*   **Expanded ARM Support:** Added support for Raspberry Pi Zero W (ARM1176JZF-S) and improved the Integrator/CP support.
+*   **New Hardware Drivers:** Implemented interrupt-driven BCM2835 SD Host (SDHC) and DMA drivers for the Raspberry Pi.
+*   **Filesystem & Storage:** Implemented a completely new FATFS file system from scratch, along with a new SDMMC stack driver with support for multi-sector reads.
+*   **Build System Modernization:** Unified configuration scripts (`--enable-mmu`) and target configurations. Fixed compilation against modern GCC (GCC 15), resolving stack boundary and strict PIC/PIE issues.
+*   **x86-pc Boot Fixes:** Resolved critical `bootldr` size limitations, fixed ELF relocation logic for driver modules (`drv.ko`), and fixed memory overlapping/page fault panics in the `exec` server's ELF loader.
+*   **System Capabilities:** Addressed capability denials (`CAP_SYSFILES`) ensuring seamless startup of the shell (`cmdbox`) and `init` scripts.
+*   **Console Output:** Ensured reliable diagnostic serial output across targets, especially for running without VGA in QEMU.
+
+## What is Prex+?
+
+Prex+ is an open source, royalty-free, real-time operating system for embedded systems. It is designed and implemented for resource-constrained systems that require predictable timing behavior. The highly portable code of Prex+ is written in 100% ANSI C based on traditional microkernel architecture.
+
+The Prex+ microkernel provides only fundamental features for task, thread, memory, IPC, exception, and synchronization. The other basic OS functions - process, file system, application loading, and networking, are provided by the user mode servers. In addition, Prex+ provides a POSIX emulation layer in order to utilize existing *NIX applications. This design allows the system to perform both of the native real-time task and the generic POSIX process simultaneously without degrading real-time performance. It also helps platform designers to construct OS by choosing suitable system servers for their target requisition.
 [Learn more »](doc/README.md)
 
 ## Project Goals
@@ -46,4 +58,12 @@ Prex has the following features:
 -   Libc: C library fully optimized to generate a small executable file
 -   CmdBox: a small binary that includes tiny versions of many UNIX utilities.
 -   Networking: (plan) TCP/IP stack, BSD socket interface
+
+## Development Plan
+
+1.  Develop BSP for QEMU armv7 virt platform (VirtIO serial, block, input, sound, and net devices).
+2.  Add new audio and net servers.
+3.  Introduce a USB stack and server.
+4.  Add RISC-V and Cortex-M support.
+5.  Add exFAT and SDXC support.
 

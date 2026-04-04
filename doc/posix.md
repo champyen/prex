@@ -1,4 +1,4 @@
-# Prex POSIX Compliance
+# Prex+ POSIX Compliance
 
 ### Table of Contents
 
@@ -7,7 +7,7 @@
 
 ## Introduction
 
-In order to reduce the development time of mobilie applications, Prex is providing developers with POSIX system call interface and standard C libraries.
+In order to reduce the development time of mobilie applications, Prex+ is providing developers with POSIX system call interface and standard C libraries.
 
 ## POSIX APIs
 

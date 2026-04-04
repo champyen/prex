@@ -1,6 +1,6 @@
-# Prex Boot Flow (x86-pc and ARM targets)
+# Prex+ Boot Flow (x86-pc and ARM targets)
 
-This document describes the complete boot sequence of the Prex operating system, detailing how the system transitions from the hardware boot phase (BIOS or ARM firmware) to the interactive shell. It covers memory layout definitions, how the system binaries are combined, and the step-by-step execution flow for both x86-pc and ARM architectures.
+This document describes the complete boot sequence of the Prex+ operating system, detailing how the system transitions from the hardware boot phase (BIOS or ARM firmware) to the interactive shell. It covers memory layout definitions, how the system binaries are combined, and the step-by-step execution flow for both x86-pc and ARM architectures.
 
 ## 1. Memory Layout and Configuration
 
@@ -8,14 +8,14 @@ The physical and virtual memory layout for each target is defined in its respect
 
 *   **`RAM_BASE`:** The physical start of RAM (e.g., `0x00000000` for x86-pc and Raspberry Pi Zero W).
 *   **`RAM_SIZE`:** For ARM targets, this explicitly defines the total available memory, as dynamic detection isn't always available via BIOS.
-*   **`LOADER_TEXT`:** The physical load address of the Prex bootloader (`bootldr`). For x86-pc, this is `0x00004000`.
+*   **`LOADER_TEXT`:** The physical load address of the Prex+ bootloader (`bootldr`). For x86-pc, this is `0x00004000`.
 *   **`BOOTIMG_BASE`:** The physical address where the OS archive payload (`tmp.a`) is placed in memory before the bootloader extracts it. For x86-pc, this is `0x00100000`.
-*   **`KERNEL_TEXT`:** The physical address where the bootloader relocates and loads the kernel (`prex`). For x86-pc, this is `0x00200000`.
+*   **`KERNEL_TEXT`:** The physical address where the bootloader relocates and loads the kernel (`prex+`). For x86-pc, this is `0x00200000`.
 *   **`SYSPAGE_BASE`:** The virtual address of the system page, which acts as the boundary between user space and kernel space.
 
 ## 2. Building the Combined Binary (`prexos`)
 
-Prex uses a multi-server microkernel architecture. The final bootable image, `prexos`, is an amalgamation of the architecture-specific bootloader, the kernel, hardware drivers, core servers, and a RAM disk containing essential user-space programs.
+Prex+ uses a multi-server microkernel architecture. The final bootable image, `prexos`, is an amalgamation of the architecture-specific bootloader, the kernel, hardware drivers, core servers, and a RAM disk containing essential user-space programs.
 
 The combination process is orchestrated by `Makefile` rules, primarily leveraging `ar` (archiver) and `cat`, and is identical across architectures:
 
@@ -26,7 +26,7 @@ The combination process is orchestrated by `Makefile` rules, primarily leveragin
 
 2.  **Temporary System Archive (`tmp.a`):**
     Next, another archive is created containing the core system components, including the previously created `bootdisk.a`.
-    *   **Contents:** `sys/prex` (the kernel), `bsp/drv/drv.ko` (the combined driver module), the core servers (`boot`, `proc`, `exec`, `pow`, `fs`), and `bootdisk.a`.
+    *   **Contents:** `sys/prex+` (the kernel), `bsp/drv/drv.ko` (the combined driver module), the core servers (`boot`, `proc`, `exec`, `pow`, `fs`), and `bootdisk.a`.
     *   **Command:** `ar rcS tmp.a ...`
 
 3.  **Final Image (`prexos`):**
@@ -48,7 +48,7 @@ For x86, this `prexos` file is then typically copied to a FAT12 floppy image (`f
 *   **ARM Targets (Firmware / U-Boot):**
     1.  The platform's primary bootloader (e.g., Broadcom GPU firmware on Raspberry Pi, or U-Boot on other boards) initializes the core hardware.
     2.  It loads the `prexos` binary from the storage medium (like an SD card or over TFTP) into RAM at `LOADER_TEXT`.
-    3.  Execution is handed over directly to the Prex bootloader.
+    3.  Execution is handed over directly to the Prex+ bootloader.
 
 ### Step 2: The Bootloader (`bootldr`)
 1.  **Entry and Relocation (`head.S`):** Execution begins in the architecture's `head.S`.
@@ -63,11 +63,11 @@ For x86, this `prexos` file is then typically copied to a FAT12 floppy image (`f
     *   It copies the `PT_LOAD` segments (Text, Data) into the allocated memory.
     *   It zero-fills the BSS sections.
     *   It performs ELF relocations (resolving undefined symbols, primarily for the driver module `drv.ko` which is linked against the kernel).
-    *   The kernel (`prex`) is specifically loaded at `KERNEL_TEXT` (`0x00200000` on x86).
+    *   The kernel (`prex+`) is specifically loaded at `KERNEL_TEXT` (`0x00200000` on x86).
 5.  **Bootinfo Population:** As it loads each module, it records its physical address, size, and entry point in the `bootinfo` structure. The `bootdisk.a` archive itself is also registered in `bootinfo` as a memory region of type `BOOTDISK`.
 6.  **Hand-off:** Finally, the bootloader jumps to the kernel's entry point, passing the physical address of the `bootinfo` structure.
 
-### Step 3: The Kernel (`sys/prex`)
+### Step 3: The Kernel (`sys/prex+`)
 1.  **Entry (`locore.S`):** The kernel entry point (`bsp/hal/x86/arch/locore.S` or `bsp/hal/arm/arch/locore.S`) sets up the initial page tables, enables the MMU (Memory Management Unit), and maps the kernel and loaded modules into the high virtual address space (above `SYSPAGE_BASE`). It then jumps to `main()`.
 2.  **Kernel Initialization (`main.c`):**
     *   Initializes the memory manager (kmem, page allocator, VM).
@@ -94,6 +94,6 @@ The core servers start running in user space. They initialize themselves and reg
 3.  The last command in `conf/etc/rc` is usually `exec sh`, which replaces the script-executing shell with an interactive shell instance.
 
 ### Step 7: The Interactive Shell
-1.  The `cmdbox` process (now running as an interactive `sh`) displays the `[prex:/]#` prompt.
+1.  The `cmdbox` process (now running as an interactive `sh`) displays the `[prex+:/]#` prompt.
 2.  It waits for user input via the console device (`/dev/console`).
 3.  The system is now fully booted and ready for interaction.

@@ -4,10 +4,10 @@
 
 **HOWTO**
 
-- [How to compile Prex for ARM Integrator?](#how-to-compile-prex-for-arm-integrator)
-- [How to run Prex with QEMU?](#how-to-run-prex-with-qemu)
+- [How to compile Prex+ for ARM Integrator?](#how-to-compile-prex+-for-arm-integrator)
+- [How to run Prex+ with QEMU?](#how-to-run-prex+-with-qemu)
 
-## How to compile Prex for ARM Integrator?
+## How to compile Prex+ for ARM Integrator?
 
 At first, you have to prepare the toolchain for cross compiling ARM code. For example, on Ubuntu/Debian, you can install the cross-compiler with:
 ```
@@ -20,8 +20,8 @@ Unpack the sources and move to top level directory of the source tree.
 
 ```
 $ cd /usr/src
-$ git clone https://github.com/champyen/prex.git
-$ cd prex
+$ git clone https://github.com/champyen/prex+.git
+$ cd prex+
 ```
 
 #### Step 2. Configure
@@ -46,9 +46,9 @@ Run make. Parallel build is supported.
 $ make -j4
 ```
 
-## How to run Prex with QEMU?
+## How to run Prex+ with QEMU?
 
- You can run Prex with QEMU on Linux using the following command:
+ You can run Prex+ with QEMU on Linux using the following command:
 
 ```
 $ qemu-system-arm -M integratorcp -kernel prexos -nographic
@@ -56,7 +56,7 @@ $ qemu-system-arm -M integratorcp -kernel prexos -nographic
 
 The `-nographic` option will redirect the serial console to your terminal. To exit QEMU, press `Ctrl-a` then `x`.
 
-On Windows, you can run Prex with QEMU by the following command:
+On Windows, you can run Prex+ with QEMU by the following command:
 
 ```
 $ qemu-system-arm.exe  -L . -kernel prexos

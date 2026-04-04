@@ -1,28 +1,28 @@
-# Prex Build Guide
+# Prex+ Build Guide
 
 ### Table of Contents
 
 - [Getting Source](#getting-source)
 - [Prerequisite Tools](#prerequisite-tools)
-- [Compiling Prex on Linux](#compiling-prex-on-linux)
-- [Compiling Prex on Windows](#compiling-prex-on-windows)
-- [Compiling Prex on FreeBSD](#compiling-prex-on-freebsd)
-- [Compiling Prex on MacOS](#compiling-prex-on-macos)
-- [Configuring Prex](#configuring-prex)
-- [Installing Prex](#installing-prex)
+- [Compiling Prex+ on Linux](#compiling-prex+-on-linux)
+- [Compiling Prex+ on Windows](#compiling-prex+-on-windows)
+- [Compiling Prex+ on FreeBSD](#compiling-prex+-on-freebsd)
+- [Compiling Prex+ on MacOS](#compiling-prex+-on-macos)
+- [Configuring Prex+](#configuring-prex+)
+- [Installing Prex+](#installing-prex+)
 - [Customizing OS Image](#customizing-os-image)
 
 
 
 ## Getting Source
 
-Please get source file with git from this [github repo](https://github.com/champyen/prex)
+Please get source file with git from this [github repo](https://github.com/champyen/prex+)
 
 Currently, there is no any released binaries.
 
 ## Prerequisite Tools
 
-The following tools are required to build Prex.
+The following tools are required to build Prex+.
 
 - GCC 4.8 or later (~10.0)
 - GNU Binutils 2.14 or later
@@ -30,7 +30,7 @@ The following tools are required to build Prex.
 
 Now, GCC, Clang, or other compilers can be used for the build.
 
-## Compiling Prex on Linux
+## Compiling Prex+ on Linux
 
 #### Step 1. Prepare Toolchain
 
@@ -45,7 +45,7 @@ To build the x86 target on an x86_64 Linux host, you must install the following 
 $ sudo apt install gcc-multilib g++-multilib libc6-dev-i386
 ```
 
-GCC/Clang and Binutils should be built appropriately for your target architecture if you cross-compile Prex.
+GCC/Clang and Binutils should be built appropriately for your target architecture if you cross-compile Prex+.
 
 #### Step 2. Get Sources
 
@@ -53,8 +53,8 @@ Unpack the sources and move to the top level directory of the source tree.
 
 ```
 $ cd /usr/src
-$ git clone https://github.com/champyen/prex.git
-$ cd prex
+$ git clone https://github.com/champyen/prex+.git
+$ cd prex+
 ```
 
 #### Step 2. Configure
@@ -78,7 +78,7 @@ $ make -j4
 - If you want to run 'make' in a subdirectory, you have to set the SRCDIR as follows:
 
 ```
-$ export SRCDIR=/usr/src/prex
+$ export SRCDIR=/usr/src/prex+
 ```
 
 - To use Clang for cross-compilation, you can use the `--cc=clang` and `--cross-prefix` options. For example:
@@ -88,7 +88,7 @@ $ ./configure --target=arm-integrator --cc=clang --cross-prefix=arm-none-eabi
 ```
 In this case, `configure` will automatically pass `--target=arm-none-eabi` to Clang.
 
-## Compiling Prex on Windows
+## Compiling Prex+ on Windows
 
 For the Windows platform, it is suggested to use a WSL/WSL2 environment.
 
@@ -96,7 +96,7 @@ The procedure is the same as Linux.
 
 If WSL/WSL2 is not considered, MinGW is suggested for this project.
 
-## Compiling Prex on FreeBSD
+## Compiling Prex+ on FreeBSD
 
 You have to specify the name of GNU make on FreeBSD.
  It can be done by changing Makefile.inc or using a symbolic link.
@@ -105,11 +105,11 @@ You have to specify the name of GNU make on FreeBSD.
 
 The compiling method is the same as compiling on Linux. Please refer to the above build step for Linux.
 
-## Compiling Prex on MacOS
+## Compiling Prex+ on MacOS
 
 Under construction
 
-## Configuring Prex
+## Configuring Prex+
 
 ### Configure Script
 
@@ -141,15 +141,15 @@ There are some build switches in the Makefile file named /mk/own.mk.
 | _STRICT_ | Compiler will check code strictly                   |
 | _SILENT_ | Output message is reduced during the build process.     |
 
-## Installing Prex
+## Installing Prex+
 
-The method to install an OS image depends on the target platform. It may be described in the target specific document listed in the [Prex document](README.md).
+The method to install an OS image depends on the target platform. It may be described in the target specific document listed in the [Prex+ document](README.md).
 
 ## Customizing OS Image
 
 ### OS Image
 
-If you compile the Prex source with the "make" command, the OS boot image is created as "prexos" in the root directory. The file "prexos" must exist in the root directory of the Prex disk/ROM. You can test your own Prex image by replacing the "prexos" in the OS boot image. The file "prexos" includes the following files.
+If you compile the Prex+ source with the "make" command, the OS boot image is created as "prexos" in the root directory. The file "prexos" must exist in the root directory of the Prex+ disk/ROM. You can test your own Prex+ image by replacing the "prexos" in the OS boot image. The file "prexos" includes the following files.
 
 - Boot loader
 - Kernel module
@@ -158,7 +158,7 @@ If you compile the Prex source with the "make" command, the OS boot image is cre
 
 ### Directory Organization
 
-The structure of the Prex source directory is as follows:
+The structure of the Prex+ source directory is as follows:
 
 ```
  /conf			System configuration files
@@ -167,7 +167,7 @@ The structure of the Prex source directory is as follows:
 
  /include		Common include files
 
- /sys			Prex microkernel
+ /sys			Prex+ microkernel
 	/include	Kernel headers
 	/lib		Common kernel library
 	/ipc		Inter process communication support

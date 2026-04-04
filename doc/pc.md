@@ -1,4 +1,4 @@
-# Prex x86 PC - HOWTO
+# Prex+ x86 PC - HOWTO
 
 *Version 1.3, 2005/09/05*
 
@@ -7,10 +7,10 @@
 **HOWTO**
 
 - [Quick Hacking Guide](#quick-hacking-guide)
-- [How to create a Prex demo floppy?](#how-to-create-a-prex-demo-floppy)
+- [How to create a Prex+ demo floppy?](#how-to-create-a-prex+-demo-floppy)
 - [How to create a bootable floppy image on Linux?](#how-to-create-a-bootable-floppy-image-on-linux)
-- [How to run Prex with Bochs?](#how-to-run-prex-with-bochs)
-- [How to run Prex with Qemu?](#how-to-run-prex-with-qemu)
+- [How to run Prex+ with Bochs?](#how-to-run-prex+-with-bochs)
+- [How to run Prex+ with Qemu?](#how-to-run-prex+-with-qemu)
 - [How to modify the OS boot image?](#how-to-modify-the-os-boot-image)
 - [How to install the boot sector?](#how-to-install-the-boot-sector)
 
@@ -23,25 +23,25 @@
 
 ## Quick Hacking Guide
 
-There are following three important points to create a Prex boot floppy  for x86-pc.
+There are following three important points to create a Prex+ boot floppy  for x86-pc.
 
 1. Format the floppy disk with FAT file system.
-2. Write the Prex boot sector (bootsect.bin) to the 1st sector.
-3. Copy the Prex kernel image (prexos) to the root directory   of the floppy.
+2. Write the Prex+ boot sector (bootsect.bin) to the 1st sector.
+3. Copy the Prex+ kernel image (prexos) to the root directory   of the floppy.
 
-Here, the difficult step is 2. To write the boot sector, some special  tool will be needed. Currently, only DOS utility (mkboot.com) is  available in the Prex distribution.
+Here, the difficult step is 2. To write the boot sector, some special  tool will be needed. Currently, only DOS utility (mkboot.com) is  available in the Prex+ distribution.
 
 So, I recommend you to create the bootable demo floppy at first. Then,  you can replace the kernel image to your own kernel in the demo floppy.
 
-The following is the easiest step to hack the Prex kernel on x86-pc.
+The following is the easiest step to hack the Prex+ kernel on x86-pc.
 
-1. Build your own kernel. Please refer to  ["Prex Build Guide"](build.md).
+1. Build your own kernel. Please refer to  ["Prex+ Build Guide"](build.md).
    Note: If you are building on an x86_64 Linux host, you must install the following multilib packages:
    ```
    $ sudo apt install gcc-multilib g++-multilib libc6-dev-i386
    ```
 
-2. Create the demo floppy. Please refer to  **"How to create a Prex demo floppy?"**
+2. Create the demo floppy. Please refer to  **"How to create a Prex+ demo floppy?"**
 
 3. Replace the kernel image (prexos) in the demo floppy with your own   image. You can use mtools to do it.  
 
@@ -53,15 +53,15 @@ The following is the easiest step to hack the Prex kernel on x86-pc.
 
 4. Boot the PC with the created floppy disk.  If the system does not boot with the floppy,  you should check the BIOS settings for the boot device order.  
 
-## How to create a Prex demo floppy?
+## How to create a Prex+ demo floppy?
 
-1. Download the binary file(*.img.gz) for the latest Prex boot floppy from the following web page.
-    [  http://prex.sourceforge.net/downloads.htm](http://prex.sourceforge.net/downloads.html) 
+1. Download the binary file(*.img.gz) for the latest Prex+ boot floppy from the following web page.
+    [  http://prex+.sourceforge.net/downloads.htm](http://prex+.sourceforge.net/downloads.html) 
 
 2. Unpack the image 
 
    ```
-   $ gunzip prex-X.X.X.i386-pc.img.gz
+   $ gunzip prex+-X.X.X.i386-pc.img.gz
    ```
 
 3. Create the floppy 
@@ -69,18 +69,18 @@ The following is the easiest step to hack the Prex kernel on x86-pc.
    - Unix:   
 
      ```
-     $ dd if=(your directory)/prex-X.X.X.i386-pc.img of=/dev/fd0
+     $ dd if=(your directory)/prex+-X.X.X.i386-pc.img of=/dev/fd0
      ```
 
    - Windows   
 
      ```
-     >rawritewin (your directory)/prex-X.X.X.i386-pc.img a:
+     >rawritewin (your directory)/prex+-X.X.X.i386-pc.img a:
      ```
 
 ## How to create a bootable floppy image on Linux?
 
-You can create a bootable Prex floppy image from scratch on Linux using the following steps. This requires `mtools` and `dosfstools` installed on your system.
+You can create a bootable Prex+ floppy image from scratch on Linux using the following steps. This requires `mtools` and `dosfstools` installed on your system.
 
 1. Create a 1.44MB blank image file:
    ```
@@ -92,44 +92,44 @@ You can create a bootable Prex floppy image from scratch on Linux using the foll
    $ mkfs.fat -F 12 floppy.img
    ```
 
-3. Write the Prex boot sector (`bootsect.bin`) to the image. Note that we must preserve the BIOS Parameter Block (BPB) created by `mkfs.fat`.
+3. Write the Prex+ boot sector (`bootsect.bin`) to the image. Note that we must preserve the BIOS Parameter Block (BPB) created by `mkfs.fat`.
    ```
    $ dd if=bsp/boot/x86/tools/bootsect/bootsect.bin of=floppy.img bs=1 count=3 conv=notrunc
    $ dd if=bsp/boot/x86/tools/bootsect/bootsect.bin of=floppy.img bs=1 skip=62 seek=62 conv=notrunc
    ```
 
-4. Copy the Prex kernel image (`prexos`) to the floppy image using `mtools`:
+4. Copy the Prex+ kernel image (`prexos`) to the floppy image using `mtools`:
    ```
    $ mcopy -i floppy.img -o prexos ::/PREXOS
    ```
 
 Now you can use `floppy.img` with QEMU or Bochs.
 
-## How to run Prex with Bochs?
+## How to run Prex+ with Bochs?
 
 ### Installing Bochs
 
-Bochs is an open-source x86 pc emulator, and you can run Prex with Bochs on Windows/Linux. The latest Bochs release can be downloaded from [ http://bochs.sourceforge.net](http://bochs.sourceforge.net).
+Bochs is an open-source x86 pc emulator, and you can run Prex+ with Bochs on Windows/Linux. The latest Bochs release can be downloaded from [ http://bochs.sourceforge.net](http://bochs.sourceforge.net).
 
 ### Setting up for Bochs
 
-The Prex demo disk is available for download. The disk image is a 1.44M floppy image with FAT file format. And, this image can be used as a Bochs floppy image.
+The Prex+ demo disk is available for download. The disk image is a 1.44M floppy image with FAT file format. And, this image can be used as a Bochs floppy image.
 
- You can setup Bochs for Prex by the following steps:
+ You can setup Bochs for Prex+ by the following steps:
 
-1. Download the binary file(*.img.gz) for the latest Prex boot floppy from the following web page.
-    [  http://prex.sourceforge.net/downloads.htm](http://prex.sourceforge.net/downloads.html) 
+1. Download the binary file(*.img.gz) for the latest Prex+ boot floppy from the following web page.
+    [  http://prex+.sourceforge.net/downloads.htm](http://prex+.sourceforge.net/downloads.html) 
 
 2. Unpack the image. 
 
    ```
-   $ gunzip prex-X.X.X.i386-pc.img.gz
+   $ gunzip prex+-X.X.X.i386-pc.img.gz
    ```
 
 3. Set the path for the floppy image in your Bochs setting file "bochsrc", like: 
 
    ```
-   floppya: 1_44=(your directory)/prex-X.X.X.i386-pc.img, status=inserted
+   floppya: 1_44=(your directory)/prex+-X.X.X.i386-pc.img, status=inserted
    ```
 
 4. Set the bootable device in "bochsrc". 
@@ -144,22 +144,22 @@ The Prex demo disk is available for download. The disk image is a 1.44M floppy i
    $ bochs -q
    ```
 
-## How to run Prex with QEMU?
+## How to run Prex+ with QEMU?
 
- If you are using QEMU, the same image created for Bochs with the above info can be used. You can simply try Prex with QEMU by the following command.
+ If you are using QEMU, the same image created for Bochs with the above info can be used. You can simply try Prex+ with QEMU by the following command.
 
 ```
-$ qemu-system-i386 -fda (your directory)/prex-X.X.X.i386-pc.img -nographic -serial mon:stdio -m 32M
+$ qemu-system-i386 -fda (your directory)/prex+-X.X.X.i386-pc.img -nographic -serial mon:stdio -m 32M
 ```
 
 ## How to modify the OS boot image?
 
-If you compile the Prex source with the "make" command, the OS boot image is created as "prexos" in the "img" directory. The file "prexos" must be placed in the root directory of the Prex disk. You can test your own Prex image by replacing the "prexos" in the floppy image.
+If you compile the Prex+ source with the "make" command, the OS boot image is created as "prexos" in the "img" directory. The file "prexos" must be placed in the root directory of the Prex+ disk. You can test your own Prex+ image by replacing the "prexos" in the floppy image.
 
 To replace the file in the floppy image, "mtools" is useful. Before using "mcopy", drive A must point to the image file in "mtools.conf" as follows:
 
 ```
-drive a: file="(your directory)/prex-X.X.X.i386-pc.img"
+drive a: file="(your directory)/prex+-X.X.X.i386-pc.img"
 ```
 
 Then, the file copy can be performed by:
@@ -168,11 +168,11 @@ Then, the file copy can be performed by:
  $ mcopy -o prexos a:\
 ```
 
-You can use this customized Prex image with Bochs, or you can create an actual bootable floppy disk and test it with the real PC hardware.
+You can use this customized Prex+ image with Bochs, or you can create an actual bootable floppy disk and test it with the real PC hardware.
 
 ## How to install the boot sector?
 
-In order to boot from the floppy disk, you must install the Prex boot sector named "bootsect.bin" into the 1st sector. The DOS program named "mkboot.com" is available to write this boot sector. You can create the Prex bootable floppy by the following steps.
+In order to boot from the floppy disk, you must install the Prex+ boot sector named "bootsect.bin" into the 1st sector. The DOS program named "mkboot.com" is available to write this boot sector. You can create the Prex+ bootable floppy by the following steps.
 
 1. Prepare a blank floppy disk. This must be formatted with 1.44M FAT file system.
 2. Boot DOS, and put "bootsect.bin" and "mkboot.com" in the same directory.
@@ -186,7 +186,7 @@ a:\>mkboot a:
 
 ```
 floppya: 1_44=dos-boot.img, status=inserted
-floppyb: 1_44=(your directory)/prex-X.X.X.i386-pc.img, status=inserted
+floppyb: 1_44=(your directory)/prex+-X.X.X.i386-pc.img, status=inserted
 ```
 
  Then, type:
@@ -195,7 +195,7 @@ floppyb: 1_44=(your directory)/prex-X.X.X.i386-pc.img, status=inserted
 a:\>mkboot b:
 ```
 
-Note: You had better download a Prex bootable image rather than this method.
+Note: You had better download a Prex+ bootable image rather than this method.
 
 ## Keyboard Interface
 
@@ -213,10 +213,10 @@ Some special keys are defined by the keyboard driver.
 
 ## Debugging with Bochs
 
- Bochs has the capability to output characters to the console via i/o port 0xe9. To get your printf() or sys_log() message in the console, you must configure and rebuild Bochs/Prex as follows.
+ Bochs has the capability to output characters to the console via i/o port 0xe9. To get your printf() or sys_log() message in the console, you must configure and rebuild Bochs/Prex+ as follows.
 
 1. Bochs must be built with "--enable-port-e9-hack" option.
-2. Prex must be built with enabling "BOCHS_OUTPUT" flag in "prex/src/arch/i386/diag.c".
+2. Prex+ must be built with enabling "BOCHS_OUTPUT" flag in "prex+/src/arch/i386/diag.c".
 
 The Bochs console is useful to debug kernel because you can browse or find the log message in the console window.
 

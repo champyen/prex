@@ -1,4 +1,4 @@
-# Prex Hardware Abstraction Layer
+# Prex+ Hardware Abstraction Layer
 
 ### Table of Contents
 
@@ -58,7 +58,7 @@
 
 ## Introduction
 
-The interface for the architecture dependent layer is defined to abstract a processor and minimum hardware in the Prex kernel. If you want to port the Prex kernel to new architecture or new platform, you have to modify the architecture dependent codes appropriately for your target system.
+The interface for the architecture dependent layer is defined to abstract a processor and minimum hardware in the Prex+ kernel. If you want to port the Prex+ kernel to new architecture or new platform, you have to modify the architecture dependent codes appropriately for your target system.
 
 ![Architecture Dependent Interface](img/hal/arch.png)  
 Figure 1. HAL interface
@@ -213,7 +213,7 @@ void interrupt_init(void);
 
 ## Clock
 
-The Prex kernel requires a clock timer hardware for all systems.
+The Prex+ kernel requires a clock timer hardware for all systems.
 
 ```
 void clock_init(void);
