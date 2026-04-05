@@ -6,7 +6,7 @@ This document describes the complete boot sequence of the Prex+ operating system
 
 The physical and virtual memory layout for each target is defined in its respective configuration file (e.g., `conf/x86/pc.base` for x86, or `conf/arm/rpi0w.base` for ARM). Key memory addresses typically include:
 
-*   **`RAM_BASE`:** The physical start of RAM (e.g., `0x00000000` for x86-pc and Raspberry Pi Zero W).
+*   **`SYSPAGE` for NOMMU:** The physical start of RAM (e.g., `0x00000000` for x86-pc and Raspberry Pi Zero W).
 *   **`RAM_SIZE`:** For ARM targets, this explicitly defines the total available memory, as dynamic detection isn't always available via BIOS.
 *   **`LOADER_TEXT`:** The physical load address of the Prex+ bootloader (`bootldr`). For x86-pc, this is `0x00004000`.
 *   **`BOOTIMG_BASE`:** The physical address where the OS archive payload (`tmp.a`) is placed in memory before the bootloader extracts it. For x86-pc, this is `0x00100000`.
@@ -56,7 +56,7 @@ For x86, this `prexos` file is then typically copied to a FAT12 floppy image (`f
     *   **ARM:** Enters Supervisor (SVC) mode, disables IRQ/FIQ, switches to Thumb mode (if applicable), sets up the stack, and jumps to `main()`.
 2.  **Initialization (`startup.c`, `main.c`):** The bootloader initializes the serial console for debugging, detects available physical memory, and initializes the `bootinfo` structure.
     *   **x86:** Memory is detected dynamically using BIOS interrupt 0x15 (e820).
-    *   **ARM:** Memory is typically hardcoded using `CONFIG_RAM_BASE` and `CONFIG_RAM_SIZE` defined in the board's `.base` config file.
+    *   **ARM:** Memory is typically hardcoded using `CONFIG_SYSPAGE_PHY_BASE` and `CONFIG_RAM_SIZE` defined in the board's `.base` config file.
 3.  **Archive Extraction (`load.c`):** The bootloader locates the `tmp.a` archive in memory. On x86, it expects to find it exactly at `BOOTIMG_BASE` (`0x00100000`) where `head.S` moved it. It verifies the archive magic string (`!<arch>\n`) and begins scanning the ELF payloads.
 4.  **ELF Loading (`elf.c`):** For each ELF binary found in the archive (kernel, drivers, servers), the bootloader parses the ELF headers:
     *   It allocates physical memory for the binary.

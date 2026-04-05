@@ -22,7 +22,6 @@ mmu     IOMEM_BASE      0x00000000  0x00000000
 #
 # Memory address
 #
-memory		RAM_BASE	0x00000000	# Start of RAM
 memory		LOADER_TEXT	0x00004000	# Start of boot loader
 memory		KERNEL_TEXT	0x00200000	# Start of kernel
 memory		BOOTIMG_BASE	0x00100000	# Location of boot image

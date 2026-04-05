@@ -58,7 +58,7 @@ struct mmumap mmumap_table[] = {
     /*
      * Internal SRAM (32M)
      */
-    {CONFIG_SYSPAGE_BASE, CONFIG_RAM_BASE, CONFIG_RAM_SIZE, VMT_RAM},
+    {CONFIG_SYSPAGE_BASE, CONFIG_SYSPAGE_PHY_BASE, CONFIG_RAM_SIZE, VMT_RAM},
 
     /*
      * FPGA core control (4K)
@@ -171,12 +171,15 @@ void machine_startup(void)
     /*
      * Reserve system pages.
      */
-    page_reserve(kvtop(SYSPAGE), SYSPAGESZ);
+    page_reserve(CONFIG_SYSPAGE_PHY_BASE, SYSPAGESZ);
 
     /*
      * Setup vector page.
-     */
+    // original code should not work, since kernel virtual address is not mapped before "mmu_init":
     vector_copy((vaddr_t)ptokv(CONFIG_ARM_VECTORS));
+     */
+    // CONFIG_SYSPAGE_PHY_BASE will be mapped to CONFIG_ARM_VECTORS in mmu_init, mmu_newmap
+    vector_copy(CONFIG_SYSPAGE_PHY_BASE);
 
 #ifdef CONFIG_MMU
     /*

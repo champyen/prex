@@ -194,7 +194,7 @@ pgd_t mmu_newmap(void)
     memcpy(&pgd[i], &boot_pgd[i], (size_t)(L1TBL_SIZE - i * 4));
 
     /* Map vector page (address 0) */
-    mmu_map(pgd, CONFIG_RAM_BASE, CONFIG_ARM_VECTORS, PAGE_SIZE, PG_SYSTEM);
+    mmu_map(pgd, CONFIG_SYSPAGE_PHY_BASE, CONFIG_ARM_VECTORS, PAGE_SIZE, PG_SYSTEM);
     return pgd;
 }
 
@@ -312,6 +312,6 @@ void mmu_init(struct mmumap* mmumap_table)
     /*
      * Map vector page.
      */
-    if (mmu_map(boot_pgd, CONFIG_RAM_BASE, CONFIG_ARM_VECTORS, PAGE_SIZE, PG_SYSTEM))
+    if (mmu_map(boot_pgd, CONFIG_SYSPAGE_PHY_BASE, CONFIG_ARM_VECTORS, PAGE_SIZE, PG_SYSTEM))
         panic("mmu_init");
 }

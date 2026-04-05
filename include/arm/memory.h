@@ -34,7 +34,7 @@
 
 #ifdef CONFIG_MMU
 #define KERNBASE CONFIG_SYSPAGE_BASE            /* base address of kernel address space */
-#define KERNOFFSET (KERNBASE - CONFIG_RAM_BASE) /* offset of kernel address space from RAM base */
+#define KERNOFFSET (KERNBASE - CONFIG_SYSPAGE_PHY_BASE) /* offset of kernel address space from RAM base */
 #define PAGE_SIZE 4096                          /* bytes per page */
 #define USERLIMIT CONFIG_SYSPAGE_BASE           /* upper limit on user address space */
 #else

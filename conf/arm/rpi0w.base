@@ -19,7 +19,6 @@ mmu         CACHE
 #
 # Memory address
 #
-memory		RAM_BASE		0x00000000	# Start of ram
 memory      RAM_SIZE        0x20000000  # DRAM Size
 memory		LOADER_TEXT		0x00010000	# Start of boot loader
 memory		KERNEL_TEXT		0x00200000	# Start of kernel
