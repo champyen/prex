@@ -1,5 +1,6 @@
 /*-
- * Copyright (c) 2005-2008, Kohsuke Ohtani
+ * Copyright (c) 2009, Richard Pandion
+ * Copyright (c) 2026, Champ Yen <champ.yen@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,29 +28,35 @@
  * SUCH DAMAGE.
  */
 
-#ifndef _ARM_CPUFUNC_H
-#define _ARM_CPUFUNC_H
+#include <sys/param.h>
+#include <sys/bootinfo.h>
+#include <boot.h>
 
-#include <sys/cdefs.h>
-#include <sys/types.h>
+/*
+ * Setup boot information.
+ */
+static void bootinfo_init(void)
+{
+    struct bootinfo* bi = bootinfo;
 
-__BEGIN_DECLS
-void cpu_idle(void);
-int get_faultstatus(void);
-void* get_faultaddress(void);
-paddr_t get_ttb(void);
-void set_ttb(paddr_t);
-void switch_ttb(paddr_t);
-void flush_tlb(void);
-void flush_cache(void);
+    /*
+     * Screen size
+     */
+    bi->video.text_x = 80;
+    bi->video.text_y = 25;
 
-// for ARMV6 & ARMV7A
-void set_vbar(vaddr_t);
-void cpu_barrier(void);
-uint32_t get_cntfrq(void);
-void set_cntp_tval_reg(uint32_t);
-void set_cntp_ctl_reg(uint32_t);
-uint32_t get_cntp_ctl_reg(void);
-__END_DECLS
+    /*
+     * On-Board DRAM - 512M
+     */
+    bi->ram[0].base = CONFIG_SYSPAGE_PHY_BASE;
+    bi->ram[0].size = CONFIG_RAM_SIZE;
+    bi->ram[0].type = MT_USABLE;
 
-#endif /* !_ARM_CPUFUNC_H */
+    bi->nr_rams = 1;
+}
+
+void startup(void)
+{
+
+    bootinfo_init();
+}

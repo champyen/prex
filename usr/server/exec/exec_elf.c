@@ -129,6 +129,7 @@ static int load_exec(Elf32_Ehdr* ehdr, task_t task, int fd, vaddr_t* entry)
     }
 
     *entry = (vaddr_t)ehdr->e_entry;
+    sys_debug(DBGC_FLUSHCACHE, NULL);
     return 0;
 
 err:
@@ -145,7 +146,7 @@ static int relocate_section_rela(Elf32_Sym* sym_table, Elf32_Rela* rela, char* t
 
     for (i = 0; i < nr_reloc; i++) {
         sym = &sym_table[ELF32_R_SYM(rela->r_info)];
-        if (sym->st_info == 0) {
+        if (ELF32_R_SYM(rela->r_info) == STN_UNDEF) {
             /* Empty symbol used for R_ARM_V4BX, etc */
             sym_val = sym->st_value;
         } else if (sym->st_shndx != STN_UNDEF) {
@@ -168,7 +169,7 @@ static int relocate_section_rel(Elf32_Sym* sym_table, Elf32_Rel* rel, char* targ
 
     for (i = 0; i < nr_reloc; i++) {
         sym = &sym_table[ELF32_R_SYM(rel->r_info)];
-        if (sym->st_info == 0) {
+        if (ELF32_R_SYM(rel->r_info) == STN_UNDEF) {
             /* Empty symbol used for R_ARM_V4BX, etc */
             sym_val = sym->st_value;
         } else if (sym->st_shndx != STN_UNDEF) {
@@ -327,7 +328,7 @@ static int load_reloc(Elf32_Ehdr* ehdr, task_t task, int fd, vaddr_t* entry)
         }
     }
     *entry = (vaddr_t)((u_long)mapped + ehdr->e_entry);
-    DPRINTF(("exec: entry=%x\n", *entry));
+    sys_debug(DBGC_FLUSHCACHE, NULL);
 out2:
     /* Release symbol table */
     shdr = (Elf32_Shdr*)buf;

@@ -37,7 +37,7 @@ LINTFLAGS:=	-D__lint__ -x -u
 endif
 
 INCSDIR:=	$(SRCDIR) $(SRCDIR)/include
-DEFS+=		__$(ARCH)__ __$(PLATFORM)__
+DEFS+=		__$(ARCH)__ __$(subst -,_,$(PLATFORM))__
 
 ifneq ($(NDEBUG),1)
 ifeq ($(_DEBUG_),1)

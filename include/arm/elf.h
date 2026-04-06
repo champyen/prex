@@ -40,5 +40,9 @@
 #define R_ARM_CALL 28
 #define R_ARM_JUMP24 29
 #define R_ARM_V4BX 40
+#define R_ARM_MOVW_ABS_NC 43
+#define R_ARM_MOVT_ABS 44
+#define R_ARM_THM_CALL 10
+#define R_ARM_THM_JUMP24 30
 
 #endif /* !_ARM_ELF_H */

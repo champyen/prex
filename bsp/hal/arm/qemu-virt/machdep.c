@@ -1,5 +1,6 @@
 /*-
- * Copyright (c) 2008-2009, Kohsuke Ohtani
+ * Copyright (c) 2009-2010, Richard Pandion
+ * Copyright (c) 2026, Champ Yen <champ.yen@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,7 +29,7 @@
  */
 
 /*
- * machdep.c - machine-dependent routines for ARM Integrator-CP
+ * machdep.c - machine-dependent routines for QEMU virt
  */
 
 #include <machine/syspage.h>
@@ -43,11 +44,6 @@
 
 #include "platform.h"
 
-/* System control reg */
-#define SC_CTRL (*(volatile uint32_t*)(FPGA_BASE + 0x0c))
-
-#define SCCTRL_SOFTRESET 0x08
-
 #ifdef CONFIG_MMU
 /*
  * Virtual and physical address mapping
@@ -55,40 +51,15 @@
  *      { virtual, physical, size, type }
  */
 struct mmumap mmumap_table[] = {
-    /*
-     * Internal SRAM (32M)
-     */
+    /* RAM: 1GB at 0x40000000 */
     {CONFIG_SYSPAGE_BASE, CONFIG_SYSPAGE_PHY_BASE, CONFIG_RAM_SIZE, VMT_RAM},
 
-    /*
-     * FPGA core control (4K)
-     */
-    {CONFIG_FPGA_BASE, CONFIG_FPGA_PHY_BASE, 0x1000, VMT_IO},
+    /* GIC: 0x08000000 */
+    {CONFIG_GIC_DIST_BASE, CONFIG_GIC_DIST_PHY_BASE, 0x00010000, VMT_IO},
+    {CONFIG_GIC_CPU_BASE, CONFIG_GIC_CPU_PHY_BASE, 0x00010000, VMT_IO},
 
-    /*
-     * Counter/Timers (1M)
-     */
-    {CONFIG_TIMER_BASE, CONFIG_TIMER_PHY_BASE, 0x100000, VMT_IO},
-
-    /*
-     * Interrupt controller (1M)
-     */
-    {CONFIG_ICU_BASE, CONFIG_ICU_PHY_BASE, 0x100000, VMT_IO},
-
-    /*
-     * Real-time clock (1M)
-     */
-    {CONFIG_PL030_BASE, CONFIG_PL030_PHY_BASE, 0x100000, VMT_IO},
-
-    /*
-     * UART 0 (1M)
-     */
-    {CONFIG_PL011_BASE, CONFIG_PL011_PHY_BASE, 0x100000, VMT_IO},
-
-    /*
-     * MMCI (PL181) (1M)
-     */
-    {CONFIG_PL181_BASE, CONFIG_PL181_PHY_BASE, 0x100000, VMT_IO},
+    /* PL011 UART: 0x09000000 */
+    {CONFIG_PL011_BASE, CONFIG_PL011_PHY_BASE, 0x00001000, VMT_IO},
 
     {0, 0, 0, 0}};
 #endif
@@ -107,12 +78,6 @@ void machine_idle(void)
  */
 static void machine_reset(void)
 {
-
-    SC_CTRL = SCCTRL_SOFTRESET;
-
-    for (;;)
-        ;
-    /* NOTREACHED */
 }
 
 /*
@@ -127,10 +92,6 @@ void machine_powerdown(int state)
 
     switch (state) {
     case PWR_OFF:
-        for (;;)
-            cpu_idle();
-        /* NOTREACHED */
-        break;
     case PWR_REBOOT:
         machine_reset();
         /* NOTREACHED */
@@ -141,17 +102,17 @@ void machine_powerdown(int state)
 /*
  * Return pointer to the boot information.
  */
-void machine_bootinfo(struct bootinfo** bip)
-{
-
-    *bip = (struct bootinfo*)BOOTINFO;
-}
-
 void machine_abort(void)
 {
 
     for (;;)
         cpu_idle();
+}
+
+void machine_bootinfo(struct bootinfo** bip)
+{
+
+    *bip = (struct bootinfo*)BOOTINFO;
 }
 
 /*
@@ -175,12 +136,12 @@ void machine_startup(void)
 
     /*
      * Setup vector page.
-    // Q: What' happed to copy data to 0x80000000?
-    // A: No, MMU already enabled and mapped initial address in locore.S
-    vector_copy((vaddr_t)ptokv(CONFIG_ARM_VECTORS));
      */
-    // CONFIG_SYSPAGE_PHY_BASE will be mapped to CONFIG_ARM_VECTORS in mmu_init, mmu_newmap
     vector_copy(CONFIG_SYSPAGE_PHY_BASE);
+    #ifndef CONFIG_MMU
+    // since DRAM start at 0x40000000, we need to use set_vbar for vector table setting
+    set_vbar(CONFIG_SYSPAGE_PHY_BASE);
+    #endif
 
 #ifdef CONFIG_MMU
     /*

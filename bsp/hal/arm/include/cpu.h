@@ -72,7 +72,7 @@
 #define CTL_ICACHE 0x00001000 /* I: Instruction cache enable */
 #define CTL_HIVEC 0x00002000  /* V: Vector relocation */
 
-#ifdef __beagle__
+#ifdef CONFIG_ARMV7A
 /* Useful ARMv7 specific flags */
 #define CTL_AFE 0x20000000     /* AFE: Access flag enable */
 #define CTL_TRE 0x10000000     /* TRE: TEX remap enable */

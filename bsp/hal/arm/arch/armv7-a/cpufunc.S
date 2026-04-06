@@ -1,5 +1,7 @@
 /*-
  * Copyright (c) 2008, Kohsuke Ohtani
+ * Copyright (c) 2010, Richard Pandion
+ * Copyright (c) 2026, Champ Yen <champ.yen@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,7 +30,7 @@
  */
 
 /*
- * cpufunc.S - ARM specific CPU functions for ARMv4-ARMv6
+ * cpufunc.S - ARMv7-A specific CPU functions
  */
 
 #include <conf/config.h>
@@ -39,9 +41,22 @@
 	.code 32
 
 ENTRY(cpu_idle)
-#if 0
-	mcr	p15, 0, r0, c7, c0, 4	/* Wait for interrupt */
-#endif
+	wfi
+	mov	pc, lr
+
+/*
+ * Set Vector Base Address Register
+ */
+ENTRY(set_vbar)
+	mcr	p15, 0, r0, c12, c0, 0
+	mov	pc, lr
+
+/*
+ * Data synchronization barrier
+ */
+ENTRY(cpu_barrier)
+	dsb
+	isb
 	mov	pc, lr
 
 /*
@@ -55,6 +70,34 @@ ENTRY(get_faultaddress)
 	mrc	p15, 0, r0, c6, c0, 0
 	mov	pc, lr
 
+/*
+ * Generic Timer functions
+ */
+ENTRY(get_cntfrq)
+	mrc	p15, 0, r0, c14, c0, 0
+	mov	pc, lr
+
+ENTRY(get_cntpct)
+	mrrc p15, 0, r0, r1, c14
+	mov	pc, lr
+
+ENTRY(set_cntp_tval_reg)
+	mcr	p15, 0, r0, c14, c2, 0
+	isb
+	mov	pc, lr
+
+ENTRY(get_cntp_tval_reg)
+	mrc	p15, 0, r0, c14, c2, 0
+	mov	pc, lr
+
+ENTRY(set_cntp_ctl_reg)
+	mcr	p15, 0, r0, c14, c2, 1
+	isb
+	mov	pc, lr
+
+ENTRY(get_cntp_ctl_reg)
+	mrc	p15, 0, r0, c14, c2, 1
+	mov	pc, lr
 
 #ifdef CONFIG_MMU
 /*
@@ -71,24 +114,19 @@ ENTRY(set_ttb)
 	mov	r1,#0
 	mcr	p15, 0, r0, c2, c0, 0	/* load new TTB */
 	mcr	p15, 0, r1, c8, c7, 0	/* invalidate I+D TLBs */
-	nop
-	nop
-	nop
+	dsb
+	isb
 	mov	pc, lr
 
 /*
  * Switch TTB for context switch
  */
 ENTRY(switch_ttb)
-	mov	r1,#0
-	mcr	p15, 0, r1, c7, c5, 0	/* flush I cache */
-	mcr	p15, 0, r1, c7, c6, 0	/* flush D cache */
-	mcr	p15, 0, r1, c7, c10, 4	/* drain the write buffer */
 	mcr	p15, 0, r0, c2, c0, 0	/* load new TTB */
+	mov	r1, #0
 	mcr	p15, 0, r1, c8, c7, 0	/* invalidate I+D TLBs */
-	nop
-	nop
-	nop
+	dsb
+	isb
 	mov	pc, lr
 
 /*
@@ -97,9 +135,8 @@ ENTRY(switch_ttb)
 ENTRY(flush_tlb)
 	mov	r1,#0
 	mcr	p15, 0, r1, c8, c7, 0	/* invalidate I+D TLBs */
-	nop
-	nop
-	nop
+	dsb
+	isb
 	mov	pc, lr
 
 #endif /* !CONFIG_MMU */
@@ -109,13 +146,12 @@ ENTRY(flush_tlb)
  * Flush all cache
  */
 ENTRY(flush_cache)
-	mov	r1,#0
-	mcr	p15, 0, r1, c7, c5, 0	/* flush I cache */
-	mcr	p15, 0, r1, c7, c6, 0	/* flush D cache */
-	mcr	p15, 0, r1, c7, c10, 4	/* drain write buffer */
+	mov	r0, #0
+	mcr	p15, 0, r0, c7, c14, 0	/* clean & invalidate D-cache */
+	mcr	p15, 0, r0, c7, c5, 0	/* invalidate I-cache */
+	dsb
+	isb
 	mov	pc, lr
 #endif /* !CONFIG_CACHE */
 
 	.end
-
-.section .note.GNU-stack,"",%progbits

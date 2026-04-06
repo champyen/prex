@@ -161,11 +161,11 @@ void machine_startup(void)
     /*
      * Setup vector page.
 
-    // original code should not work, since kernel virtual address is not mapped before "mmu_init":
-    // since (0 - 0x80000000) == 0x80000000, However the logic is incorrect
-    // What' happed to copy data to 0x80000000? It seems that this work coincidentally (due to QEMU using ring address?)
+    // Q: What' happed to copy data to 0x80000000?
+    // A: No, MMU already enabled and mapped initial address in locore.S
     vector_copy((vaddr_t)ptokv(CONFIG_ARM_VECTORS));
-    // this working is just a coincidence
+    // since (0 - 0x80000000) == 0x80000000, However the logic is incorrect
+    // this working is just a coincidence,
     set_vbar((vaddr_t)ptokv(CONFIG_ARM_VECTORS));
 
      */

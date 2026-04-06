@@ -1,5 +1,6 @@
 /*-
- * Copyright (c) 2005-2008, Kohsuke Ohtani
+ * Copyright (c) 2008, Kohsuke Ohtani
+ * Copyright (c) 2026, Champ Yen <champ.yen@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,29 +28,47 @@
  * SUCH DAMAGE.
  */
 
-#ifndef _ARM_CPUFUNC_H
-#define _ARM_CPUFUNC_H
+/*
+ * diag.c - diagnostic message support for QEMU virt (PL011)
+ */
 
-#include <sys/cdefs.h>
-#include <sys/types.h>
+#include <sys/bootinfo.h>
+#include <kernel.h>
+#include <cpufunc.h>
+#include <mmu.h>
 
-__BEGIN_DECLS
-void cpu_idle(void);
-int get_faultstatus(void);
-void* get_faultaddress(void);
-paddr_t get_ttb(void);
-void set_ttb(paddr_t);
-void switch_ttb(paddr_t);
-void flush_tlb(void);
-void flush_cache(void);
+#include "platform.h"
 
-// for ARMV6 & ARMV7A
-void set_vbar(vaddr_t);
-void cpu_barrier(void);
-uint32_t get_cntfrq(void);
-void set_cntp_tval_reg(uint32_t);
-void set_cntp_ctl_reg(uint32_t);
-uint32_t get_cntp_ctl_reg(void);
-__END_DECLS
+#define UART_FR (*(volatile uint32_t*)(UART_BASE + 0x18))
+#define UART_DR (*(volatile uint32_t*)(UART_BASE + 0x00))
 
-#endif /* !_ARM_CPUFUNC_H */
+/* Flag register */
+#define FR_RXFE 0x10 /* Receive FIFO empty */
+#define FR_TXFF 0x20 /* Transmit FIFO full */
+
+static void serial_putc(char c)
+{
+
+    while (UART_FR & FR_TXFF)
+        ;
+    UART_DR = (uint32_t)c;
+}
+
+void diag_puts(char* buf)
+{
+
+    while (*buf) {
+        if (*buf == '\n')
+            serial_putc('\r');
+        serial_putc(*buf++);
+    }
+}
+
+void diag_init(void)
+{
+
+#ifdef CONFIG_MMU
+    mmu_premap(CONFIG_PL011_PHY_BASE, UART_BASE);
+#endif
+    diag_puts("UART initialized\n");
+}

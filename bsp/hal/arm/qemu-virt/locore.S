@@ -1,5 +1,6 @@
 /*-
- * Copyright (c) 2005-2008, Kohsuke Ohtani
+ * Copyright (c) 2005-2007, Kohsuke Ohtani
+ * Copyright (c) 2026, Champ Yen <champ.yen@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,29 +28,26 @@
  * SUCH DAMAGE.
  */
 
-#ifndef _ARM_CPUFUNC_H
-#define _ARM_CPUFUNC_H
+/*
+ * locore_virt.S - platform dependent support for QEMU virt
+ */
 
-#include <sys/cdefs.h>
-#include <sys/types.h>
+#include <conf/config.h>
+#include <machine/asm.h>
 
-__BEGIN_DECLS
-void cpu_idle(void);
-int get_faultstatus(void);
-void* get_faultaddress(void);
-paddr_t get_ttb(void);
-void set_ttb(paddr_t);
-void switch_ttb(paddr_t);
-void flush_tlb(void);
-void flush_cache(void);
+	.section ".text","ax"
+	.code 32
 
-// for ARMV6 & ARMV7A
-void set_vbar(vaddr_t);
-void cpu_barrier(void);
-uint32_t get_cntfrq(void);
-void set_cntp_tval_reg(uint32_t);
-void set_cntp_ctl_reg(uint32_t);
-uint32_t get_cntp_ctl_reg(void);
-__END_DECLS
+/*
+ * Reset system via PSCI (HVC call for QEMU)
+ */
+ENTRY(machine_reset)
+	ldr	r0, =0x84000009		/* PSCI_SYSTEM_RESET */
+	hvc	#0			/* Hypervisor Call */
+	smc	#0			/* Fallback to Secure Monitor Call */
+1:
+	b	1b			/* Should not reach here */
 
-#endif /* !_ARM_CPUFUNC_H */
+	.end
+
+.section .note.GNU-stack,"",%progbits

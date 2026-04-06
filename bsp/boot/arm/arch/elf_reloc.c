@@ -37,35 +37,43 @@ int relocate_rel(Elf32_Rel* rel, Elf32_Addr sym_val, char* target_sect)
     Elf32_Sword addend;
 
     where = (Elf32_Addr*)(target_sect + rel->r_offset);
-
-    switch (ELF32_R_TYPE(rel->r_info)) {
-    case R_ARM_NONE:
-        break;
-    case R_ARM_ABS32:
-        *where += (vaddr_t)ptokv(sym_val);
-        ELFDBG(("R_ARM_ABS32: %lx -> %lx\n", (long)where, (long)*where));
-        break;
-    case R_ARM_PC24:
-    case R_ARM_PLT32:
-    case R_ARM_CALL:
-    case R_ARM_JUMP24:
-        addend = (Elf32_Sword)(*where & 0x00ffffff);
-        if (addend & 0x00800000)
-            addend |= 0xff000000;
-        tmp = sym_val - (Elf32_Addr)where + (addend << 2);
-        tmp >>= 2;
-        *where = (*where & 0xff000000) | (tmp & 0x00ffffff);
-        ELFDBG(("R_ARM_PC24: %lx -> %lx\n", (long)where, (long)*where));
-        break;
-    case R_ARM_V4BX:
-        /* nothing to do: bx instruction is supported */
-        break;
-    default:
-        ELFDBG(("Unkown relocation type=%d\n", ELF32_R_TYPE(rel->r_info)));
-        panic("relocation fail");
-        return -1;
-    }
-    return 0;
+switch (ELF32_R_TYPE(rel->r_info)) {
+case R_ARM_NONE:
+    break;
+case R_ARM_ABS32:
+    *where += (vaddr_t)ptokv(sym_val);
+    break;
+case R_ARM_MOVW_ABS_NC:
+    addend = *where;
+    addend = ((addend & 0xf0000) >> 4) | (addend & 0xfff);
+    tmp = (vaddr_t)ptokv(sym_val) + addend;
+    *where = (*where & 0xfff0f000) | ((tmp & 0xf000) << 4) | (tmp & 0xfff);
+    break;
+case R_ARM_MOVT_ABS:
+    addend = *where;
+    addend = ((addend & 0xf0000) >> 4) | (addend & 0xfff);
+    tmp = (vaddr_t)ptokv(sym_val) + addend;
+    tmp >>= 16;
+    *where = (*where & 0xfff0f000) | ((tmp & 0xf000) << 4) | (tmp & 0xfff);
+    break;
+case R_ARM_PC24:
+case R_ARM_PLT32:
+case R_ARM_CALL:
+case R_ARM_JUMP24:
+    addend = *where & 0x00ffffff;
+    if (addend & 0x00800000)
+        addend |= 0xff000000;
+    tmp = (vaddr_t)ptokv(sym_val) - (vaddr_t)where + (addend << 2);
+    tmp >>= 2;
+    *where = (*where & 0xff000000) | (tmp & 0x00ffffff);
+    break;
+case R_ARM_V4BX:
+    break;
+default:
+    ELFDBG(("Unkown relocation type=%d\n", ELF32_R_TYPE(rel->r_info)));
+    panic("relocation fail");
+    return -1;
+}    return 0;
 }
 
 int relocate_rela(Elf32_Rela* rela, Elf32_Addr sym_val, char* target_sec)

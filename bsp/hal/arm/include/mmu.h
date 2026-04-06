@@ -42,20 +42,44 @@ typedef uint32_t* pte_t; /* page table entry */
 /*
  * Page directory entry (L1)
  */
-#define PDE_PRESENT 0x00000001
+#define PDE_PRESENT 0x00000001 /* Page table */
+#define PDE_DOMAIN(x) ((x) << 5)
+#define PDE_TYPE_MASK 0x00000003
 #define PDE_ADDRESS 0xfffffc00
 
 /*
  * Page table entry (L2)
+ *
+ * In ARMv7-A (VMSAv7) with TRE=0 and AFE=0:
+ * Bits [1:0]: 10 (Large Page/Small Page)
+ * Bit  [0]  : XN (Execute Never) - only for Small Page
+ * Bits [5:4]: AP[2:1]
  */
-#ifdef __beagle__
-#define PTE_PRESENT 0x00000002
+#ifdef CONFIG_ARMV7A
+#define PTE_PRESENT 0x00000002 /* Small Page */
+#define PTE_XN 0x00000001      /* Execute Never */
 #define PTE_WBUF 0x00000004
 #define PTE_CACHE 0x00000008
-#define PTE_SYSTEM 0x00000010
-#define PTE_USER_RO 0x00000020
-#define PTE_USER_RW 0x00000030
-#define PTE_ATTR_MASK 0x00000ff0
+#define PTE_AF 0x00000010      /* Access Flag (if AFE=1) */
+#define PTE_SYSTEM 0x00000010  /* AP[2:1] = 00, AF = 1 */
+#define PTE_USER_RO 0x00000020 /* AP[2:1] = 01 */
+#define PTE_USER_RW 0x00000030 /* AP[2:1] = 01 + AP[2]=0? No. */
+
+/* ARMv7 Permissions (AP[2:1]):
+ * AP[2:1] | PL1 | PL0
+ * 00      | RW  | NA
+ * 01      | RW  | RW
+ * 10      | RO  | NA
+ * 11      | RO  | RO
+ */
+#undef PTE_SYSTEM
+#undef PTE_USER_RO
+#undef PTE_USER_RW
+#define PTE_SYSTEM 0x00000010  /* PL1:RW, PL0:NA (AP=00, AF=1) */
+#define PTE_USER_RO 0x00000070 /* PL1:RO, PL0:RO (AP=11, AF=1) */
+#define PTE_USER_RW 0x00000030 /* PL1:RW, PL0:RW (AP=01, AF=1) */
+
+#define PTE_ATTR_MASK 0x00000ff1
 #define PTE_ADDRESS 0xfffff000
 #else
 #define PTE_PRESENT 0x00000002
@@ -66,6 +90,7 @@ typedef uint32_t* pte_t; /* page table entry */
 #define PTE_USER_RW 0x00000ff0
 #define PTE_ATTR_MASK 0x00000ff0
 #define PTE_ADDRESS 0xfffff000
+#define PTE_XN 0
 #endif
 
 /*

@@ -41,6 +41,7 @@
 #include <device.h>
 #include <system.h>
 #include <hal.h>
+#include <cpufunc.h>
 #include <sys/dbgctl.h>
 
 static char infobuf[MAXINFOSZ]; /* common information buffer */
@@ -186,6 +187,12 @@ int sys_debug(int cmd, void* data)
             break;
         }
         dbgctl(cmd, (void*)task);
+        error = 0;
+        break;
+    case DBGC_FLUSHCACHE:
+#ifdef CONFIG_CACHE
+        flush_cache();
+#endif
         error = 0;
         break;
     }

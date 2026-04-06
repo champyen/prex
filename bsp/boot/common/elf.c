@@ -145,7 +145,7 @@ static int load_executable(char* img, struct module* m)
             }
             m->datasz = (size_t)((phdr->p_vaddr + phdr->p_filesz) - m->data);
             m->bsssz = (size_t)((phdr->p_vaddr + phdr->p_memsz) - m->data) - m->datasz;
-            
+
             if (phdr->p_filesz > 0) {
                 memcpy((char*)load_base + (phdr->p_vaddr - m->data), img + phdr->p_offset, (size_t)phdr->p_filesz);
             }
@@ -155,7 +155,7 @@ static int load_executable(char* img, struct module* m)
             }
         }
     }
-    
+
     if (m->data != 0) {
         load_base = phys_base + (m->data - m->text) + m->datasz + m->bsssz;
     } else {
@@ -181,11 +181,13 @@ static int relocate_section_rela(Elf32_Sym* sym_table, Elf32_Rela* rela, char* t
     for (i = 0; i < nr_reloc; i++) {
         sym = &sym_table[ELF32_R_SYM(rela->r_info)];
         ELFDBG(("%s\n", strtab + sym->st_name));
-        if (sym->st_info == 0) {
+        if (sym->st_shndx != STN_UNDEF) {
+            sym_val = (Elf32_Addr)sect_addr[sym->st_shndx] + sym->st_value;
+            if (relocate_rela(rela, sym_val, target_sect) != 0)
+                return -1;
+        } else if (ELF32_R_SYM(rela->r_info) == STN_UNDEF) {
             /* Empty symbol used for R_ARM_V4BX, etc */
             sym_val = sym->st_value;
-        } else if (sym->st_shndx != STN_UNDEF) {
-            sym_val = (Elf32_Addr)sect_addr[sym->st_shndx] + sym->st_value;
             if (relocate_rela(rela, sym_val, target_sect) != 0)
                 return -1;
         } else if (ELF32_ST_BIND(sym->st_info) != STB_WEAK) {
@@ -208,11 +210,13 @@ static int relocate_section_rel(Elf32_Sym* sym_table, Elf32_Rel* rel, char* targ
     for (i = 0; i < nr_reloc; i++) {
         sym = &sym_table[ELF32_R_SYM(rel->r_info)];
         ELFDBG(("%s\n", strtab + sym->st_name));
-        if (sym->st_info == 0) {
+        if (sym->st_shndx != STN_UNDEF) {
+            sym_val = (Elf32_Addr)sect_addr[sym->st_shndx] + sym->st_value;
+            if (relocate_rel(rel, sym_val, target_sect) != 0)
+                return -1;
+        } else if (ELF32_R_SYM(rel->r_info) == STN_UNDEF) {
             /* Empty symbol used for R_ARM_V4BX, etc */
             sym_val = sym->st_value;
-        } else if (sym->st_shndx != STN_UNDEF) {
-            sym_val = (Elf32_Addr)sect_addr[sym->st_shndx] + sym->st_value;
             if (relocate_rel(rel, sym_val, target_sect) != 0)
                 return -1;
         } else if (ELF32_ST_BIND(sym->st_info) != STB_WEAK) {
@@ -276,12 +280,14 @@ static int load_relocatable(char* img, struct module* m)
     m->phys = load_base;
     ELFDBG(("phys addr=%lx\n", load_base));
 
+    char* shstrtab = img + ((Elf32_Shdr*)(img + ehdr->e_shoff + ehdr->e_shstrndx * ehdr->e_shentsize))->sh_offset;
+
     /* Copy sections */
     for (i = 0; i < (int)ehdr->e_shnum; i++, shdr++) {
         sect_addr[i] = 0;
         if (shdr->sh_type == SHT_PROGBITS) {
 
-            ELFDBG(("sh_addr=%x\n", shdr->sh_addr));
+            ELFDBG(("sh_addr=%x name=%s\n", shdr->sh_addr, shstrtab + shdr->sh_name));
             ELFDBG(("sh_size=%x\n", shdr->sh_size));
             ELFDBG(("sh_offset=%x\n", shdr->sh_offset));
             ELFDBG(("sh_flags=%x\n", shdr->sh_flags));
@@ -309,6 +315,7 @@ static int load_relocatable(char* img, struct module* m)
             ELFDBG(("load: offset=%lx size=%x\n", sect_base, (int)shdr->sh_size));
 
             sect_addr[i] = (char*)sect_base;
+            ELFDBG(("section %d (%s): pa=%lx size=%x\n", i, shstrtab + shdr->sh_name, sect_base, (int)shdr->sh_size));
         } else if (shdr->sh_type == SHT_NOBITS) {
             /* BSS */
             m->bsssz = (size_t)shdr->sh_size;
@@ -319,6 +326,7 @@ static int load_relocatable(char* img, struct module* m)
             memset((char*)bss_base, 0, (size_t)shdr->sh_size);
 
             sect_addr[i] = (char*)sect_base;
+            ELFDBG(("section %d (%s): pa=%lx size=%x\n", i, shstrtab + shdr->sh_name, sect_base, (int)shdr->sh_size));
         } else if (shdr->sh_type == SHT_SYMTAB) {
             /* Symbol table */
             ELFDBG(("load: symtab index=%d link=%d\n", i, shdr->sh_link));

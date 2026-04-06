@@ -1,5 +1,6 @@
 /*-
- * Copyright (c) 2005-2008, Kohsuke Ohtani
+ * Copyright (c) 2005-2007, Kohsuke Ohtani
+ * Copyright (c) 2026, Champ Yen <champ.yen@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,29 +28,57 @@
  * SUCH DAMAGE.
  */
 
-#ifndef _ARM_CPUFUNC_H
-#define _ARM_CPUFUNC_H
+/*
+ * clock.c - ARM Generic Timer driver
+ */
 
-#include <sys/cdefs.h>
-#include <sys/types.h>
+#include <kernel.h>
+#include <timer.h>
+#include <irq.h>
+#include <cpufunc.h>
+#include <sys/ipl.h>
 
-__BEGIN_DECLS
-void cpu_idle(void);
-int get_faultstatus(void);
-void* get_faultaddress(void);
-paddr_t get_ttb(void);
-void set_ttb(paddr_t);
-void switch_ttb(paddr_t);
-void flush_tlb(void);
-void flush_cache(void);
+/*
+ * Default IRQ for Physical Timer (PPI)
+ */
+#ifndef CLOCK_IRQ
+#define CLOCK_IRQ 30
+#endif
 
-// for ARMV6 & ARMV7A
-void set_vbar(vaddr_t);
-void cpu_barrier(void);
-uint32_t get_cntfrq(void);
-void set_cntp_tval_reg(uint32_t);
-void set_cntp_ctl_reg(uint32_t);
-uint32_t get_cntp_ctl_reg(void);
-__END_DECLS
+static uint32_t timer_count;
 
-#endif /* !_ARM_CPUFUNC_H */
+/*
+ * Clock interrupt service routine.
+ */
+static int clock_isr(void* arg)
+{
+    splhigh();
+    /* Program next timeout */
+    set_cntp_tval_reg(timer_count);
+    timer_handler();
+    spl0();
+
+    return INT_DONE;
+}
+
+/*
+ * Initialize clock H/W chip.
+ */
+void clock_init(void)
+{
+    uint32_t freq;
+
+    freq = get_cntfrq();
+    timer_count = freq / CONFIG_HZ;
+
+    /* Install ISR */
+    irq_attach(CLOCK_IRQ, IPL_CLOCK, 0, clock_isr, IST_NONE, NULL);
+
+    /* Program first timeout */
+    set_cntp_tval_reg(timer_count);
+
+    /* Enable physical timer: ENABLE=1, IMASK=0 */
+    set_cntp_ctl_reg(1);
+
+    DPRINTF(("ARM Generic Timer: %d Hz, IRQ %d\n", freq, CLOCK_IRQ));
+}

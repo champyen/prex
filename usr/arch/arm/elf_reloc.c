@@ -28,6 +28,8 @@
  */
 #include <sys/elf.h>
 #include <sys/syslog.h>
+#include <sys/prex.h>
+#include <stdint.h>
 
 int relocate_rel(Elf32_Rel* rel, Elf32_Addr sym_val, char* target_sect)
 {
@@ -41,7 +43,19 @@ int relocate_rel(Elf32_Rel* rel, Elf32_Addr sym_val, char* target_sect)
         break;
     case R_ARM_ABS32:
         *where += (Elf32_Addr)sym_val;
-        /* printf("R_ARM_ABS32: %x -> %x\n", where, *where); */
+        break;
+    case R_ARM_MOVW_ABS_NC:
+        addend = *where;
+        addend = ((addend & 0xf0000) >> 4) | (addend & 0xfff);
+        tmp = (Elf32_Addr)sym_val + addend;
+        *where = (*where & 0xfff0f000) | ((tmp & 0xf000) << 4) | (tmp & 0xfff);
+        break;
+    case R_ARM_MOVT_ABS:
+        addend = *where;
+        addend = ((addend & 0xf0000) >> 4) | (addend & 0xfff);
+        tmp = (Elf32_Addr)sym_val + addend;
+        tmp >>= 16;
+        *where = (*where & 0xfff0f000) | ((tmp & 0xf000) << 4) | (tmp & 0xfff);
         break;
     case R_ARM_PC24:
     case R_ARM_PLT32:
@@ -53,7 +67,34 @@ int relocate_rel(Elf32_Rel* rel, Elf32_Addr sym_val, char* target_sect)
         tmp = sym_val - (Elf32_Addr)where + (addend << 2);
         tmp >>= 2;
         *where = (*where & 0xff000000) | (tmp & 0x00ffffff);
-        /* printf("R_ARM_PC24: %x -> %x\n", where, *where); */
+        break;
+    case R_ARM_THM_CALL:
+    case R_ARM_THM_JUMP24:
+        /*
+         * R_ARM_THM_CALL: ((S + A) | T) - P
+         * S=sym_val, A=addend, P=where
+         */
+        {
+            uint16_t* w = (uint16_t*)where;
+            uint32_t upper = w[0];
+            uint32_t lower = w[1];
+            uint32_t s = (upper >> 10) & 1;
+            uint32_t j1 = (lower >> 13) & 1;
+            uint32_t j2 = (lower >> 11) & 1;
+            uint32_t i1 = !(j1 ^ s);
+            uint32_t i2 = !(j2 ^ s);
+            addend = (s << 24) | (i1 << 23) | (i2 << 22) | ((upper & 0x3ff) << 12) | ((lower & 0x7ff) << 1);
+            if (addend & 0x01000000)
+                addend |= 0xfe000000;
+            tmp = sym_val - (Elf32_Addr)where + addend;
+            s = (tmp >> 24) & 1;
+            i1 = (tmp >> 23) & 1;
+            i2 = (tmp >> 22) & 1;
+            j1 = !(i1 ^ s);
+            j2 = !(i2 ^ s);
+            w[0] = (uint16_t)((upper & 0xf800) | (s << 10) | ((tmp >> 12) & 0x3ff));
+            w[1] = (uint16_t)((lower & 0xd000) | (j1 << 13) | (j2 << 11) | ((tmp >> 1) & 0x7ff));
+        }
         break;
     case R_ARM_V4BX:
         /* nothing to do: bx instruction is supported */

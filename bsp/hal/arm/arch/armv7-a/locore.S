@@ -1,5 +1,7 @@
 /*-
  * Copyright (c) 2005-2007, Kohsuke Ohtani
+ * Copyright (c) 2010, Richard Pandion
+ * Copyright (c) 2026, Champ Yen <champ.yen@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,7 +30,7 @@
  */
 
 /*
- * locore.S - low level platform support for ARMv4-ARMv6
+ * locore.S - low level platform support for ARMv7-A
  */
 
 #include <conf/config.h>
@@ -119,8 +121,20 @@ ENTRY(reset_entry)
 	/*
 	 * Setup control register with default values
 	 */
-	ldr	r0, =(CTL_32BP | CTL_32BD | CTL_LABT)
+	ldr	r1, =(CTL_AFE | CTL_TRE | CTL_ICACHE | CTL_BPRD | CTL_CACHE | CTL_MMU)
+	mrc	p15, 0, r0, c1, c0, 0
+	bic	r0, r0, r1
 	mcr	p15, 0, r0, c1, c0, 0
+	/*
+	 * Disable L2 cache and set cache level to 0
+	 */
+	mrc p15, 0, r0, c1, c0, 1		/* Read auxiliary control register */
+	ldr r1,=(AUXCTL_L2EN)
+	bic r0, r0, r1					/* Disable L2 cache */
+	mcr p15, 0, r0, c1, c0, 1 		/* Load auxiliary control register... */
+	mrc	p15, 0, r0, c1, c0, 1		/* ...and read it back */
+	ldr	r0, =0x0
+	mcr	p15, 2, r0, c0, c0, 0		/* set cache level to 0 in CSSR */
 
 	/*
 	 * Initialize boot page directory
@@ -139,10 +153,19 @@ ENTRY(reset_entry)
 	 */
 	ldr	r1, =BOOT_PTE0_PHYS		/* Page table entry base address */
 	add	r2, r1, #0x1000			/* 4K in size (1k per section x 4 sections) */
-	ldr	r0, =(RAMBASE | 0x55a)	/* We map from RAMBASE */
+	ldr	r0, =(RAMBASE | 0x1a)	/* We map from RAMBASE */
 1:
 	str	r0, [r1], #4
 	add	r0, r0, #0x1000
+	teq	r1, r2
+	bne	1b
+
+	/* Initialize BOOT_PTE1_PHYS (used for premap) */
+	ldr	r1, =BOOT_PTE1_PHYS
+	add	r2, r1, #0x1000
+	ldr	r0, =0x0
+1:
+	str	r0, [r1], #4
 	teq	r1, r2
 	bne	1b
 
@@ -165,19 +188,28 @@ ENTRY(reset_entry)
 	str	r0, [r1]
 	str	r0, [r2], #4
 
-	mcr	p15, 0, r0, c7, c10, 4		/* Drain the write buffer */
+	/* Map BOOT_PTE1_PHYS at UART_BASE (0xC9000000) */
+/*
+	ldr	r1, =(BOOT_PGD_PHYS + (0xC9000000 >> 18))
+	ldr	r0, =(BOOT_PTE1_PHYS | 0x01)
+	str	r0, [r1]
+*/
+	dsb
 	ldr	r1, =BOOT_PGD_PHYS
 	mcr	p15, 0, r1, c2, c0, 0		/* Load page table pointer */
 	mcr	p15, 0, r0, c8, c7, 0		/* Flush I,D TLBs */
+	dsb
+	isb
 	ldr	r0, =0x55555555				/* AP is defined in page table entries */
 	mcr	p15, 0, r0, c3, c0			/* Load domain access register */
 	mrc	p15, 0, r0, c1, c0, 0		/* Read control register */
 	ldr	r1, =(CTL_ICACHE | CTL_BPRD | CTL_CACHE | CTL_MMU)
 	orr	r0, r0, r1					/* Enable MMU, caches and branch prediction */
-	ldr	r1, =(CTL_AFLT)
-	bic	r0, r0, r1					/* Disable alignment checks */
+	ldr	r1, =(CTL_AFLT | CTL_AFE | CTL_TRE)
+	bic	r0, r0, r1					/* Disable alignment checks, AFE and TRE */
 	mcr	p15, 0, r0, c1, c0, 0		/* Load control register... */
 	mrc	p15, 0, r0, c1, c0, 0		/* ...and read it back */
+	isb
 
 	/*
 	 * Reload PC register for virtual address.
@@ -245,9 +277,6 @@ ENTRY(cache_init)
  * Interrupt entry point
  */
 ENTRY(interrupt_entry)
-#ifdef __gba__
-	ldmfd	sp!, {r0-r3,r12,lr}	/* Discard GBA BIOS stack */
-#endif
 	stmfd	sp, {r0-r4}		/* Save work registers */
 	sub	r4, sp, #(4*5)		/* r4: Pointer to saved registers */
 	mrs	r0, spsr		/* r0: cpsr */
@@ -308,14 +337,6 @@ interrupt_ret:
  */
 	.global syscall_ret
 ENTRY(syscall_entry)
-#ifdef __gba__
-	mov	r5, lr			/* Syscall stub already saved r5 */
-	mrs	r12, cpsr		/* Set processor to SVC mode */
-	bic	r12, r12, #PSR_MODE
-	orr	r12, r12, #PSR_SVC_MODE
-	msr	cpsr_c, r12
-	mov, lr, r5
-#endif
 	sub	sp, sp, #CTXREGS	/* Adjust stack */
 	stmia	sp, {r0-r14}^		/* Push r0-r14 */
 	nop				/* Instruction gap for stm^ */
@@ -325,14 +346,13 @@ ENTRY(syscall_entry)
 	str	r5, [sp, #REG_SVCSP]	/* Push svc_sp */
 	str	lr, [sp, #REG_SVCLR]	/* Push svc_lr */
 	str	lr, [sp, #REG_PC]	/* Push pc */
-#ifndef __gba__
+
 	ldr	r4, [lr, #-4]		/* Get SWI number */
 	bic	r4, r4, #0xff000000
 
 	mrs	r5, cpsr		/* Enable IRQ */
 	bic	r5, r5, #0xc0
 	msr	cpsr_c, r5
-#endif
 
 	stmfd	sp!, {r4}
 	bl	syscall_handler		/* System call dispatcher */
@@ -454,17 +474,15 @@ ENTRY(copyin)
  	mov	r12, #0
  	b	2f
 1:
-	ldrb	r3, [r0, r12]
+	ldrb	r3, [r12, r0]
 known_fault1:				/* May be fault here */
- 	strb	r3, [r1, r12]
+ 	strb	r3, [r12, r1]
  	add	r12, r12, #1
 2:
 	subs	r2, r2, #1
  	bcs	1b
 	mov	r0, #0			/* Set no error */
- 	ldmfd	sp!, {r4, r11, r12, lr}
-	mov	sp, r12
-	mov	pc, lr
+ 	ldmia	sp, {r4, r11, sp, pc}
 
 /*
  * Copy data to user from kernel space.
@@ -482,17 +500,15 @@ ENTRY(copyout)
  	mov	r12, #0
  	b	2f
 1:
-	ldrb	r3, [r0, r12]
+	ldrb	r3, [r12, r0]
 known_fault2:				/* May be fault here */
- 	strb	r3, [r1, r12]
+ 	strb	r3, [r12, r1]
  	add	r12, r12, #1
 2:
 	subs	r2, r2, #1
  	bcs	1b
 	mov	r0, #0			/* Set no error */
- 	ldmfd	sp!, {r4, r11, r12, lr}
-	mov	sp, r12
-	mov	pc, lr
+ 	ldmia	sp, {r4, r11, sp, pc}
 
 /*
  * copyinstr - Copy string from user space.
@@ -510,9 +526,9 @@ ENTRY(copyinstr)
  	mov	r12, #0
  	b	2f
 1:
-	ldrb	r3, [r0, r12]
+	ldrb	r3, [r12, r0]
 known_fault3:				/* May be fault here */
- 	strb	r3, [r1, r12]
+ 	strb	r3, [r12, r1]
 	cmp	r3, #0
 	beq	3f
  	add	r12, r12, #1
@@ -524,18 +540,14 @@ known_fault3:				/* May be fault here */
 3:
 	mov	r0, #0			/* Set no error */
 4:
- 	ldmfd	sp!, {r4, r11, r12, lr}
-	mov	sp, r12
-	mov	pc, lr
+ 	ldmia	sp, {r4, r11, sp, pc}
 
 /*
  * Fault entry for user access
  */
 ENTRY(copy_fault)
 	mov	r0, #(EFAULT)
- 	ldmfd	sp!, {r4, r11, r12, lr}
-	mov	sp, r12
-	mov	pc, lr
+ 	ldmia	sp, {r4, r11, sp, pc}
 
 
 /*

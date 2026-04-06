@@ -1,0 +1,148 @@
+#
+# Prex system configuration file
+#
+
+#
+# Make options
+#
+makeoptions	CFLAGS+= -mcpu=cortex-a7  -fno-dwarf2-cfi-asm -mno-unaligned-access
+makeoptions	ASFLAGS+= -mcpu=cortex-a7
+
+#
+# MMU Option
+#
+mmu	        SYSPAGE_BASE	0x80000000  0x40000000 	# Location of system page
+mmu	        IOMEM_BASE      0xC0000000	0x00000000  # Location of system page
+mmu         CACHE
+
+#
+# Memory address
+#
+memory      RAM_SIZE        0x10000000  # DRAM Size
+memory		LOADER_TEXT		0x40010000	# Start of boot loader
+memory		KERNEL_TEXT		0x40200000	# Start of kernel
+memory		BOOTIMG_BASE	0x40012000	# Location of boot image
+
+#
+# Tunable paramters
+#
+options 	HZ=100			# Ticks/second of the clock
+options 	TIME_SLICE=50	# Context switch ratio (msec)
+options 	OPEN_MAX=16		# Max open files per process
+options 	BUF_CACHE=32	# Blocks for buffer cache
+options 	FS_THREADS=4	# Number of file system threads
+
+#
+# Platform settings
+#
+options		ARMV7A		# Processor core
+#options 	FPU			# Floating point unit
+#options 	ROMBOOT		# Boot from ROM
+options 	BOOTDISK	# Disk for /boot directory
+
+#
+# General setup
+#
+options 	POSIX		# POSIX support
+options 	CMDBOX		# Core utilities
+#options 	TINY		# Optimize for size
+
+#
+# Kernel hacking
+#
+#options 	KD		# Kernel debugger
+#options 	AUDIT		# Security auditing
+
+#
+# Diagnostic options
+#
+options 	DIAG_SERIAL	# Diagnostic via serial port
+
+#
+# File systems
+#
+options 	FIFOFS		# FIFO & Pipe
+options 	DEVFS		# Device file system
+options 	RAMFS		# RAM file system
+options 	ARFS		# Archive file system
+options 	FATFS		# FAT file system
+
+#
+# Power management
+#
+#options 	PM				# Power management
+#options 	PM_POWERSAVE	# Power policy: Battery optimized
+#options 	PM_PERFORMANCE	# Power policy: Parformance optimized
+
+#
+# Device drivers (initialization order)
+#
+device		pm			# Power management
+device		null		# NULL device
+device		zero		# Zero device
+device		ramdisk		# RAM disk
+device		cons		# System console
+device		serial		# Logical serial
+device      pl011       # Serial
+#device      vio_rtc     # VirtIO RTC
+#device      vio_sound   # VirtIO SND
+#device      vio_block   # VirtIO Block
+#device      vio_net     # VirtIO Net
+#device      vio_kb      # VirtIO Input
+#device      vio_mouse   # VirtIO Input
+
+#
+# Hardware configuations
+#
+options		ARM_VECTORS=0x00000000
+options		NIRQS=128
+options     GIC_DIST_BASE=0x08000000
+options     GIC_CPU_BASE=0x08010000
+options     PL011_BASE=0x09000000
+options		PL011_IRQ=33
+options		PL011_CLK=24000000
+options     VIO_RTC_BASE=0x09010000
+
+#
+# Command box
+#
+command 	cat
+command 	clear
+command 	cp
+command 	date
+command 	dmesg
+command 	echo
+command 	free
+command 	head
+command 	hostname
+command 	kill
+command 	ls
+command 	mkdir
+command 	more
+command 	mv
+command 	nice
+command 	printenv
+command 	ps
+command 	pwd
+command 	rm
+command 	rmdir
+command 	sh
+command 	sleep
+command 	sync
+#command 	test
+command 	touch
+command 	uname
+
+#
+# Adminisrative tools
+#
+command 	diskutil
+command 	install
+command 	pmctrl
+command 	ktrace
+command 	lock
+command 	debug
+
+# Math library
+math		fdlibm
+

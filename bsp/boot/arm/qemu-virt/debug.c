@@ -1,5 +1,6 @@
 /*-
- * Copyright (c) 2005-2008, Kohsuke Ohtani
+ * Copyright (c) 2008-2009, Kohsuke Ohtani
+ * Copyright (c) 2026, Champ Yen <champ.yen@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,29 +28,35 @@
  * SUCH DAMAGE.
  */
 
-#ifndef _ARM_CPUFUNC_H
-#define _ARM_CPUFUNC_H
+#include <sys/param.h>
+#include <boot.h>
 
-#include <sys/cdefs.h>
-#include <sys/types.h>
+#define UART_BASE CONFIG_PL011_PHY_BASE
 
-__BEGIN_DECLS
-void cpu_idle(void);
-int get_faultstatus(void);
-void* get_faultaddress(void);
-paddr_t get_ttb(void);
-void set_ttb(paddr_t);
-void switch_ttb(paddr_t);
-void flush_tlb(void);
-void flush_cache(void);
+/* UART Registers */
+#define UART_DR (*(volatile uint32_t*)(UART_BASE + 0x00))
+#define UART_FR (*(volatile uint32_t*)(UART_BASE + 0x18))
 
-// for ARMV6 & ARMV7A
-void set_vbar(vaddr_t);
-void cpu_barrier(void);
-uint32_t get_cntfrq(void);
-void set_cntp_tval_reg(uint32_t);
-void set_cntp_ctl_reg(uint32_t);
-uint32_t get_cntp_ctl_reg(void);
-__END_DECLS
+/* Flag register */
+#define FR_TXFF 0x20 /* Transmit FIFO full */
 
-#endif /* !_ARM_CPUFUNC_H */
+/*
+ * Print one chracter
+ */
+void debug_putc(int c)
+{
+    int i;
+    for (i = 0; i < 1000; i++) {
+        if (!(UART_FR & FR_TXFF))
+            break;
+    }
+    UART_DR = c;
+}
+
+/*
+ * Initialize debug port.
+ */
+void debug_init(void)
+{
+    /* QEMU PL011 doesn't really need initialization for basic output */
+}
