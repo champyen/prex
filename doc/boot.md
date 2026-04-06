@@ -68,7 +68,10 @@ For x86, this `prexos` file is then typically copied to a FAT12 floppy image (`f
 6.  **Hand-off:** Finally, the bootloader jumps to the kernel's entry point, passing the physical address of the `bootinfo` structure.
 
 ### Step 3: The Kernel (`sys/prex+`)
-1.  **Entry (`locore.S`):** The kernel entry point (`bsp/hal/x86/arch/locore.S` or `bsp/hal/arm/arch/locore.S`) sets up the initial page tables, enables the MMU (Memory Management Unit), and maps the kernel and loaded modules into the high virtual address space (above `SYSPAGE_BASE`). It then jumps to `main()`.
+1.  **Entry (`locore.S`):** The kernel entry point (`bsp/hal/x86/arch/locore.S` or `bsp/hal/arm/arch/locore.S`) performs the initial MMU setup when `CONFIG_MMU` is enabled. It establishes the following address space layout:
+    *   **ARM:** Maps the first 4MB of physical RAM (`RAMBASE`, typically `0x00000000`) to the kernel virtual address `KERNBASE` (`SYSPAGE_BASE`, typically `0x80000000`). It also creates a temporary 1:1 mapping of this 4MB region to enable the transition to paged mode.
+    *   **x86:** Maps the first 4MB of physical RAM (starting at `0x00000000`) to the kernel virtual address `KERNBASE` (`SYSPAGE_BASE`, `0x80000000`). A temporary 1:1 mapping of the first 4MB is used during the switch to protected mode with paging, which is subsequently unmapped.
+    After enabling the MMU, it performs a long jump to the high virtual address and proceeds to the C entry point `main()`.
 2.  **Kernel Initialization (`main.c`):**
     *   Initializes the memory manager (kmem, page allocator, VM).
     *   Initializes the scheduler, threads, and IPC mechanisms.
