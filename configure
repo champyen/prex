@@ -36,6 +36,7 @@ setdefaults()
 	prefix=""
 	srcdir=`pwd`
 	SYSPAGE_BASE=0
+	SYSPAGE_PHY_BASE=0
 	IOMEM_BASE=0
 	ASFLAGS=""
 	LDFLAGS=""
@@ -125,8 +126,8 @@ gettarget()
 		target="x86-pc"
 	fi
 
-	arch=`expr "x$target" : 'x\([^=]*\)-'`
-	platform=`expr "x$target" : 'x[^=]*-\(.*\)'`
+	arch=`expr "x$target" : 'x\([^-]*\)-'`
+	platform=`expr "x$target" : 'x[^-]*-\(.*\)'`
 
 	case "$arch" in
 	x86|arm|ppc|sh|mips)
@@ -292,7 +293,7 @@ memory()
 	case $name in
 	KERNEL_TEXT|BOOTIMG_BASE|BOOTING_BASE)
 		# refinement: val = val + SYSPAGE_BASE
-		val=$(printf "0x%08x" $(($val + $SYSPAGE_BASE)))
+		val=$(printf "0x%08x" $(($val + ($SYSPAGE_BASE-$SYSPAGE_PHY_BASE))))
 		;;
 	esac
 
@@ -322,6 +323,7 @@ mmu()
 		case $param in
 		SYSPAGE_BASE)
 			SYSPAGE_BASE=$val
+			SYSPAGE_PHY_BASE=$val_nommu
 			echo "#define CONFIG_SYSPAGE_PHY_BASE $val_nommu" >> $CONFIG_H
 			memory $param $val
 			;;
