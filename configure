@@ -17,6 +17,7 @@ usage()
 	echo "	--target=TARGET		use TARGET for target system"
 	echo "	--cross-prefix=PREFIX	use PREFIX for compile tools"
 	echo "	--cc=CC			use CC as C compiler"
+	echo "	--mem-size=SIZE		overwrite default RAM_SIZE (e.g. 256M, 1G)"
 	echo "	--enable-mmu		enable MMU support"
 	echo "	--no-debug		disable all debug features"
 
@@ -38,6 +39,7 @@ setdefaults()
 	SYSPAGE_BASE=0
 	SYSPAGE_PHY_BASE=0
 	IOMEM_BASE=0
+	mem_size=""
 	ASFLAGS=""
 	LDFLAGS=""
 
@@ -106,6 +108,9 @@ parseargs()
 			;;
 		--cc)
 			cc=$optarg
+			;;
+		--mem-size)
+			mem_size=$optarg
 			;;
 		--no-debug)
 			nodebug=1
@@ -275,10 +280,37 @@ capability()
 	} >> $CAPTAB_H
 }
 
+parse_size()
+{
+	val=$1
+	case $val in
+	*[Gg])
+		num=`echo $val | tr -d 'Gg'`
+		echo $(($num * 1024 * 1024 * 1024))
+		;;
+	*[Mm])
+		num=`echo $val | tr -d 'Mm'`
+		echo $(($num * 1024 * 1024))
+		;;
+	*[Kk])
+		num=`echo $val | tr -d 'Kk'`
+		echo $(($num * 1024))
+		;;
+	*)
+		echo $val
+		;;
+	esac
+}
+
 memory()
 {
 	name=$1
 	val=$2
+
+	if [ "$name" = "RAM_SIZE" ] && [ -n "$mem_size" ]; then
+		val=`parse_size $mem_size`
+		val=`printf "0x%x" $val`
+	fi
 
 	case $name in
 	*_BASE)

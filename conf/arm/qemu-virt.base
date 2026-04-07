@@ -101,7 +101,8 @@ options     GIC_CPU_BASE=0x08010000
 options     PL011_BASE=0x09000000
 options		PL011_IRQ=33
 options		PL011_CLK=24000000
-options     VIO_RTC_BASE=0x09010000
+options     RTC_BASE=0x09010000
+options     VIO_MMIO_BASE=0x0a000000
 
 #
 # Command box
@@ -132,14 +133,14 @@ command 	sync
 #command 	test
 command 	touch
 command 	uname
-command 	wc
+#command 	wc
 command 	grep
 command 	tail
-command 	sort
+#command 	sort
 command 	find
 command 	xargs
-command 	tar
-command 	gzip
+#command 	tar
+#command 	gzip
 
 #
 # Adminisrative tools
