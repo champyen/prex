@@ -30,5 +30,9 @@ include $(CURDIR)/sync/Makefile.inc
 include $(CURDIR)/test/Makefile.inc
 include $(CURDIR)/touch/Makefile.inc
 include $(CURDIR)/uname/Makefile.inc
+include $(CURDIR)/wc/Makefile.inc
+include $(CURDIR)/grep/Makefile.inc
+include $(CURDIR)/tail/Makefile.inc
+include $(CURDIR)/sort/Makefile.inc
 
 include $(SRCDIR)/mk/prog.mk

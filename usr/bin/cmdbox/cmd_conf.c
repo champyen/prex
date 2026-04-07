@@ -56,6 +56,10 @@ extern int sync_main(int argc, char* argv[]);
 extern int test_main(int argc, char* argv[]);
 extern int touch_main(int argc, char* argv[]);
 extern int uname_main(int argc, char* argv[]);
+extern int wc_main(int argc, char* argv[]);
+extern int grep_main(int argc, char* argv[]);
+extern int tail_main(int argc, char* argv[]);
+extern int sort_main(int argc, char* argv[]);
 extern int null_main(int argc, char* argv[]);
 
 /*
@@ -137,6 +141,18 @@ const struct cmdentry builtin_cmds[] = {
 #endif
 #ifdef CONFIG_CMD_UNAME
     {"uname", uname_main},
+#endif
+#ifdef CONFIG_CMD_WC
+    {"wc", wc_main},
+#endif
+#ifdef CONFIG_CMD_GREP
+    {"grep", grep_main},
+#endif
+#ifdef CONFIG_CMD_TAIL
+    {"tail", tail_main},
+#endif
+#ifdef CONFIG_CMD_SORT
+    {"sort", sort_main},
 #endif
     {NULL, null_main},
 };

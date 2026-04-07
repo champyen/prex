@@ -135,6 +135,10 @@ command 	sync
 #command 	test
 command 	touch
 command 	uname
+command 	wc
+command 	grep
+command 	tail
+command 	sort
 
 #
 # Adminisrative tools
