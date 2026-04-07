@@ -60,6 +60,10 @@ extern int wc_main(int argc, char* argv[]);
 extern int grep_main(int argc, char* argv[]);
 extern int tail_main(int argc, char* argv[]);
 extern int sort_main(int argc, char* argv[]);
+extern int find_main(int argc, char* argv[]);
+extern int xargs_main(int argc, char* argv[]);
+extern int tar_main(int argc, char* argv[]);
+extern int gzip_main(int argc, char* argv[]);
 extern int null_main(int argc, char* argv[]);
 
 /*
@@ -153,6 +157,19 @@ const struct cmdentry builtin_cmds[] = {
 #endif
 #ifdef CONFIG_CMD_SORT
     {"sort", sort_main},
+#endif
+#ifdef CONFIG_CMD_FIND
+    {"find", find_main},
+#endif
+#ifdef CONFIG_CMD_XARGS
+    {"xargs", xargs_main},
+#endif
+#ifdef CONFIG_CMD_TAR
+    {"tar", tar_main},
+#endif
+#ifdef CONFIG_CMD_GZIP
+    {"gzip", gzip_main},
+    {"gunzip", gzip_main},
 #endif
     {NULL, null_main},
 };

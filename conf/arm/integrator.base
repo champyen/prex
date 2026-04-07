@@ -139,6 +139,11 @@ command 	wc
 command 	grep
 command 	tail
 command 	sort
+command 	find
+command 	xargs
+command 	tar
+command 	gzip
+
 
 #
 # Adminisrative tools

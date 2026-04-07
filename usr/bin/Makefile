@@ -34,5 +34,9 @@ include $(CURDIR)/wc/Makefile.inc
 include $(CURDIR)/grep/Makefile.inc
 include $(CURDIR)/tail/Makefile.inc
 include $(CURDIR)/sort/Makefile.inc
+include $(CURDIR)/find/Makefile.inc
+include $(CURDIR)/xargs/Makefile.inc
+include $(CURDIR)/tar/Makefile.inc
+include $(CURDIR)/gzip/Makefile.inc
 
 include $(SRCDIR)/mk/prog.mk
