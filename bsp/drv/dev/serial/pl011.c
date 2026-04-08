@@ -149,19 +149,18 @@ static void pl011_set_poll(struct serial_port* sp, int on)
         bus_write_32(UART_IMSC, (IMSC_RX | IMSC_TX | IMSC_RT));
 }
 
-static int pl011_isr(void* arg)
+static void pl011_ist(void* arg)
 {
     struct serial_port* sp = arg;
     int c;
-    uint32_t mis;
+    uint32_t ris;
 
-    mis = bus_read_32(UART_MIS);
+    ris = bus_read_32(UART_RIS);
 
-    if (mis & (MIS_RX | MIS_RT)) {
+    if (ris & (MIS_RX | MIS_RT)) {
         /*
          * Receive interrupt
          */
-        // while (bus_read_32(UART_FR) & FR_RXFE);
         do {
             c = (int)bus_read_32(UART_DR);
             serial_rcv_char(sp, (char)c);
@@ -170,7 +169,7 @@ static int pl011_isr(void* arg)
         /* Clear interrupt status */
         bus_write_32(UART_ICR, (ICR_RX | ICR_RT));
     }
-    if (mis & MIS_TX) {
+    if (ris & MIS_TX) {
         /*
          * Transmit interrupt
          */
@@ -179,7 +178,22 @@ static int pl011_isr(void* arg)
         /* Clear interrupt status */
         bus_write_32(UART_ICR, ICR_TX);
     }
-    return 0;
+
+    /* Re-enable interrupts */
+    bus_write_32(UART_IMSC, (IMSC_RX | IMSC_TX | IMSC_RT));
+}
+
+static int pl011_isr(void* arg)
+{
+    uint32_t mis = bus_read_32(UART_MIS);
+
+    if (mis == 0)
+        return INT_DONE;
+
+    /* Disable interrupts; IST will re-enable them */
+    bus_write_32(UART_IMSC, 0);
+
+    return INT_CONTINUE;
 }
 
 static void pl011_start(struct serial_port* sp)
@@ -208,7 +222,7 @@ static void pl011_start(struct serial_port* sp)
     bus_write_32(UART_CR, (CR_RXE | CR_TXE | CR_UARTEN));
 
     /* Install interrupt handler */
-    sp->irq = irq_attach(UART_IRQ, IPL_COMM, 0, pl011_isr, IST_NONE, sp);
+    sp->irq = irq_attach(UART_IRQ, IPL_COMM, 0, pl011_isr, pl011_ist, sp);
 
     /* Enable TX/RX interrupt */
     bus_write_32(UART_IMSC, (IMSC_RX | IMSC_TX | IMSC_RT));
@@ -223,7 +237,6 @@ static void pl011_stop(struct serial_port* sp)
 
 static int pl011_init(struct driver* self)
 {
-
     serial_attach(&pl011_ops, &pl011_port);
     return 0;
 }
