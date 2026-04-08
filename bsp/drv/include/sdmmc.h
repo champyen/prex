@@ -147,4 +147,4 @@ void sdmmc_insert(device_t dev);
 void sdmmc_remove(device_t dev);
 __END_DECLS
 
-#endif /* !_CPUFREQ_H */
+#endif /* _SDMMC_H_ */

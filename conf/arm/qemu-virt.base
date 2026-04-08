@@ -19,9 +19,9 @@ mmu         CACHE
 # Memory address
 #
 memory      RAM_SIZE        0x10000000  # DRAM Size
-memory		LOADER_TEXT		0x40010000	# Start of boot loader
-memory		KERNEL_TEXT		0x40200000	# Start of kernel
-memory		BOOTIMG_BASE	0x40012000	# Location of boot image
+memory      LOADER_TEXT     0x40010000  # Start of boot loader
+memory      KERNEL_TEXT     0x40200000  # Start of kernel
+memory      BOOTIMG_BASE    0x40012000  # Location of boot image
 
 #
 # Tunable paramters
@@ -84,12 +84,10 @@ device		ramdisk		# RAM disk
 device		cons		# System console
 device		serial		# Logical serial
 device      pl011       # Serial
-#device      vio_rtc     # VirtIO RTC
-#device      vio_sound   # VirtIO SND
-#device      vio_block   # VirtIO Block
+device      vio_mmio
+#device      vio_audio   # VirtIO Audio
+device      vio_block   # VirtIO Block
 #device      vio_net     # VirtIO Net
-#device      vio_kb      # VirtIO Input
-#device      vio_mouse   # VirtIO Input
 
 #
 # Hardware configuations
