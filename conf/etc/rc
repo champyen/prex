@@ -2,8 +2,5 @@ PATH=/boot:/bin
 HOME=/
 export HOME PATH
 uname -msr
-ls /dev
-#ls /mnt/sdcard
-mem
 date
 exec sh
