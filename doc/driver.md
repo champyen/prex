@@ -137,6 +137,28 @@ static int null_write(device_t dev, char *buf, size_t *nbyte, int blkno)
 }
 ```
 
+## Interrupt Handling (ISR + IST)
+
+Prex enforces a split interrupt handling architecture to minimize interrupt latency: the Top Half (ISR) and the Bottom Half (IST).
+
+### Top Half: Interrupt Service Routine (ISR)
+
+The ISR runs in a true interrupt context with hardware interrupts disabled. Its primary job is to be as fast as possible.
+- It must **not** block, sleep, or perform heavy computations.
+- It should read the device's interrupt status register to confirm the interrupt originated from this device.
+- It must acknowledge and clear the interrupt at the hardware level.
+- If the device generates continuous interrupts (like level-triggered interrupts), the ISR **must mask** the device's interrupt output.
+- It returns `INT_CONTINUE` to request the kernel to schedule the IST, or `INT_DONE` if the interrupt was spurious or fully handled.
+
+### Bottom Half: Interrupt Service Thread (IST)
+
+The IST runs in a standard kernel thread context. This is where the heavy lifting occurs.
+- It can safely perform data processing, copy data to/from buffers, and call scheduler functions.
+- It typically calls `sched_wakeup()` to awaken any driver threads that were blocked (e.g., in `read()` or `write()`) waiting for this hardware event.
+- Once processing is complete, the IST must unmask the device's interrupts so the next event can be received.
+
+Both functions are registered together using `irq_attach()`.
+
 ## Using the Kernel Interfaces
 
 Drivers run in kernel mode and cannot safely call standard C library functions (like `printf` or `malloc`) or system calls directly. Instead, they must rely on the provided kernel APIs:
