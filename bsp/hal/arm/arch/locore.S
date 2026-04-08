@@ -314,7 +314,7 @@ ENTRY(syscall_entry)
 	bic	r12, r12, #PSR_MODE
 	orr	r12, r12, #PSR_SVC_MODE
 	msr	cpsr_c, r12
-	mov, lr, r5
+	mov	lr, r5
 #endif
 	sub	sp, sp, #CTXREGS	/* Adjust stack */
 	stmia	sp, {r0-r14}^		/* Push r0-r14 */
