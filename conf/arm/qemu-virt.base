@@ -86,6 +86,7 @@ device		rtc		# Real time clock
 device		pl031		# ARM PrimeCell PL031 RTC
 device		serial		# Logical serial
 device      pl011       # Serial
+device      audio       # Generic Audio
 device      vio_mmio
 #device      vio_audio   # VirtIO Audio
 device      vio_block   # VirtIO Block

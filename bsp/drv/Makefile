@@ -19,6 +19,7 @@ include $(CURDIR)/dev/misc/Makefile.inc
 include $(CURDIR)/dev/rtc/Makefile.inc
 include $(CURDIR)/dev/serial/Makefile.inc
 include $(CURDIR)/dev/video/Makefile.inc
+include $(CURDIR)/dev/audio/Makefile.inc
 
 include $(CURDIR)/lib/Makefile.inc
 -include $(CURDIR)/$(ARCH)/arch/Makefile.inc
