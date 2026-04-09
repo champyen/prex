@@ -109,7 +109,7 @@ go_prot:
 	 */
 	movl	$(CONFIG_BOOTIMG_BASE - KERNBASE), %edi	/* Destination */
 	movl	$0x32000, %esi		/* Source address: 0x32000 */
-	movl	$0x1B800, %ecx		/* size 0x6e000 */
+	movl	$0x40000, %ecx		/* size 1MB */
 	rep	movsl
 
 	jmp	main			/* Jump to main routine in C */

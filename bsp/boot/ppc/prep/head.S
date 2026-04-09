@@ -40,7 +40,7 @@
 
 #define MSR_EE		0x8000
 
-#define ENTRY(x) .global x; .align; x##:
+#define ENTRY(x) .global x; .align 2; x##:
 
 	.section ".text","ax"
 

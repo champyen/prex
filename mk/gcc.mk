@@ -7,9 +7,9 @@ OUTPUT_OPTION=	-o $@
 
 DEFINES=	$(addprefix -D,$(DEFS))
 
-EXTRA_CFLAGS=	-Wno-unused-but-set-variable -Wno-nonnull-compare -Wno-attributes -Wno-sizeof-pointer-memaccess -Wno-pedantic
+EXTRA_CFLAGS=	-Wno-unused-but-set-variable -Wno-nonnull-compare -Wno-attributes -Wno-sizeof-pointer-memaccess -Wno-pedantic -fno-asynchronous-unwind-tables
 CFLAGS+=	-std=c23 -c -O3 -pedantic -Wall -Wundef -Wstrict-prototypes -Wpointer-arith -nostdinc \
-		-fno-reorder-functions -fno-reorder-blocks -fno-tree-loop-distribute-patterns -fno-strict-aliasing $(GCCFLAGS) $(EXTRA_CFLAGS)
+		-fno-reorder-functions -fno-reorder-blocks -fno-tree-loop-distribute-patterns -fno-strict-aliasing -fno-stack-protector $(GCCFLAGS) $(EXTRA_CFLAGS)
 CPPFLAGS+=	$(DEFINES) -I. $(addprefix -I,$(INCSDIR))
 ACPPFLAGS+=	-D__ASSEMBLY__
 ifneq ($(filter -m32,$(GCCFLAGS)),)

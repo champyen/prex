@@ -53,3 +53,41 @@ void* memset(void* dst0, int c0, size_t length)
     }
     RETURN;
 }
+
+#ifdef __arm__
+/*
+ * ARM EABI memset alias
+ */
+#ifndef BZERO
+void __aeabi_memset(void *dest, size_t n, int c)
+{
+	memset(dest, c, n);
+}
+
+void __aeabi_memset4(void *dest, size_t n, int c)
+{
+	memset(dest, c, n);
+}
+
+void __aeabi_memset8(void *dest, size_t n, int c)
+{
+	memset(dest, c, n);
+}
+
+void __aeabi_memclr(void *dest, size_t n)
+{
+	memset(dest, 0, n);
+}
+
+void __aeabi_memclr4(void *dest, size_t n)
+{
+	memset(dest, 0, n);
+}
+
+void __aeabi_memclr8(void *dest, size_t n)
+{
+	memset(dest, 0, n);
+}
+#endif /* !BZERO */
+#endif /* __arm__ */
+

@@ -35,7 +35,7 @@
 #include <machine/memory.h>
 #include <machine/syspage.h>
 
-#define ENTRY(x) .global x; .align; x##:
+#define ENTRY(x) .global x; .align 2; x##:
 
 	.section ".start","ax"
 	.code 32
@@ -45,7 +45,7 @@
 ENTRY(boot_entry)
 	b	start_vector
 
-	.align
+	.align 2
 	.code 32
 stack_end:	.word	(BOOTSTKTOP - KERNOFFSET)
 

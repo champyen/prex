@@ -472,7 +472,16 @@ main()
 		echo "${cc_type}=1"
 		if [ "${cc}" = "clang" ]; then
 			echo "_CLANG_=1"
-			echo "CC=${cc} --target=${prefix}"
+			if [ -n "${prefix}" ]; then
+				echo "CC=${cc} --target=${prefix%-}"
+			else
+				case "${ARCH}" in
+				arm) echo "CC=${cc} --target=arm-none-eabi" ;;
+				x86) echo "CC=${cc} --target=i386-pc-elf" ;;
+				ppc) echo "CC=${cc} --target=powerpc-unknown-eabi" ;;
+				*) echo "CC=${cc}" ;;
+				esac
+			fi
 			echo "GCC=${prefix}gcc"
 		else
 			echo "CC=${prefix}${cc}"

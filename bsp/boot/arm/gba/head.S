@@ -51,7 +51,7 @@
 #include <machine/memory.h>
 #include <machine/syspage.h>
 
-#define ENTRY(x) .global x; .align; x##:
+#define ENTRY(x) .global x; .align 2; x##:
 
 	.section ".text","ax"
 	.code 32
@@ -99,7 +99,7 @@ ENTRY(boot_entry)
 	/* Checksum (80000BEh) */
 	.byte	0x00,0x00
 
-	.align
+	.align 2
 	.code 32
 
 rom_header_end:
@@ -121,7 +121,7 @@ __slave_number:
 	.word	0
 	.word	0
 
-	.align
+	.align 2
 	.code 32
 stack_top:	.word	(BOOTSTKTOP - KERNBASE)
 
