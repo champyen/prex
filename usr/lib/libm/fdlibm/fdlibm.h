@@ -31,9 +31,13 @@
 #endif
 
 #ifdef __STDC__
-#define	__P(p)	p
+#ifndef __P
+#define __P(p)  p
+#endif
 #else
+#ifndef __P
 #define	__P(p)	()
+#endif
 #endif
 
 /*

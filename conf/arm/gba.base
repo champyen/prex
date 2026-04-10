@@ -26,6 +26,7 @@ options 	TIME_SLICE=50	# Context switch ratio (msec)
 options 	OPEN_MAX=8	# Max open files per process
 options 	BUF_CACHE=8	# Blocks for buffer cache
 options 	FS_THREADS=1	# Number of file system threads
+options 	MAX_ALLOC_SIZE=0x8000	# Max kernel memory allocation size
 
 #
 # Platform settings

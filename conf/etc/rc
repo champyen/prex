@@ -3,4 +3,6 @@ HOME=/
 export HOME PATH
 uname -msr
 date
+#beep &
+#sleep 2
 exec sh

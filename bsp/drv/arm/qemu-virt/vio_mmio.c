@@ -35,6 +35,10 @@
 extern int vio_block_attach(vaddr_t base, int irq);
 #endif
 
+#ifdef CONFIG_VIO_AUDIO
+extern int vio_audio_attach(vaddr_t base, int irq);
+#endif
+
 static int vio_mmio_init(struct driver* self)
 {
     vaddr_t base;
@@ -58,6 +62,12 @@ static int vio_mmio_init(struct driver* self)
             case VIO_DEV_BLOCK:
                 printf("Found VirtIO Block device at 0x%lx, irq %d, ver %d\n", base, irq, (int)ver);
                 vio_block_attach(base, irq);
+                break;
+#endif
+#ifdef CONFIG_VIO_AUDIO
+            case VIO_DEV_AUDIO:
+                printf("Found VirtIO Audio device at 0x%lx, irq %d, ver %d\n", base, irq, (int)ver);
+                vio_audio_attach(base, irq);
                 break;
 #endif
 #ifdef CONFIG_VIO_NET

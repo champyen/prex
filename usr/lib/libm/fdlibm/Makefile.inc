@@ -14,4 +14,5 @@ SRCS += $(LIBM_DIR)/s_sin.c \
         $(LIBM_DIR)/s_ldexp.c \
         $(LIBM_DIR)/s_scalbn.c \
         $(LIBM_DIR)/s_finite.c \
-        $(LIBM_DIR)/s_copysign.c
+        $(LIBM_DIR)/s_copysign.c \
+        $(LIBM_DIR)/s_floor.c

@@ -99,7 +99,11 @@ struct page_hdr
 
 #define BLKHDR_SIZE (sizeof(struct block_hdr))
 #define PGHDR_SIZE (sizeof(struct page_hdr))
+#ifdef CONFIG_MAX_ALLOC_SIZE
+#define MAX_ALLOC_SIZE (size_t)CONFIG_MAX_ALLOC_SIZE
+#else
 #define MAX_ALLOC_SIZE (size_t)(PAGE_SIZE - PGHDR_SIZE)
+#endif
 
 #define MIN_BLOCK_SIZE (BLKHDR_SIZE + 16)
 #define MAX_BLOCK_SIZE (u_short)(PAGE_SIZE - (PGHDR_SIZE - BLKHDR_SIZE))
@@ -199,9 +203,12 @@ void* kmem_alloc(size_t size)
         pg = PAGETOP(blk);       /* Get the page address */
     } else {
         /*
-         * No block found. Allocate new page.
+         * No block found. Allocate new page(s).
          */
-        if ((pa = page_alloc(PAGE_SIZE)) == 0) {
+        size_t pg_size = ALLOC_SIZE(size + PGHDR_SIZE);
+        if (pg_size < PAGE_SIZE) pg_size = PAGE_SIZE;
+
+        if ((pa = page_alloc(pg_size)) == 0) {
             sched_unlock();
             return NULL;
         }
@@ -214,7 +221,7 @@ void* kmem_alloc(size_t size)
          */
         blk = &pg->first_blk;
         blk->magic = BLOCK_MAGIC;
-        blk->size = MAX_BLOCK_SIZE;
+        blk->size = (u_short)(pg_size - (PGHDR_SIZE - BLKHDR_SIZE));
         blk->pg_next = NULL;
     }
 
