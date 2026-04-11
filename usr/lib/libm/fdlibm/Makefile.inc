@@ -4,8 +4,13 @@ LIBM_DIR := $(SRCDIR)/usr/lib/libm/fdlibm
 
 SRCS += $(LIBM_DIR)/s_sin.c \
         $(LIBM_DIR)/s_cos.c \
+        $(LIBM_DIR)/s_tan.c \
         $(LIBM_DIR)/s_fabs.c \
+        $(LIBM_DIR)/s_frexp.c \
         $(LIBM_DIR)/e_sqrt.c \
+        $(LIBM_DIR)/e_pow.c \
+        $(LIBM_DIR)/e_log.c \
+        $(LIBM_DIR)/e_exp.c \
         $(LIBM_DIR)/k_sin.c \
         $(LIBM_DIR)/k_cos.c \
         $(LIBM_DIR)/k_tan.c \
