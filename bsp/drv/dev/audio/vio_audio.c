@@ -32,6 +32,12 @@
 #include <audio.h>
 #include <sys/audioio.h>
 
+#ifdef DEBUG_VIO_AUDIO
+#define DPRINTF(a) printf a
+#else
+#define DPRINTF(a)
+#endif
+
 /* VirtIO Sound Request Types */
 #define VIO_SND_REQ_JACK_INFO          0x0001
 #define VIO_SND_REQ_JACK_REMAP         0x0002
@@ -79,12 +85,11 @@
 #define VIO_SND_STREAM_REC           1
 
 /* Default PCM Configuration */
-#define VIO_SND_BUFFER_BYTES         32768
-#define VIO_SND_PERIOD_BYTES         16384
+#define VIO_SND_BUFFER_BYTES         16384
+#define VIO_SND_PERIOD_BYTES         8192
 
 /* VirtQueue Configuration */
 #define VQ_SIZE                      16
-#define VQ_ALLOC_SIZE                (PAGE_SIZE * 2)
 #ifndef PAGE_SHIFT
 #define PAGE_SHIFT                   12
 #endif
@@ -155,6 +160,7 @@ struct vio_audio_vq {
     volatile struct vring_avail* avail;
     volatile struct vring_used* used;
     uint16_t last_used_idx;
+    uint16_t next_free;
 };
 
 struct vio_audio_softc {
@@ -171,7 +177,9 @@ struct vio_audio_softc {
     void *ctrl_req;
     struct virtio_snd_hdr *resp_hdr;
     struct virtio_snd_pcm_status *pcm_status;
+    struct virtio_snd_pcm_xfer *xfer;
     
+    int pcm_started;
     void (*play_intr)(void *);
 };
 
@@ -196,7 +204,6 @@ static struct audio_hw_if vio_audio_hw_if = {
 
 static int vio_audio_set_volume(void *priv, uint8_t volume)
 {
-    printf("vio_audio_set_volume: %d\n", volume);
     return 0;
 }
 
@@ -204,7 +211,6 @@ static int vio_audio_isr(void* arg)
 {
     struct vio_audio_softc* sc = arg;
     uint32_t status = bus_read_32(sc->base + VIO_MMIO_IRQ_STATUS);
-    printf("vio_audio_isr: status 0x%x\n", (unsigned int)status);
     if (status) {
         bus_write_32(sc->base + VIO_MMIO_IRQ_ACK, status);
         return INT_CONTINUE;
@@ -223,11 +229,10 @@ static void vio_audio_ist(void* arg)
     }
 
     /* Check TX VQ */
-    if (sc->vqs[VIO_SND_VQ_TX].used->idx != sc->vqs[VIO_SND_VQ_TX].last_used_idx) {
-        sc->vqs[VIO_SND_VQ_TX].last_used_idx = sc->vqs[VIO_SND_VQ_TX].used->idx;
+    while (sc->vqs[VIO_SND_VQ_TX].used->idx != sc->vqs[VIO_SND_VQ_TX].last_used_idx) {
+        sc->vqs[VIO_SND_VQ_TX].last_used_idx++;
         if (sc->play_intr)
             sc->play_intr(device_private(sc->dev));
-        sched_wakeup(&sc->tx_event);
     }
 }
 
@@ -243,7 +248,7 @@ static int vio_audio_send_ctrl(struct vio_audio_softc *sc, void *req, size_t req
     vq->desc[0].next = 1;
 
     vq->desc[1].addr = (uint64_t)kvtop(sc->resp_hdr);
-    vq->desc[1].len = 512; /* Allow space for large responses */
+    vq->desc[1].len = 512;
     vq->desc[1].flags = VRING_DESC_F_WRITE;
     vq->desc[1].next = 0;
 
@@ -252,36 +257,21 @@ static int vio_audio_send_ctrl(struct vio_audio_softc *sc, void *req, size_t req
     vq->avail->idx++;
     __sync_synchronize();
 
-    printf("vio_audio: notifying ctrl vq\n");
+    sched_lock();
     bus_write_32(sc->base + VIO_MMIO_QUEUE_NOTIFY, VIO_SND_VQ_CONTROL);
-
-    int timeout = 1000000;
-    while (vq->used->idx == vq->last_used_idx && timeout > 0) {
-        if (sc->vqs[VIO_SND_VQ_CONTROL].used->idx != sc->vqs[VIO_SND_VQ_CONTROL].last_used_idx)
-            break;
-        timeout--;
-    }
-    
-    if (timeout == 0) {
-        printf("vio_audio: ctrl req timeout\n");
-        return EIO;
-    }
-    vq->last_used_idx = vq->used->idx;
-
-    printf("vio_audio: ctrl req code %d done, resp 0x%x\n",
-           (int)((struct virtio_snd_hdr*)req)->code, (unsigned int)sc->resp_hdr->code);
+    sched_tsleep(&sc->ctrl_event, 1000);
+    sched_unlock();
 
     if (sc->resp_hdr->code != VIO_SND_S_OK) {
         return EIO;
     }
     return 0;
 }
+
 static int vio_audio_open(void *priv, int mode)
 {
     struct vio_audio_softc *sc = priv;
     struct virtio_snd_query_info req;
-
-    printf("vio_audio_open: querying pcm info\n");
 
     memset(&req, 0, sizeof(req));
     req.hdr.code = VIO_SND_REQ_PCM_INFO;
@@ -292,15 +282,15 @@ static int vio_audio_open(void *priv, int mode)
     return vio_audio_send_ctrl(sc, &req, sizeof(req));
 }
 
-
 static void vio_audio_close(void *priv)
 {
     struct vio_audio_softc *sc = priv;
     struct virtio_snd_pcm_hdr req;
 
-    printf("vio_audio_close\n");
+    memset(&req, 0, sizeof(req));
     req.hdr.code = VIO_SND_REQ_PCM_RELEASE;
     req.stream_id = VIO_SND_STREAM_PLAY;
+    sc->pcm_started = 0;
 
     vio_audio_send_ctrl(sc, &req, sizeof(req));
 }
@@ -310,8 +300,6 @@ static int vio_audio_set_params(void *priv, struct audio_params *params)
     struct vio_audio_softc *sc = priv;
     struct virtio_snd_pcm_set_params req;
 
-    printf("vio_audio_set_params: rate=%d channels=%d encoding=%d\n",
-           params->sample_rate, params->channels, params->encoding);
     memset(&req, 0, sizeof(req));
     req.hdr.code = VIO_SND_REQ_PCM_SET_PARAMS;
     req.stream_id = VIO_SND_STREAM_PLAY;
@@ -319,13 +307,11 @@ static int vio_audio_set_params(void *priv, struct audio_params *params)
     req.period_bytes = VIO_SND_PERIOD_BYTES;
     req.channels = params->channels;
 
-    /* Map encoding */
     if (params->encoding == AUDIO_ENCODING_PCM_S16_LE)
         req.format = VIO_SND_PCM_FMT_S16;
     else
         req.format = VIO_SND_PCM_FMT_U8;
 
-    /* Map rate */
     if (params->sample_rate == AUDIO_SAMP_RATE_44K)
         req.rate = VIO_SND_PCM_RATE_44100;
     else
@@ -334,7 +320,6 @@ static int vio_audio_set_params(void *priv, struct audio_params *params)
     int err = vio_audio_send_ctrl(sc, &req, sizeof(req));
     if (err) return err;
 
-    /* Now PREPARE the stream */
     struct virtio_snd_pcm_hdr prep_req;
     memset(&prep_req, 0, sizeof(prep_req));
     prep_req.hdr.code = VIO_SND_REQ_PCM_PREPARE;
@@ -347,35 +332,46 @@ static int vio_audio_start_output(void *priv, void *block, size_t blksize, void 
 {
     struct vio_audio_softc *sc = priv;
     struct vio_audio_vq *vq = &sc->vqs[VIO_SND_VQ_TX];
-    struct virtio_snd_pcm_xfer xfer;
     struct virtio_snd_pcm_hdr start_req;
+    void *kbuf;
 
     sc->play_intr = intr;
 
-    /* 1. Start PCM if not already started (simplified) */
-    start_req.hdr.code = VIO_SND_REQ_PCM_START;
-    start_req.stream_id = VIO_SND_STREAM_PLAY;
-    vio_audio_send_ctrl(sc, &start_req, sizeof(start_req));
+    if (!sc->pcm_started) {
+        memset(&start_req, 0, sizeof(start_req));
+        start_req.hdr.code = VIO_SND_REQ_PCM_START;
+        start_req.stream_id = VIO_SND_STREAM_PLAY;
+        vio_audio_send_ctrl(sc, &start_req, sizeof(start_req));
+        sc->pcm_started = 1;
+    }
 
-    /* 2. Submit data to TX queue */
-    xfer.stream_id = VIO_SND_STREAM_PLAY;
+    kbuf = kmem_map(block, blksize);
+    if (kbuf == NULL)
+        return EFAULT;
+
+    int head = vq->next_free;
+    sc->xfer->stream_id = VIO_SND_STREAM_PLAY;
     
-    vq->desc[0].addr = (uint64_t)kvtop(&xfer);
-    vq->desc[0].len = sizeof(xfer);
-    vq->desc[0].flags = VRING_DESC_F_NEXT;
-    vq->desc[0].next = 1;
+    vq->desc[head].addr = (uint64_t)kvtop(sc->xfer);
+    vq->desc[head].len = sizeof(struct virtio_snd_pcm_xfer);
+    vq->desc[head].flags = VRING_DESC_F_NEXT;
+    vq->desc[head].next = (head + 1) % VQ_SIZE;
 
-    vq->desc[1].addr = (uint64_t)kvtop(block);
-    vq->desc[1].len = (uint32_t)blksize;
-    vq->desc[1].flags = VRING_DESC_F_NEXT;
-    vq->desc[1].next = 2;
+    int d1 = (head + 1) % VQ_SIZE;
+    vq->desc[d1].addr = (uint64_t)kvtop(kbuf);
+    vq->desc[d1].len = (uint32_t)blksize;
+    vq->desc[d1].flags = VRING_DESC_F_NEXT;
+    vq->desc[d1].next = (head + 2) % VQ_SIZE;
 
-    vq->desc[2].addr = (uint64_t)kvtop(sc->pcm_status);
-    vq->desc[2].len = sizeof(struct virtio_snd_pcm_status);
-    vq->desc[2].flags = VRING_DESC_F_WRITE;
-    vq->desc[2].next = 0;
+    int d2 = (head + 2) % VQ_SIZE;
+    vq->desc[d2].addr = (uint64_t)kvtop(sc->pcm_status);
+    vq->desc[d2].len = sizeof(struct virtio_snd_pcm_status);
+    vq->desc[d2].flags = VRING_DESC_F_WRITE;
+    vq->desc[d2].next = 0;
 
-    vq->avail->ring[vq->avail->idx % VQ_SIZE] = 0;
+    vq->next_free = (head + 3) % VQ_SIZE;
+
+    vq->avail->ring[vq->avail->idx % VQ_SIZE] = head;
     __sync_synchronize();
     vq->avail->idx++;
     __sync_synchronize();
@@ -390,10 +386,14 @@ static int vio_audio_stop_output(void *priv)
     struct vio_audio_softc *sc = priv;
     struct virtio_snd_pcm_hdr req;
 
-    req.hdr.code = VIO_SND_REQ_PCM_STOP;
-    req.stream_id = VIO_SND_STREAM_PLAY;
-
-    return vio_audio_send_ctrl(sc, &req, sizeof(req));
+    if (sc->pcm_started) {
+        memset(&req, 0, sizeof(req));
+        req.hdr.code = VIO_SND_REQ_PCM_STOP;
+        req.stream_id = VIO_SND_STREAM_PLAY;
+        sc->pcm_started = 0;
+        return vio_audio_send_ctrl(sc, &req, sizeof(req));
+    }
+    return 0;
 }
 
 static int vio_audio_init(struct driver *self)
@@ -424,8 +424,6 @@ int vio_audio_attach(vaddr_t base, int irq)
     sc->base = base;
     sc->irq = irq;
 
-    /* 1. Register with MI layer first to get a device node.
-       Pass sc as hw_priv. */
     dev = audio_attach("audio", &vio_audio_hw_if, sc);
     if (dev == 0) {
         kmem_free(sc);
@@ -436,50 +434,47 @@ int vio_audio_attach(vaddr_t base, int irq)
     event_init(&sc->ctrl_event, "vio_audio_ctrl");
     event_init(&sc->tx_event, "vio_audio_tx");
 
-    /* 2. Reset device */
     bus_write_32(base + VIO_MMIO_STATUS, 0);
     status = VIO_STATUS_ACKNOWLEDGE | VIO_STATUS_DRIVER;
     bus_write_32(base + VIO_MMIO_STATUS, status);
 
-    /* 3. Feature negotiation (Negotiate all host features) */
     uint32_t f0 = bus_read_32(base + VIO_MMIO_DEV_FEATURE);
     bus_write_32(base + VIO_MMIO_DRV_FEATURE, f0);
 
-    /* 4. Setup VirtQueues */
     bus_write_32(base + VIO_MMIO_PAGE_SIZE, 4096);
     for (int i = 0; i < VIO_SND_VQ_MAX; i++) {
         bus_write_32(base + VIO_MMIO_QUEUE_SEL, i);
         uint32_t q_max = bus_read_32(base + VIO_MMIO_QUEUE_NUM_MAX);
         if (q_max == 0) continue;
 
-        paddr_t raw_pa = page_alloc(8192 + 4096);
-        paddr_t vq_pa = (raw_pa + 4095) & ~4095;
+        paddr_t raw_pa = page_alloc(PAGE_SIZE * 2);
+        paddr_t vq_pa = raw_pa;
         void *vq_mem = ptokv(vq_pa);
-        memset(vq_mem, 0, 8192);
+        memset(vq_mem, 0, PAGE_SIZE * 2);
         
         sc->vqs[i].desc = (struct vring_desc*)vq_mem;
-        sc->vqs[i].avail = (struct vring_avail*)((char*)vq_mem + 16 * sizeof(struct vring_desc));
-        sc->vqs[i].used = (struct vring_used*)((char*)vq_mem + 4096);
+        sc->vqs[i].avail = (struct vring_avail*)((char*)vq_mem + VQ_SIZE * sizeof(struct vring_desc));
+        sc->vqs[i].used = (struct vring_used*)((char*)vq_mem + PAGE_SIZE);
         sc->vqs[i].last_used_idx = 0;
+        sc->vqs[i].next_free = 0;
 
-        bus_write_32(base + VIO_MMIO_QUEUE_SIZE, 16);
-        bus_write_32(base + VIO_MMIO_QUEUE_ALIGN, 4096);
+        bus_write_32(base + VIO_MMIO_QUEUE_SIZE, VQ_SIZE);
+        bus_write_32(base + VIO_MMIO_QUEUE_ALIGN, PAGE_SIZE);
         bus_write_32(base + VIO_MMIO_QUEUE_PFN, (uint32_t)(vq_pa >> 12));
     }
 
-    /* 5. Driver OK */
     status |= VIO_STATUS_DRIVER_OK;
     bus_write_32(base + VIO_MMIO_STATUS, status);
 
-    /* 5. Attach ISR */
     sc->irq_handle = irq_attach(irq, IPL_AUDIO, 0, vio_audio_isr, vio_audio_ist, sc);
 
-    /* 6. Allocate response buffers */
     paddr_t buf_pa = page_alloc(PAGE_SIZE);
     sc->ctrl_req = ptokv(buf_pa);
     sc->resp_hdr = (struct virtio_snd_hdr*)((char*)sc->ctrl_req + 512);
     sc->pcm_status = (struct virtio_snd_pcm_status*)((char*)sc->ctrl_req + 1024);
+    sc->xfer = (struct virtio_snd_pcm_xfer*)((char*)sc->ctrl_req + 1536);
+    sc->pcm_started = 0;
 
-    printf("VirtIO Audio attached at 0x%lx, irq %d\n", base, irq);
+    DPRINTF(("VirtIO Audio attached at 0x%lx, irq %d\n", base, irq));
     return 0;
 }

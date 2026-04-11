@@ -40,3 +40,8 @@ capability	/boot/install	CAP_SYSFILES
 capability	/boot/pmctrl	CAP_POWERMGMT
 
 capability	/boot/lock	CAP_USERFILES
+
+capability	/boot/sndiod	CAP_NICE \
+				CAP_EXTMEM \
+				CAP_PROTSERV \
+				CAP_RAWIO

@@ -109,4 +109,15 @@ struct audio_info {
 #define AUDIO_DRAIN     _IO('A', 3)
 #define AUDIO_FLUSH     _IO('A', 4)
 
+/*
+ * Playback/record modes
+ */
+#define AUMODE_PLAY     0x0001
+#define AUMODE_RECORD   0x0002
+
+#define AUDIO_INITINFO(p) \
+    do { \
+        memset((p), 0xff, sizeof(struct audio_info)); \
+    } while (0)
+
 #endif /* !_SYS_AUDIOIO_H_ */

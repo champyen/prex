@@ -46,6 +46,7 @@ struct aucb {
     size_t  head;
     size_t  tail;
     size_t  used;
+    int     active;
     struct event event;
 };
 
@@ -127,8 +128,7 @@ static void audio_play_intr(void *priv) {
     struct aucb *cb = &sc->play_cb;
     
     /* Hardware finished a chunk */
-    /* Update used count and head pointer */
-    /* In this simple model, we just wake up writers */
+    cb->active = 0;
     sched_wakeup(&cb->event);
 }
 
@@ -137,6 +137,7 @@ static void audio_record_intr(void *priv) {
     struct aucb *cb = &sc->record_cb;
     
     /* Hardware filled a chunk */
+    cb->active = 0;
     sched_wakeup(&cb->event);
 }
 
@@ -157,11 +158,13 @@ static int audio_open(device_t dev, int mode) {
     sc->play_cb.head = 0;
     sc->play_cb.tail = 0;
     sc->play_cb.used = 0;
+    sc->play_cb.active = 0;
     
     /* Reset Record buffer */
     sc->record_cb.head = 0;
     sc->record_cb.tail = 0;
     sc->record_cb.used = 0;
+    sc->record_cb.active = 0;
     
     return 0;
 }
@@ -179,39 +182,23 @@ static int audio_close(device_t dev) {
 static int audio_write(device_t dev, char *buf, size_t *nbyte, int blkno) {
     struct audio_softc *sc = device_private(dev);
     struct aucb *cb = &sc->play_cb;
-    size_t requested = *nbyte;
-    size_t copied = 0;
 
-    while (copied < requested) {
-        size_t avail = cb->size - cb->used;
-        if (avail == 0) {
-            /* Buffer full, start hardware if not already active */
-            if (!sc->info.play.active) {
-                sc->info.play.active = 1;
-                sc->hw_if->start_output(sc->hw_priv, cb->buf, cb->size, audio_play_intr);
-            }
-            sched_sleep(&cb->event);
-            continue;
-        }
+    if (*nbyte == 0) return 0;
 
-        size_t chunk = requested - copied;
-        if (chunk > avail) chunk = avail;
-
-        /* Linear copy to circular buffer */
-        size_t to_end = cb->size - cb->tail;
-        if (chunk > to_end) {
-            memcpy(cb->buf + cb->tail, buf + copied, to_end);
-            memcpy(cb->buf, buf + copied + to_end, chunk - to_end);
-        } else {
-            memcpy(cb->buf + cb->tail, buf + copied, chunk);
-        }
-
-        cb->tail = (cb->tail + chunk) % cb->size;
-        cb->used += chunk;
-        copied += chunk;
+    /* 
+     * Start hardware output and wait for completion.
+     * We use a loop and an 'active' flag to prevent the lost wakeup problem.
+     */
+    sched_lock();
+    cb->active = 1;
+    sc->hw_if->start_output(sc->hw_priv, buf, *nbyte, audio_play_intr);
+    
+    while (cb->active) {
+        sched_sleep(&cb->event);
     }
+    sched_unlock();
 
-    *nbyte = copied;
+    /* We assume the hardware finished the whole chunk */
     return 0;
 }
 
@@ -221,18 +208,19 @@ static int audio_read(device_t dev, char *buf, size_t *nbyte, int blkno) {
     size_t requested = *nbyte;
     size_t copied = 0;
 
+    sched_lock();
     while (copied < requested) {
         size_t avail = cb->used;
         if (avail == 0) {
             /* Buffer empty, start hardware if not already active */
-            if (!sc->info.record.active) {
-                sc->info.record.active = 1;
+            if (!cb->active) {
+                cb->active = 1;
                 sc->hw_if->start_input(sc->hw_priv, cb->buf, cb->size, audio_record_intr);
             }
             sched_sleep(&cb->event);
             continue;
         }
-
+        
         size_t chunk = requested - copied;
         if (chunk > avail) chunk = avail;
 
@@ -249,6 +237,7 @@ static int audio_read(device_t dev, char *buf, size_t *nbyte, int blkno) {
         cb->used -= chunk;
         copied += chunk;
     }
+    sched_unlock();
 
     *nbyte = copied;
     return 0;

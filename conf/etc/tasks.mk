@@ -10,6 +10,9 @@ ifeq ($(CONFIG_PM),y)
 TASKS+= 	$(SRCDIR)/usr/server/pow/pow
 endif
 TASKS+= 	$(SRCDIR)/usr/server/fs/fs
+ifeq ($(CONFIG_SNDIO),y)
+TASKS+= 	$(SRCDIR)/usr/server/sndio/sndiod
+endif
 endif
 
 #TASKS+= 	$(SRCDIR)/usr/sample/alarm/alarm.rt

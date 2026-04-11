@@ -38,11 +38,16 @@ ifeq ($(CONFIG_CMD_DEBUG),y)
 FILES+= 	$(SRCDIR)/usr/sbin/debug/debug
 endif
 
+ifeq ($(CONFIG_SNDIO),y)
+FILES+=		$(SRCDIR)/usr/server/sndio/sndiod
+#FILES+=		$(SRCDIR)/usr/sample/beep/beep
+FILES+=		$(SRCDIR)/usr/sample/sndio_test/sndio_test
+endif
+
 ifneq ($(_QUICK_),1)
 ifneq ($(CONFIG_TINY),y)
 FILES+=		$(SRCDIR)/usr/sample/hello/hello
 FILES+=		$(SRCDIR)/usr/sample/tetris/tetris
-#FILES+=		$(SRCDIR)/usr/sample/beep/beep
 endif
 endif
 
