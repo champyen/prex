@@ -117,7 +117,7 @@ ENTRY(reset_entry)
 
 	/* It is svc mode now. */
 
-#ifdef CONFIG_MMU
+#ifdef CONFIG_CACHE
 	/*
 	 * Setup control register with default values
 	 */
@@ -135,7 +135,9 @@ ENTRY(reset_entry)
 	mrc	p15, 0, r0, c1, c0, 1		/* ...and read it back */
 	ldr	r0, =0x0
 	mcr	p15, 2, r0, c0, c0, 0		/* set cache level to 0 in CSSR */
+#endif
 
+#ifdef CONFIG_MMU
 	/*
 	 * Initialize boot page directory
 	 */
