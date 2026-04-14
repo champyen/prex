@@ -13,6 +13,7 @@ makeoptions	ASFLAGS+= -mcpu=cortex-a7
 #
 mmu	        SYSPAGE_BASE	0x80000000  0x40000000 	# Location of system page
 mmu	        IOMEM_BASE      0xC0000000	0x00000000  # Location of system page
+mmu         CACHE
 option      CACHE
 
 #
