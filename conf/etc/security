@@ -45,3 +45,6 @@ capability	/boot/sndiod	CAP_NICE \
 				CAP_EXTMEM \
 				CAP_PROTSERV \
 				CAP_RAWIO
+
+capability      /boot/playwav   CAP_EXTMEM \
+                                CAP_SYSFILES

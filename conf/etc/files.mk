@@ -42,6 +42,7 @@ ifeq ($(CONFIG_SNDIO),y)
 FILES+=		$(SRCDIR)/usr/server/sndio/sndiod
 #FILES+=		$(SRCDIR)/usr/sample/beep/beep
 FILES+=		$(SRCDIR)/usr/sample/sndio_test/sndio_test
+FILES+=		$(SRCDIR)/usr/sample/playwav/playwav
 endif
 
 ifneq ($(_QUICK_),1)
