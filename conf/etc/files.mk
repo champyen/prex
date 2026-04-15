@@ -43,6 +43,7 @@ FILES+=		$(SRCDIR)/usr/server/sndio/sndiod
 #FILES+=		$(SRCDIR)/usr/sample/beep/beep
 FILES+=		$(SRCDIR)/usr/sample/sndio_test/sndio_test
 FILES+=		$(SRCDIR)/usr/sample/playwav/playwav
+FILES+=		$(SRCDIR)/usr/sample/helixmp3/helixmp3
 endif
 
 ifneq ($(_QUICK_),1)

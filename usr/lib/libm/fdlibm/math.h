@@ -3,4 +3,6 @@
 
 #include "fdlibm.h"
 
+#define pow __ieee754_pow
+
 #endif

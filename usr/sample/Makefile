@@ -1,7 +1,7 @@
 include $(SRCDIR)/mk/own.mk
 
 SUBDIR:=	alarm balls cpumon bench hello ipc mutex sem task thread \
-		tetris
+		tetris helixmp3
 
 ifeq ($(CONFIG_SNDIO),y)
 SUBDIR+=	beep sndio_test playwav

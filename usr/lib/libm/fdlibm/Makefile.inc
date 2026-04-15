@@ -1,6 +1,7 @@
 # usr/lib/libm/fdlibm/Makefile.inc
 
 LIBM_DIR := $(SRCDIR)/usr/lib/libm/fdlibm
+DEFS += __IEEE_LITTLE_ENDIAN
 
 SRCS += $(LIBM_DIR)/s_sin.c \
         $(LIBM_DIR)/s_cos.c \

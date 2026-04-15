@@ -48,3 +48,6 @@ capability	/boot/sndiod	CAP_NICE \
 
 capability      /boot/playwav   CAP_EXTMEM \
                                 CAP_SYSFILES
+
+capability      /boot/helixmp3   CAP_EXTMEM \
+                                 CAP_SYSFILES

@@ -54,7 +54,7 @@ void bcopy(const void* src0, void* dst0, size_t length)
     if (length == 0 || dst == src) /* nothing to do */
         goto done;
 
-    if (((unsigned long)dst < (unsigned long)src) && ((unsigned long)dst < (unsigned long)src + length)) {
+    if (((unsigned long)dst > (unsigned long)src) && ((unsigned long)dst < (unsigned long)src + length)) {
         /* Copy backwards. */
         src += length;
         dst += length;
@@ -62,6 +62,7 @@ void bcopy(const void* src0, void* dst0, size_t length)
             *--dst = *--src;
         }
     } else {
+        /* Copy forwards. */
         while (length--) {
             *dst++ = *src++;
         }
