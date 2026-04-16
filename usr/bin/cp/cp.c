@@ -47,6 +47,8 @@
 #define main(argc, argv) cp_main(argc, argv)
 #endif
 
+#define CP_BUFSIZE 65536
+
 static void usage(void);
 static int copy(char* from, char* to, int dirflag);
 
@@ -70,7 +72,7 @@ int main(int argc, char* argv[])
     if (argc < 2)
         usage();
 
-    if ((iobuf = malloc(BUFSIZ)) == NULL)
+    if ((iobuf = malloc(CP_BUFSIZE)) == NULL)
         err(1, NULL);
 
     target = argv[--argc];
@@ -152,7 +154,7 @@ static int copy(char* from, char* to, int dirflag)
         close(fold);
         return 1;
     }
-    while ((n = read(fold, iobuf, BUFSIZ)) > 0) {
+    while ((n = read(fold, iobuf, CP_BUFSIZE)) > 0) {
         if (write(fnew, iobuf, (size_t)n) != n) {
             warn("%s", to);
             close(fold);

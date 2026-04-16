@@ -146,6 +146,8 @@ static const struct sysent sysent[] = {
     /* 57 */ SYSENT(2, sys_info),
     /* 58 */ SYSENT(1, sys_time),
     /* 59 */ SYSENT(2, sys_debug),
+    /* 60 */ SYSENT(4, device_gather_read),
+    /* 61 */ SYSENT(4, device_scatter_write),
 };
 
 #define NSYSCALL (int)(sizeof(sysent) / sizeof(sysent[0]))

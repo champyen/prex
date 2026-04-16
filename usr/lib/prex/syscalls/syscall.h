@@ -94,5 +94,7 @@
 #define SYS_sys_info 57
 #define SYS_sys_time 58
 #define SYS_sys_debug 59
+#define SYS_device_gather_read 60
+#define SYS_device_scatter_write 61
 
 #endif /* _SYSCALL_H */

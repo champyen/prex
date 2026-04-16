@@ -165,8 +165,6 @@ static int fatfs_read(vnode_t vp, file_t fp, void* buf, size_t size, size_t* res
     int nr_read, nr_copy, buf_pos, error;
     u_long cl, file_pos;
 
-    DPRINTF(("fatfs_read: vp=%x\n", vp));
-
     *result = 0;
     fmp = vp->v_mount->m_data;
 
@@ -193,6 +191,80 @@ static int fatfs_read(vnode_t vp, file_t fp, void* buf, size_t size, size_t* res
 
     /* Read and copy data */
     nr_read = 0;
+#ifdef CONFIG_FATFS_CACHE
+    buf_pos = file_pos % fmp->cluster_size;
+    /* Read first partial cluster */
+    if (buf_pos > 0) {
+        if (fat_read_cluster(fmp, cl)) {
+            error = EIO;
+            goto out;
+        }
+        nr_copy = fmp->cluster_size - buf_pos;
+        if (nr_copy > size)
+            nr_copy = size;
+        memcpy(buf, fmp->io_buf + buf_pos, nr_copy);
+
+        file_pos += nr_copy;
+        nr_read += nr_copy;
+        size -= nr_copy;
+        buf = (void*)((u_long)buf + nr_copy);
+
+        error = fat_next_cluster(fmp, cl, &cl);
+        if (error)
+            goto out;
+    }
+
+    /* Read middle full clusters using device_gather_read */
+    int nblks = size / fmp->cluster_size;
+    if (nblks > 0 && !IS_EOFCL(fmp, cl)) {
+        int* blks = malloc(nblks * sizeof(int));
+        if (blks == NULL) {
+            error = ENOMEM;
+            goto out;
+        }
+        u_long tmp_cl = cl;
+        for (int i = 0; i < nblks; i++) {
+            blks[i] = cl_to_sec(fmp, tmp_cl);
+            error = fat_next_cluster(fmp, tmp_cl, &tmp_cl);
+            if (error) {
+                free(blks);
+                goto out;
+            }
+            if (IS_EOFCL(fmp, tmp_cl) && i < nblks - 1) {
+                nblks = i + 1;
+                break;
+            }
+        }
+        struct dev_io io;
+        io.blkno = blks;
+        io.blksz = fmp->cluster_size;
+        size_t total_size = nblks * fmp->cluster_size;
+        DPRINTF(("fatfs_read: gather_read total_size=%d\n", total_size));
+        error = device_gather_read(fmp->dev, buf, &total_size, &io);
+        free(blks);
+        if (error)
+            goto out;
+
+        file_pos += total_size;
+        nr_read += total_size;
+        size -= total_size;
+        buf = (void*)((u_long)buf + total_size);
+        cl = tmp_cl;
+    }
+
+    /* Read last partial cluster */
+    if (size > 0 && !IS_EOFCL(fmp, cl)) {
+        if (fat_read_cluster(fmp, cl)) {
+            error = EIO;
+            goto out;
+        }
+        nr_copy = size;
+        memcpy(buf, fmp->io_buf, nr_copy);
+        file_pos += nr_copy;
+        nr_read += nr_copy;
+        size -= nr_copy;
+    }
+#else
     buf_pos = file_pos % fmp->cluster_size;
     do {
         if (fat_read_cluster(fmp, cl)) {
@@ -220,6 +292,7 @@ static int fatfs_read(vnode_t vp, file_t fp, void* buf, size_t size, size_t* res
         buf = (void*)((u_long)buf + nr_copy);
         buf_pos = 0;
     } while (!IS_EOFCL(fmp, cl));
+#endif
 
     fp->f_offset = file_pos;
     *result = nr_read;
@@ -234,7 +307,10 @@ static int fatfs_write(vnode_t vp, file_t fp, void* buf, size_t size, size_t* re
     struct fatfsmount* fmp;
     struct fatfs_node* np;
     struct fat_dirent* de;
-    int nr_copy, nr_write, buf_pos, i, cl_size, error;
+    int nr_copy, nr_write, buf_pos, error;
+#ifndef CONFIG_FATFS_CACHE
+    int i, cl_size;
+#endif
     u_long file_pos, end_pos;
     u_long cl;
 
@@ -288,9 +364,91 @@ static int fatfs_write(vnode_t vp, file_t fp, void* buf, size_t size, size_t* re
     if (error)
         goto out;
 
+    nr_write = 0;
+#ifdef CONFIG_FATFS_CACHE
+    buf_pos = file_pos % fmp->cluster_size;
+    /* Write first partial cluster */
+    if (buf_pos > 0) {
+        if (fat_read_cluster(fmp, cl)) {
+            error = EIO;
+            goto out;
+        }
+        nr_copy = fmp->cluster_size - buf_pos;
+        if (nr_copy > size)
+            nr_copy = size;
+        memcpy(fmp->io_buf + buf_pos, buf, nr_copy);
+        if (fat_write_cluster(fmp, cl)) {
+            error = EIO;
+            goto out;
+        }
+
+        file_pos += nr_copy;
+        nr_write += nr_copy;
+        size -= nr_copy;
+        buf = (void*)((u_long)buf + nr_copy);
+
+        error = fat_next_cluster(fmp, cl, &cl);
+        if (error)
+            goto out;
+    }
+
+    /* Write middle full clusters using device_scatter_write */
+    int nblks = size / fmp->cluster_size;
+    if (nblks > 0 && !IS_EOFCL(fmp, cl)) {
+        int* blks = malloc(nblks * sizeof(int));
+        if (blks == NULL) {
+            error = ENOMEM;
+            goto out;
+        }
+        u_long tmp_cl = cl;
+        for (int i = 0; i < nblks; i++) {
+            blks[i] = cl_to_sec(fmp, tmp_cl);
+            error = fat_next_cluster(fmp, tmp_cl, &tmp_cl);
+            if (error) {
+                free(blks);
+                goto out;
+            }
+            if (IS_EOFCL(fmp, tmp_cl) && i < nblks - 1) {
+                nblks = i + 1;
+                break;
+            }
+        }
+        struct dev_io io;
+        io.blkno = blks;
+        io.blksz = fmp->cluster_size;
+        size_t total_size = nblks * fmp->cluster_size;
+        DPRINTF(("fatfs_write: scatter_write total_size=%d\n", total_size));
+        error = device_scatter_write(fmp->dev, buf, &total_size, &io);
+        free(blks);
+        if (error)
+            goto out;
+
+        file_pos += total_size;
+        nr_write += total_size;
+        size -= total_size;
+        buf = (void*)((u_long)buf + total_size);
+        cl = tmp_cl;
+    }
+
+    /* Write last partial cluster */
+    if (size > 0 && !IS_EOFCL(fmp, cl)) {
+        if (fat_read_cluster(fmp, cl)) {
+            error = EIO;
+            goto out;
+        }
+        nr_copy = size;
+        memcpy(fmp->io_buf, buf, nr_copy);
+        if (fat_write_cluster(fmp, cl)) {
+            error = EIO;
+            goto out;
+        }
+        file_pos += nr_copy;
+        nr_write += nr_copy;
+        size -= nr_copy;
+    }
+#else
     buf_pos = file_pos % fmp->cluster_size;
     cl_size = size / fmp->cluster_size + 1;
-    nr_write = 0;
     i = 0;
     do {
         /* First and last cluster must be read before write */
@@ -325,6 +483,7 @@ static int fatfs_write(vnode_t vp, file_t fp, void* buf, size_t size, size_t* re
         buf_pos = 0;
         i++;
     } while (!IS_EOFCL(fmp, cl));
+#endif
 
     fp->f_offset = file_pos;
 
@@ -696,6 +855,7 @@ static int fatfs_truncate(vnode_t vp, off_t length)
                 goto out;
             de->cluster_hi = 0;
             de->cluster = 0;
+            vp->v_blkno = 0;
         }
     } else if (length > vp->v_size) {
         error = fat_expand_file(fmp, vp->v_blkno, length);

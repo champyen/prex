@@ -166,6 +166,7 @@ static int fatfs_mount(mount_t mp, char* dev, int flags, void* data)
     vnode_t vp;
     int error = 0;
 
+    sys_log("fatfs_mount called\n");
     DPRINTF(("fatfs_mount device=%s\n", dev));
 
     fmp = malloc(sizeof(struct fatfsmount));
@@ -189,11 +190,29 @@ static int fatfs_mount(mount_t mp, char* dev, int flags, void* data)
     if (fmp->dir_buf == NULL)
         goto err3;
 
+#ifdef CONFIG_FATFS_CACHE
+    fmp->cache_size = CONFIG_FATFS_CACHE * 1024 / SEC_SIZE;
+    fmp->fat_cache = malloc(CONFIG_FATFS_CACHE * 1024);
+    if (fmp->fat_cache == NULL)
+        goto err4;
+    fmp->cache_tags = malloc(fmp->cache_size * sizeof(uint32_t));
+    if (fmp->cache_tags == NULL)
+        goto err5;
+    for (int i = 0; i < fmp->cache_size; i++)
+        fmp->cache_tags[i] = SEC_INVAL;
+#endif
+
     mutex_init(&fmp->lock);
     mp->m_data = fmp;
     vp = mp->m_root;
     vp->v_blkno = CL_ROOT;
     return 0;
+#ifdef CONFIG_FATFS_CACHE
+err5:
+    free(fmp->fat_cache);
+err4:
+    free(fmp->dir_buf);
+#endif
 err3:
     free(fmp->fat_buf);
 err2:
@@ -211,6 +230,12 @@ static int fatfs_unmount(mount_t mp)
     struct fatfsmount* fmp;
 
     fmp = mp->m_data;
+#ifdef CONFIG_FATFS_CACHE
+    if (fmp->cache_tags)
+        free(fmp->cache_tags);
+    if (fmp->fat_cache)
+        free(fmp->fat_cache);
+#endif
     free(fmp->dir_buf);
     free(fmp->fat_buf);
     free(fmp->io_buf);

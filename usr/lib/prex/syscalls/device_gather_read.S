@@ -1,5 +1,5 @@
-/*-
- * Copyright (c) 2005-2007, Kohsuke Ohtani
+/*
+ * Copyright (c) 2005, Kohsuke Ohtani
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,37 +27,9 @@
  * SUCH DAMAGE.
  */
 
-#ifndef _DEVICE_H
-#define _DEVICE_H
+#include <machine/systrap.h>
+#include "syscall.h"
 
-#include <sys/cdefs.h>
-#include <types.h>
-#include <sys/device.h>
+SYSCALL4(device_gather_read)
 
-/*
- * Device object
- */
-struct device
-{
-    struct device* next;   /* linkage on list of all devices */
-    struct driver* driver; /* pointer to the driver object */
-    char name[MAXDEVNAME]; /* name of device */
-    int flags;             /* D_* flags defined above */
-    int active;            /* device has not been destroyed */
-    int refcnt;            /* reference count */
-    void* private;         /* private storage */
-};
-
-__BEGIN_DECLS
-int device_open(const char*, int, device_t*);
-int device_close(device_t);
-int device_read(device_t, void*, size_t*, int);
-int device_write(device_t, void*, size_t*, int);
-int device_gather_read(device_t, void*, size_t*, struct dev_io*);
-int device_scatter_write(device_t, void*, size_t*, struct dev_io*);
-int device_ioctl(device_t, u_long, void*);
-int device_info(struct devinfo*);
-void device_init(void);
-__END_DECLS
-
-#endif /* !_DEVICE_H */
+.section .note.GNU-stack,"",%progbits

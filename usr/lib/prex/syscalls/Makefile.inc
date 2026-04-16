@@ -16,6 +16,7 @@ SRCS+=	$(SRCDIR)/usr/arch/$(ARCH)/_systrap.S \
 	exception_setup.S exception_return.S \
 	exception_raise.S exception_wait.S \
 	device_open.S device_close.S device_read.S device_write.S \
+	device_gather_read.S device_scatter_write.S \
 	device_ioctl.S \
 	mutex_init.S mutex_destroy.S mutex_trylock.S mutex_unlock.S \
 	_mutex_lock.S mutex_lock.c \

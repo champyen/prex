@@ -31,6 +31,10 @@
 #ifndef _FATFS_H
 #define _FATFS_H
 
+#undef DEBUG
+#define CONFIG_FATFS_CACHE 256
+
+#include <conf/config.h>
 #include <sys/prex.h>
 #include <sys/cdefs.h>
 #include <sys/types.h>
@@ -227,6 +231,11 @@ struct fatfsmount
     char* fat_buf;       /* buffer for fat entry */
     char* dir_buf;       /* buffer for directory entry */
     dev_t dev;           /* mounted device */
+#ifdef CONFIG_FATFS_CACHE
+    char* fat_cache;       /* FAT cache */
+    uint32_t* cache_tags;  /* FAT cache tags (sector numbers) */
+    int cache_size;        /* FAT cache size in sectors */
+#endif
 #if CONFIG_FS_THREADS > 1
     mutex_t lock; /* file system lock */
 #endif

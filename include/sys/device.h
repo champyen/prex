@@ -44,6 +44,15 @@
 #define D_PROT 0x00000008 /* protected device */
 #define D_TTY 0x00000010  /* tty device */
 
+/*
+ * Scatter/gather I/O vector
+ */
+struct dev_io
+{
+    int* blkno;   /* array of block numbers */
+    size_t blksz; /* size of each block */
+};
+
 #ifdef KERNEL
 
 /*

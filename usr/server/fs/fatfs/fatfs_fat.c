@@ -47,6 +47,9 @@ static int read_fat_entry(struct fatfsmount* fmp, u_long cl)
     char* buf = fmp->fat_buf;
     int error, border = 0;
     struct buf* bp;
+#ifdef CONFIG_FATFS_CACHE
+    int cache_idx;
+#endif
 
     /* Get the sector number in FAT entry. */
     if (FAT32(fmp)) {
@@ -65,18 +68,49 @@ static int read_fat_entry(struct fatfsmount* fmp, u_long cl)
     }
     sec += fmp->fat_start;
 
+#ifdef CONFIG_FATFS_CACHE
+    cache_idx = sec % fmp->cache_size;
+    if (fmp->cache_tags[cache_idx] == sec) {
+        memcpy(buf, fmp->fat_cache + (cache_idx * SEC_SIZE), SEC_SIZE);
+    } else {
+        /* Read first sector. */
+        if ((error = bread(fmp->dev, sec, &bp)) != 0)
+            return error;
+        memcpy(fmp->fat_cache + (cache_idx * SEC_SIZE), bp->b_data, SEC_SIZE);
+        fmp->cache_tags[cache_idx] = sec;
+        memcpy(buf, bp->b_data, SEC_SIZE);
+        brelse(bp);
+    }
+#else
     /* Read first sector. */
     if ((error = bread(fmp->dev, sec, &bp)) != 0)
         return error;
     memcpy(buf, bp->b_data, SEC_SIZE);
     brelse(bp);
+#endif
 
     if (FAT12(fmp) && border > 0) {
+#ifdef CONFIG_FATFS_CACHE
+        sec++;
+        cache_idx = sec % fmp->cache_size;
+        if (fmp->cache_tags[cache_idx] == sec) {
+            memcpy(buf + SEC_SIZE, fmp->fat_cache + (cache_idx * SEC_SIZE), SEC_SIZE);
+        } else {
+            /* Read second sector for the border entry of FAT12. */
+            if ((error = bread(fmp->dev, sec, &bp)) != 0)
+                return error;
+            memcpy(fmp->fat_cache + (cache_idx * SEC_SIZE), bp->b_data, SEC_SIZE);
+            fmp->cache_tags[cache_idx] = sec;
+            memcpy(buf + SEC_SIZE, bp->b_data, SEC_SIZE);
+            brelse(bp);
+        }
+#else
         /* Read second sector for the border entry of FAT12. */
         if ((error = bread(fmp->dev, sec + 1, &bp)) != 0)
             return error;
         memcpy(buf + SEC_SIZE, bp->b_data, SEC_SIZE);
         brelse(bp);
+#endif
     }
     return 0;
 }
@@ -90,6 +124,9 @@ static int write_fat_entry(struct fatfsmount* fmp, u_long cl)
     char* buf = fmp->fat_buf;
     int error, border = 0;
     struct buf* bp;
+#ifdef CONFIG_FATFS_CACHE
+    int cache_idx;
+#endif
 
     /* Get the sector number in FAT entry. */
     if (FAT32(fmp)) {
@@ -104,6 +141,12 @@ static int write_fat_entry(struct fatfsmount* fmp, u_long cl)
     }
     sec += fmp->fat_start;
 
+#ifdef CONFIG_FATFS_CACHE
+    cache_idx = sec % fmp->cache_size;
+    memcpy(fmp->fat_cache + (cache_idx * SEC_SIZE), buf, SEC_SIZE);
+    fmp->cache_tags[cache_idx] = sec;
+#endif
+
     /* Write first sector. */
     bp = getblk(fmp->dev, sec);
     memcpy(bp->b_data, buf, SEC_SIZE);
@@ -111,8 +154,14 @@ static int write_fat_entry(struct fatfsmount* fmp, u_long cl)
         return error;
 
     if (FAT12(fmp) && border > 0) {
+        sec++;
+#ifdef CONFIG_FATFS_CACHE
+        cache_idx = sec % fmp->cache_size;
+        memcpy(fmp->fat_cache + (cache_idx * SEC_SIZE), buf + SEC_SIZE, SEC_SIZE);
+        fmp->cache_tags[cache_idx] = sec;
+#endif
         /* Write second sector for the border entry of FAT12. */
-        bp = getblk(fmp->dev, sec + 1);
+        bp = getblk(fmp->dev, sec);
         memcpy(bp->b_data, buf + SEC_SIZE, SEC_SIZE);
         error = bwrite(bp);
     }
@@ -159,7 +208,7 @@ int fat_next_cluster(struct fatfsmount* fmp, u_long cl, u_long* next)
         }
         *next = (u_long)val;
     }
-    DPRINTF(("fat_next_cluster: %d => %d\n", cl, *next));
+    /* DPRINTF(("fat_next_cluster: %d => %d\n", cl, *next)); */
     return 0;
 }
 
@@ -321,9 +370,10 @@ int fat_expand_file(struct fatfsmount* fmp, u_long cl, int size)
     u_long next;
 
     alloc = 0;
-    cl_len = size / fmp->cluster_size + 1;
+    if (size == 0) return 0;
+    cl_len = (size + fmp->cluster_size - 1) / fmp->cluster_size;
 
-    for (i = 0; i < cl_len; i++) {
+    for (i = 0; i < cl_len - 1; i++) {
         error = fat_next_cluster(fmp, cl, &next);
         if (error)
             return error;

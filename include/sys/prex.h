@@ -126,6 +126,8 @@ int device_open(const char* name, int mode, device_t* dev);
 int device_close(device_t dev);
 int device_read(device_t dev, void* buf, size_t* nbyte, int blkno);
 int device_write(device_t dev, void* buf, size_t* nbyte, int blkno);
+int device_gather_read(device_t dev, void* buf, size_t* nbyte, struct dev_io* io);
+int device_scatter_write(device_t dev, void* buf, size_t* nbyte, struct dev_io* io);
 int device_ioctl(device_t dev, u_long cmd, void* arg);
 
 int mutex_init(mutex_t* mp);

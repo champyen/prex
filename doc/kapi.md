@@ -63,6 +63,8 @@
   - device_close
   - device_read
   - device_write
+  - device_gather_read
+  - device_scatter_write
   - device_ioctl
 
 - [Mutex](#mutex)
@@ -1481,7 +1483,7 @@ int device_write(device_t dev, void *buf, size_t *nbyte, int blkno);
 
 ### DESCRIPTION
 
-The device_read() function writes data to the specified device. *nbytes* is a write size in byte, and *blkno* is a start block of the target device. The unit of *blkno* is device specific.
+The device_write() function writes data to the specified device. *nbytes* is a write size in byte, and *blkno* is a start block of the target device. The unit of *blkno* is device specific.
 
 ### ERRORS
 
@@ -1496,6 +1498,90 @@ The device_read() function writes data to the specified device. *nbytes* is a wr
 - [EFAULT]
 
   The specified buffer is inaccessible
+
+- [EPERM]
+
+  The caller task does not have CAP_DEVIO capability.
+
+Other device specific error may be returned. 
+
+
+
+------
+
+### NAME
+
+**device_gather_read()** -- gather read from a device
+
+### SYNOPSIS
+
+```
+int device_gather_read(device_t dev, void *buf, size_t *nbyte, struct dev_io *io);
+```
+
+### DESCRIPTION
+
+The device_gather_read() function reads data from the specified device using a gather list. *nbyte* is a total read size in byte. *io* points to a `struct dev_io` which contains an array of block numbers and the block size.
+
+### ERRORS
+
+- [ENODEV]
+
+  The specified device is not valid device.
+
+- [EBADF]
+
+  The specified device is not a valid device opened for read.
+
+- [EFAULT]
+
+  The specified buffer or I/O vector is inaccessible.
+
+- [EINVAL]
+
+  The block size is zero.
+
+- [EPERM]
+
+  The caller task does not have CAP_DEVIO capability.
+
+Other device specific error may be returned. 
+
+
+
+------
+
+### NAME
+
+**device_scatter_write()** -- scatter write to a device
+
+### SYNOPSIS
+
+```
+int device_scatter_write(device_t dev, void *buf, size_t *nbyte, struct dev_io *io);
+```
+
+### DESCRIPTION
+
+The device_scatter_write() function writes data to the specified device using a scatter list. *nbyte* is a total write size in byte. *io* points to a `struct dev_io` which contains an array of block numbers and the block size.
+
+### ERRORS
+
+- [ENODEV]
+
+  The specified device is not valid device.
+
+- [EBADF]
+
+  The specified device is not a valid device opened for write.
+
+- [EFAULT]
+
+  The specified buffer or I/O vector is inaccessible.
+
+- [EINVAL]
+
+  The block size is zero.
 
 - [EPERM]
 

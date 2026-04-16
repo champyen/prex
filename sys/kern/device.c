@@ -378,6 +378,68 @@ int device_read(device_t dev, void* buf, size_t* nbyte, int blkno)
 }
 
 /*
+ * device_gather_read - gather read from a device.
+ */
+int device_gather_read(device_t dev, void* buf, size_t* nbyte, struct dev_io* io)
+{
+    struct devops* ops;
+    size_t count, total = 0;
+    int error = 0, b;
+    struct dev_io kio;
+    char* p = (char*)buf;
+
+    if (!user_area(buf))
+        return EFAULT;
+
+    if ((error = device_reference(dev)) != 0)
+        return error;
+
+    if (copyin(nbyte, &count, sizeof(count))) {
+        device_release(dev);
+        return EFAULT;
+    }
+
+    if (copyin(io, &kio, sizeof(kio))) {
+        device_release(dev);
+        return EFAULT;
+    }
+
+    if (kio.blksz == 0) {
+        device_release(dev);
+        return EINVAL;
+    }
+
+    ops = dev->driver->devops;
+    ASSERT(ops->read != NULL);
+
+    while (total < count) {
+        if (copyin(&kio.blkno[total / kio.blksz], &b, sizeof(b))) {
+            error = EFAULT;
+            break;
+        }
+        size_t size = kio.blksz;
+        if (total + size > count)
+            size = count - total;
+
+        error = (*ops->read)(dev, p, &size, b);
+        if (error)
+            break;
+
+        p += size;
+        total += size;
+    }
+
+    if (!error || total > 0) {
+        int err2 = copyout(&total, nbyte, sizeof(total));
+        if (!error)
+            error = err2;
+    }
+
+    device_release(dev);
+    return error;
+}
+
+/*
  * device_write - write to a device.
  *
  * Actual write count is set in "nbyte" as return.
@@ -404,6 +466,68 @@ int device_write(device_t dev, void* buf, size_t* nbyte, int blkno)
     error = (*ops->write)(dev, buf, &count, blkno);
     if (!error)
         error = copyout(&count, nbyte, sizeof(count));
+
+    device_release(dev);
+    return error;
+}
+
+/*
+ * device_scatter_write - scatter write to a device.
+ */
+int device_scatter_write(device_t dev, void* buf, size_t* nbyte, struct dev_io* io)
+{
+    struct devops* ops;
+    size_t count, total = 0;
+    int error = 0, b;
+    struct dev_io kio;
+    char* p = (char*)buf;
+
+    if (!user_area(buf))
+        return EFAULT;
+
+    if ((error = device_reference(dev)) != 0)
+        return error;
+
+    if (copyin(nbyte, &count, sizeof(count))) {
+        device_release(dev);
+        return EFAULT;
+    }
+
+    if (copyin(io, &kio, sizeof(kio))) {
+        device_release(dev);
+        return EFAULT;
+    }
+
+    if (kio.blksz == 0) {
+        device_release(dev);
+        return EINVAL;
+    }
+
+    ops = dev->driver->devops;
+    ASSERT(ops->write != NULL);
+
+    while (total < count) {
+        if (copyin(&kio.blkno[total / kio.blksz], &b, sizeof(b))) {
+            error = EFAULT;
+            break;
+        }
+        size_t size = kio.blksz;
+        if (total + size > count)
+            size = count - total;
+
+        error = (*ops->write)(dev, p, &size, b);
+        if (error)
+            break;
+
+        p += size;
+        total += size;
+    }
+
+    if (!error || total > 0) {
+        int err2 = copyout(&total, nbyte, sizeof(total));
+        if (!error)
+            error = err2;
+    }
 
     device_release(dev);
     return error;
