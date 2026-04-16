@@ -181,32 +181,52 @@ struct fat_dirent
     uint16_t mtime;      /* 22 ~ 23 	: 0x16 ~ 0x17	*/
     uint16_t mdate;      /* 24 ~ 25 	: 0x18 ~ 0x19	*/
     uint16_t cluster;    /* 26 ~ 27 	: 0x1A ~ 0x1B	*/
-    uint32_t size;       /* 28 ~ 31 	: 0x1C ~ 0x1F	*/
-} __packed;
+    uint32_t size;       /* 28 ~ 31     : 0x1C ~ 0x1F   */
+    } __packed;
 
-#if defined(__SUNPRO_C)
-#pragma pack()
-#endif
+    /*
+    * LFN directory entry
+    */
+    struct fat_lfn_dirent
+    {
+    uint8_t seq;         /* 0           : 0x00          */
+    uint16_t name1[5];   /* 1 ~ 10      : 0x01 ~ 0x0A   */
+    uint8_t attr;        /* 11          : 0x0B          */
+    uint8_t type;        /* 12          : 0x0C          */
+    uint8_t checksum;    /* 13          : 0x0D          */
+    uint16_t name2[6];   /* 14 ~ 25     : 0x0E ~ 0x19   */
+    uint16_t cluster;    /* 26 ~ 27     : 0x1A ~ 0x1B   */
+    uint16_t name3[2];   /* 28 ~ 31     : 0x1C ~ 0x1F   */
+    } __packed;
 
-#define SLOT_EMPTY 0x00
-#define SLOT_DELETED 0xe5
+    #if defined(__SUNPRO_C)
+    #pragma pack()
+    #endif
 
-#define DIR_PER_SEC (SEC_SIZE / sizeof(struct fat_dirent))
+    #define SLOT_EMPTY 0x00
+    #define SLOT_DELETED 0xe5
 
-/*
- * FAT attribute for attr
- */
-#define FA_RDONLY 0x01
-#define FA_HIDDEN 0x02
-#define FA_SYSTEM 0x04
-#define FA_VOLID 0x08
-#define FA_SUBDIR 0x10
-#define FA_ARCH 0x20
-#define FA_DEVICE 0x40
+    #define DIR_PER_SEC (SEC_SIZE / sizeof(struct fat_dirent))
 
-#define IS_DIR(de) (((de)->attr) & FA_SUBDIR)
-#define IS_VOL(de) (((de)->attr) & FA_VOLID)
-#define IS_FILE(de) (!IS_DIR(de) && !IS_VOL(de))
+    /*
+    * FAT attribute for attr
+    */
+    #define FA_RDONLY 0x01
+    #define FA_HIDDEN 0x02
+    #define FA_SYSTEM 0x04
+    #define FA_VOLID 0x08
+    #define FA_SUBDIR 0x10
+    #define FA_ARCH 0x20
+    #define FA_DEVICE 0x40
+    #define FA_LFN 0x0F
+
+    #define IS_DIR(de) (((de)->attr) & FA_SUBDIR)
+    #define IS_VOL(de) ((((de)->attr) & FA_VOLID) && ((de)->attr != FA_LFN))
+    #define IS_FILE(de) (!IS_DIR(de) && !IS_VOL(de) && !IS_LFN(de))
+    #define IS_LFN(de) (((de)->attr) == FA_LFN)
+
+    #define LFN_END 0x40
+    #define LFN_SEQ_MASK 0x1F
 
 #define IS_DELETED(de) ((de)->name[0] == 0xe5)
 #define IS_EMPTY(de) ((de)->name[0] == 0)
@@ -257,6 +277,8 @@ struct fatfs_node
     struct fat_dirent dirent; /* copy of directory entry */
     u_long sector;            /* sector# for directory entry */
     u_long offset;            /* offset of directory entry in sector */
+    char name[NAME_MAX];      /* LFN or SFN */
+    int num_lfn;              /* number of LFN entries preceding this one */
 };
 
 extern struct vnops fatfs_vnops;
@@ -283,6 +305,7 @@ void fat_attr_to_mode(u_char attr, mode_t* mode);
 int fatfs_lookup_node(vnode_t dvp, char* name, struct fatfs_node* node);
 int fatfs_get_node(vnode_t dvp, int index, struct fatfs_node* node);
 int fatfs_put_node(struct fatfsmount* fmp, struct fatfs_node* node);
+int fatfs_remove_node(struct fatfsmount* fmp, struct fatfs_node* node);
 int fatfs_add_node(vnode_t dvp, struct fatfs_node* node);
 __END_DECLS
 

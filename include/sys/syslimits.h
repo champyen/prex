@@ -35,7 +35,7 @@
 
 #define ARG_MAX 255              /* max bytes for an exec function */
 #define MAX_INPUT 128            /* max bytes in terminal input */
-#define NAME_MAX 64              /* max bytes in a file name */
+#define NAME_MAX 260             /* max bytes in a file name */
 #define NGROUPS_MAX 16           /* max supplemental group id's */
 #define OPEN_MAX CONFIG_OPEN_MAX /* max open files per process */
 #define PATH_MAX 256             /* max bytes in pathname (include null)*/

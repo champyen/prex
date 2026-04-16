@@ -504,18 +504,24 @@ out:
 static int fatfs_readdir(vnode_t vp, file_t fp, struct dirent* dir)
 {
     struct fatfsmount* fmp;
-    struct fatfs_node np;
+    struct fatfs_node* np;
     struct fat_dirent* de;
     int error;
+
+    DPRINTF(("fatfs_readdir: offset=%d\n", fp->f_offset));
+
+    np = malloc(sizeof(struct fatfs_node));
+    if (np == NULL)
+        return ENOMEM;
 
     fmp = vp->v_mount->m_data;
     mutex_lock(&fmp->lock);
 
-    error = fatfs_get_node(vp, fp->f_offset, &np);
+    error = fatfs_get_node(vp, fp->f_offset, np);
     if (error)
         goto out;
-    de = &np.dirent;
-    fat_restore_name((char*)&de->name, dir->d_name);
+    strlcpy(dir->d_name, np->name, NAME_MAX);
+    de = &np->dirent;
 
     if (de->attr & FA_SUBDIR)
         dir->d_type = DT_DIR;
@@ -525,12 +531,13 @@ static int fatfs_readdir(vnode_t vp, file_t fp, struct dirent* dir)
         dir->d_type = DT_REG;
 
     dir->d_fileno = fp->f_offset;
-    dir->d_namlen = strlen(dir->d_name);
+    dir->d_namlen = (uint16_t)strlen(dir->d_name);
 
     fp->f_offset++;
     error = 0;
 out:
     mutex_unlock(&fmp->lock);
+    free(np);
     return error;
 }
 
@@ -540,7 +547,7 @@ out:
 static int fatfs_create(vnode_t dvp, char* name, mode_t mode)
 {
     struct fatfsmount* fmp;
-    struct fatfs_node np;
+    struct fatfs_node* np;
     struct fat_dirent* de;
     int error;
 
@@ -549,29 +556,31 @@ static int fatfs_create(vnode_t dvp, char* name, mode_t mode)
     if (!S_ISREG(mode))
         return EINVAL;
 
-    if (!fat_valid_name(name))
-        return EINVAL;
+    np = malloc(sizeof(struct fatfs_node));
+    if (np == NULL)
+        return ENOMEM;
 
     fmp = dvp->v_mount->m_data;
     mutex_lock(&fmp->lock);
 
-    de = &np.dirent;
+    strlcpy(np->name, name, NAME_MAX);
+    de = &np->dirent;
     memset(de, 0, sizeof(struct fat_dirent));
-    fat_convert_name(name, (char*)de->name);
     de->cluster_hi = 0;
     de->cluster = 0;
     de->time = TEMP_TIME;
     de->date = TEMP_DATE;
     fat_mode_to_attr(mode, &de->attr);
-    error = fatfs_add_node(dvp, &np);
+    error = fatfs_add_node(dvp, np);
     mutex_unlock(&fmp->lock);
+    free(np);
     return error;
 }
 
 static int fatfs_remove(vnode_t dvp, vnode_t vp, char* name)
 {
     struct fatfsmount* fmp;
-    struct fatfs_node np;
+    struct fatfs_node* np;
     struct fat_dirent* de;
     u_long cl;
     int error;
@@ -579,13 +588,17 @@ static int fatfs_remove(vnode_t dvp, vnode_t vp, char* name)
     if (*name == '\0')
         return ENOENT;
 
+    np = malloc(sizeof(struct fatfs_node));
+    if (np == NULL)
+        return ENOMEM;
+
     fmp = dvp->v_mount->m_data;
     mutex_lock(&fmp->lock);
 
-    error = fatfs_lookup_node(dvp, name, &np);
+    error = fatfs_lookup_node(dvp, name, np);
     if (error)
         goto out;
-    de = &np.dirent;
+    de = &np->dirent;
     if (IS_DIR(de)) {
         error = EISDIR;
         goto out;
@@ -604,10 +617,10 @@ static int fatfs_remove(vnode_t dvp, vnode_t vp, char* name)
     }
 
     /* remove directory */
-    de->name[0] = 0xe5;
-    error = fatfs_put_node(fmp, &np);
+    error = fatfs_remove_node(fmp, np);
 out:
     mutex_unlock(&fmp->lock);
+    free(np);
     return error;
 }
 
@@ -710,16 +723,14 @@ out:
 static int fatfs_mkdir(vnode_t dvp, char* name, mode_t mode)
 {
     struct fatfsmount* fmp;
-    struct fatfs_node np;
+    struct fatfs_node* np;
     struct fat_dirent* de;
     u_long cl;
     int error;
 
-    if (!S_ISDIR(mode))
-        return EINVAL;
-
-    if (!fat_valid_name(name))
-        return ENOTDIR;
+    np = malloc(sizeof(struct fatfs_node));
+    if (np == NULL)
+        return ENOMEM;
 
     fmp = dvp->v_mount->m_data;
     mutex_lock(&fmp->lock);
@@ -729,17 +740,19 @@ static int fatfs_mkdir(vnode_t dvp, char* name, mode_t mode)
     if (error)
         goto out;
 
-    memset(&np, 0, sizeof(struct fatfs_node));
-    de = &np.dirent;
-    fat_convert_name(name, (char*)&de->name);
+    memset(np, 0, sizeof(struct fatfs_node));
+    strlcpy(np->name, name, NAME_MAX);
+    de = &np->dirent;
     de->cluster_hi = (cl & 0xFFFF0000) >> 16;
     de->cluster = cl & 0x0000FFFF;
     de->time = TEMP_TIME;
     de->date = TEMP_DATE;
     fat_mode_to_attr(mode, &de->attr);
-    error = fatfs_add_node(dvp, &np);
+    de->attr |= FA_SUBDIR;
+    error = fatfs_add_node(dvp, np);
     if (error)
         goto out;
+    // ...
 
     /* Initialize "." and ".." for new directory */
     memset(fmp->io_buf, 0, fmp->cluster_size);
@@ -776,7 +789,7 @@ out:
 static int fatfs_rmdir(vnode_t dvp, vnode_t vp, char* name)
 {
     struct fatfsmount* fmp;
-    struct fatfs_node np;
+    struct fatfs_node* np;
     struct fat_dirent* de;
     u_long cl;
     int error;
@@ -784,14 +797,18 @@ static int fatfs_rmdir(vnode_t dvp, vnode_t vp, char* name)
     if (*name == '\0')
         return ENOENT;
 
+    np = malloc(sizeof(struct fatfs_node));
+    if (np == NULL)
+        return ENOMEM;
+
     fmp = dvp->v_mount->m_data;
     mutex_lock(&fmp->lock);
 
-    error = fatfs_lookup_node(dvp, name, &np);
+    error = fatfs_lookup_node(dvp, name, np);
     if (error)
         goto out;
 
-    de = &np.dirent;
+    de = &np->dirent;
     if (!IS_DIR(de)) {
         error = ENOTDIR;
         goto out;
@@ -806,11 +823,10 @@ static int fatfs_rmdir(vnode_t dvp, vnode_t vp, char* name)
     }
 
     /* remove directory */
-    de->name[0] = 0xe5;
-
-    error = fatfs_put_node(fmp, &np);
+    error = fatfs_remove_node(fmp, np);
 out:
     mutex_unlock(&fmp->lock);
+    free(np);
     return error;
 }
 
