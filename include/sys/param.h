@@ -55,11 +55,15 @@
 #define NOGROUP 65535       /* marker for empty group set member */
 #define MAXHOSTNAMELEN 32   /* max hostname size */
 
-#define MAXTASKS 256             /* max number of tasks in system */
+#define MAXTASKS 256              /* max number of tasks in system */
 #define MAXTHREADS 128           /* max number of threads per task */
 #define MAXOBJECTS 32            /* max number of objects per task */
 #define MAXSYNCS 512             /* max number of synch objects per task */
+#ifdef CONFIG_MAXMEM
+#define MAXMEM CONFIG_MAXMEM
+#else
 #define MAXMEM (4 * 1024 * 1024) /* max core per task - first # is Mb */
+#endif
 
 /* The following name length include a null-terminate character */
 #define MAXTASKNAME 12 /* max task name */
@@ -116,7 +120,11 @@
 #define KSTACKSZ 768 /* kernel stack size */
 
 #define USRSTACK (0 + PAGE_SIZE) /* base address of user stack */
-#define DFLSTKSZ 4096            /* default size of user stack */
+#ifdef CONFIG_USR_STACKSZ
+#define DFLSTKSZ CONFIG_USR_STACKSZ
+#else
+#define DFLSTKSZ 4096 /* default size of user stack */
+#endif
 
 #ifdef CONFIG_MMU
 #define user_area(a) ((vaddr_t)(a) < (vaddr_t)USERLIMIT)

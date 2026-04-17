@@ -51,3 +51,10 @@ capability      /boot/playwav   CAP_EXTMEM \
 
 capability      /boot/helixmp3   CAP_EXTMEM \
                                  CAP_SYSFILES
+
+                                 CAP_SYSFILES \
+                                 CAP_USERFILES
+
+capability      /boot/sqlite3    CAP_EXTMEM \
+                                 CAP_SYSFILES \
+                                 CAP_USERFILES

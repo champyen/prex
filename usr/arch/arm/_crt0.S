@@ -45,14 +45,15 @@
 /*
  * Entry point called by kernel first
  */
-	.text
-	.global _start
+        .text
+        .global _start
 _start:
-	ldr	r0, [sp], #4		/* Get argc */
-	mov	r1, sp			/* Get argv */
-	add	r2, r1, r0, lsl #2	/* Get envp */ 
-	mov	fp, #0			/* Clear frame pointer */
-	bl	__prex_main
+        ldr     r0, [sp], #4            /* Get argc */
+        mov     r1, sp                  /* Get argv */
+        add     r2, r1, r0, lsl #2      /* Get envp */ 
+        mov     fp, #0                  /* Clear frame pointer */
+        bic     sp, sp, #7              /* Align stack to 8 bytes for AAPCS */
+        bl      __prex_main
 
 
 .section .note.GNU-stack,"",%progbits

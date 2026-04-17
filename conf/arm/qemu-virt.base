@@ -21,18 +21,20 @@ option      CACHE
 #
 memory      RAM_SIZE        0x10000000  # DRAM Size
 memory      LOADER_TEXT     0x40010000  # Start of boot loader
-memory      KERNEL_TEXT     0x40200000  # Start of kernel
+memory      KERNEL_TEXT     0x40300000  # Start of kernel
 memory      BOOTIMG_BASE    0x40012000  # Location of boot image
 
 #
-# Tunable paramters
+# Tunable parameters
 #
-options 	HZ=100			# Ticks/second of the clock
+options         HZ=100			# Ticks/second of the clock
 options 	TIME_SLICE=50	# Context switch ratio (msec)
 options 	OPEN_MAX=16		# Max open files per process
-options 	BUF_CACHE=32	# Blocks for buffer cache
-options 	FS_THREADS=4	# Number of file system threads
-options 	MAX_ALLOC_SIZE=0x9000	# Max kernel memory allocation size
+options         BUF_CACHE=32    # Blocks for buffer cache
+options         FS_THREADS=4    # Number of file system threads
+options         MAX_ALLOC_SIZE=0x400000   # Max kernel memory allocation size
+options         USR_STACKSZ=32768         # Default user stack size
+options         MAXMEM=16777216           # Max core per task (16MB)
 
 #
 # Platform settings

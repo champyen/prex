@@ -224,8 +224,14 @@ options         TIME_SLICE=50   # Context switch ratio (msec)
 options         OPEN_MAX=16     # Max open files per process
 options         BUF_CACHE=32    # Blocks for buffer cache
 options         FS_THREADS=4    # Number of file system threads
+options         MAX_ALLOC_SIZE=0x400000   # Max kernel memory allocation size
+options         USR_STACKSZ=32768         # Default user stack size
+options         MAXMEM=16777216           # Max core per task
 ...
 ```
+
+**Note:** You must re-run the `./configure` script after changing any options in the platform configuration file to regenerate the header files.
+
 
 ### Changing Boot Tasks
 
