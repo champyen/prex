@@ -79,3 +79,34 @@ sdk:
 	@echo "clean:" >> $(SDK_EXAMPLES)/hello/Makefile
 	@echo "	rm -f \$$(TARGET) \$$(OBJS)" >> $(SDK_EXAMPLES)/hello/Makefile
 	@echo "SDK generated at $(SDK_DIR)"
+
+.PHONY: sdk-tcc
+sdk-tcc: sdk
+	@echo "Generating Prex SDK for TinyCC..."
+	# Create sdk/config-tcc.mk
+	@echo "# Prex SDK Configuration for TinyCC" > $(SDK_DIR)/config-tcc.mk
+	@echo "ARCH ?= $(ARCH)" >> $(SDK_DIR)/config-tcc.mk
+	@echo "TCC_DIR ?= /usr/local/lib/tcc" >> $(SDK_DIR)/config-tcc.mk
+	@echo "CROSS_COMPILE ?= $(subst tcc,,$(notdir $(shell which arm-none-eabi-tcc)))" >> $(SDK_DIR)/config-tcc.mk
+	@echo "CC = \$$(CROSS_COMPILE)tcc" >> $(SDK_DIR)/config-tcc.mk
+	@echo "CPP = \$$(CC) -E" >> $(SDK_DIR)/config-tcc.mk
+	@echo "AS = \$$(CC) -c" >> $(SDK_DIR)/config-tcc.mk
+	@echo "LD = \$$(CC)" >> $(SDK_DIR)/config-tcc.mk
+	@echo "AR = \$$(CC) -ar" >> $(SDK_DIR)/config-tcc.mk
+	@echo "STRIP = \$$(CROSS_COMPILE)strip" >> $(SDK_DIR)/config-tcc.mk
+	@echo "" >> $(SDK_DIR)/config-tcc.mk
+	@echo "SDK_DIR := \$$(abspath \$$(dir \$$(lastword \$$(MAKEFILE_LIST))))" >> $(SDK_DIR)/config-tcc.mk
+	@echo "SDK_INC = \$$(SDK_DIR)/include" >> $(SDK_DIR)/config-tcc.mk
+	@echo "SDK_LIB = \$$(SDK_DIR)/lib" >> $(SDK_DIR)/config-tcc.mk
+	@echo "" >> $(SDK_DIR)/config-tcc.mk
+	@echo "CONFIG_MMU ?= $(CONFIG_MMU)" >> $(SDK_DIR)/config-tcc.mk
+	@echo "" >> $(SDK_DIR)/config-tcc.mk
+	@echo "CFLAGS += -c -nostdinc -g" >> $(SDK_DIR)/config-tcc.mk
+	@echo "CPPFLAGS += -I. -I\$$(SDK_INC) -I\$$(SDK_INC)/ipc -I\$$(SDK_INC)/machine" >> $(SDK_DIR)/config-tcc.mk
+	@echo "LDFLAGS += -static -nostdlib -L\$$(SDK_LIB) -Wl,-Ttext=0x10000" >> $(SDK_DIR)/config-tcc.mk
+	@echo "" >> $(SDK_DIR)/config-tcc.mk
+	@echo "CRT0 = \$$(SDK_LIB)/crt0.o" >> $(SDK_DIR)/config-tcc.mk
+	@echo "LIBC = \$$(SDK_LIB)/libc.a" >> $(SDK_DIR)/config-tcc.mk
+	@echo "" >> $(SDK_DIR)/config-tcc.mk
+	@echo "LIBTCC1 = \$$(TCC_DIR)/arm-none-eabi-libtcc1.a" >> $(SDK_DIR)/config-tcc.mk
+	@echo "PLATFORM_LIBS = \$$(LIBTCC1)" >> $(SDK_DIR)/config-tcc.mk
