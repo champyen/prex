@@ -128,7 +128,7 @@ static const struct fscap_map fscap_table[] = {
     {"/bin/", 5, ACC_OK, CAP_SYSFILES, ACC_OK},
     {"/etc/", 5, ACC_OK, CAP_SYSFILES, ACC_NG},
     {"/private/", 9, CAP_USERFILES, CAP_USERFILES, ACC_NG},
-    {"/mnt/", 5, ACC_OK, ACC_OK, ACC_OK},
+    {"/usr/", 5, ACC_OK, ACC_OK, ACC_OK},
     {NULL, 0, 0, 0, 0},
 };
 

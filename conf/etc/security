@@ -55,6 +55,6 @@ capability      /boot/helixmp3   CAP_EXTMEM \
                                  CAP_SYSFILES \
                                  CAP_USERFILES
 
-capability      /mnt/vd0/SQLITE3 CAP_EXTMEM \
+capability      /usr/BIN/SQLITE3 CAP_EXTMEM \
                                  CAP_SYSFILES \
                                  CAP_USERFILES

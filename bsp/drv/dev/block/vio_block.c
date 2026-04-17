@@ -101,6 +101,11 @@ struct vio_blk_softc {
 
     struct vio_blk_req* req;
     uint8_t* status_ptr;
+
+    /* Partition support */
+    uint32_t start_sector;
+    uint32_t nsectors;
+    struct vio_blk_softc* parent_sc;
 };
 
 static int vio_blk_read(device_t dev, char* buf, size_t* nbyte, int blkno);
@@ -148,13 +153,46 @@ static int vio_block_init(struct driver* self)
     return 0;
 }
 
+#define BSIZE 512
+#define MAX_PARTI 4
+
+typedef struct part_record
+{
+    uint32_t status_chs;
+    uint32_t part_type;
+    uint32_t start; /* start sector address */
+    uint32_t size;  /* in sectors */
+} part_record;
+
+static void attach_partition(struct vio_blk_softc* parent_sc, const char* name, uint32_t start, uint32_t size)
+{
+    device_t dev;
+    struct vio_blk_softc* sc;
+
+    dev = device_create(&vio_block_driver, name, D_BLK | D_PROT);
+    sc = device_private(dev);
+    
+    /* Copy necessary info from parent */
+    sc->dev = dev;
+    sc->base = parent_sc->base;
+    sc->irq = parent_sc->irq;
+    sc->irq_handle = parent_sc->irq_handle;
+    
+    /* Partition info */
+    sc->start_sector = start;
+    sc->nsectors = size;
+    sc->parent_sc = parent_sc;
+
+    printf("VirtIO Block partition %s: start %u, size %u\n", name, start, size);
+}
+
 int vio_block_attach(vaddr_t base, int irq)
 {
     struct vio_blk_softc* sc;
     device_t dev;
     uint32_t status;
     static int unit = 0;
-    char name[12] = "vd0";
+    char name[16] = "vd0";
 
     if (unit < 10) name[2] = '0' + unit++;
     dev = device_create(&vio_block_driver, name, D_BLK | D_PROT);
@@ -163,6 +201,9 @@ int vio_block_attach(vaddr_t base, int irq)
     sc->base = base;
     sc->irq = irq;
     sc->last_used_idx = 0;
+    sc->start_sector = 0;
+    sc->nsectors = 0; /* Unknown yet */
+    sc->parent_sc = NULL;
     event_init(&sc->done_event, "vio_blk");
 
     /* Reset device */
@@ -213,52 +254,101 @@ int vio_block_attach(vaddr_t base, int irq)
     sc->status_ptr = kmem_alloc(1);
 
     printf("VirtIO Block initialized at 0x%lx, irq %d as %s\n", base, irq, name);
+
+    /* Read capacity */
+    uint32_t cap_low = bus_read_32(base + VIO_MMIO_CFG);
+    uint32_t cap_high = bus_read_32(base + VIO_MMIO_CFG + 4);
+    sc->nsectors = cap_low; /* Support up to 2TB for now */
+    if (cap_high != 0) printf("Warning: disk capacity > 2TB, truncated\n");
+
+    /* Partition scan */
+    uint8_t mbr[BSIZE];
+    size_t count = BSIZE;
+    if (vio_blk_read(dev, (char*)mbr, &count, 0) == 0) {
+        uint8_t* ptr = mbr + 446;
+        int i, found = 0;
+        for (i = 0; i < MAX_PARTI; i++) {
+            uint32_t psize = *(uint32_t*)(ptr + 12);
+            if (psize > 0) {
+                char pname[16];
+                strlcpy(pname, name, sizeof(pname));
+                int len = 0;
+                while (pname[len] && len < sizeof(pname)) len++;
+                if (len + 2 < sizeof(pname)) {
+                    pname[len] = 'p';
+                    pname[len + 1] = '1' + i;
+                    pname[len + 2] = '\0';
+                }
+                attach_partition(sc, pname, *(uint32_t*)(ptr + 8), psize);
+                found = 1;
+            }
+            ptr += 16;
+        }
+        if (!found) {
+            printf("No partition found on %s, using whole disk as p1\n", name);
+            char pname[16];
+            strlcpy(pname, name, sizeof(pname));
+            int len = 0;
+            while (pname[len] && len < sizeof(pname)) len++;
+            if (len + 2 < sizeof(pname)) {
+                pname[len] = 'p';
+                pname[len + 1] = '1';
+                pname[len + 2] = '\0';
+            }
+            attach_partition(sc, pname, 0, sc->nsectors);
+        }
+    }
+
     return 0;
 }
 
 static int vio_blk_read(device_t dev, char* buf, size_t* nbyte, int blkno)
 {
     struct vio_blk_softc* sc = device_private(dev);
+    struct vio_blk_softc* psc = sc->parent_sc ? sc->parent_sc : sc;
     void* kbuf;
     
+    if (sc->nsectors > 0 && blkno >= (int)sc->nsectors)
+        return EIO;
+
     kbuf = kmem_map(buf, *nbyte);
     if (kbuf == NULL) return EFAULT;
 
-    *sc->status_ptr = 0xFF;
+    *psc->status_ptr = 0xFF;
 
-    sc->req->type = VIO_BLK_T_IN;
-    sc->req->reserved = 0;
-    sc->req->sector = blkno;
+    psc->req->type = VIO_BLK_T_IN;
+    psc->req->reserved = 0;
+    psc->req->sector = sc->start_sector + blkno;
 
-    sc->desc[0].addr = (uint64_t)kvtop(sc->req);
-    sc->desc[0].len = sizeof(struct vio_blk_req);
-    sc->desc[0].flags = VRING_DESC_F_NEXT;
-    sc->desc[0].next = 1;
+    psc->desc[0].addr = (uint64_t)kvtop(psc->req);
+    psc->desc[0].len = sizeof(struct vio_blk_req);
+    psc->desc[0].flags = VRING_DESC_F_NEXT;
+    psc->desc[0].next = 1;
 
-    sc->desc[1].addr = (uint64_t)kvtop(kbuf);
-    sc->desc[1].len = (uint32_t)*nbyte;
-    sc->desc[1].flags = VRING_DESC_F_NEXT | VRING_DESC_F_WRITE;
-    sc->desc[1].next = 2;
+    psc->desc[1].addr = (uint64_t)kvtop(kbuf);
+    psc->desc[1].len = (uint32_t)*nbyte;
+    psc->desc[1].flags = VRING_DESC_F_NEXT | VRING_DESC_F_WRITE;
+    psc->desc[1].next = 2;
 
-    sc->desc[2].addr = (uint64_t)kvtop(sc->status_ptr);
-    sc->desc[2].len = 1;
-    sc->desc[2].flags = VRING_DESC_F_WRITE;
-    sc->desc[2].next = 0;
+    psc->desc[2].addr = (uint64_t)kvtop(psc->status_ptr);
+    psc->desc[2].len = 1;
+    psc->desc[2].flags = VRING_DESC_F_WRITE;
+    psc->desc[2].next = 0;
 
-    sc->avail->ring[sc->avail->idx % 16] = 0;
+    psc->avail->ring[psc->avail->idx % 16] = 0;
     __sync_synchronize();
-    sc->avail->idx++;
+    psc->avail->idx++;
     __sync_synchronize();
 
-    bus_write_32(sc->base + VIO_MMIO_QUEUE_NOTIFY, 0);
+    bus_write_32(psc->base + VIO_MMIO_QUEUE_NOTIFY, 0);
 
-    while (sc->used->idx == sc->last_used_idx) {
-        sched_sleep(&sc->done_event);
+    while (psc->used->idx == psc->last_used_idx) {
+        sched_sleep(&psc->done_event);
     }
-    sc->last_used_idx = sc->used->idx;
+    psc->last_used_idx = psc->used->idx;
 
-    int err = (*sc->status_ptr == VIO_BLK_S_OK) ? 0 : EIO;
-    if (err) printf("vio_blk_read: error status %d\n", *sc->status_ptr);
+    int err = (*psc->status_ptr == VIO_BLK_S_OK) ? 0 : EIO;
+    if (err) printf("vio_blk_read: error status %d\n", *psc->status_ptr);
     
     return err;
 }
@@ -266,45 +356,49 @@ static int vio_blk_read(device_t dev, char* buf, size_t* nbyte, int blkno)
 static int vio_blk_write(device_t dev, char* buf, size_t* nbyte, int blkno)
 {
     struct vio_blk_softc* sc = device_private(dev);
+    struct vio_blk_softc* psc = sc->parent_sc ? sc->parent_sc : sc;
     void* kbuf;
     
+    if (sc->nsectors > 0 && blkno >= (int)sc->nsectors)
+        return EIO;
+
     kbuf = kmem_map(buf, *nbyte);
     if (kbuf == NULL) return EFAULT;
 
-    *sc->status_ptr = 0xFF;
+    *psc->status_ptr = 0xFF;
 
-    sc->req->type = VIO_BLK_T_OUT;
-    sc->req->reserved = 0;
-    sc->req->sector = blkno;
+    psc->req->type = VIO_BLK_T_OUT;
+    psc->req->reserved = 0;
+    psc->req->sector = sc->start_sector + blkno;
 
-    sc->desc[0].addr = (uint64_t)kvtop(sc->req);
-    sc->desc[0].len = sizeof(struct vio_blk_req);
-    sc->desc[0].flags = VRING_DESC_F_NEXT;
-    sc->desc[0].next = 1;
+    psc->desc[0].addr = (uint64_t)kvtop(psc->req);
+    psc->desc[0].len = sizeof(struct vio_blk_req);
+    psc->desc[0].flags = VRING_DESC_F_NEXT;
+    psc->desc[0].next = 1;
 
-    sc->desc[1].addr = (uint64_t)kvtop(kbuf);
-    sc->desc[1].len = (uint32_t)*nbyte;
-    sc->desc[1].flags = VRING_DESC_F_NEXT;
-    sc->desc[1].next = 2;
+    psc->desc[1].addr = (uint64_t)kvtop(kbuf);
+    psc->desc[1].len = (uint32_t)*nbyte;
+    psc->desc[1].flags = VRING_DESC_F_NEXT;
+    psc->desc[1].next = 2;
 
-    sc->desc[2].addr = (uint64_t)kvtop(sc->status_ptr);
-    sc->desc[2].len = 1;
-    sc->desc[2].flags = VRING_DESC_F_WRITE;
-    sc->desc[2].next = 0;
+    psc->desc[2].addr = (uint64_t)kvtop(psc->status_ptr);
+    psc->desc[2].len = 1;
+    psc->desc[2].flags = VRING_DESC_F_WRITE;
+    psc->desc[2].next = 0;
 
-    sc->avail->ring[sc->avail->idx % 16] = 0;
+    psc->avail->ring[psc->avail->idx % 16] = 0;
     __sync_synchronize();
-    sc->avail->idx++;
+    psc->avail->idx++;
     __sync_synchronize();
 
-    bus_write_32(sc->base + VIO_MMIO_QUEUE_NOTIFY, 0);
+    bus_write_32(psc->base + VIO_MMIO_QUEUE_NOTIFY, 0);
 
-    while (sc->used->idx == sc->last_used_idx) {
-        sched_sleep(&sc->done_event);
+    while (psc->used->idx == psc->last_used_idx) {
+        sched_sleep(&psc->done_event);
     }
-    sc->last_used_idx = sc->used->idx;
+    psc->last_used_idx = psc->used->idx;
 
-    int err = (*sc->status_ptr == VIO_BLK_S_OK) ? 0 : EIO;
+    int err = (*psc->status_ptr == VIO_BLK_S_OK) ? 0 : EIO;
     
     return err;
 }

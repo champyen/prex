@@ -20,11 +20,11 @@ option      CACHE
 # Memory address
 #
 memory      RAM_SIZE        0x10000000  # DRAM Size
-memory      LOADER_TEXT     0x40010000  # Start of boot loader
-memory      KERNEL_TEXT     0x40300000  # Start of kernel
-memory      BOOTIMG_BASE    0x40012000  # Location of boot image
-
+# Memory address
 #
+memory      LOADER_TEXT     0x40010000  # Start of boot loader
+memory      KERNEL_TEXT     0x40200000  # Start of kernel
+memory      BOOTIMG_BASE    0x40012000  # Location of boot image
 # Tunable parameters
 #
 options         HZ=100			# Ticks/second of the clock
