@@ -161,3 +161,6 @@ command 	debug
 # Math library
 math		fdlibm
 
+# SDK option
+options		SDK
+
