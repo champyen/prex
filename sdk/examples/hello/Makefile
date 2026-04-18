@@ -1,6 +1,5 @@
 # Prex SDK Example Makefile
-CONFIG ?= ../../config.mk
-include $(CONFIG)
+include ../../config.mk
 
 TARGET = hello
 SRCS = main.c

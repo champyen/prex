@@ -216,8 +216,9 @@ static int fs_read(struct task* t, struct io_msg* msg)
     if ((fp = task_getfp(t, msg->fd)) == NULL)
         return EBADF;
     size = msg->size;
-    if ((error = vm_map(msg->hdr.task, msg->buf, size, &buf)) != 0)
-        return EFAULT;
+    if ((error = vm_map(msg->hdr.task, msg->buf, size, &buf)) != 0) {
+        return error;
+    }
 
     error = sys_read(fp, buf, size, &bytes);
     msg->size = bytes;
@@ -235,8 +236,9 @@ static int fs_write(struct task* t, struct io_msg* msg)
     if ((fp = task_getfp(t, msg->fd)) == NULL)
         return EBADF;
     size = msg->size;
-    if ((error = vm_map(msg->hdr.task, msg->buf, size, &buf)) != 0)
-        return EFAULT;
+    if ((error = vm_map(msg->hdr.task, msg->buf, size, &buf)) != 0) {
+        return error;
+    }
 
     error = sys_write(fp, buf, size, &bytes);
     msg->size = bytes;
@@ -565,8 +567,11 @@ static int fs_fcntl(struct task* t, struct fcntl_msg* msg)
         msg->arg = 0;
         break;
     case F_GETFL:
+        msg->arg = fp->f_flags;
+        break;
     case F_SETFL:
-        msg->arg = -1;
+        fp->f_flags = (fp->f_flags & ~O_APPEND) | (msg->arg & O_APPEND);
+        msg->arg = 0;
         break;
     default:
         msg->arg = -1;

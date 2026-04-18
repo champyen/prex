@@ -78,7 +78,27 @@ sdk:
 	@echo "" >> $(SDK_EXAMPLES)/hello/Makefile
 	@echo "clean:" >> $(SDK_EXAMPLES)/hello/Makefile
 	@echo "	rm -f \$$(TARGET) \$$(OBJS)" >> $(SDK_EXAMPLES)/hello/Makefile
+	# Build and copy tinycc to sdk/bin
+	make -C usr/sample/tinycc SRCDIR=$(SRCDIR)
+	mkdir -p $(SDK_DIR)/bin
+	cp usr/sample/tinycc/tcc $(SDK_DIR)/bin/tcc
+	# Copy libtcc1.a to sdk/lib/tcc/
+	mkdir -p $(SDK_DIR)/lib/tcc/include
+	cp ../tinycc/arm-none-eabi-libtcc1.a $(SDK_DIR)/lib/tcc/libtcc1.a
+	cp -r ../tinycc/include/* $(SDK_DIR)/lib/tcc/include/
+	# Create on-device build script
+	@echo "#!/bin/sh" > $(SDK_DIR)/build_hello.sh
+	@echo "echo 'Diagnostics:'" >> $(SDK_DIR)/build_hello.sh
+	@echo "mount" >> $(SDK_DIR)/build_hello.sh
+	@echo "ls -F /usr" >> $(SDK_DIR)/build_hello.sh
+	@echo "ls -F /usr/bin" >> $(SDK_DIR)/build_hello.sh
+	@echo "echo 'Building hello example with TCC on-device...'" >> $(SDK_DIR)/build_hello.sh
+	@echo "/usr/bin/tcc -B/usr/lib/tcc -c /usr/src/main.c -o /usr/bin/main.o -I/usr/include -I/usr/include/ipc -I/usr/include/machine -nostdinc" >> $(SDK_DIR)/build_hello.sh
+	@echo "/usr/bin/tcc -B/usr/lib/tcc -static -nostdlib -L/usr/lib -Wl,-Ttext=0x10000 -o /usr/bin/hello_tcc /usr/lib/crt0.o /usr/bin/main.o /usr/lib/libc.a /usr/lib/tcc/libtcc1.a" >> $(SDK_DIR)/build_hello.sh
+	@echo "echo 'Running /usr/bin/hello_tcc...'" >> $(SDK_DIR)/build_hello.sh
+	@echo "/usr/bin/hello_tcc" >> $(SDK_DIR)/build_hello.sh
 	@echo "SDK generated at $(SDK_DIR)"
+	@mcopy -o -i disk.img@@1024k $(SDK_DIR)/bin/tcc ::/bin/tcc || true
 
 .PHONY: sdk-tcc
 sdk-tcc: sdk
