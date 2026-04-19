@@ -13,7 +13,7 @@ else
 endif
 
 .PHONY: sdk
-sdk:
+sdk: $(TARGET)
 	@echo "Generating Prex SDK (MMU=$(SDK_MMU_DEFAULT))..."
 	@mkdir -p $(SDK_LIB) $(SDK_INC) $(SDK_EXAMPLES)
 	# Clean old/legacy configs
