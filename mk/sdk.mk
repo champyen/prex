@@ -14,6 +14,7 @@ endif
 
 .PHONY: sdk
 sdk: $(TARGET)
+ifeq ($(CONFIG_SDK),y)
 	@echo "Generating Prex SDK (MMU=$(SDK_MMU_DEFAULT))..."
 	@mkdir -p $(SDK_LIB) $(SDK_INC) $(SDK_EXAMPLES)
 	# Clean old/legacy configs
@@ -114,6 +115,9 @@ sdk: $(TARGET)
 	@echo "echo 'Running /usr/examples/hello/hello...'" >> $(SDK_DIR)/build_hello.sh
 	@echo "/usr/examples/hello/hello" >> $(SDK_DIR)/build_hello.sh
 	@echo "SDK generated at $(SDK_DIR)"
+else
+	@echo "SDK generation skipped (CONFIG_SDK is not enabled)."
+endif
 
 .PHONY: sdk-tcc
 sdk-tcc: sdk

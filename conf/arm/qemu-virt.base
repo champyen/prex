@@ -164,6 +164,6 @@ command 	debug
 # Math library
 math		fdlibm
 
-# SDK option
+# Extra samples
+options		SQLITE
 options		SDK
-
