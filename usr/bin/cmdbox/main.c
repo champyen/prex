@@ -120,6 +120,8 @@ int main(int argc, char* argv[])
     else if (!strcmp(prog, "cmdbox")) {
         if (argc == 1)
             shcmd = 1;
+        else if (argv[1][0] == '-')
+            shcmd = 1;
         else {
             if (!strcmp(argv[1], "sh"))
                 shcmd = 1;

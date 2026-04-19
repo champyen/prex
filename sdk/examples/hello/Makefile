@@ -9,10 +9,6 @@ all: $(TARGET)
 
 $(TARGET): $(OBJS)
 	$(LD) $(LDFLAGS) -o $@ $(CRT0) $(OBJS) $(LIBC) $(PLATFORM_LIBS)
-	$(STRIP) $(STRIPFLAG) $@
-
-%.o: %.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $<
 
 clean:
 	rm -f $(TARGET) $(OBJS)

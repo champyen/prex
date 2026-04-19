@@ -91,6 +91,7 @@ struct vattr
 {
     int va_type;    /* vnode type */
     mode_t va_mode; /* file access mode */
+    time_t va_mtime; /* time of last data modification */
 };
 
 /*

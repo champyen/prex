@@ -1,6 +1,9 @@
 /*
- * Copyright (c) 1989, 1993
+ * Copyright (c) 1988, 1989, 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
+ *
+ * This code is derived from software contributed to Berkeley by
+ * Adam de Boor.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +13,11 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the University nor the names of its contributors
+ * 3. All advertising materials mentioning features or use of this software
+ *    must display the following acknowledgement:
+ *	This product includes software developed by the University of
+ *	California, Berkeley and its contributors.
+ * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -25,24 +32,42 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- *	@(#)paths.h	8.1 (Berkeley) 6/2/93
  */
 
-#ifndef _PATHS_H_
-#define _PATHS_H_
+#ifndef lint
+static char sccsid[] = "@(#)lstSucc.c	8.2 (Berkeley) 4/28/95";
+#endif /* not lint */
 
-/* Default search path. */
-#define _PATH_DEFPATH "/boot:/bin"
-/* All standard utilities path. */
-#define _PATH_STDPATH "/boot:/bin"
+/*-
+ * LstSucc.c --
+ *	return the successor to a given node
+ */
 
-#define _PATH_BSHELL "/boot/cmdbox"
-#define _PATH_CONSOLE "/dev/console"
-#define _PATH_DEVNULL "/dev/null"
-#define _PATH_TTY "/dev/tty"
-#define _PATH_DEV "/dev/"
-#define _PATH_TMP "/tmp/"
-#define _PATH_PASSWD "/private/passwd"
+#include	"lstInt.h"
 
-#endif /* !_PATHS_H_ */
+/*-
+ *-----------------------------------------------------------------------
+ * Lst_Succ --
+ *	Return the sucessor to the given node on its list.
+ *
+ * Results:
+ *	The successor of the node, if it exists (note that on a circular
+ *	list, if the node is the only one in the list, it is its own
+ *	successor).
+ *
+ * Side Effects:
+ *	None.
+ *
+ *-----------------------------------------------------------------------
+ */
+LstNode
+Lst_Succ (ln)
+    LstNode	ln;
+{
+    if (ln == NILLNODE) {
+	return (NILLNODE);
+    } else {
+	return ((LstNode) ((ListNode) ln)->nextPtr);
+    }
+}
+

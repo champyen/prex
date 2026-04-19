@@ -1,6 +1,9 @@
 /*
- * Copyright (c) 1989, 1993
+ * Copyright (c) 1988, 1989, 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
+ *
+ * This code is derived from software contributed to Berkeley by
+ * Adam de Boor.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,7 +13,11 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the University nor the names of its contributors
+ * 3. All advertising materials mentioning features or use of this software
+ *    must display the following acknowledgement:
+ *	This product includes software developed by the University of
+ *	California, Berkeley and its contributors.
+ * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -25,24 +32,39 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- *	@(#)paths.h	8.1 (Berkeley) 6/2/93
  */
 
-#ifndef _PATHS_H_
-#define _PATHS_H_
+#ifndef lint
+static char sccsid[] = "@(#)lstAtEnd.c	8.2 (Berkeley) 4/28/95";
+#endif /* not lint */
 
-/* Default search path. */
-#define _PATH_DEFPATH "/boot:/bin"
-/* All standard utilities path. */
-#define _PATH_STDPATH "/boot:/bin"
+/*-
+ * LstAtEnd.c --
+ *	Add a node at the end of the list
+ */
 
-#define _PATH_BSHELL "/boot/cmdbox"
-#define _PATH_CONSOLE "/dev/console"
-#define _PATH_DEVNULL "/dev/null"
-#define _PATH_TTY "/dev/tty"
-#define _PATH_DEV "/dev/"
-#define _PATH_TMP "/tmp/"
-#define _PATH_PASSWD "/private/passwd"
-
-#endif /* !_PATHS_H_ */
+#include	"lstInt.h"
+	
+/*-
+ *-----------------------------------------------------------------------
+ * Lst_AtEnd --
+ *	Add a node to the end of the given list
+ *
+ * Results:
+ *	SUCCESS if life is good.
+ *
+ * Side Effects:
+ *	A new ListNode is created and added to the list.
+ *
+ *-----------------------------------------------------------------------
+ */
+ReturnStatus
+Lst_AtEnd (l, d)
+    Lst		l;	/* List to which to add the datum */
+    ClientData	d;	/* Datum to add */
+{
+    register LstNode	end;
+    
+    end = Lst_Last (l);
+    return (Lst_Append (l, end, d));
+}

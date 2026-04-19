@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1989, 1993
+ * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -10,7 +10,11 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the University nor the names of its contributors
+ * 3. All advertising materials mentioning features or use of this software
+ *    must display the following acknowledgement:
+ *	This product includes software developed by the University of
+ *	California, Berkeley and its contributors.
+ * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -26,23 +30,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	@(#)paths.h	8.1 (Berkeley) 6/2/93
+ *	@(#)pathnames.h	8.2 (Berkeley) 4/28/95
  */
 
-#ifndef _PATHS_H_
-#define _PATHS_H_
-
-/* Default search path. */
-#define _PATH_DEFPATH "/boot:/bin"
-/* All standard utilities path. */
-#define _PATH_STDPATH "/boot:/bin"
-
-#define _PATH_BSHELL "/boot/cmdbox"
-#define _PATH_CONSOLE "/dev/console"
-#define _PATH_DEVNULL "/dev/null"
-#define _PATH_TTY "/dev/tty"
-#define _PATH_DEV "/dev/"
-#define _PATH_TMP "/tmp/"
-#define _PATH_PASSWD "/private/passwd"
-
-#endif /* !_PATHS_H_ */
+#define	_PATH_OBJDIR		"obj"
+#define	_PATH_DEFSHELLDIR	"/boot"
+#define	_PATH_DEFSYSMK		"sys.mk"
+#define	_PATH_DEFSYSPATH	"/usr/share/mk"

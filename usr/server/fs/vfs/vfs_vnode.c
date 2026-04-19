@@ -326,8 +326,14 @@ void vflush(mount_t mp)
 int vn_stat(vnode_t vp, struct stat* st)
 {
     mode_t mode;
+    struct vattr vattr;
 
     memset(st, 0, sizeof(struct stat));
+    memset(&vattr, 0, sizeof(struct vattr));
+
+    if (VOP_GETATTR(vp, &vattr) == 0) {
+        st->st_mtime = vattr.va_mtime;
+    }
 
     st->st_ino = (ino_t)vp;
     st->st_size = vp->v_size;

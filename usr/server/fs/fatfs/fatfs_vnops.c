@@ -43,14 +43,31 @@
 #include <stdlib.h>
 #include <fcntl.h>
 
+#include <time.h>
+
 #include "fatfs.h"
 
 /*
  *  Time bits: 15-11 hours (0-23), 10-5 min, 4-0 sec /2
  *  Date bits: 15-9 year - 1980, 8-5 month, 4-0 day
  */
-#define TEMP_DATE 0x3021
-#define TEMP_TIME 0
+static void fat_get_time(uint16_t* pdate, uint16_t* ptime)
+{
+    time_t t;
+    struct tm tm;
+
+    time(&t);
+    localtime_r(&t, &tm);
+
+    if (tm.tm_year < 80) {
+        *pdate = (0 << 9) | (1 << 5) | 1;
+        *ptime = 0;
+        return;
+    }
+
+    *pdate = ((tm.tm_year - 80) << 9) | ((tm.tm_mon + 1) << 5) | tm.tm_mday;
+    *ptime = (tm.tm_hour << 11) | (tm.tm_min << 5) | (tm.tm_sec / 2);
+}
 
 #define fatfs_open ((vnop_open_t)vop_nullop)
 #define fatfs_close ((vnop_close_t)vop_nullop)
@@ -488,12 +505,12 @@ static int fatfs_write(vnode_t vp, file_t fp, void* buf, size_t size, size_t* re
     fp->f_offset = file_pos;
 
     /*
-     * XXX: Todo!
-     *    de.time = ?
-     *    de.date = ?
-     *    if (dirent_set(fp, &de))
-     *        return EIO;
+     * Update directory entry
      */
+    fat_get_time(&de->mdate, &de->mtime);
+    if (fatfs_put_node(fmp, np))
+        return EIO;
+
     *result = nr_write;
     error = 0;
 out:
@@ -568,8 +585,9 @@ static int fatfs_create(vnode_t dvp, char* name, mode_t mode)
     memset(de, 0, sizeof(struct fat_dirent));
     de->cluster_hi = 0;
     de->cluster = 0;
-    de->time = TEMP_TIME;
-    de->date = TEMP_DATE;
+    fat_get_time(&de->date, &de->time);
+    de->mdate = de->date;
+    de->mtime = de->time;
     fat_mode_to_attr(mode, &de->attr);
     error = fatfs_add_node(dvp, np);
     mutex_unlock(&fmp->lock);
@@ -696,13 +714,15 @@ static int fatfs_rename(vnode_t dvp1, vnode_t vp1, char* name1, vnode_t dvp2, vn
             de2 = (struct fat_dirent*)fmp->io_buf;
             de2->cluster_hi = de1->cluster_hi;
             de2->cluster = de1->cluster;
-            de2->time = TEMP_TIME;
-            de2->date = TEMP_DATE;
+            fat_get_time(&de2->date, &de2->time);
+            de2->mdate = de2->date;
+            de2->mtime = de2->time;
             de2++;
             de2->cluster_hi = (dvp2->v_blkno & 0xFFFF0000) >> 16;
             de2->cluster = dvp2->v_blkno & 0x0000FFFF;
-            de2->time = TEMP_TIME;
-            de2->date = TEMP_DATE;
+            fat_get_time(&de2->date, &de2->time);
+            de2->mdate = de2->date;
+            de2->mtime = de2->time;
 
             if (fat_write_cluster(fmp, (de1->cluster_hi << 16) | de1->cluster)) {
                 error = EIO;
@@ -745,8 +765,9 @@ static int fatfs_mkdir(vnode_t dvp, char* name, mode_t mode)
     de = &np->dirent;
     de->cluster_hi = (cl & 0xFFFF0000) >> 16;
     de->cluster = cl & 0x0000FFFF;
-    de->time = TEMP_TIME;
-    de->date = TEMP_DATE;
+    fat_get_time(&de->date, &de->time);
+    de->mdate = de->date;
+    de->mtime = de->time;
     fat_mode_to_attr(mode, &de->attr);
     de->attr |= FA_SUBDIR;
     error = fatfs_add_node(dvp, np);
@@ -762,15 +783,17 @@ static int fatfs_mkdir(vnode_t dvp, char* name, mode_t mode)
     de->attr = FA_SUBDIR;
     de->cluster_hi = (cl & 0xFFFF0000) >> 16;
     de->cluster = cl & 0x0000FFFF;
-    de->time = TEMP_TIME;
-    de->date = TEMP_DATE;
+    fat_get_time(&de->date, &de->time);
+    de->mdate = de->date;
+    de->mtime = de->time;
     de++;
     memcpy(de->name, "..         ", 11);
     de->attr = FA_SUBDIR;
     de->cluster_hi = (dvp->v_blkno & 0xFFFF0000) >> 16;
     de->cluster = dvp->v_blkno & 0x0000FFFF;
-    de->time = TEMP_TIME;
-    de->date = TEMP_DATE;
+    fat_get_time(&de->date, &de->time);
+    de->mdate = de->date;
+    de->mtime = de->time;
 
     if (fat_write_cluster(fmp, cl)) {
         error = EIO;
@@ -832,7 +855,29 @@ out:
 
 static int fatfs_getattr(vnode_t vp, struct vattr* vap)
 {
-    /* XXX */
+    struct fatfs_node* np;
+    struct fat_dirent* de;
+    uint32_t year, month, day, hour, min, sec, days;
+
+    if (!vp || !vp->v_data || !vap)
+        return EINVAL;
+
+    np = vp->v_data;
+    de = &np->dirent;
+
+    fat_attr_to_mode(de->attr, &vap->va_mode);
+    vap->va_type = vp->v_type;
+
+    year = (de->mdate >> 9) & 0x7F;
+    month = (de->mdate >> 5) & 0x0F;
+    day = de->mdate & 0x1F;
+    hour = (de->mtime >> 11) & 0x1F;
+    min = (de->mtime >> 5) & 0x3F;
+    sec = (de->mtime & 0x1F) * 2;
+
+    days = year * 365 + month * 30 + day;
+    vap->va_mtime = days * 86400 + hour * 3600 + min * 60 + sec;
+
     return 0;
 }
 
@@ -883,6 +928,7 @@ static int fatfs_truncate(vnode_t vp, off_t length)
 
     /* Update directory entry */
     de->size = length;
+    fat_get_time(&de->mdate, &de->mtime);
     error = fatfs_put_node(fmp, np);
     if (error)
         goto out;

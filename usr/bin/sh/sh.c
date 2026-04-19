@@ -163,7 +163,7 @@ static void execute(int argc, char* argv[], int* redir, int flags, cmdfn_t cmdfn
             else if (errno == EACCES)
                 error("Permission denied");
             else
-                error("%s cannot execute", argv[0]);
+                error("%s: %s", argv[0], strerror(errno));
         }
         exit(1);
         /* NOTREACHED */
@@ -452,6 +452,32 @@ int main(int argc, char** argv)
     }
     interact = 1;
     initvar();
+
+    /* 
+     * Prex exec server prepends the program path to argv[0].
+     * If we were called via cmdbox as "sh", argv[0] is the path to cmdbox,
+     * and argv[1] might be "sh".
+     */
+    if (argc > 1 && (!strcmp(argv[1], "sh") || !strcmp(argv[1], "cmdbox"))) {
+        argv++;
+        argc--;
+    }
+
+    while (argc > 1 && argv[1][0] == '-') {
+        if (strchr(argv[1], 'c')) {
+            if (argc > 2) {
+                interact = 0;
+                parseline(argv[2]);
+                exit(retval);
+            } else {
+                fprintf(stderr, "sh: -c: option requires an argument\n");
+                exit(1);
+            }
+        }
+        /* Skip flag */
+        argv++;
+        argc--;
+    }
 
     if (argc == 1) {
         input = 0;

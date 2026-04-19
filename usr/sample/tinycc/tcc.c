@@ -295,6 +295,7 @@ int main(int argc, char **argv)
     char **argv0 = argv;
     FILE *ppfp = stdout;
 
+
 redo:
     argc = argc0, argv = argv0;
     s = s1 = tcc_new();
@@ -342,8 +343,9 @@ redo:
         } else if (s->output_type == TCC_OUTPUT_OBJ && !s->option_r) {
             if (s->nb_libraries)
                 tcc_error_noabort("cannot specify libraries with -c");
-            else if (s->nb_files > 1 && s->outfile)
+            else if (s->nb_files > 1 && s->outfile) {
                 tcc_error_noabort("cannot specify output file with -c many files");
+            }
         }
         if (s->nb_errors)
             goto err;

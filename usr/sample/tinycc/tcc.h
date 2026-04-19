@@ -127,7 +127,7 @@ extern long double strtold (const char *__nptr, char **__endptr);
 #else
 # define IS_DIRSEP(c) (c == '/')
 # define IS_ABSPATH(p) IS_DIRSEP(p[0])
-# define PATHCMP strcmp
+# define PATHCMP strcasecmp
 # define PATHSEP ":"
 #endif
 

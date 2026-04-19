@@ -73,14 +73,14 @@ void fat_restore_name(char* org, char* name)
     memset(name, 0, 13);
     for (i = 0; i < 8; i++) {
         if (*org != ' ')
-            *name++ = *org;
+            *name++ = tolower((unsigned char)*org);
         org++;
     }
     if (*org != ' ')
         *name++ = '.';
     for (i = 0; i < 3; i++) {
         if (*org != ' ')
-            *name++ = *org;
+            *name++ = tolower((unsigned char)*org);
         org++;
     }
 }
