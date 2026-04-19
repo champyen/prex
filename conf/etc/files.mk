@@ -35,8 +35,13 @@ FILES+= 	$(SRCDIR)/usr/sbin/lock/lock
 endif
 
 ifeq ($(CONFIG_CMD_DEBUG),y)
-FILES+= 	$(SRCDIR)/usr/sbin/debug/debug
+FILES+=         $(SRCDIR)/usr/sbin/debug/debug
 endif
+
+ifeq ($(CONFIG_NET),y)
+FILES+=         $(SRCDIR)/usr/sbin/ifconfig/ifconfig
+endif
+
 
 ifeq ($(CONFIG_SNDIO),y)
 FILES+=		$(SRCDIR)/usr/server/sndio/sndiod

@@ -74,18 +74,6 @@ int main(int argc, char **argv) {
 
     sys_log("Network server initialized\n");
 
-    /* Simple self-test */
-    int test_sock = lwip_socket(AF_INET, SOCK_DGRAM, 0);
-    char msg[128];
-    if (test_sock >= 0) {
-        sprintf(msg, "network: self-test UDP socket created successfully (fd=%d)\n", test_sock);
-        sys_log(msg);
-        lwip_close(test_sock);
-    } else {
-        sprintf(msg, "network: self-test UDP socket failed (errno=%d)\n", errno);
-        sys_log(msg);
-    }
-
     for (;;) {
         if (msg_receive(net_obj, &m, sizeof(m)) != 0)
             continue;
@@ -114,6 +102,52 @@ int main(int argc, char **argv) {
         case NET_CLOSE:
             m.hdr.status = lwip_close(m.socket);
             if (m.hdr.status < 0) m.hdr.status = errno;
+            break;
+        case NET_GETIFINFO:
+            {
+                char ifname[16];
+                strncpy(ifname, m.data, 15);
+                ifname[15] = '\0';
+                
+                struct netif *netif = netif_find(ifname);
+                if (netif) {
+                    struct net_ifinfo *info = (struct net_ifinfo *)m.data;
+                    uint32_t ip = ip4_addr_get_u32(netif_ip4_addr(netif));
+                    uint32_t nm = ip4_addr_get_u32(netif_ip4_netmask(netif));
+                    uint32_t gw = ip4_addr_get_u32(netif_ip4_gw(netif));
+                    uint8_t hw[6];
+                    memcpy(hw, netif->hwaddr, 6);
+                    int flags = netif->flags;
+                    
+                    memset(info, 0, sizeof(*info));
+                    strncpy(info->name, ifname, 15);
+                    info->name[15] = '\0';
+                    info->ip_addr = ip;
+                    info->netmask = nm;
+                    info->gateway = gw;
+                    memcpy(info->hwaddr, hw, 6);
+                    info->flags = flags;
+                    m.hdr.status = 0;
+                } else {
+                    m.hdr.status = ENODEV;
+                }
+            }
+            break;
+        case NET_SETIFINFO:
+            {
+                struct net_ifinfo *info = (struct net_ifinfo *)m.data;
+                struct netif *netif = netif_find(info->name);
+                if (netif) {
+                    ip4_addr_t ip, mask, gw;
+                    ip4_addr_set_u32(&ip, info->ip_addr);
+                    ip4_addr_set_u32(&mask, info->netmask);
+                    ip4_addr_set_u32(&gw, info->gateway);
+                    netif_set_addr(netif, &ip, &mask, &gw);
+                    m.hdr.status = 0;
+                } else {
+                    m.hdr.status = ENODEV;
+                }
+            }
             break;
         default:
             m.hdr.status = EINVAL;

@@ -31,6 +31,13 @@
 #include <driver.h>
 #include <net.h>
 
+#define SIOCGIFHWADDR   0x8927
+
+struct net_ifreq {
+    char name[16];
+    char hwaddr[14];
+};
+
 #define NET_BUF_SIZE (64 * 1024)
 
 struct net_softc {
@@ -137,9 +144,14 @@ static int net_write(device_t dev, char *buf, size_t *nbyte, int blkno) {
 
 static int net_ioctl(device_t dev, u_long cmd, void *arg) {
     struct net_softc *sc = device_private(dev);
+    struct net_ifreq *ifr = arg;
     
     switch(cmd) {
-    /* SIOCGIFADDR, etc. */
+    case SIOCGIFHWADDR:
+        if (sc->hw_if->get_addr) {
+            return sc->hw_if->get_addr(sc->hw_priv, (uint8_t *)ifr->hwaddr);
+        }
+        return ENOSYS;
     default:
         return EINVAL;
     }

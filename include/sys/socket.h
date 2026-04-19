@@ -94,7 +94,7 @@ struct sockaddr_in {
     u_char          sin_family;
     uint16_t        sin_port;
     struct in_addr  sin_addr;
-    char            sin_zero[8];
+    char            sin_zero[SIN_ZERO_LEN];
 };
 
 struct hostent {
@@ -141,25 +141,6 @@ struct addrinfo {
 
 #define SOL_SOCKET  0xffff      /* options for socket level */
 
-__BEGIN_DECLS
-int accept(int, struct sockaddr *, socklen_t *);
-int bind(int, const struct sockaddr *, socklen_t);
-int connect(int, const struct sockaddr *, socklen_t);
-int getpeername(int, struct sockaddr *, socklen_t *);
-int getsockname(int, struct sockaddr *, socklen_t *);
-int getsockopt(int, int, int, void *, socklen_t *);
-int listen(int, int);
-ssize_t recv(int, void *, size_t, int);
-ssize_t recvfrom(int, void *, size_t, int, struct sockaddr *, socklen_t *);
-ssize_t send(int, const void *, size_t, int);
-ssize_t sendto(int, const void *, size_t, int, const struct sockaddr *, socklen_t);
-int setsockopt(int, int, int, const void *, socklen_t);
-int shutdown(int, int);
-int socket(int, int, int);
-__END_DECLS
-
-#endif /* !_SYS_SOCKET_H_ */
-
 /* Socket options */
 #define SO_DEBUG        0x0001
 #define SO_ACCEPTCONN   0x0002
@@ -200,11 +181,55 @@ __END_DECLS
 /* ifreq for SO_BINDTODEVICE */
 #define IFNAMSIZ        16
 struct ifreq {
-    char ifr_name[IFNAMSIZ]; /* Interface name */
+    char ifr_name[IFNAMSIZ];
+    union {
+        struct sockaddr ifru_addr;
+        struct sockaddr ifru_dstaddr;
+        struct sockaddr ifru_broadaddr;
+        short           ifru_flags;
+        int             ifru_metric;
+        int             ifru_mtu;
+        char            ifru_data[1];
+    } ifr_ifru;
 };
 
-typedef int msg_iovlen_t;
+#define ifr_addr      ifr_ifru.ifru_addr      /* address */
+#define ifr_dstaddr   ifr_ifru.ifru_dstaddr   /* P-P address */
+#define ifr_broadaddr ifr_ifru.ifru_broadaddr /* broadcast address */
+#define ifr_flags     ifr_ifru.ifru_flags     /* flags */
+#define ifr_metric    ifr_ifru.ifru_metric    /* metric */
+#define ifr_mtu       ifr_ifru.ifru_mtu       /* mtu */
 
+struct ifconf {
+    int ifc_len;              /* size of buffer */
+    union {
+        char *ifcu_buf;
+        struct ifreq *ifcu_req;
+    } ifc_ifcu;
+};
+#define ifc_buf ifc_ifcu.ifcu_buf /* buffer address */
+#define ifc_req ifc_ifcu.ifcu_req /* array of structures */
+
+#define IFF_UP          0x1     /* interface is up */
+#define IFF_BROADCAST   0x2     /* broadcast address valid */
+#define IFF_DEBUG       0x4     /* turn on debugging */
+#define IFF_LOOPBACK    0x8     /* is a loopback net */
+#define IFF_POINTOPOINT 0x10    /* interface is point-to-point link */
+#define IFF_RUNNING     0x40    /* resources allocated */
+#define IFF_NOARP       0x80    /* no address resolution protocol */
+#define IFF_PROMISC     0x100   /* receive all packets */
+
+#define SIOCGIFCONF     0x8912
+#define SIOCGIFFLAGS    0x8913
+#define SIOCSIFFLAGS    0x8914
+#define SIOCGIFADDR     0x8915
+#define SIOCSIFADDR     0x8916
+#define SIOCGIFNETMASK  0x891b
+#define SIOCSIFNETMASK  0x891c
+#define SIOCGIFHWADDR   0x8927
+#define SIOCSIFHWADDR   0x8924
+
+#define IOV_MAX         1024
 
 /* Message flags */
 #define MSG_OOB         0x0001
@@ -219,5 +244,23 @@ typedef int msg_iovlen_t;
 #define MSG_MORE        0x0200
 #define MSG_NOSIGNAL    0x0400
 
-#define IOV_MAX         1024
+typedef int msg_iovlen_t;
 
+__BEGIN_DECLS
+int accept(int, struct sockaddr *, socklen_t *);
+int bind(int, const struct sockaddr *, socklen_t);
+int connect(int, const struct sockaddr *, socklen_t);
+int getpeername(int, struct sockaddr *, socklen_t *);
+int getsockname(int, struct sockaddr *, socklen_t *);
+int getsockopt(int, int, int, void *, socklen_t *);
+int listen(int, int);
+ssize_t recv(int, void *, size_t, int);
+ssize_t recvfrom(int, void *, size_t, int, struct sockaddr *, socklen_t *);
+ssize_t send(int, const void *, size_t, int);
+ssize_t sendto(int, const void *, size_t, int, const struct sockaddr *, socklen_t);
+int setsockopt(int, int, int, const void *, socklen_t);
+int shutdown(int, int);
+int socket(int, int, int);
+__END_DECLS
+
+#endif /* !_SYS_SOCKET_H_ */

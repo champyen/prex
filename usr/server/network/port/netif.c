@@ -103,8 +103,13 @@ err_t prex_netif_init(struct netif *netif) {
     netif->linkoutput = low_level_output;
     netif->hwaddr_len = ETHARP_HWADDR_LEN;
     
-    /* TODO: Get MAC from device via ioctl */
-    memset(netif->hwaddr, 0, ETHARP_HWADDR_LEN);
+    struct ifreq ifr;
+    memset(&ifr, 0, sizeof(ifr));
+    if (device_ioctl(dev, SIOCGIFHWADDR, &ifr) == 0) {
+        memcpy(netif->hwaddr, ifr.ifr_ifru.ifru_data, ETHARP_HWADDR_LEN);
+    } else {
+        memset(netif->hwaddr, 0, ETHARP_HWADDR_LEN);
+    }
     
     netif->mtu = 1500;
     netif->flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_LINK_UP;

@@ -48,6 +48,18 @@
 #define NET_RECV        0x607
 #define NET_SHUTDOWN    0x608
 #define NET_CLOSE       0x609
+#define NET_GETIFINFO   0x60a
+#define NET_SETIFINFO   0x60b
+
+struct net_ifinfo {
+    char name[16];
+    uint32_t ip_addr;
+    uint32_t netmask;
+    uint32_t gateway;
+    uint8_t  hwaddr[6];
+    int      flags;
+    int      index;
+};
 
 struct net_msg {
     struct msg_header hdr;
