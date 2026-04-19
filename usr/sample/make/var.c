@@ -2,6 +2,7 @@
  * Copyright (c) 1988, 1989, 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
  * Copyright (c) 1989 by Berkeley Softworks
+ * Copyright (c) 2026, Champ Yen (champ.yen@gmail.com)
  * All rights reserved.
  *
  * This code is derived from software contributed to Berkeley by
