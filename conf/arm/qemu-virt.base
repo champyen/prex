@@ -117,10 +117,12 @@ command 	cat
 command 	clear
 command 	cp
 command 	date
+command 	dd
 command 	dmesg
 command 	echo
 command 	free
 command 	head
+command 	hexdump
 command 	hostname
 command 	kill
 command 	ls

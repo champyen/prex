@@ -8,10 +8,12 @@ include $(CURDIR)/cat/Makefile.inc
 include $(CURDIR)/clear/Makefile.inc
 include $(CURDIR)/cp/Makefile.inc
 include $(CURDIR)/date/Makefile.inc
+include $(CURDIR)/dd/Makefile.inc
 include $(CURDIR)/dmesg/Makefile.inc
 include $(CURDIR)/echo/Makefile.inc
 include $(CURDIR)/free/Makefile.inc
 include $(CURDIR)/head/Makefile.inc
+include $(CURDIR)/hexdump/Makefile.inc
 include $(CURDIR)/hostname/Makefile.inc
 include $(CURDIR)/kill/Makefile.inc
 include $(CURDIR)/ls/Makefile.inc
