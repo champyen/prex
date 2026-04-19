@@ -33,16 +33,64 @@
 
 #include <stddef.h>
 #include <errno.h>
+#include <string.h>
+
+/*
+ * VFS server uses vm_map() for zero-copy I/O.
+ * This requires the user buffer to be page-aligned and within a single segment.
+ * If mapping fails, we use a 4KB aligned bounce buffer.
+ */
+#define IO_BUF_SIZE 4096
+static char io_buf[IO_BUF_SIZE] __attribute__((aligned(4096)));
 
 int read(int fd, void* buf, size_t len)
 {
     struct io_msg m;
+    int error;
+    size_t total = 0;
+    char* p = (char*)buf;
 
+    if (len == 0)
+        return 0;
+
+    /* 1. Try direct read (zero-copy) first for efficiency */
     m.hdr.code = FS_READ;
     m.fd = fd;
     m.buf = buf;
     m.size = len;
-    if (__posix_call(__fs_obj, &m, sizeof(m), 0) != 0)
-        return -1;
-    return (int)m.size;
+    error = __posix_call(__fs_obj, &m, sizeof(m), 0);
+
+    if (error == 0)
+        return (int)m.size;
+
+    /* 2. Fallback to bounce-buffer if vm_map failed (EINVAL) or other mapping issues */
+    if (error == EINVAL || error == EFAULT) {
+        while (len > 0) {
+            size_t chunk = (len > IO_BUF_SIZE) ? IO_BUF_SIZE : len;
+            m.hdr.code = FS_READ;
+            m.fd = fd;
+            m.buf = io_buf;
+            m.size = chunk;
+            error = __posix_call(__fs_obj, &m, sizeof(m), 0);
+            
+            if (error != 0) {
+                if (total > 0) return (int)total;
+                errno = error;
+                return -1;
+            }
+            
+            if (m.size == 0) break;
+
+            memcpy(p, io_buf, m.size);
+            total += m.size;
+            p += m.size;
+            len -= m.size;
+
+            if (m.size < chunk) break;
+        }
+        return (int)total;
+    }
+
+    errno = error;
+    return -1;
 }
