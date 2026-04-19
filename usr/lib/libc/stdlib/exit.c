@@ -42,9 +42,9 @@ void exit(int status)
 {
     int i = __atexit_index;
 
-    while (i) {
-        __atexit_list[i]();
+    while (i > 0) {
         i--;
+        __atexit_list[i]();
     }
     if (__cleanup)
         (*__cleanup)();

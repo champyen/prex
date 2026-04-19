@@ -228,6 +228,7 @@ int ungetc(int, FILE*);
 int vfprintf(FILE*, const char*, va_list);
 int vprintf(const char*, va_list);
 int vsprintf(char*, const char*, va_list);
+ssize_t getline(char**, size_t*, FILE*);
 __END_DECLS
 
 /*

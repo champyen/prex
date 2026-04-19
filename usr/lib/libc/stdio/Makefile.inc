@@ -1,7 +1,7 @@
 VPATH:=	$(SRCDIR)/usr/lib/libc/stdio:$(VPATH)
 
 SRCS+=	clrerr.c fclose.c fdopen.c feof.c ferror.c fflush.c fgetc.c \
-	fgetpos.c fgets.c fileno.c findfp.c flags.c fopen.c \
+	fgetpos.c fgets.c fileno.c findfp.c flags.c fopen.c getline.c \
 	fprintf.c fpurge.c fputc.c fputs.c fread.c freopen.c fscanf.c \
 	fseek.c fsetpos.c ftell.c fvwrite.c fwalk.c fwrite.c \
 	getc.c getchar.c gets.c getw.c makebuf.c mktemp.c \

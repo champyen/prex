@@ -64,6 +64,7 @@ extern int find_main(int argc, char* argv[]);
 extern int xargs_main(int argc, char* argv[]);
 extern int tar_main(int argc, char* argv[]);
 extern int gzip_main(int argc, char* argv[]);
+extern int kilo_main(int argc, char* argv[]);
 extern int null_main(int argc, char* argv[]);
 
 /*
@@ -170,6 +171,9 @@ const struct cmdentry builtin_cmds[] = {
 #ifdef CONFIG_CMD_GZIP
     {"gzip", gzip_main},
     {"gunzip", gzip_main},
+#endif
+#ifdef CONFIG_CMD_KILO
+    {"kilo", kilo_main},
 #endif
     {NULL, null_main},
 };
