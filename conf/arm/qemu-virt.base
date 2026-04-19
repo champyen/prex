@@ -71,6 +71,7 @@ options 	DEVFS		# Device file system
 options 	RAMFS		# RAM file system
 options 	ARFS		# Archive file system
 options 	FATFS		# FAT file system
+options 	NET		# Network support
 
 #
 # Power management
@@ -95,7 +96,7 @@ device      audio       # Generic Audio
 device      vio_mmio
 device      vio_audio   # VirtIO Audio
 device      vio_block   # VirtIO Block
-#device      vio_net     # VirtIO Net
+device      vio_net     # VirtIO Net
 
 #
 # Hardware configuations
@@ -165,5 +166,5 @@ command 	debug
 math		fdlibm
 
 # Extra samples
-options		SQLITE
-options		SDK
+#options	SQLITE
+#options	SDK

@@ -39,6 +39,10 @@ extern int vio_block_attach(vaddr_t base, int irq);
 extern int vio_audio_attach(vaddr_t base, int irq);
 #endif
 
+#ifdef CONFIG_VIO_NET
+extern int vio_net_attach(vaddr_t base, int irq);
+#endif
+
 static int vio_mmio_init(struct driver* self)
 {
     vaddr_t base;
@@ -72,7 +76,8 @@ static int vio_mmio_init(struct driver* self)
 #endif
 #ifdef CONFIG_VIO_NET
             case VIO_DEV_NET:
-                printf("Found VirtIO Net device at 0x%lx, irq %d\n", base, irq);
+                printf("Found VirtIO Net device at 0x%lx, irq %d, ver %d\n", base, irq, (int)ver);
+                vio_net_attach(base, irq);
                 break;
 #endif
             default:
