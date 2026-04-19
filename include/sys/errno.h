@@ -88,3 +88,40 @@
 #define ENOSYS 40   /* Function not implemented */
 
 #endif /* !_SYS_ERRNO_H_ */
+
+/* Networking errnos */
+#define EADDRINUSE      48
+#define EADDRNOTAVAIL   49
+#define ENETDOWN        50
+#define ENETUNREACH     51
+#define ENETRESET       52
+#define ECONNABORTED    53
+#define ECONNRESET      54
+#define ENOBUFS         55
+#define EISCONN         56
+#define ENOTCONN        57
+#define ESHUTDOWN       58
+#define ETOOMANYREFS    59
+#define ECONNREFUSED    61
+#define ELOOP           62
+#define EHOSTDOWN       64
+#define EHOSTUNREACH    65
+#define EUSERS          68
+#define EDQUOT          69
+#define ESTALE          70
+#define EREMOTE         71
+#define EBADRPC         72
+#define ERPCMISMATCH    73
+#define EPROGUNAVAIL    74
+#define EPROGMISMATCH   75
+#define EPROCUNAVAIL    76
+#define ENOLCK          77
+#define EFTYPE          79
+#define EAUTH           80
+#define ENEEDAUTH       81
+#define EINPROGRESS     82
+#define EALREADY        83
+#define EMSGSIZE        84
+#define ENOPROTOOPT     85
+#define EAFNOSUPPORT    86
+#define EOPNOTSUPP      87

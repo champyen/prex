@@ -1,0 +1,3 @@
+[submodule "usr/server/network/lwip"]
+	path = usr/server/network/lwip
+	url = https://github.com/lwip-tcpip/lwip

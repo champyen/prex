@@ -2,6 +2,10 @@ include $(SRCDIR)/mk/own.mk
 
 SUBDIR:=	fs boot proc exec pow
 
+ifeq ($(CONFIG_NET),y)
+SUBDIR+=	network
+endif
+
 ifeq ($(CONFIG_SNDIO),y)
 SUBDIR+=	sndio
 endif

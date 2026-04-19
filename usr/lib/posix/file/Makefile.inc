@@ -8,3 +8,4 @@ SRCS+=	__file.c \
 	link.c unlink.c rmdir.c mkdir.c mknod.c chmod.c chown.c \
 	umask.c ioctl.c fcntl.c pipe.c isatty.c truncate.c ftruncate.c \
 	fchdir.c readlink.c
+SRCS+=	socket.c

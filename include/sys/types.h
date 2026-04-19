@@ -54,6 +54,8 @@ typedef int32_t off_t;        /* file offset */
 typedef int32_t pid_t;        /* process id */
 typedef uint32_t uid_t;       /* user id */
 typedef unsigned long rlim_t; /* resource limit */
+typedef unsigned int socklen_t;
+typedef unsigned int nfds_t;
 
 #ifndef KERNEL
 typedef unsigned long object_t;

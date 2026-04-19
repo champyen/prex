@@ -10,6 +10,9 @@ ifeq ($(CONFIG_PM),y)
 TASKS+= 	$(SRCDIR)/usr/server/pow/pow
 endif
 TASKS+= 	$(SRCDIR)/usr/server/fs/fs
+ifeq ($(CONFIG_NET),y)
+TASKS+= 	$(SRCDIR)/usr/server/network/network
+endif
 ifeq ($(CONFIG_SNDIO),y)
 TASKS+= 	$(SRCDIR)/usr/server/sndio/sndiod
 endif
