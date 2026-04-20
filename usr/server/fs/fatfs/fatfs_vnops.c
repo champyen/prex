@@ -343,6 +343,9 @@ static int fatfs_write(vnode_t vp, file_t fp, void* buf, size_t size, size_t* re
 
     mutex_lock(&fmp->lock);
 
+    np = vp->v_data;
+    de = &np->dirent;
+
     /* Check if file position exceeds the end of file. */
     end_pos = vp->v_size;
     file_pos = (fp->f_flags & O_APPEND) ? end_pos : fp->f_offset;
@@ -365,8 +368,6 @@ static int fatfs_write(vnode_t vp, file_t fp, void* buf, size_t size, size_t* re
         }
 
         /* Update directory entry */
-        np = vp->v_data;
-        de = &np->dirent;
         de->size = end_pos;
         de->cluster_hi = (vp->v_blkno & 0xFFFF0000) >> 16;
         de->cluster = vp->v_blkno & 0x0000FFFF;

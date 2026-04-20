@@ -12,6 +12,6 @@ SUBDIR+=	errno malloc stderr environ
 
 # Test for servers
 SUBDIR+=	fileio fork forkbomb args signal fifo pipe dup creat conf \
-		mount umount shutdown
+		mount umount shutdown truncate_bug
 
 include $(SRCDIR)/mk/subdir.mk
