@@ -272,27 +272,38 @@ static void parsecmd(char* cmds, int* redir, int flags)
     char *p, *word = NULL;
     cmdfn_t fn;
     int i, argc = 0;
+    int inquote = 0;
 
     optind = 1; /* for nommu */
-
-    if (cmds[0] != ' ' && cmds[0] != '\t')
-        word = cmds;
 
     p = cmds;
     while (*p) {
         if (word == NULL) {
             /* Skip white space. */
-            if (*p != ' ' && *p != '\t')
-                word = p;
+            if (*p != ' ' && *p != '\t' && *p != '\r') {
+                if (*p == '\"') {
+                    inquote = 1;
+                    word = p + 1;
+                } else {
+                    word = p;
+                }
+            }
         } else {
-            if (*p == ' ' || *p == '\t') {
+            if (inquote) {
+                if (*p == '\"') {
+                    *p = '\0';
+                    args[argc++] = word;
+                    word = NULL;
+                    inquote = 0;
+                }
+            } else if (*p == ' ' || *p == '\t' || *p == '\r') {
                 *p = '\0';
                 args[argc++] = word;
                 word = NULL;
-                if (argc >= ARGMAX - 1) {
-                    error("Too many args");
-                    return;
-                }
+            }
+            if (word == NULL && argc >= ARGMAX - 1) {
+                error("Too many args");
+                return;
             }
         }
         p++;

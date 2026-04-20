@@ -34,6 +34,8 @@ include $(CURDIR)/touch/Makefile.inc
 include $(CURDIR)/uname/Makefile.inc
 include $(CURDIR)/wc/Makefile.inc
 include $(CURDIR)/grep/Makefile.inc
+include $(CURDIR)/ping/Makefile.inc
+include $(CURDIR)/nc/Makefile.inc
 include $(CURDIR)/kilo/Makefile.inc
 include $(CURDIR)/tail/Makefile.inc
 include $(CURDIR)/sort/Makefile.inc

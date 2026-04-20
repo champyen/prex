@@ -32,6 +32,7 @@
 #include "lwip/netif.h"
 #include "lwip/dhcp.h"
 #include "lwip/dns.h"
+#include "lwip/netdb.h"
 
 #include <sys/prex.h>
 #include <ipc/ipc.h>
@@ -135,6 +136,18 @@ int main(int argc, char **argv) {
             m.len = lwip_recv(m.socket, m.data, m.len, m.flags);
             m.hdr.status = (m.len < 0) ? errno : 0;
             break;
+        case NET_SENDTO:
+            m.len = lwip_sendto(m.socket, m.data, m.len, m.flags, &m.addr, m.addrlen);
+            m.hdr.status = (m.len < 0) ? errno : 0;
+            break;
+        case NET_RECVFROM:
+            m.len = lwip_recvfrom(m.socket, m.data, m.len, m.flags, &m.addr, &m.addrlen);
+            m.hdr.status = (m.len < 0) ? errno : 0;
+            break;
+        case NET_SHUTDOWN:
+            m.hdr.status = lwip_shutdown(m.socket, m.flags);
+            if (m.hdr.status < 0) m.hdr.status = errno;
+            break;
         case NET_CLOSE:
             m.hdr.status = lwip_close(m.socket);
             if (m.hdr.status < 0) m.hdr.status = errno;
@@ -182,6 +195,22 @@ int main(int argc, char **argv) {
                     m.hdr.status = 0;
                 } else {
                     m.hdr.status = ENODEV;
+                }
+            }
+            break;
+        case NET_RESOLVE:
+            {
+                char hostname[256];
+                strncpy(hostname, m.data, 255);
+                hostname[255] = '\0';
+                
+                struct hostent *he = lwip_gethostbyname(hostname);
+                if (he && he->h_addr_list[0]) {
+                    uint32_t *ip_out = (uint32_t *)m.data;
+                    memcpy(ip_out, he->h_addr_list[0], 4);
+                    m.hdr.status = 0;
+                } else {
+                    m.hdr.status = EHOSTUNREACH;
                 }
             }
             break;

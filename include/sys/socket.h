@@ -261,6 +261,7 @@ ssize_t sendto(int, const void *, size_t, int, const struct sockaddr *, socklen_
 int setsockopt(int, int, int, const void *, socklen_t);
 int shutdown(int, int);
 int socket(int, int, int);
+struct hostent *gethostbyname(const char *);
 __END_DECLS
 
 #endif /* !_SYS_SOCKET_H_ */

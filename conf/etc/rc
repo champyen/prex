@@ -1,6 +1,7 @@
 PATH=/boot:/bin:/usr/bin
 HOME=/
 export HOME PATH
+mkdir /tmp
 uname -msr
 date
 #ifconfig

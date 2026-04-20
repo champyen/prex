@@ -339,15 +339,5 @@ int vio_net_attach(vaddr_t base, int irq)
     DPRINTF(("VirtIO Net attached at 0x%lx, irq %d, MAC %02x:%02x:%02x:%02x:%02x:%02x\n",
            base, irq, sc->mac[0], sc->mac[1], sc->mac[2], sc->mac[3], sc->mac[4], sc->mac[5]));
 
-    /* Simple TX test: send a dummy ARP-like broadcast packet */
-    uint8_t dummy_pkt[42];
-    memset(dummy_pkt, 0xFF, 6); /* Dest MAC: Broadcast */
-    memcpy(dummy_pkt + 6, sc->mac, 6); /* Src MAC */
-    dummy_pkt[12] = 0x08; dummy_pkt[13] = 0x06; /* Type: ARP */
-    memset(dummy_pkt + 14, 0x00, 28); /* Dummy payload */
-    
-    DPRINTF(("VirtIO Net: Sending test broadcast packet...\n"));
-    vio_net_xmit(sc, dummy_pkt, sizeof(dummy_pkt));
-
     return 0;
 }

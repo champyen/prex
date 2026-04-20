@@ -5,6 +5,7 @@ SRCS+=	__libc_init.c assert.c \
 	execl.c execlp.c execle.c execv.c execvp.c \
 	time.c basename.c dirname.c \
 	gethostname.c sethostname.c \
+	endian.c \
 	err.c errx.c verr.c verrx.c \
 	warn.c warnx.c vwarn.c vwarnx.c \
 	getpagesize.c confstr.c getpass.c \

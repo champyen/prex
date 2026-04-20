@@ -144,6 +144,8 @@ command 	touch
 command 	uname
 #command 	wc
 command 	grep
+command 	ping
+command 	nc
 command 	kilo
 command 	tail
 #command 	sort

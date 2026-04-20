@@ -46,10 +46,13 @@
 #define NET_ACCEPT      0x605
 #define NET_SEND        0x606
 #define NET_RECV        0x607
+#define NET_SENDTO      0x60c
+#define NET_RECVFROM    0x60d
 #define NET_SHUTDOWN    0x608
 #define NET_CLOSE       0x609
 #define NET_GETIFINFO   0x60a
 #define NET_SETIFINFO   0x60b
+#define NET_RESOLVE     0x60e
 
 struct net_ifinfo {
     char name[16];
