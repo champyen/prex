@@ -80,10 +80,11 @@ struct pollfd {
 /* diagnostics */
 void bail(const char *format, ...);
 void errout(int err, const char *format, ...);
+void lwip_diag(const char *format, ...);
 
 extern int h_errno;
 
-#define LWIP_PLATFORM_DIAG(x)	printf x
+#define LWIP_PLATFORM_DIAG(x)	lwip_diag x
 #define LWIP_PLATFORM_ASSERT	bail
 
 /* initialization */

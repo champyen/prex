@@ -118,6 +118,7 @@ struct vio_net_softc {
     struct virtio_net_hdr *tx_hdr;
     void                  *rx_pkts[VQ_SIZE];
     struct virtio_net_hdr *rx_hdrs[VQ_SIZE];
+    struct event          tx_event;
 };
 
 static int vio_net_open(void *priv) {
@@ -159,9 +160,17 @@ static int vio_net_xmit(void *priv, void *buf, size_t len) {
 
     bus_write_32(sc->base + VIO_MMIO_QUEUE_NOTIFY, VIO_NET_VQ_TX);
 
-    /* Wait for completion (simplified polling for now, or use event) */
-    while (vq->used->idx == vq->last_used_idx);
+    /* Wait for completion using event */
+    sched_lock();
+    while (vq->used->idx == vq->last_used_idx) {
+        if (sched_tsleep(&sc->tx_event, 1000) == ETIMEDOUT) {
+            sched_unlock();
+            DPRINTF(("vio_net: TX timeout!\n"));
+            return EIO;
+        }
+    }
     vq->last_used_idx = vq->used->idx;
+    sched_unlock();
 
     return 0;
 }
@@ -195,27 +204,34 @@ static int vio_net_isr(void* arg)
 static void vio_net_ist(void* arg)
 {
     struct vio_net_softc* sc = arg;
-    struct vio_net_vq *vq = &sc->vqs[VIO_NET_VQ_RX];
+    struct vio_net_vq *rx_vq = &sc->vqs[VIO_NET_VQ_RX];
+    struct vio_net_vq *tx_vq = &sc->vqs[VIO_NET_VQ_TX];
 
-    while (vq->used->idx != vq->last_used_idx) {
-        volatile struct vring_used_elem *ue = &vq->used->ring[vq->last_used_idx % VQ_SIZE];
+    /* Process RX */
+    while (rx_vq->used->idx != rx_vq->last_used_idx) {
+        volatile struct vring_used_elem *ue = &rx_vq->used->ring[rx_vq->last_used_idx % VQ_SIZE];
         int id = ue->id;
         uint32_t len = ue->len;
         
         /* ue->len includes the virtio header size */
         if (len > sizeof(struct virtio_net_hdr)) {
-            net_rx_complete(sc->net_dev, sc->rx_pkts[id], len - sizeof(struct virtio_net_hdr));
+            net_rx_complete(sc->net_dev, sc->rx_pkts[id / 2], len - sizeof(struct virtio_net_hdr));
         }
 
         /* Put descriptor back to avail ring */
-        vq->avail->ring[vq->avail->idx % VQ_SIZE] = id;
+        rx_vq->avail->ring[rx_vq->avail->idx % VQ_SIZE] = id;
         __sync_synchronize();
-        vq->avail->idx++;
+        rx_vq->avail->idx++;
         __sync_synchronize();
         
-        vq->last_used_idx++;
+        rx_vq->last_used_idx++;
     }
     bus_write_32(sc->base + VIO_MMIO_QUEUE_NOTIFY, VIO_NET_VQ_RX);
+
+    /* Process TX completion */
+    if (tx_vq->used->idx != tx_vq->last_used_idx) {
+        sched_wakeup(&sc->tx_event);
+    }
 }
 
 static int vio_net_init(struct driver *self)
@@ -244,6 +260,7 @@ int vio_net_attach(vaddr_t base, int irq)
     
     sc->base = base;
     sc->irq = irq;
+    event_init(&sc->tx_event, "vio_net_tx");
 
     /* Reset device */
     bus_write_32(base + VIO_MMIO_STATUS, 0);

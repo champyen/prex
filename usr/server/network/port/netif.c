@@ -86,11 +86,14 @@ err_t prex_netif_init(struct netif *netif) {
     struct prex_netif *px;
     device_t dev;
 
-    if (device_open("eth0", 0, &dev) != 0)
+    if (device_open("eth0", 0, &dev) != 0) {
+        sys_log("netif: failed to open eth0\n");
         return ERR_IF;
+    }
 
     px = malloc(sizeof(struct prex_netif));
     if (!px) {
+        sys_log("netif: failed to allocate prex_netif\n");
         device_close(dev);
         return ERR_MEM;
     }

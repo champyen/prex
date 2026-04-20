@@ -30,13 +30,19 @@
 #include "arch/sys_arch.h"
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 
 static mutex_t global_lock;
 static mutex_t thread_boot_lock;
+static sem_t thread_boot_sem;
+
+static lwip_thread_fn current_thread_entry;
+static void *current_thread_arg;
 
 void sys_init(void) {
     mutex_init(&global_lock);
     mutex_init(&thread_boot_lock);
+    sem_init(&thread_boot_sem, 0);
 }
 
 void sys_arch_global_lock(void) {
@@ -153,13 +159,17 @@ void sys_mutex_unlock(sys_mutex_t *mutex) {
 }
 
 /* Threads */
-static lwip_thread_fn current_thread_entry;
-static void *current_thread_arg;
-
 static void thread_trampoline(void) {
+    /* 
+     * The parent thread holds thread_boot_lock and is waiting on thread_boot_sem.
+     * This ensures that no other thread can call sys_thread_new and overwrite
+     * the global current_thread_* variables until we have copied them.
+     */
     lwip_thread_fn entry = current_thread_entry;
     void *arg = current_thread_arg;
-    mutex_unlock(&thread_boot_lock);
+    
+    sem_post(&thread_boot_sem);
+    /* Now parent will proceed and unlock thread_boot_lock. */
     
     entry(arg);
     
@@ -191,10 +201,21 @@ sys_thread_t sys_thread_new(const char *name, lwip_thread_fn thread, void *arg, 
     thread_resume(tid);
 
     /* Wait for the trampoline to consume the arguments */
-    mutex_lock(&thread_boot_lock);
+    sem_wait(&thread_boot_sem, 0);
     mutex_unlock(&thread_boot_lock);
 
     return tid;
+}
+
+void lwip_diag(const char *format, ...) {
+    va_list ap;
+    char buf[256];
+
+    va_start(ap, format);
+    vsnprintf(buf, sizeof(buf), format, ap);
+    va_end(ap);
+
+    sys_log(buf);
 }
 
 int sys_thread_join(sys_thread_t id) { return 0; }
@@ -215,4 +236,3 @@ u32_t sys_arch_mbox_tryfetch(sys_mbox_t *mbox, void **msg) {
 err_t sys_mbox_trypost_fromisr(sys_mbox_t *mbox, void *msg) {
     return sys_mbox_trypost(mbox, msg);
 }
-

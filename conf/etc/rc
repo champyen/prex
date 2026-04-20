@@ -1,8 +1,7 @@
-PATH=/boot:/bin
+PATH=/boot:/bin:/usr/bin
 HOME=/
 export HOME PATH
 uname -msr
 date
-#beep &
-#sleep 2
+#ifconfig
 exec sh

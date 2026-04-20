@@ -30,6 +30,7 @@
 #include "lwip/tcpip.h"
 #include "lwip/sockets.h"
 #include "lwip/netif.h"
+#include "lwip/dhcp.h"
 
 #include <sys/prex.h>
 #include <ipc/ipc.h>
@@ -49,6 +50,22 @@ static void tcpip_init_done(void *arg) {
     sys_sem_signal(sem);
 }
 
+static void ip_monitor(void *arg) {
+    /* Monitor IP binding */
+    for (int i = 0; i < 100; i++) {
+        if (!ip4_addr_isany_val(*netif_ip4_addr(&prex_netif))) {
+            uint32_t ip = ip4_addr_get_u32(netif_ip4_addr(&prex_netif));
+            char log_buf[64];
+            sprintf(log_buf, "network: IP bound: %d.%d.%d.%d\n",
+                    (int)(ip & 0xff), (int)((ip >> 8) & 0xff),
+                    (int)((ip >> 16) & 0xff), (int)((ip >> 24) & 0xff));
+            sys_log(log_buf);
+            break;
+        }
+        sys_msleep(500);
+    }
+}
+
 int main(int argc, char **argv) {
     sys_sem_t init_sem;
     struct net_msg m;
@@ -66,13 +83,19 @@ int main(int argc, char **argv) {
     sys_sem_free(&init_sem);
 
     if (netif_add(&prex_netif, NULL, NULL, NULL, NULL, prex_netif_init, tcpip_input) == NULL) {
-        fprintf(stderr, "network: failed to add netif\n");
+        sys_log("network: failed to add netif\n");
         return 1;
     }
     netif_set_default(&prex_netif);
+
     netif_set_up(&prex_netif);
 
+    sys_log("network: starting DHCP...\n");
+    dhcp_start(&prex_netif);
+
     sys_log("Network server initialized\n");
+
+    sys_thread_new("ip_monitor", ip_monitor, NULL, 4096, 0);
 
     for (;;) {
         if (msg_receive(net_obj, &m, sizeof(m)) != 0)
@@ -108,7 +131,7 @@ int main(int argc, char **argv) {
                 char ifname[16];
                 strncpy(ifname, m.data, 15);
                 ifname[15] = '\0';
-                
+
                 struct netif *netif = netif_find(ifname);
                 if (netif) {
                     struct net_ifinfo *info = (struct net_ifinfo *)m.data;
@@ -118,7 +141,7 @@ int main(int argc, char **argv) {
                     uint8_t hw[6];
                     memcpy(hw, netif->hwaddr, 6);
                     int flags = netif->flags;
-                    
+
                     memset(info, 0, sizeof(*info));
                     strncpy(info->name, ifname, 15);
                     info->name[15] = '\0';
