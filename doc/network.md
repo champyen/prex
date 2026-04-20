@@ -98,6 +98,16 @@ The `gethostbyname()` implementation sends a `NET_RESOLVE` message to the Networ
 
 ---
 
+## Reference Implementation
+This networking stack is developed based on the following reference implementations:
+
+- **Network Server & IPC**: Based on the architecture and implementation of [Phoenix-RTOS](https://www.phoenix-rtos.com/).
+- **Networking Tools (ping, nc)**: Based on tools ported from [LiteBSD](https://github.com/dankmanning/litebsd).
+
+Maintained by Champ Yen (champ.yen@gmail.com).
+
+---
+
 ## Configuration
 
 *   **DHCP**: Automatically enabled at boot if `CONFIG_NET` is defined.
