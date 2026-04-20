@@ -31,6 +31,7 @@
 #include "lwip/sockets.h"
 #include "lwip/netif.h"
 #include "lwip/dhcp.h"
+#include "lwip/dns.h"
 
 #include <sys/prex.h>
 #include <ipc/ipc.h>
@@ -60,6 +61,18 @@ static void ip_monitor(void *arg) {
                     (int)(ip & 0xff), (int)((ip >> 8) & 0xff),
                     (int)((ip >> 16) & 0xff), (int)((ip >> 24) & 0xff));
             sys_log(log_buf);
+
+            /* Log DNS servers */
+            for (int n = 0; n < DNS_MAX_SERVERS; n++) {
+                const ip_addr_t *dns = dns_getserver(n);
+                if (!ip_addr_isany(dns)) {
+                    uint32_t dns_ip = ip4_addr_get_u32(ip_2_ip4(dns));
+                    sprintf(log_buf, "network: DNS server %d: %d.%d.%d.%d\n", n,
+                            (int)(dns_ip & 0xff), (int)((dns_ip >> 8) & 0xff),
+                            (int)((dns_ip >> 16) & 0xff), (int)((dns_ip >> 24) & 0xff));
+                    sys_log(log_buf);
+                }
+            }
             break;
         }
         sys_msleep(500);
