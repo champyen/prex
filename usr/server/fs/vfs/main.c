@@ -978,8 +978,9 @@ static void fs_thread(void)
     const struct msg_map* map;
     struct task* t;
     int error;
+    size_t msg_size = 1024; /* Enough for struct path_msg and others */
 
-    msg = malloc(MAX_FSMSG);
+    msg = malloc(msg_size);
 
     /*
      * Message loop
@@ -988,7 +989,7 @@ static void fs_thread(void)
         /*
          * Wait for an incoming request.
          */
-        if ((error = msg_receive(fsobj, msg, MAX_FSMSG)) != 0)
+        if ((error = msg_receive(fsobj, msg, msg_size)) != 0)
             continue;
 
         error = EINVAL;

@@ -245,32 +245,21 @@ int task_conv(struct task* t, char* path, int acc, char* full)
             p++;
         *p = '\0';
         if (!strcmp(src, "..")) {
-            if (len >= 2) {
-                len -= 2;
-                tgt -= 2; /* skip previous '/' */
-                while (*tgt != '/') {
+            if (tgt > full + 1) {
+                tgt--;
+                while (tgt > full && *(tgt - 1) != '/')
                     tgt--;
-                    len--;
-                }
-                if (len == 0) {
-                    tgt++;
-                    len++;
-                }
             }
         } else if (!strcmp(src, ".")) {
             /* Ignore "." */
         } else {
-            while (*src != '\0') {
+            while (*src != '\0')
                 *tgt++ = *src++;
-                len++;
-            }
         }
         if (p == end)
             break;
-        if (len > 0 && *(tgt - 1) != '/') {
+        if (tgt > full && *(tgt - 1) != '/')
             *tgt++ = '/';
-            len++;
-        }
         src = p + 1;
     }
     *tgt = '\0';
