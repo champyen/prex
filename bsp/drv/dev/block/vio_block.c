@@ -253,6 +253,7 @@ int vio_block_attach(vaddr_t base, int irq)
     sc->req = kmem_alloc(sizeof(struct vio_blk_req));
     sc->status_ptr = kmem_alloc(1);
 
+    int error;
     printf("VirtIO Block initialized at 0x%lx, irq %d as %s\n", base, irq, name);
 
     /* Read capacity */
@@ -265,24 +266,27 @@ int vio_block_attach(vaddr_t base, int irq)
     uint8_t mbr[BSIZE];
     size_t count = BSIZE;
     if (vio_blk_read(dev, (char*)mbr, &count, 0) == 0) {
-        uint8_t* ptr = mbr + 446;
         int i, found = 0;
-        for (i = 0; i < MAX_PARTI; i++) {
-            uint32_t psize = *(uint32_t*)(ptr + 12);
-            if (psize > 0) {
-                char pname[16];
-                strlcpy(pname, name, sizeof(pname));
-                int len = 0;
-                while (pname[len] && len < sizeof(pname)) len++;
-                if (len + 2 < sizeof(pname)) {
-                    pname[len] = 'p';
-                    pname[len + 1] = '1' + i;
-                    pname[len + 2] = '\0';
+        /* Check MBR signature */
+        if (mbr[510] == 0x55 && mbr[511] == 0xaa) {
+            uint8_t* ptr = mbr + 446;
+            for (i = 0; i < MAX_PARTI; i++) {
+                uint32_t psize = *(uint32_t*)(ptr + 12);
+                if (psize > 0) {
+                    char pname[16];
+                    strlcpy(pname, name, sizeof(pname));
+                    int len = 0;
+                    while (pname[len] && len < sizeof(pname)) len++;
+                    if (len + 2 < sizeof(pname)) {
+                        pname[len] = 'p';
+                        pname[len + 1] = '1' + i;
+                        pname[len + 2] = '\0';
+                    }
+                    attach_partition(sc, pname, *(uint32_t*)(ptr + 8), psize);
+                    found = 1;
                 }
-                attach_partition(sc, pname, *(uint32_t*)(ptr + 8), psize);
-                found = 1;
+                ptr += 16;
             }
-            ptr += 16;
         }
         if (!found) {
             printf("No partition found on %s, using whole disk as p1\n", name);

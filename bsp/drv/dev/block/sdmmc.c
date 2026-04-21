@@ -528,30 +528,33 @@ void sdmmc_insert(device_t dev)
             return;
         }
 
-        ptr = mbr + 446;
-        for (i = 0; i < MAX_PARTI; i++) {
-            part_exist = (uint32_t*)(ptr + 4);
-            if (*part_exist) {
-                device_t part_dev;
-                memcpy(&info->part_info[i], ptr, sizeof(part_record));
-                DPRINTF(("partition %d exist\n", i + 1));
-                DPRINTF(("first sector   :%d\n", info->part_info[i].start));
-                DPRINTF(("size in sectors:%d\n", info->part_info[i].size));
+        /* Check MBR signature */
+        if (mbr[510] == 0x55 && mbr[511] == 0xaa) {
+            ptr = mbr + 446;
+            for (i = 0; i < MAX_PARTI; i++) {
+                part_exist = (uint32_t*)(ptr + 4);
+                if (*part_exist) {
+                    device_t part_dev;
+                    memcpy(&info->part_info[i], ptr, sizeof(part_record));
+                    DPRINTF(("partition %d exist\n", i + 1));
+                    DPRINTF(("first sector   :%d\n", info->part_info[i].start));
+                    DPRINTF(("size in sectors:%d\n", info->part_info[i].size));
 
-                memcpy(&(info->part_drv[i]), &sdmmc_dev_driver, sizeof(struct driver));
-                info->part_drv[i].name = info->part_dev_name[i];
-                info->part_drv[i].init = NULL; /* Avoid wiping drv_list */
+                    memcpy(&(info->part_drv[i]), &sdmmc_dev_driver, sizeof(struct driver));
+                    info->part_drv[i].name = info->part_dev_name[i];
+                    info->part_drv[i].init = NULL; /* Avoid wiping drv_list */
 
-                part_dev = device_create(&(info->part_drv[i]), info->part_drv[i].name, D_BLK);
-                info->part_dev[i] = part_dev;
+                    part_dev = device_create(&(info->part_drv[i]), info->part_drv[i].name, D_BLK);
+                    info->part_dev[i] = part_dev;
 
-                part_sc = device_private(part_dev);
-                part_sc->ops = ops;
-                part_sc->info = info;
+                    part_sc = device_private(part_dev);
+                    part_sc->ops = ops;
+                    part_sc->info = info;
 
-                info->part_status |= (1 << i);
+                    info->part_status |= (1 << i);
+                }
+                ptr += 16;
             }
-            ptr += 16;
         }
 
         if (info->part_status == 0) {

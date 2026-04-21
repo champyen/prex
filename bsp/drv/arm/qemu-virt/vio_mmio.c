@@ -52,7 +52,12 @@ static int vio_mmio_init(struct driver* self)
 
     printf("VirtIO MMIO scan...\n");
 
-    for (int i = 0; i < 32; i++) {
+    /*
+     * Scan from high to low address to match QEMU's device assignment order.
+     * Ref: https://lists.libreplanet.org/archive/html/qemu-devel/2015-01/msg04406.html
+     * TODO: Implement a robust identification method (e.g. UUID) for real hardware.
+     */
+    for (int i = 31; i >= 0; i--) {
         base = CONFIG_VIO_MMIO_BASE + (i * 0x200);
         magic = bus_read_32(base + VIO_MMIO_MAGIC_ID);
 
