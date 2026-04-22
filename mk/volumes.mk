@@ -17,9 +17,14 @@ all: $(BIN_IMG) $(DISK_IMG)
 $(BIN_IMG): usr
 	@echo "Creating $@ (ARFS)"
 	@rm -rf $(BIN_ROOT)
-	@mkdir -p $(BIN_ROOT)/bin
-	@cp $(sort $(BIN_FILES)) $(BIN_ROOT)/bin/
-	@cd $(BIN_ROOT) && $(AR) rcS $(BIN_IMG) bin/*
+	@mkdir -p $(BIN_ROOT)
+	@for f in $(BIN_FILES); do \
+		if [ -f $$f ]; then cp $$f $(BIN_ROOT)/; \
+		elif [ -f $$f/$(notdir $$f) ]; then cp $$f/$(notdir $$f) $(BIN_ROOT)/; \
+		fi; \
+	done
+	@rm -f $@
+	@cd $(BIN_ROOT) && $(AR) rcS $@ *
 
 $(DISK_IMG): usr sdk
 	@echo "Creating $@ (FATFS)"

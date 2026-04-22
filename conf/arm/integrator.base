@@ -20,7 +20,7 @@ mmu         CACHE
 #
 memory      RAM_SIZE    0x02000000  # RAM Size
 memory		LOADER_TEXT	0x00010000	# Start of boot loader
-memory		KERNEL_TEXT	0x00100000	# Start of kernel
+memory		KERNEL_TEXT	0x00200000	# Start of kernel
 memory		BOOTIMG_BASE	0x00012000	# Location of boot image
 
 #
@@ -46,7 +46,6 @@ options 	BOOTDISK	# Disk for /boot directory
 #
 # General setup
 #
-options 	SNDIO		# Audio server
 options 	POSIX		# POSIX support
 options 	CMDBOX		# Core utilities
 options 	TINY		# Optimize for size
@@ -134,7 +133,7 @@ command 	rmdir
 command 	sh
 command 	sleep
 command 	sync
-#command 	test
+command 	test
 command 	touch
 command 	uname
 command 	wc
@@ -145,6 +144,12 @@ command 	find
 command 	xargs
 command 	tar
 command 	gzip
+command 	dd
+command 	hexdump
+command 	kilo
+command 	nc
+command 	ping
+command 	init
 
 
 #
@@ -156,6 +161,7 @@ command 	pmctrl
 command 	ktrace
 command 	lock
 command 	debug
+
 
 # Math library
 math		fdlibm

@@ -38,7 +38,6 @@ options 	BOOTDISK	# Disk for /boot directory
 #
 # General setup
 #
-options 	SNDIO		# Audio server
 options 	POSIX		# POSIX support
 options 	CMDBOX		# Core utilities
 options 	TINY		# Optimize for size

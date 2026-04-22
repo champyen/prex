@@ -49,7 +49,6 @@ options 	BOOTDISK	# Disk for /boot directory
 #
 # General setup
 #
-options 	SNDIO		# Audio server
 options 	POSIX		# POSIX support
 options 	CMDBOX		# Core utilities
 #options 	TINY		# Optimize for size
@@ -139,7 +138,7 @@ command 	rmdir
 command 	sh
 command 	sleep
 command 	sync
-#command 	test
+command 	test
 command 	touch
 command 	uname
 command 	wc
@@ -150,6 +149,12 @@ command 	find
 command 	xargs
 command 	tar
 command 	gzip
+command 	dd
+command 	hexdump
+command 	kilo
+command 	nc
+command 	ping
+command 	init
 
 #
 # Adminisrative tools
