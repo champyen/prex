@@ -418,7 +418,9 @@ int vio_audio_attach(vaddr_t base, int irq)
     uint32_t status;
 
     sc = kmem_alloc(sizeof(struct vio_audio_softc));
-    if (sc == NULL) return -1;
+    if (sc == NULL) {
+        return -1;
+    }
     memset(sc, 0, sizeof(*sc));
     
     sc->base = base;
@@ -442,25 +444,44 @@ int vio_audio_attach(vaddr_t base, int irq)
     bus_write_32(base + VIO_MMIO_DRV_FEATURE, f0);
 
     bus_write_32(base + VIO_MMIO_PAGE_SIZE, 4096);
+    uint32_t ver = bus_read_32(base + VIO_MMIO_VER);
+
     for (int i = 0; i < VIO_SND_VQ_MAX; i++) {
         bus_write_32(base + VIO_MMIO_QUEUE_SEL, i);
         uint32_t q_max = bus_read_32(base + VIO_MMIO_QUEUE_NUM_MAX);
         if (q_max == 0) continue;
 
-        paddr_t raw_pa = page_alloc(PAGE_SIZE * 2);
-        paddr_t vq_pa = raw_pa;
+        /* Allocate memory for descriptors, avail ring and used ring.
+         * For legacy layout, they are often placed in the same page(s).
+         * We allocate 8KB + 4KB for manual 4KB alignment.
+         */
+        paddr_t raw_pa = page_alloc(8192 + 4096);
+        if (raw_pa == 0) {
+            return -1;
+        }
+        paddr_t vq_pa = (raw_pa + 4095) & ~4095;
         void *vq_mem = ptokv(vq_pa);
-        memset(vq_mem, 0, PAGE_SIZE * 2);
+        memset(vq_mem, 0, 8192);
         
         sc->vqs[i].desc = (struct vring_desc*)vq_mem;
         sc->vqs[i].avail = (struct vring_avail*)((char*)vq_mem + VQ_SIZE * sizeof(struct vring_desc));
-        sc->vqs[i].used = (struct vring_used*)((char*)vq_mem + PAGE_SIZE);
+        sc->vqs[i].used = (struct vring_used*)((char*)vq_mem + 4096);
         sc->vqs[i].last_used_idx = 0;
         sc->vqs[i].next_free = 0;
 
         bus_write_32(base + VIO_MMIO_QUEUE_SIZE, VQ_SIZE);
-        bus_write_32(base + VIO_MMIO_QUEUE_ALIGN, PAGE_SIZE);
-        bus_write_32(base + VIO_MMIO_QUEUE_PFN, (uint32_t)(vq_pa >> 12));
+        if (ver >= 2) {
+            bus_write_32(base + VIO_MMIO_QUEUE_DESC_LOW, (uint32_t)vq_pa);
+            bus_write_32(base + VIO_MMIO_QUEUE_DESC_HIGH, 0);
+            bus_write_32(base + VIO_MMIO_QUEUE_DRV_LOW, (uint32_t)kvtop(sc->vqs[i].avail));
+            bus_write_32(base + VIO_MMIO_QUEUE_DRV_HIGH, 0);
+            bus_write_32(base + VIO_MMIO_QUEUE_DEV_LOW, (uint32_t)kvtop(sc->vqs[i].used));
+            bus_write_32(base + VIO_MMIO_QUEUE_DEV_HIGH, 0);
+            bus_write_32(base + VIO_MMIO_QUEUE_READY, 1);
+        } else {
+            bus_write_32(base + VIO_MMIO_QUEUE_ALIGN, 4096);
+            bus_write_32(base + VIO_MMIO_QUEUE_PFN, (uint32_t)(vq_pa >> 12));
+        }
     }
 
     status |= VIO_STATUS_DRIVER_OK;
@@ -469,6 +490,9 @@ int vio_audio_attach(vaddr_t base, int irq)
     sc->irq_handle = irq_attach(irq, IPL_AUDIO, 0, vio_audio_isr, vio_audio_ist, sc);
 
     paddr_t buf_pa = page_alloc(PAGE_SIZE);
+    if (buf_pa == 0) {
+        return -1;
+    }
     sc->ctrl_req = ptokv(buf_pa);
     sc->resp_hdr = (struct virtio_snd_hdr*)((char*)sc->ctrl_req + 512);
     sc->pcm_status = (struct virtio_snd_pcm_status*)((char*)sc->ctrl_req + 1024);
