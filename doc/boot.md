@@ -13,9 +13,9 @@ The physical and virtual memory layout for each target is defined in its respect
 *   **`KERNEL_TEXT`:** The physical address where the bootloader relocates and loads the kernel (`prex+`). For x86-pc, this is `0x00200000`.
 *   **`SYSPAGE_BASE`:** The virtual address of the system page, which acts as the boundary between user space and kernel space.
 
-## 2. Building the Combined Binary (`prexos`)
+## 2. Building the Combined Binary (`prexos.bin`)
 
-Prex+ uses a multi-server microkernel architecture. The final bootable image, `prexos`, is an amalgamation of the architecture-specific bootloader, the kernel, hardware drivers, core servers, and a RAM disk containing essential user-space programs.
+Prex+ uses a multi-server microkernel architecture. The final bootable image, `prexos.bin`, is an amalgamation of the architecture-specific bootloader, the kernel, hardware drivers, core servers, and a RAM disk containing essential user-space programs.
 
 The combination process is orchestrated by `Makefile` rules, primarily leveraging `ar` (archiver) and `cat`, and is identical across architectures:
 
@@ -29,14 +29,14 @@ The combination process is orchestrated by `Makefile` rules, primarily leveragin
     *   **Contents:** `sys/prex+` (the kernel), `bsp/drv/drv.ko` (the combined driver module), the core servers (`boot`, `proc`, `exec`, `pow`, `fs`), and `bootdisk.a`.
     *   **Command:** `ar rcS tmp.a ...`
 
-3.  **Final Image (`prexos`):**
+3.  **Final Image (`prexos.bin`):**
     Finally, the bootloader executable (`bsp/boot/bootldr`) and the system archive (`tmp.a`) are concatenated into a single binary image.
     *   **Contents:** `bootldr` + `tmp.a`
-    *   **Command:** `cat bsp/boot/bootldr tmp.a > prexos`
+    *   **Command:** `cat bsp/boot/bootldr tmp.a > prexos.bin`
 
-Because `bootldr` is exactly 8KB (padded by its linker script), the system archive (`tmp.a`) always begins at an offset of exactly 8KB (`0x2000`) into the `prexos` file.
+Because `bootldr` is exactly 8KB (padded by its linker script), the system archive (`tmp.a`) always begins at an offset of exactly 8KB (`0x2000`) into the `prexos.bin` file.
 
-For x86, this `prexos` file is then typically copied to a FAT12 floppy image (`floppy.img`). For ARM, it may be placed onto an SD card (e.g., as `kernel.img` for Raspberry Pi) or loaded via U-Boot.
+For x86, this `prexos.bin` file is then typically copied to a FAT12 floppy image (`floppy.img`). For ARM, it may be placed onto an SD card (e.g., as `kernel.img` for Raspberry Pi) or loaded via U-Boot.
 
 ## 3. The Boot Execution Flow
 
@@ -47,7 +47,7 @@ For x86, this `prexos` file is then typically copied to a FAT12 floppy image (`f
     3.  It then jumps to `0x30000`, the entry point of the loaded `PREXOS` image (which is the start of `bootldr`).
 *   **ARM Targets (Firmware / U-Boot):**
     1.  The platform's primary bootloader (e.g., Broadcom GPU firmware on Raspberry Pi, or U-Boot on other boards) initializes the core hardware.
-    2.  It loads the `prexos` binary from the storage medium (like an SD card or over TFTP) into RAM at `LOADER_TEXT`.
+    2.  It loads the `prexos.bin` binary from the storage medium (like an SD card or over TFTP) into RAM at `LOADER_TEXT`.
     3.  Execution is handed over directly to the Prex+ bootloader.
 
 ### Step 2: The Bootloader (`bootldr`)

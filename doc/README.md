@@ -4,6 +4,7 @@
 | Document Name                      | Description                                                  |
 | ---------------------------------- | ------------------------------------------------------------ |
 | [Technology Overview](overview.md) | Gives a quick introduction to the Prex+'s OS components.      |
+| [Source Tree & Volumes](tree.md)    | Describes the source tree and tiered volume strategy.        |
 | [Bootstrap Sequence](boot.md)      | Describes the boot sequence and memory layout of Prex+.       |
 | [Kernel Internals](kernel.md)      | Describes the design and implementation of the Prex+ microkernel. |
 | [Power Management](power.md)       | Describes the Prex+'s power management framework and driver interfaces. |

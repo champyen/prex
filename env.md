@@ -1,6 +1,15 @@
+### Current Support Targets
+* arm-gba (no MMU support)
+* arm-rpi0w
+* arm-qemu-virt
+* x86-pc
+
 ### Build
 1. configure the target (refer ./doc/integrator.md )
-$ ./configure --target=arm-qemu-virt --cross-prefix=arm-none-eabi --enable-mmu
+  * ARM targets
+  $ ./configure --target=YOUR_TARGET --cross-prefix=arm-none-eabi [--enable-mmu]
+  * x86 targets
+  $ ./configure --target=YOUR_TARGET [--enable-mmu]
 
 2. build & clean
 * to build
@@ -12,7 +21,7 @@ $ make clean
 ### QEMU launch command example to get console log
 QEMU command to run Prex on QEMU virt platform and get boot logz:
 $ timeout 15 \
-  qemu-system-arm -M virt -m 256M -kernel prexos -nographic \
+  qemu-system-arm -M virt -m 256M -kernel prexos.bin -nographic \
   -drive if=none,file=disk.img,id=drv0,format=raw -device virtio-blk-device,drive=drv0 \
   -device virtio-sound-device,audiodev=audio0 -audiodev pa,id=audio0 \
   -netdev user,id=net0 -device virtio-net-device,netdev=net0 \

@@ -72,11 +72,11 @@ static char iobuf[BUFSIZ];
  * Base directories at root.
  */
 static char* base_dir[] = {"/bin",     /* applications */
-                           "/boot",    /* system servers */
+                           "/boot",    /* boot init environment */
                            "/dev",     /* device files */
                            "/etc",     /* shareable read-only data */
                            "/mnt",     /* mount point for file systems */
-                           "/private", /* user's private data */
+                           "/usr",     /* mount point for large applications and SDK */
                            "/tmp",     /* temporary files */
                            NULL};
 

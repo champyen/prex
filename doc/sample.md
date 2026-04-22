@@ -18,14 +18,14 @@
 
 ## Introduction
 
-Prex+ includes a number of sample programs for using Prex+ application interface. The source code for these programs are generally found in /usr/sample directory of the Prex+ distribution.
+Prex+ includes a number of sample programs for using Prex+ application interface. The source code for these programs are generally found in /usr/task (RTOS tasks) or /usr/test (POSIX tests) directories of the Prex+ distribution.
 
 This document describes the purpose and the screenshot for each sample program.
 
 ## Hello World
 
 - Task Type: UNIX Process
-- Source Code Directory: /usr/sample/hello
+- Source Code Directory: /usr/test/hello
 - Description: A simple program to print "Hello World!"
 
 ```
@@ -37,7 +37,7 @@ Hello World!
 ## Alarm Timer
 
 - Task Type: Real-time Task
-- Source Code Directory: /usr/sample/alarm
+- Source Code Directory: /usr/task/alarm
 - Description: A sample program to install an alarm handler and to program an alarm timer.
 
 ```
@@ -59,7 +59,7 @@ End...
 ## Moving Balls
 
 - Task Type: Real-time Task
-- Source Code Directory: /usr/sample/balls
+- Source Code Directory: /usr/task/balls
 - Description: A program to create many threads. Each thread displays one ball and moves it in the screen.
 
 ```
@@ -91,7 +91,7 @@ End...
 ## Thread Benchmark
 
 - Task Type: Real-time Task
-- Source Code Directory: /usr/sample/bench
+- Source Code Directory: /usr/task/bench
 - Description: A benchmark program for running many threads
 
 ```
@@ -102,7 +102,7 @@ Complete. The score is 612 msec (612 ticks).
 ## IPC Transmission
 
 - Task Type: Real-time Task
-- Source Code Directory: /usr/sample/ipc
+- Source Code Directory: /usr/task/ipc
 - Description: A sample program for IPC message transmission
 
 ```
@@ -129,7 +129,7 @@ End...
 ## Task Creation
 
 - Task Type: Real-time Task
-- Source Code Directory: /usr/sample/task
+- Source Code Directory: /usr/task/task
 - Description: A sample program to run tasks
 
 ```
@@ -159,7 +159,7 @@ Task 80047d14: Bye!
 ## Thread Creation
 
 - Task Type: Real-time Task
-- Source Code Directory: /usr/sample/thread
+- Source Code Directory: /usr/task/thread
 - Description: A sample program to create three threads
 
 ```
@@ -185,7 +185,7 @@ AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBBBBBBBBBBBBCCCCCCCCCCCCCCAAA
 ## Mutex
 
 - Task Type: Real-time Task
-- Source Code Directory: /usr/sample/mutex
+- Source Code Directory: /usr/task/mutex
 - Description: A sample program for mutex with priority inheritance
 
 ```
@@ -241,7 +241,7 @@ th_2: prio=100
 ## Semaphore
 
 - Task Type: Real-time Task
-- Source Code Directory: /usr/sample/sem
+- Source Code Directory: /usr/task/sem
 - Description: A sample program for semaphore. This sample demonstrates that 10 threads try to aquire one semaphore which has initial sempaphore count = 3.
 
 ```
@@ -275,7 +275,7 @@ Running thread=8001fbe4
 ## CPU Voltage Monitor
 
 - Task Type: Real-time Task
-- Source Code Directory: /usr/sample/cpumon
+- Source Code Directory: /usr/task/cpumon
 - Description: CPU voltage monitoring program
 
 ```

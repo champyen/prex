@@ -149,12 +149,12 @@ The method to install an OS image depends on the target platform. It may be desc
 
 ### OS Image
 
-If you compile the Prex+ source with the "make" command, the OS boot image is created as "prexos" in the root directory. The file "prexos" must exist in the root directory of the Prex+ disk/ROM. You can test your own Prex+ image by replacing the "prexos" in the OS boot image. The file "prexos" includes the following files.
+If you compile the Prex+ source with the "make" command, the following OS images are created in the root directory:
 
-- Boot loader
-- Kernel module
-- Driver module
-- Boot task(s)
+- **prexos.bin**: The primary boot volume (ARFS). It includes the boot loader, kernel module, driver module, and essential system servers and utilities.
+- **prexos_full.bin**: Similar to `prexos.bin` but includes all POSIX utilities and RTOS tasks in its internal RAM disk (bootdisk).
+- **bin.img**: The secondary volume (ARFS) mounted at `/bin`. It contains the majority of user-mode POSIX utilities and RTOS tasks.
+- **disk.img**: The tertiary volume (FATFS) mounted at `/usr`. It contains large applications (like SQLite, TinyCC) and the Prex SDK.
 
 ### Directory Organization
 
@@ -162,8 +162,9 @@ The structure of the Prex+ source directory is as follows:
 
 ```
  /conf			System configuration files
+    /etc        Volume and task configuration (files.mk, bin_vol.mk, usr_vol.mk)
 
- /mk			Common Makefiles
+ /mk			Common Makefiles and volume generation logic
 
  /include		Common include files
 
@@ -182,13 +183,15 @@ The structure of the Prex+ source directory is as follows:
 
  /usr			User mode programs
 	/arch		Architecture dependent code
-	/bin		User command binaries
+	/posix      Standalone POSIX utilities and cmdbox
+        /cmdbox Combox multi-call binary and "Slim Core" sources
 	/include	Header files
 	/lib		User libraries
 	/server		System servers
-	/sbin		System utilities
-	/test		Functional test programs
-	/sample		Sample programs
+	/task		RTOS/Real-time task programs
+	/test		Functional and audio test programs
+
+ /sdk           Generated Prex SDK directory (populated during build)
 
  configure ... Configuration script
 
@@ -230,8 +233,29 @@ options         MAXMEM=16777216           # Max core per task
 ...
 ```
 
-**Note:** You must re-run the `./configure` script after changing any options in the platform configuration file to regenerate the header files.
+**Note:** You must re-run the `./configure` script after changing any options in the platform configuration file to regenerate the header files and `conf/config.mk`.
 
+
+### Configuring Volume Contents
+
+Prex+ uses three configuration files in `/conf/etc/` to manage the content of each tiered volume:
+
+- **files.mk**: Defines files included in the primary boot volumes (`prexos.bin` and `prexos_full.bin`). Files listed in the `FILES` variable are packed into the core `bootdisk.a`.
+- **bin_vol.mk**: Defines files included in the secondary binary volume (`bin.img`). Files listed in `BIN_FILES` are also included in `prexos_full.bin`.
+- **usr_vol.mk**: Defines files included in the tertiary user volume (`disk.img`), such as large applications and the SDK.
+
+### Conditional Command Compilation
+
+Individual commands and utilities can be enabled or disabled via `CONFIG_CMD_XXX` flags in the target platform configuration file (e.g., `conf/arm/qemu-virt.base`).
+
+To add or remove a command:
+1.  Add or comment out the `command` entry in your platform's `.base` file:
+    ```
+    command     ls
+    #command    tetris
+    ```
+2.  Re-run `./configure` to update the build environment.
+3.  The build system will automatically include or exclude the corresponding source directories during the `make` process.
 
 ### Changing Boot Tasks
 

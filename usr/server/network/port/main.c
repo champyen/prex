@@ -61,7 +61,7 @@ static void ip_monitor(void *arg) {
             sprintf(log_buf, "network: IP bound: %d.%d.%d.%d\n",
                     (int)(ip & 0xff), (int)((ip >> 8) & 0xff),
                     (int)((ip >> 16) & 0xff), (int)((ip >> 24) & 0xff));
-            sys_log(log_buf);
+            //sys_log(log_buf);
 
             /* Log DNS servers */
             for (int n = 0; n < DNS_MAX_SERVERS; n++) {
@@ -71,7 +71,7 @@ static void ip_monitor(void *arg) {
                     sprintf(log_buf, "network: DNS server %d: %d.%d.%d.%d\n", n,
                             (int)(dns_ip & 0xff), (int)((dns_ip >> 8) & 0xff),
                             (int)((dns_ip >> 16) & 0xff), (int)((dns_ip >> 24) & 0xff));
-                    sys_log(log_buf);
+                    //sys_log(log_buf);
                 }
             }
             break;
@@ -84,7 +84,7 @@ int main(int argc, char **argv) {
     sys_sem_t init_sem;
     struct net_msg m;
 
-    sys_log("Network server starting...\n");
+    //sys_log("Network server starting...\n");
 
     if (object_create(OBJNAME_NETWORK, &net_obj) != 0) {
         fprintf(stderr, "network: failed to create object\n");
@@ -97,17 +97,17 @@ int main(int argc, char **argv) {
     sys_sem_free(&init_sem);
 
     if (netif_add(&prex_netif, NULL, NULL, NULL, NULL, prex_netif_init, tcpip_input) == NULL) {
-        sys_log("network: failed to add netif\n");
+        //sys_log("network: failed to add netif\n");
         return 1;
     }
     netif_set_default(&prex_netif);
 
     netif_set_up(&prex_netif);
 
-    sys_log("network: starting DHCP...\n");
+    //sys_log("network: starting DHCP...\n");
     dhcp_start(&prex_netif);
 
-    sys_log("Network server initialized\n");
+    //sys_log("Network server initialized\n");
 
     sys_thread_new("ip_monitor", ip_monitor, NULL, 4096, 0);
 

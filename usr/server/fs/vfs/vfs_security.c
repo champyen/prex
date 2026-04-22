@@ -62,14 +62,6 @@
  *   is required to modify /etc. The system configurator has
  *   responsible to modify the contents in /etc.
  *
- * /private
- *
- *   This is the restricted system area and is inaccessible to
- *   the normal processes. It contains private user data like
- *   address book or calendar entries. CAP_USERFILES
- *   capability is required to access to the /private
- *   contents. The PIM application will have CAP_USERFILES.
- *
  * /all the rest
  *
  *   Access to all the other directories is unrestricted.
@@ -85,7 +77,7 @@
  *
  *  /etc       Any            CAP_SYSFILES   Not Allowed
  *
- *  /private   CAP_USERFILES  CAP_USERFILES  Not Allowed
+ *  /usr       Any            Any            Any
  *
  *  /other     Any            Any            Not Allowed
  *
@@ -127,7 +119,6 @@ static const struct fscap_map fscap_table[] = {
     {"/boot/", 6, CAP_SYSFILES, ACC_NG, ACC_OK},
     {"/bin/", 5, ACC_OK, CAP_SYSFILES, ACC_OK},
     {"/etc/", 5, ACC_OK, CAP_SYSFILES, ACC_NG},
-    {"/private/", 9, CAP_USERFILES, CAP_USERFILES, ACC_NG},
     {"/usr/", 5, ACC_OK, ACC_OK, ACC_OK},
     {NULL, 0, 0, 0, 0},
 };

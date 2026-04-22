@@ -14,4 +14,7 @@ SUBDIR+=	errno malloc stderr environ
 SUBDIR+=	fileio fork forkbomb args signal fifo pipe dup creat conf \
 		mount umount shutdown truncate_bug
 
+# Test for audio
+SUBDIR+=	beep sndio_test hello
+
 include $(SRCDIR)/mk/subdir.mk

@@ -18,14 +18,14 @@ TASKS+= 	$(SRCDIR)/usr/server/sndio/sndiod
 endif
 endif
 
-#TASKS+= 	$(SRCDIR)/usr/sample/alarm/alarm.rt
-#TASKS+= 	$(SRCDIR)/usr/sample/bench/bench.rt
-#TASKS+= 	$(SRCDIR)/usr/sample/ipc/ipc.rt
-#TASKS+= 	$(SRCDIR)/usr/sample/mutex/mutex.rt
-#TASKS+= 	$(SRCDIR)/usr/sample/sem/sem.rt
-#TASKS+= 	$(SRCDIR)/usr/sample/task/task.rt
-#TASKS+= 	$(SRCDIR)/usr/sample/thread/thread.rt
-#TASKS+= 	$(SRCDIR)/usr/sample/balls/balls.rt
+#TASKS+= 	$(SRCDIR)/usr/task/alarm/alarm.rt
+#TASKS+= 	$(SRCDIR)/usr/task/bench/bench.rt
+#TASKS+= 	$(SRCDIR)/usr/task/ipc/ipc.rt
+#TASKS+= 	$(SRCDIR)/usr/task/mutex/mutex.rt
+#TASKS+= 	$(SRCDIR)/usr/task/sem/sem.rt
+#TASKS+= 	$(SRCDIR)/usr/task/task/task.rt
+#TASKS+= 	$(SRCDIR)/usr/task/thread/thread.rt
+#TASKS+= 	$(SRCDIR)/usr/task/balls/balls.rt
 
 #TASKS+= 	$(SRCDIR)/usr/test/console/console.rt
 #TASKS+= 	$(SRCDIR)/usr/test/deadlock/deadlock.rt
@@ -49,7 +49,6 @@ endif
 #TASKS+= 	$(SRCDIR)/usr/test/zero/zero.rt
 
 #TASKS+= 	$(SRCDIR)/usr/test/cpufreq/cpufreq.rt
-#TASKS+= 	$(SRCDIR)/usr/sample/cpumon/cpumon.rt
+#TASKS+= 	$(SRCDIR)/usr/task/cpumon/cpumon.rt
 
-#TASKS+= 	$(SRCDIR)/usr/server/fs/fs
 #TASKS+= 	$(SRCDIR)/usr/test/fileio/fileio.rt

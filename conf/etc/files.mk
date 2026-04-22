@@ -4,57 +4,27 @@
 
 ifeq ($(CONFIG_POSIX),y)
 
-FILES+= 	$(SRCDIR)/usr/sbin/init/init
+FILES+= 	$(SRCDIR)/usr/posix/init/init
 FILES+= 	$(SRCDIR)/conf/etc/rc
 FILES+= 	$(SRCDIR)/conf/etc/fstab
 
 ifeq ($(CONFIG_CMDBOX),y)
-FILES+= 	$(SRCDIR)/usr/bin/cmdbox/cmdbox
+FILES+= 	$(SRCDIR)/usr/posix/cmdbox/cmdbox/cmdbox
 endif
 
 #FILES+= 	$(SRCDIR)/usr/bin/tcc/tcc
 
-ifeq ($(CONFIG_CMD_KTRACE),y)
-FILES+= 	$(SRCDIR)/usr/sbin/ktrace/ktrace
-endif
-
-ifeq ($(CONFIG_CMD_DISKUTIL),y)
-FILES+= 	$(SRCDIR)/usr/sbin/diskutil/diskutil
-endif
-
-ifeq ($(CONFIG_CMD_INSTALL),y)
-FILES+= 	$(SRCDIR)/usr/sbin/install/install
-endif
-
-ifeq ($(CONFIG_CMD_PMCTRL),y)
-FILES+= 	$(SRCDIR)/usr/sbin/pmctrl/pmctrl
-endif
-
-ifeq ($(CONFIG_CMD_LOCK),y)
-FILES+= 	$(SRCDIR)/usr/sbin/lock/lock
-endif
-
-ifeq ($(CONFIG_CMD_DEBUG),y)
-FILES+=         $(SRCDIR)/usr/sbin/debug/debug
-endif
-
 ifeq ($(CONFIG_NET),y)
-FILES+=         $(SRCDIR)/usr/sbin/ifconfig/ifconfig
 endif
 
 
 ifeq ($(CONFIG_SNDIO),y)
-FILES+=		$(SRCDIR)/usr/server/sndio/sndiod
+#FILES+=		$(SRCDIR)/usr/server/sndio/sndiod
 #FILES+=		$(SRCDIR)/usr/sample/beep/beep
-FILES+=		$(SRCDIR)/usr/sample/sndio_test/sndio_test
-FILES+=		$(SRCDIR)/usr/sample/playwav/playwav
-FILES+=		$(SRCDIR)/usr/sample/helixmp3/helixmp3
 endif
 
 ifneq ($(_QUICK_),1)
 ifneq ($(CONFIG_TINY),y)
-FILES+=		$(SRCDIR)/usr/sample/hello/hello
-FILES+=		$(SRCDIR)/usr/sample/tetris/tetris
 endif
 endif
 

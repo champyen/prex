@@ -32,7 +32,7 @@ ifeq ($(CONFIG_SDK),y)
 	mkdir -p $(SDK_INC)/conf && cp $(SRCDIR)/conf/config.h $(SDK_INC)/conf/
 	# Copy examples
 	mkdir -p $(SDK_EXAMPLES)/hello
-	cp $(SRCDIR)/usr/sample/hello/hello.c $(SDK_EXAMPLES)/hello/main.c
+	cp $(SRCDIR)/usr/test/hello/hello.c $(SDK_EXAMPLES)/hello/main.c
 	# Create sdk/share/mk/sys.mk
 	mkdir -p $(SDK_DIR)/share/mk
 	@echo ".SUFFIXES: .out .a .ln .o .c .cc .C .cpp .p .f .F .r .y .l .s .S .cl .p .h .sh .m4" > $(SDK_DIR)/share/mk/sys.mk
@@ -98,12 +98,12 @@ ifeq ($(CONFIG_SDK),y)
 	@echo "clean:" >> $(SDK_EXAMPLES)/hello/Makefile
 	@echo "	rm -f \$$(TARGET) \$$(OBJS)" >> $(SDK_EXAMPLES)/hello/Makefile
 	# Build and copy tinycc to sdk/bin
-	make -C usr/sample/tinycc SRCDIR=$(SRCDIR)
+	make -C usr/posix/tinycc SRCDIR=$(SRCDIR)
 	# Build and copy make to sdk/bin
-	make -C usr/sample/make SRCDIR=$(SRCDIR)
+	make -C usr/posix/make SRCDIR=$(SRCDIR)
 	mkdir -p $(SDK_DIR)/bin
-	cp usr/sample/tinycc/tcc $(SDK_DIR)/bin/tcc
-	cp usr/sample/make/make $(SDK_DIR)/bin/make
+	cp usr/posix/tinycc/tcc $(SDK_DIR)/bin/tcc
+	cp usr/posix/make/make $(SDK_DIR)/bin/make
 	# Copy libtcc1.a to sdk/lib/tcc/
 	mkdir -p $(SDK_DIR)/lib/tcc/include
 	cp ../tinycc/arm-none-eabi-libtcc1.a $(SDK_DIR)/lib/tcc/libtcc1.a

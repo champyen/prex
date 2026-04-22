@@ -44,6 +44,5 @@
 #define _PATH_TTY "/dev/tty"
 #define _PATH_DEV "/dev/"
 #define _PATH_TMP "/tmp/"
-#define _PATH_PASSWD "/private/passwd"
 
 #endif /* !_PATHS_H_ */

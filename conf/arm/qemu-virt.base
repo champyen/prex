@@ -49,6 +49,7 @@ options 	BOOTDISK	# Disk for /boot directory
 #
 options 	SNDIO		# Audio server
 options 	POSIX		# POSIX support
+options 	NET		    # Network support
 options 	CMDBOX		# Core utilities
 #options 	TINY		# Optimize for size
 
@@ -71,7 +72,6 @@ options 	DEVFS		# Device file system
 options 	RAMFS		# RAM file system
 options 	ARFS		# Archive file system
 options 	FATFS		# FAT file system
-options 	NET		# Network support
 
 #
 # Power management
@@ -139,34 +139,35 @@ command 	rmdir
 command 	sh
 command 	sleep
 command 	sync
-#command 	test
+command 	test
 command 	touch
 command 	uname
-#command 	wc
+command 	wc
 command 	grep
 command 	ping
 command 	nc
 command 	kilo
 command 	tail
-#command 	sort
+command 	sort
 command 	find
 command 	xargs
-#command 	tar
-#command 	gzip
+command 	tar
+command 	gzip
+command 	tetris
+command 	init
 
 #
 # Adminisrative tools
 #
 command 	diskutil
-command 	install
 command 	pmctrl
 command 	ktrace
-command 	lock
 command 	debug
 
 # Math library
 math		fdlibm
 
 # Extra samples
-#options	SQLITE
-#options	SDK
+#options 	SQLITE
+#options 	SDK
+

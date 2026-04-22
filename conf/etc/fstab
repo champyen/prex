@@ -7,6 +7,7 @@ none		/		ramfs
 none		/dev		devfs
 none		/mnt/fifo	fifofs
 /dev/vd0p1	/usr		fatfs
+/dev/vd1p1	/bin		arfs
 #/dev/vd0p2	/data		fatfs
 #/dev/sdmmc0p1	/mnt/sdcard	fatfs
 #/dev/fd0	/mnt/floppy	fatfs
