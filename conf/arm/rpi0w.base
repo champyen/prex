@@ -84,8 +84,8 @@ device		bcm2835_dma	# BCM2835 DMA controller
 device		cons		# System console
 device		serial		# Logical serial
 device  	pl011		# ARM PrimeCell PL011 UART (P:serial)
-#device		sdmmc		# SD/MMC stack
-#device		bcm2835_sd	# BCM2835 SDHost controller
+device		sdmmc		# SD/MMC stack
+device		bcm2835_sd	# BCM2835 SDHost controller
 device		null		# NULL device
 device		zero		# Zero device
 device		ramdisk		# RAM disk

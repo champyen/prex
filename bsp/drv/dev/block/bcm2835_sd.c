@@ -372,14 +372,6 @@ static int bcm_sd_xmit(struct sdmmc_devinfo* info, char* buf, size_t nbyte)
     }
 #endif
 
-    /* Wait for transfer end */
-#if BCM2835_SD_BUSY_WAIT
-    retry = 1000000;
-    while (!(bus_read_32(SDHSTS) & (SDHSTS_BLOCK | SDHSTS_DATA)) && --retry > 0)
-        ;
-#else
-    error = bcm_sd_wait_int(SDHSTS_BLOCK | SDHSTS_DATA, 1000);
-#endif
     sched_unlock();
     return error;
 }
@@ -425,17 +417,6 @@ static int bcm_sd_recv(struct sdmmc_devinfo* info, char* buf, size_t nbyte)
     }
 #endif
 
-    /* Wait for transfer end */
-#if BCM2835_SD_BUSY_WAIT
-    retry = 1000000;
-    while (!(bus_read_32(SDHSTS) & (SDHSTS_BLOCK | SDHSTS_DATA)) && --retry > 0)
-        ;
-    if (retry == 0) {
-        DPRINTF(("%s timeout ################", __func__));
-    }
-#else
-    error = bcm_sd_wait_int(SDHSTS_BLOCK | SDHSTS_DATA, 1000);
-#endif
     sched_unlock();
     return error;
 }
