@@ -44,21 +44,23 @@
 
 #define SYSCALL0(name)                                                                                                 \
     .global name;                                                                                                      \
+    .type name, %function;                                                                                             \
     .align;                                                                                                            \
     name## : stmfd sp !, {r4, r5, lr};                                                                                 \
     mov r4, #SYS_##name;                                                                                               \
     ldr r5, = 0x200007c;                                                                                               \
     add lr, pc, #2;                                                                                                    \
-    mov pc, r5;                                                                                                        \
+    bx r5;                                                                                                        \
     ldmfd sp !, {r4, r5, pc};
 
 #else
 
 #define SYSCALL0(name)                                                                                                 \
     .global name;                                                                                                      \
+    .type name, %function;                                                                                             \
     .align;                                                                                                            \
     name## : swi #SYS_##name;                                                                                          \
-    mov pc, lr
+    bx lr
 
 #endif
 

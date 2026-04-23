@@ -75,7 +75,7 @@ ENTRY(setjmp)
 	/* Store integer registers */
         stmia	r0, {r4-r14}
         mov	r0, #0x00000000
-        mov	r15, r14
+        bx	lr
 
 .Lsetjmp_magic:
 	.word	_JB_MAGIC_SETJMP
@@ -126,9 +126,9 @@ ENTRY(longjmp)
 	teq	r0, #0x00000000
 	moveq	r0, #0x00000001
 #ifdef __ARM_26__
-	mov	r15, r14
+	bx	lr
 #else
-	mov	r15, r14
+	bx	lr
 #endif
 
 	/* validation failed, die die die. */

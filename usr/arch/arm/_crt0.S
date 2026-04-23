@@ -47,6 +47,7 @@
  */
         .text
         .global _start
+        .type _start, %function
 _start:
         ldr     r0, [sp], #4            /* Get argc */
         mov     r1, sp                  /* Get argv */

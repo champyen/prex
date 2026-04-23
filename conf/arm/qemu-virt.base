@@ -51,6 +51,7 @@ options 	SNDIO		# Audio server
 options 	POSIX		# POSIX support
 options 	NET		    # Network support
 options 	CMDBOX		# Core utilities
+options 	USR_THUMB	# Thumb mode for user programs
 #options 	TINY		# Optimize for size
 
 #

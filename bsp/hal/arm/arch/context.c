@@ -101,6 +101,10 @@ void context_set(context_t ctx, int type, register_t val)
         /* User mode program counter */
         u = ctx->uregs;
         u->cpsr = PSR_APP_MODE; /* FIQ/IRQ is enabled */
+        if (val & 1) {
+            u->cpsr |= PSR_THUMB;
+            val &= ~1UL;
+        }
         u->pc = (uint32_t)val;
         u->lr = 0x12345678;
         break;

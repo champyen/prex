@@ -31,6 +31,14 @@ ifeq ($(_STRICT_),1)
 CFLAGS+=	-Werror
 endif
 
+ifeq ($(ARCH),arm)
+ifneq ($(_KERNEL_),1)
+ifeq ($(CONFIG_USR_THUMB),y)
+CFLAGS+=	-mthumb
+endif
+endif
+endif
+
 ifdef LDSCRIPT
 LDFLAGS+=	-T $(LDSCRIPT)
 endif

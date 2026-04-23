@@ -433,7 +433,7 @@ ENTRY(cpu_switch)
  */
 ENTRY(kernel_thread_entry)
 	mov	r0, r5			/* Set argument */
-	mov	pc, r4			/* Jump to kernel thread */
+	bx	r4			/* Jump to kernel thread */
 1:
 	b	1b
 
