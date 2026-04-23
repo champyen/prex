@@ -50,9 +50,7 @@ static void odoffset __P((int, char ***));
 static void odprecede __P((void));
 
 void
-oldsyntax(argc, argvp)
-	int argc;
-	char ***argvp;
+oldsyntax(int argc, char ***argvp)
 {
 	extern enum _vflag vflag;
 	extern FS *fshead;
@@ -153,9 +151,7 @@ oldsyntax(argc, argvp)
 }
 
 static void
-odoffset(argc, argvp)
-	int argc;
-	char ***argvp;
+odoffset(int argc, char ***argvp)
 {
 	extern off_t skip;
 	register char *num, *p;

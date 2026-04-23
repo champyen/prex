@@ -48,8 +48,7 @@ static char sccsid[] = "@(#)parse.c	8.1 (Berkeley) 6/6/93";
 FU *endfu;					/* format at end-of-data */
 
 void
-addfile(name)
-	char *name;
+addfile(char *name)
 {
 	register char *p;
 	FILE *fp;
@@ -74,8 +73,7 @@ addfile(name)
 }
 
 void
-add(fmt)
-	char *fmt;
+add(char *fmt)
 {
 	register char *p;
 	static FS **nextfs;
@@ -149,8 +147,7 @@ add(fmt)
 static char *spec = ".#-+ 0123456789";
 
 int
-size(fs)
-	FS *fs;
+size(FS *fs)
 {
 	register FU *fu;
 	register int bcnt, cursize;
@@ -203,8 +200,7 @@ size(fs)
 }
 
 void
-rewrite(fs)
-	FS *fs;
+rewrite(FS *fs)
 {
 	enum { NOTOKAY, USEBCNT, USEPREC } sokay;
 	register PR *pr, **nextpr;
@@ -437,8 +433,7 @@ isint2:					switch(fu->bcnt) {
 }
 
 void
-escape(p1)
-	register char *p1;
+escape(char *p1)
 {
 	register char *p2;
 
@@ -480,28 +475,25 @@ escape(p1)
 }
 
 void
-badcnt(s)
-	char *s;
+badcnt(char *s)
 {
 	hd_err("%s: bad byte count", s);
 }
 
 void
-badsfmt()
+badsfmt(void)
 {
 	hd_err("%%s: requires a precision or a byte count\n");
 }
 
 void
-badfmt(fmt)
-	char *fmt;
+badfmt(char *fmt)
 {
 	hd_err("\"%s\": bad format\n", fmt);
 }
 
 void
-badconv(ch)
-	char *ch;
+badconv(char *ch)
 {
 	hd_err("%%%s: bad conversion character\n", ch);
 }

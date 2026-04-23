@@ -109,9 +109,7 @@ display()
 }
 
 static inline void
-print(pr, bp)
-	PR *pr;
-	u_char *bp;
+print(PR *pr, u_char *bp)
 {
 	   double f8;
 	    float f4;
@@ -201,8 +199,7 @@ print(pr, bp)
 }
 
 void
-bpad(pr)
-	PR *pr;
+bpad(PR *pr)
 {
 	static char *spec = " -0+#";
 	register char *p1, *p2;
@@ -222,7 +219,7 @@ bpad(pr)
 static char **_argv;
 
 u_char *
-get()
+get(void)
 {
 	extern enum _vflag vflag;
 	extern int length;
@@ -293,8 +290,7 @@ get()
 extern off_t skip;			/* bytes to skip */
 
 int
-next(argv)
-	char **argv;
+next(char **argv)
 {
 	extern int exitval;
 	static int done;
@@ -330,9 +326,7 @@ next(argv)
 }
 
 void
-doskip(fname, statok)
-	char *fname;
-	int statok;
+doskip(char *fname, int statok)
 {
 	register int cnt;
 	struct stat sb;
@@ -361,8 +355,7 @@ doskip(fname, statok)
 }
 
 void *
-emalloc(size)
-	int size;
+emalloc(int size)
 {
 	void *p;
 
@@ -373,7 +366,7 @@ emalloc(size)
 }
 
 void
-nomem()
+nomem(void)
 {
 	hd_err("%s", strerror(errno));
 }

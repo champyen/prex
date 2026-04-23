@@ -47,9 +47,7 @@ static char sccsid[] = "@(#)hexsyntax.c	8.2 (Berkeley) 5/4/95";
 off_t skip;				/* bytes to skip */
 
 void
-newsyntax(argc, argvp)
-	int argc;
-	char ***argvp;
+newsyntax(int argc, char ***argvp)
 {
 	extern enum _vflag vflag;
 	extern FS *fshead;

@@ -42,9 +42,7 @@ static char sccsid[] = "@(#)conv.c	8.1 (Berkeley) 6/6/93";
 #include "hexdump.h"
 
 void
-conv_c(pr, p)
-	PR *pr;
-	u_char *p;
+conv_c(PR *pr, u_char *p)
 {
 	extern int deprecated;
 	char buf[10], *str;
@@ -93,9 +91,7 @@ strpr:		*pr->cchar = 's';
 }
 
 void
-conv_u(pr, p)
-	PR *pr;
-	u_char *p;
+conv_u(PR *pr, u_char *p)
 {
 	extern int deprecated;
 	static char *list[] = {
