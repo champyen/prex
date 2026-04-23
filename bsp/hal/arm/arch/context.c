@@ -157,8 +157,8 @@ void context_save(context_t ctx)
 
     ctx->saved_regs = sav;
 
-    /* Adjust stack pointer */
-    cur->sp = (uint32_t)sav - sizeof(uint32_t);
+    /* Adjust stack pointer (8-byte aligned for AAPCS) */
+    cur->sp = (uint32_t)sav - 8;
 }
 
 /*

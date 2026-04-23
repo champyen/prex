@@ -20,23 +20,23 @@ SECTIONS
 		*(.glue_7t)
 	} : text = 0xff
 
-	. = ALIGN(4);
+	. = ALIGN(8);
 	.rodata : {
 		*(.rodata)
 		*(.rodata.*)
 	} : text
 
-	.data ALIGN(4) : {
+	.data ALIGN(8) : {
 		*(.data)
 	} : data = 0xff
 
-	. = ALIGN(4);
+	. = ALIGN(8);
 	__bss = . ;
 	.bss .    : {
 		*(.bss)
 		*(COMMON)
 	}
-	. = ALIGN(4);
+	. = ALIGN(8);
 	__end = . ;
 
 	/DISCARD/ : { *(.comment .note .ARM.*) }

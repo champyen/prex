@@ -84,6 +84,7 @@ struct cpu_regs
     uint32_t svc_sp; /* +64 (40) */
     uint32_t svc_lr; /* +68 (44) */
     uint32_t pc;     /* +72 (48) */
+    uint32_t pad;    /* +76 (4C) */
 };
 
 /*
@@ -140,6 +141,6 @@ typedef struct context* context_t; /* context id */
 #define REG_SVCLR 0x44
 #define REG_PC 0x48
 
-#define CTXREGS (4 * 19)
+#define CTXREGS (4 * 20)
 
 #endif /* !_ARM_ARCH_H */

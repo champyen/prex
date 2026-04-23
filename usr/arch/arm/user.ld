@@ -16,7 +16,7 @@ SECTIONS
 		*(.glue_7t)
 	} : text = 0xff
 
-	. = ALIGN(4);
+	. = ALIGN(8);
 	.rodata : {
 		*(.rodata)
 		*(.rodata.*)
@@ -27,7 +27,7 @@ SECTIONS
 		*(.data)
 	} : data
 
-	. = ALIGN(4);
+	. = ALIGN(8);
 	.bss .  : {
 		*(.bss)
 		*(COMMON)

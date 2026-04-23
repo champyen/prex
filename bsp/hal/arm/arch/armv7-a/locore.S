@@ -291,7 +291,7 @@ ENTRY(interrupt_entry)
 
 	mov	r1, sp			/* r1: svc_sp */
 	mov	r2, lr			/* r2: svc_lr */
-	stmfd	sp!, {r0-r3}		/* Push cpsr, svc_sp, svc_lr, pc */
+	stmfd	sp!, {r0-r3, r12}	/* Push cpsr, svc_sp, svc_lr, pc + dummy */
 	ldmfd	r4, {r0-r4}		/* Restore work registers */
 	sub	sp, sp, #(4*15)
 	stmia	sp, {r0-r14}^		/* Push r0-r14 */
@@ -356,9 +356,9 @@ ENTRY(syscall_entry)
 	bic	r5, r5, #0xc0
 	msr	cpsr_c, r5
 
-	stmfd	sp!, {r4}
+	stmfd	sp!, {r4, r5}
 	bl	syscall_handler		/* System call dispatcher */
-	ldmfd	sp!, {r4}
+	ldmfd	sp!, {r4, r5}
 
 	cmp	r4, #0			/* Skip storing error if exception_return */
 	strne	r0, [sp]		/* Set return value to r0 */
@@ -469,7 +469,7 @@ ENTRY(kernel_thread_entry)
 	.global known_fault1
 ENTRY(copyin)
  	mov	r12, sp
- 	stmdb	sp!, {r4, r11, r12, lr, pc}
+ 	stmdb	sp!, {r4, r5, r11, r12, lr, pc}
  	sub	r11, r12, #4
 	cmp	r0, #(USERLIMIT)
 	bhi	copy_fault
@@ -484,7 +484,7 @@ known_fault1:				/* May be fault here */
 	subs	r2, r2, #1
  	bcs	1b
 	mov	r0, #0			/* Set no error */
- 	ldmia	sp, {r4, r11, sp, pc}
+ 	ldmia	sp, {r4, r5, r11, sp, pc}
 
 /*
  * Copy data to user from kernel space.
@@ -495,7 +495,7 @@ known_fault1:				/* May be fault here */
 	.global known_fault2
 ENTRY(copyout)
  	mov	r12, sp
- 	stmdb	sp!, {r4, r11, r12, lr, pc}
+ 	stmdb	sp!, {r4, r5, r11, r12, lr, pc}
  	sub	r11, r12, #4
 	cmp	r1, #(USERLIMIT)
 	bhi	copy_fault
@@ -510,7 +510,7 @@ known_fault2:				/* May be fault here */
 	subs	r2, r2, #1
  	bcs	1b
 	mov	r0, #0			/* Set no error */
- 	ldmia	sp, {r4, r11, sp, pc}
+ 	ldmia	sp, {r4, r5, r11, sp, pc}
 
 /*
  * copyinstr - Copy string from user space.
@@ -521,7 +521,7 @@ known_fault2:				/* May be fault here */
 	.global known_fault3
 ENTRY(copyinstr)
  	mov	r12, sp
- 	stmdb	sp!, {r4, r11, r12, lr, pc}
+ 	stmdb	sp!, {r4, r5, r11, r12, lr, pc}
  	sub	r11, r12, #4
 	cmp	r0, #(USERLIMIT)
 	bhi	copy_fault
@@ -542,14 +542,14 @@ known_fault3:				/* May be fault here */
 3:
 	mov	r0, #0			/* Set no error */
 4:
- 	ldmia	sp, {r4, r11, sp, pc}
+ 	ldmia	sp, {r4, r5, r11, sp, pc}
 
 /*
  * Fault entry for user access
  */
 ENTRY(copy_fault)
 	mov	r0, #(EFAULT)
- 	ldmia	sp, {r4, r11, sp, pc}
+ 	ldmia	sp, {r4, r5, r11, sp, pc}
 
 
 /*
