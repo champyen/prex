@@ -127,6 +127,7 @@ struct driver bcm2835_dma_driver = {
     /* shutdown */ NULL,
 };
 
+__isr
 static int dma_isr(void* arg)
 {
     struct dma* dma = (struct dma*)arg;

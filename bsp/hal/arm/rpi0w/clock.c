@@ -76,6 +76,8 @@
  * Clock interrupt service routine.
  * No H/W reprogram is required.
  */
+
+__isr
 static int clock_isr(void* arg)
 {
     splhigh();
@@ -130,6 +132,8 @@ void clock_init(void)
 #define STIMER_C2 (*(volatile uint32_t*)(STIMER_BASE + 0x14))
 #define STIMER_C3 (*(volatile uint32_t*)(STIMER_BASE + 0x18))
 
+
+__isr
 static int clock_isr(void* arg)
 {
     splhigh();

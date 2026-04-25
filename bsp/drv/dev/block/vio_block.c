@@ -131,6 +131,7 @@ struct driver vio_block_driver = {
     /* shutdown */ NULL,
 };
 
+__isr
 static int vio_blk_isr(void* arg)
 {
     struct vio_blk_softc* sc = arg;

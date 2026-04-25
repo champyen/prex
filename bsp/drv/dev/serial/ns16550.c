@@ -142,6 +142,7 @@ static void ns16550_set_poll(struct serial_port* sp, int on)
     }
 }
 
+__isr
 static int ns16550_isr(void* arg)
 {
     struct serial_port* sp = arg;

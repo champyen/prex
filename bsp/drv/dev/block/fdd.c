@@ -376,6 +376,7 @@ static void fdc_timeout(void* arg)
  * Interrupt service routine
  * Do not change the fdc_stat in isr.
  */
+__isr
 static int fdc_isr(void* arg)
 {
     struct fdd_softc* sc = arg;

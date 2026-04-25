@@ -215,6 +215,7 @@ again:
 /*
  * Interrupt service routine
  */
+__isr
 static int pckbd_isr(void* arg)
 {
     struct pckbd_softc* sc = arg;

@@ -183,6 +183,7 @@ static void pl011_ist(void* arg)
     bus_write_32(UART_IMSC, (IMSC_RX | IMSC_TX | IMSC_RT));
 }
 
+__isr
 static int pl011_isr(void* arg)
 {
     uint32_t mis = bus_read_32(UART_MIS);

@@ -90,6 +90,7 @@ struct driver keypad_driver = {
 /*
  * Interrupt service routine
  */
+__isr
 static int keypad_isr(void* arg)
 {
     uint16_t sts;

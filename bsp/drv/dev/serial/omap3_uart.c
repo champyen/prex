@@ -129,6 +129,7 @@
 static void omap3_uart_xmt_char(struct serial_port*, char);
 static char omap3_uart_rcv_char(struct serial_port*);
 static void omap3_uart_set_poll(struct serial_port*, int);
+__isr
 static int omap3_uart_isr(void*);
 static void omap3_uart_start(struct serial_port*);
 static void omap3_uart_stop(struct serial_port*);
@@ -191,6 +192,7 @@ static void omap3_uart_set_poll(struct serial_port* sp, int on)
     }
 }
 
+__isr
 static int omap3_uart_isr(void* arg)
 {
     struct serial_port* sp = arg;

@@ -207,6 +207,7 @@ static int vio_audio_set_volume(void *priv, uint8_t volume)
     return 0;
 }
 
+__isr
 static int vio_audio_isr(void* arg)
 {
     struct vio_audio_softc* sc = arg;

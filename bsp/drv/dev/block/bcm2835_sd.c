@@ -102,6 +102,7 @@
 static struct event bcm_sd_event;
 static volatile uint32_t bcm_sd_status;
 
+__isr
 static int bcm_sd_isr(void* arg)
 {
     uint32_t sts = bus_read_32(SDHSTS);

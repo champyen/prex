@@ -134,6 +134,7 @@ static int kmc_write_aux(u_char val)
 /*
  * Interrupt handler
  */
+__isr
 static int psaux_isr(void* arg)
 {
     struct psaux_softc* sc = arg;

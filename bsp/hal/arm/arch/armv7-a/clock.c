@@ -50,6 +50,8 @@ static uint32_t timer_count;
 /*
  * Clock interrupt service routine.
  */
+
+__isr
 static int clock_isr(void* arg)
 {
     splhigh();

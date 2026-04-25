@@ -93,6 +93,12 @@
 #define __noreturn /* delete */
 #endif
 
+#if defined(__arm__)
+#define __isr __attribute__((target("arm")))
+#else
+#define __isr
+#endif
+
 #define __P(protos) protos
 #define __RCSID(_s)
 #define __COPYRIGHT(_s)

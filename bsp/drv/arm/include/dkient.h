@@ -30,6 +30,18 @@
 /*
  * Stub to call kernel device interface
  */
+#ifdef CONFIG_DRV_THUMB
+#define STUB(index, func)         \
+    .syntax unified;              \
+    .thumb;                       \
+    .global func;                 \
+    .thumb_func;                  \
+    ENTRY(func)                   \
+    ldr ip, = dki_table;          \
+    ldr ip, [ip];                 \
+    ldr ip, [ ip, #(index * 4) ]; \
+    bx ip
+#else
 #define STUB(index, func)         \
     .global func;                 \
     ENTRY(func)                   \
@@ -37,3 +49,5 @@
     ldr ip, [ip];                 \
     ldr ip, [ ip, #(index * 4) ]; \
     mov pc, ip
+#endif
+

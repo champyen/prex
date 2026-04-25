@@ -68,6 +68,8 @@
  * Clock interrupt service routine.
  * No H/W reprogram is required.
  */
+
+__isr
 static int clock_isr(void* arg)
 {
 

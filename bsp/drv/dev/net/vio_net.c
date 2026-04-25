@@ -190,6 +190,7 @@ static struct net_hw_if vio_net_hw_if = {
     NULL, /* set_promisc */
 };
 
+__isr
 static int vio_net_isr(void* arg)
 {
     struct vio_net_softc* sc = arg;

@@ -32,9 +32,17 @@ CFLAGS+=	-Werror
 endif
 
 ifeq ($(ARCH),arm)
+ifeq ($(CONFIG_THUMB),y)
 ifneq ($(_KERNEL_),1)
 ifeq ($(CONFIG_USR_THUMB),y)
 CFLAGS+=	-mthumb
+endif
+endif
+ifeq ($(_DRV_),1)
+ifeq ($(CONFIG_DRV_THUMB),y)
+CFLAGS+=	-mthumb
+DEFS+=		CONFIG_DRV_THUMB
+endif
 endif
 endif
 endif
