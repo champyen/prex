@@ -1,15 +1,15 @@
-### Current Support Targets
+# Current Support Targets
 * arm-gba (no MMU support)
 * arm-rpi0w
 * arm-qemu-virt
 * x86-pc
 
-### Build
+# Build
 1. configure the target (refer ./doc/integrator.md )
   * ARM targets
-  $ ./configure --target=YOUR_TARGET --cross-prefix=arm-none-eabi [--enable-mmu]
+  $ ./configure --target=$TARGET --cross-prefix=arm-none-eabi [--enable-mmu]
   * x86 targets
-  $ ./configure --target=YOUR_TARGET [--enable-mmu]
+  $ ./configure --target=$TARGET [--enable-mmu]
 
 2. build & clean
 * to build
@@ -18,8 +18,24 @@ $ make -j4
 $ make clean
 
 
-### QEMU launch command example to get console log
+# QEMU launch command example to get console log
+## WARNINGS
+1. Don't take away "sleep" command, without it you can't get redirected console log
+2. Attach all specified devices for each platform
+
+## COMMANDS
 QEMU command to run Prex on QEMU virt platform and get boot logz:
+* arm-rpi0w
+$ timeout 15 \
+  qemu-system-arm -M raspi0 -kernel prexos_full.bin -nographic -sd disk.img \
+  > qemu.log 2>&1 & sleep 16 && cat qemu.log
+
+* arm-integrator
+$ timeout 15 \
+  qemu-system-arm -M integratorcp -kernel prexos_full.bin -nographic \
+  > qemu.log 2>&1 & sleep 16 && cat qemu.log
+
+* arm-qemu-virt
 $ timeout 15 \
   qemu-system-arm -M virt -m 256M -kernel prexos.bin -nographic \
   -drive if=none,file=disk.img,id=drv0,format=raw -device virtio-blk-device,drive=drv0 \
@@ -27,8 +43,8 @@ $ timeout 15 \
   -netdev user,id=net0 -device virtio-net-device,netdev=net0 \
   > qemu.log 2>&1 & sleep 16 && cat qemu.log
 
-### disk image build
-You don't need to request sudo from me, the following tools can be used without sudo
+# disk image build
+You don't need to request sudo from me, the following tools to manipulate disk image can be used without sudo
 1. image creation: you can make use of qemu-img
 2. partition, format: add /usr/sbin to PATH, you can use mkfs.vfat format disk image directly
 3. image manipulation: mtools is installed, please use it to copy concret files into image
