@@ -51,9 +51,10 @@ options 	SNDIO		# Audio server
 options 	POSIX		# POSIX support
 options 	NET		    # Network support
 options 	CMDBOX		# Core utilities
-options 	THUMB		# Thumb mode support
-options 	USR_THUMB	# Thumb mode for user programs
-options 	DRV_THUMB	# Thumb mode for drivers
+options		THUMB		# Thumb mode support
+options		USR_THUMB	# Thumb mode for user programs
+options		DRV_THUMB	# Thumb mode for drivers
+options		KERNEL_THUMB	# Thumb mode for kernel
 
 #options 	TINY		# Optimize for size
 

@@ -43,6 +43,11 @@ ifeq ($(CONFIG_DRV_THUMB),y)
 CFLAGS+=	-mthumb
 DEFS+=		CONFIG_DRV_THUMB
 endif
+else ifeq ($(_KERNEL_),1)
+ifeq ($(CONFIG_KERNEL_THUMB),y)
+CFLAGS+=	-mthumb
+DEFS+=		CONFIG_KERNEL_THUMB
+endif
 endif
 endif
 endif
