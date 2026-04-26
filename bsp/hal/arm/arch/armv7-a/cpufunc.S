@@ -42,14 +42,14 @@
 
 ENTRY(cpu_idle)
 	wfi
-	mov	pc, lr
+	bx	lr
 
 /*
  * Set Vector Base Address Register
  */
 ENTRY(set_vbar)
 	mcr	p15, 0, r0, c12, c0, 0
-	mov	pc, lr
+	bx	lr
 
 /*
  * Data synchronization barrier
@@ -57,47 +57,47 @@ ENTRY(set_vbar)
 ENTRY(cpu_barrier)
 	dsb
 	isb
-	mov	pc, lr
+	bx	lr
 
 /*
  * Fault information
  */
 ENTRY(get_faultstatus)
 	mrc	p15, 0, r0, c5, c0, 0
-	mov	pc, lr
+	bx	lr
 
 ENTRY(get_faultaddress)
 	mrc	p15, 0, r0, c6, c0, 0
-	mov	pc, lr
+	bx	lr
 
 /*
  * Generic Timer functions
  */
 ENTRY(get_cntfrq)
 	mrc	p15, 0, r0, c14, c0, 0
-	mov	pc, lr
+	bx	lr
 
 ENTRY(get_cntpct)
 	mrrc p15, 0, r0, r1, c14
-	mov	pc, lr
+	bx	lr
 
 ENTRY(set_cntp_tval_reg)
 	mcr	p15, 0, r0, c14, c2, 0
 	isb
-	mov	pc, lr
+	bx	lr
 
 ENTRY(get_cntp_tval_reg)
 	mrc	p15, 0, r0, c14, c2, 0
-	mov	pc, lr
+	bx	lr
 
 ENTRY(set_cntp_ctl_reg)
 	mcr	p15, 0, r0, c14, c2, 1
 	isb
-	mov	pc, lr
+	bx	lr
 
 ENTRY(get_cntp_ctl_reg)
 	mrc	p15, 0, r0, c14, c2, 1
-	mov	pc, lr
+	bx	lr
 
 #ifdef CONFIG_MMU
 /*
@@ -105,7 +105,7 @@ ENTRY(get_cntp_ctl_reg)
  */
 ENTRY(get_ttb)
 	mrc	p15, 0, r0, c2, c0, 0
-	mov	pc, lr
+	bx	lr
 
 /*
  * Set TTB
@@ -116,7 +116,7 @@ ENTRY(set_ttb)
 	mcr	p15, 0, r1, c8, c7, 0	/* invalidate I+D TLBs */
 	dsb
 	isb
-	mov	pc, lr
+	bx	lr
 
 /*
  * Switch TTB for context switch
@@ -127,7 +127,7 @@ ENTRY(switch_ttb)
 	mcr	p15, 0, r1, c8, c7, 0	/* invalidate I+D TLBs */
 	dsb
 	isb
-	mov	pc, lr
+	bx	lr
 
 /*
  * Flush TLB
@@ -137,7 +137,7 @@ ENTRY(flush_tlb)
 	mcr	p15, 0, r1, c8, c7, 0	/* invalidate I+D TLBs */
 	dsb
 	isb
-	mov	pc, lr
+	bx	lr
 
 #endif /* !CONFIG_MMU */
 
@@ -151,7 +151,7 @@ ENTRY(flush_cache)
 	mcr	p15, 0, r0, c7, c5, 0	/* invalidate I-cache */
 	dsb
 	isb
-	mov	pc, lr
+	bx	lr
 #endif /* !CONFIG_CACHE */
 
 	.end

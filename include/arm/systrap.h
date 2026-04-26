@@ -53,6 +53,18 @@
     bx r5;                                                                                                        \
     ldmfd sp !, {r4, r5, pc};
 
+#elif defined(CONFIG_USR_THUMB)
+
+#define SYSCALL0(name)                                                                                                 \
+    .syntax unified;                                                                                                   \
+    .thumb;                                                                                                            \
+    .global name;                                                                                                      \
+    .thumb_func;                                                                                                       \
+    .type name, %function;                                                                                             \
+    .align;                                                                                                            \
+    name## : svc #SYS_##name;                                                                                          \
+    bx lr
+
 #else
 
 #define SYSCALL0(name)                                                                                                 \

@@ -36,16 +36,19 @@ ifeq ($(CONFIG_THUMB),y)
 ifneq ($(_KERNEL_),1)
 ifeq ($(CONFIG_USR_THUMB),y)
 CFLAGS+=	-mthumb
+ASFLAGS+=	-mthumb
 endif
 endif
 ifeq ($(_DRV_),1)
 ifeq ($(CONFIG_DRV_THUMB),y)
 CFLAGS+=	-mthumb
+ASFLAGS+=	-mthumb
 DEFS+=		CONFIG_DRV_THUMB
 endif
 else ifeq ($(_KERNEL_),1)
 ifeq ($(CONFIG_KERNEL_THUMB),y)
 CFLAGS+=	-mthumb
+ASFLAGS+=	-mthumb
 DEFS+=		CONFIG_KERNEL_THUMB
 endif
 endif

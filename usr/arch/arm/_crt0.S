@@ -45,6 +45,13 @@
 /*
  * Entry point called by kernel first
  */
+#include <conf/config.h>
+
+#ifdef CONFIG_USR_THUMB
+        .syntax unified
+        .thumb
+        .thumb_func
+#endif
         .text
         .global _start
         .type _start, %function
@@ -53,7 +60,13 @@ _start:
         mov     r1, sp                  /* Get argv */
         add     r2, r1, r0, lsl #2      /* Get envp */ 
         mov     fp, #0                  /* Clear frame pointer */
+#ifdef CONFIG_USR_THUMB
+        mov     r3, sp
+        bic     r3, r3, #7
+        mov     sp, r3
+#else
         bic     sp, sp, #7              /* Align stack to 8 bytes for AAPCS */
+#endif
         bl      __prex_main
 
 

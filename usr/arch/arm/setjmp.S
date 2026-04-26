@@ -32,8 +32,15 @@
  * SUCH DAMAGE.
  */
 
+#include <conf/config.h>
 #include <machine/asm.h>
 #include <machine/setjmp.h>
+
+#ifdef CONFIG_USR_THUMB
+	.syntax unified
+	.thumb
+	.thumb_func
+#endif
 
 /*
  * C library -- setjmp, longjmp
@@ -73,7 +80,13 @@ ENTRY(setjmp)
 #endif	/*SOFTFLOAT*/
 #endif
 	/* Store integer registers */
+#ifdef CONFIG_USR_THUMB
+        stmia	r0!, {r4-r12}
+        str     sp, [r0], #4
+        str     lr, [r0], #4
+#else
         stmia	r0, {r4-r14}
+#endif
         mov	r0, #0x00000000
         bx	lr
 
@@ -113,18 +126,37 @@ ENTRY(longjmp)
 #endif	/* SOFTFLOAT */
 #endif
 	/* Restore integer registers */
+#ifdef CONFIG_USR_THUMB
+        ldmia	r0!, {r4-r12}
+        ldr     sp, [r0], #4
+        ldr     lr, [r0], #4
+#else
         ldmia	r0, {r4-r14}
+#endif
 
 	/* Validate sp and r14 */
+#ifdef CONFIG_USR_THUMB
+	mov	r2, sp
+	cmp	r2, #0
+	it	ne
+	cmpne	r14, #0
+#else
 	teq	sp, #0
 	teqne	r14, #0
+#endif
 	beq	botch
 
 	/* Set return value */
 
 	mov	r0, r1
+#ifdef CONFIG_USR_THUMB
+	cmp	r0, #0
+	it	eq
+	moveq	r0, #1
+#else
 	teq	r0, #0x00000000
 	moveq	r0, #0x00000001
+#endif
 #ifdef __ARM_26__
 	bx	lr
 #else

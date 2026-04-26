@@ -31,6 +31,13 @@
 #include <sys/prex.h>
 #include <stdint.h>
 
+#ifndef R_ARM_THM_MOVW_ABS_NC
+#define R_ARM_THM_MOVW_ABS_NC 47
+#endif
+#ifndef R_ARM_THM_MOVT_ABS
+#define R_ARM_THM_MOVT_ABS 48
+#endif
+
 int relocate_rel(Elf32_Rel* rel, Elf32_Addr sym_val, char* target_sect)
 {
     Elf32_Addr *where, tmp;
@@ -87,6 +94,14 @@ int relocate_rel(Elf32_Rel* rel, Elf32_Addr sym_val, char* target_sect)
             if (addend & 0x01000000)
                 addend |= 0xfe000000;
             tmp = sym_val - (Elf32_Addr)where + addend;
+
+            if ((sym_val & 1) == 0 && ELF32_R_TYPE(rel->r_info) == R_ARM_THM_CALL) {
+                /* Interworking: convert BL to BLX */
+                tmp = (tmp + 2) & ~3; /* BLX immediate must be 4-byte aligned */
+                w[1] = (uint16_t)((w[1] & 0xefff)); /* Clear bit 12 to make it BLX */
+                lower = w[1];
+            }
+
             s = (tmp >> 24) & 1;
             i1 = (tmp >> 23) & 1;
             i2 = (tmp >> 22) & 1;
@@ -94,6 +109,30 @@ int relocate_rel(Elf32_Rel* rel, Elf32_Addr sym_val, char* target_sect)
             j2 = !(i2 ^ s);
             w[0] = (uint16_t)((upper & 0xf800) | (s << 10) | ((tmp >> 12) & 0x3ff));
             w[1] = (uint16_t)((lower & 0xd000) | (j1 << 13) | (j2 << 11) | ((tmp >> 1) & 0x7ff));
+        }
+        break;
+    case R_ARM_THM_MOVW_ABS_NC:
+        {
+            uint16_t* w = (uint16_t*)where;
+            uint32_t upper = w[0];
+            uint32_t lower = w[1];
+            addend = ((upper & 0x0400) << 1) | ((upper & 0x000f) << 12) |
+                     ((lower & 0x7000) >> 4) | (lower & 0x00ff);
+            tmp = sym_val + addend;
+            w[0] = (uint16_t)((upper & 0xfbf0) | ((tmp & 0x0800) >> 1) | ((tmp & 0xf000) >> 12));
+            w[1] = (uint16_t)((lower & 0x8f00) | ((tmp & 0x0700) << 4) | (tmp & 0x00ff));
+        }
+        break;
+    case R_ARM_THM_MOVT_ABS:
+        {
+            uint16_t* w = (uint16_t*)where;
+            uint32_t upper = w[0];
+            uint32_t lower = w[1];
+            addend = ((upper & 0x0400) << 1) | ((upper & 0x000f) << 12) |
+                     ((lower & 0x7000) >> 4) | (lower & 0x00ff);
+            tmp = (sym_val + addend) >> 16;
+            w[0] = (uint16_t)((upper & 0xfbf0) | ((tmp & 0x0800) >> 1) | ((tmp & 0xf000) >> 12));
+            w[1] = (uint16_t)((lower & 0x8f00) | ((tmp & 0x0700) << 4) | (tmp & 0x00ff));
         }
         break;
     case R_ARM_V4BX:

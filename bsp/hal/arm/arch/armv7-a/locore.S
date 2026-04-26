@@ -43,7 +43,8 @@
 #include <cpu.h>
 
 	.section ".text","ax"
-	.code 32
+	.syntax unified
+	.arm
 
 /*
  * Kernel start point
@@ -223,7 +224,7 @@ reload_pc:
     mrc p15, 0, r0, c1, c0, 0    /* Read control register */
     ldr r1,=(CTL_AFLT)
     bic r0, r0, r1              /* Disable alignment checks */
-    mrc p15, 0, r0, c1, c0, 0
+    mcr p15, 0, r0, c1, c0, 0
 #endif /* !CONFIG_MMU */
 
 	/*
@@ -265,14 +266,14 @@ ENTRY(vector_copy)
 	stmia	r0!, {r3}
 	teq	r1, r2
 	bne	1b
-	mov	pc, lr
+	bx	lr
 
 #ifdef CONFIG_CACHE
 /*
  * Enable cache
  */
 ENTRY(cache_init)
-	mov	pc, lr
+	bx	lr
 #endif
 
 /*
@@ -344,13 +345,18 @@ ENTRY(syscall_entry)
 	nop				/* Instruction gap for stm^ */
 	mrs	r5, spsr		/* Push cpsr */
 	str	r5, [sp, #REG_CPSR]
-	add	r5, sp, #CTXREGS
-	str	r5, [sp, #REG_SVCSP]	/* Push svc_sp */
+	add	r12, sp, #CTXREGS
+	str	r12, [sp, #REG_SVCSP]	/* Push svc_sp */
+	bic	lr, lr, #1		/* Mask bit 0 of lr */
 	str	lr, [sp, #REG_SVCLR]	/* Push svc_lr */
 	str	lr, [sp, #REG_PC]	/* Push pc */
 
-	ldr	r4, [lr, #-4]		/* Get SWI number */
-	bic	r4, r4, #0xff000000
+	tst	r5, #PSR_THUMB		/* Check Thumb mode */
+	ldreq	r4, [lr, #-4]		/* ARM mode: Load swi instruction */
+	biceq	r4, r4, #0xff000000	/* Mask out opcode */
+	beq	1f
+	ldrb	r4, [lr, #-2]		/* Thumb mode: Load svc immediate */
+1:
 
 	mrs	r5, cpsr		/* Enable IRQ */
 	bic	r5, r5, #0xc0
@@ -389,7 +395,7 @@ ENTRY(undefined_entry)
  * Prefetch abort
  */
 ENTRY(prefetch_entry)
-	sub	lr, lr, #8		/* Adjust the lr */
+	sub	lr, lr, #4		/* Adjust the lr */
 	sub	sp, sp, #CTXREGS	/* Adjust stack */
 	stmia	sp, {r0-r14}^		/* Push r0-r14 */
 	nop				/* Instruction gap for stm^ */
@@ -400,7 +406,7 @@ ENTRY(prefetch_entry)
  * Data abort
  */
 ENTRY(abort_entry)
-	sub	lr, lr, #4		/* Adjust the lr */
+	sub	lr, lr, #8		/* Adjust the lr */
 	sub	sp, sp, #CTXREGS	/* Adjust stack */
 	stmia	sp, {r0-r14}^		/* Push r0-r14 */
 	nop				/* Instruction gap for stm^ */
@@ -564,7 +570,7 @@ ENTRY(spl0)
 	mrs	r1, cpsr		/* Enable interrupt */
 	bic	r1, r1, #0xc0
 	msr	cpsr_c, r1
-	mov	pc, lr
+	bx	lr
 
 /*
  * int splhigh(void);
@@ -578,7 +584,7 @@ ENTRY(splhigh)
 	ldr	r0, [r1]
 	mov	r2, #15
 	str	r2, [r1]
-	mov	pc, lr
+	bx	lr
 
 /*
  * void splx(int s);
@@ -596,7 +602,7 @@ ENTRY(splx)
 	bic	r1, r1, #0xc0
 	orrne	r1, r1, #0xc0		/* Disable interrupt if curspl != 0 */
 	msr	cpsr_c, r1
-	mov	pc, lr
+	bx	lr
 
 
 /*
@@ -606,7 +612,7 @@ ENTRY(sploff)
 	mrs	r0, cpsr
 	orr	r0, r0, #0xc0
 	msr	cpsr_c, r0
-	mov	pc, lr
+	bx	lr
 
 /*
  * void splon(void);
@@ -615,7 +621,7 @@ ENTRY(splon)
 	mrs	r0, cpsr
 	bic	r0, r0, #0xc0
 	msr	cpsr_c, r0
-	mov	pc, lr
+	bx	lr
 
 /*
  * Interrupt nest counter.
