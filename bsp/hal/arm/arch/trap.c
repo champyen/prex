@@ -90,14 +90,27 @@ void trap_handler(struct cpu_regs* regs)
     printf("=============================\n");
 
     trap_dump(regs);
-    for (;;)
-        ;
+    if ((regs->cpsr & PSR_MODE) != PSR_USR_MODE) {
+        for (;;)
+            ;
+    }
 #endif
     if ((regs->cpsr & PSR_MODE) != PSR_USR_MODE)
         panic("Kernel exception");
 
     exception_mark(exception_map[trap_no]);
-    exception_deliver();
+
+    /*
+     * Sync the trap frame from the abort stack to the thread context
+     * so exception_deliver can modify it, then sync it back.
+     */
+    if (curthread && curthread->ctx.uregs) {
+        memcpy(curthread->ctx.uregs, regs, sizeof(*regs));
+        exception_deliver();
+        memcpy(regs, curthread->ctx.uregs, sizeof(*regs));
+    } else {
+        exception_deliver();
+    }
 }
 
 #ifdef DEBUG

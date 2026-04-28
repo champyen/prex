@@ -8,7 +8,7 @@ SUBDIR:=	task thread ipc timer exception fault deadlock sem mutex \
 SUBDIR+=	console kbd fdd ramdisk reset time zero
 
 # Test for library
-SUBDIR+=	errno malloc stderr environ
+SUBDIR+=	errno malloc stderr environ assert
 
 # Test for servers
 SUBDIR+=	fileio fork forkbomb args signal fifo pipe dup creat conf \

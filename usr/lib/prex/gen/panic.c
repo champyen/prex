@@ -38,6 +38,17 @@ void panic(const char* fmt, ...)
     char buf[LINE_MAX];
     va_list args;
 
+#ifdef CONFIG_USR_BACKTRACE
+    backtrace_t bt[16];
+    int count, i;
+
+    count = backtrace_unwind(bt, 16);
+    printf("Backtrace:\n");
+    for (i = 0; i < count; i++) {
+        printf(" [%d] %p %s\n", i, bt[i].address, bt[i].name);
+    }
+#endif
+
     va_start(args, fmt);
     vsprintf(buf, fmt, args);
     sys_panic(buf);

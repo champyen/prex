@@ -17,6 +17,17 @@ SECTIONS
 	} : text = 0xff
 
 	. = ALIGN(8);
+	.ARM.exidx : {
+		__exidx_start = .;
+		*(.ARM.exidx* .gnu.linkonce.armexidx.*)
+		__exidx_end = .;
+	} : text
+
+	.ARM.extab : {
+		*(.ARM.extab* .gnu.linkonce.armextab.*)
+	} : text
+
+	. = ALIGN(8);
 	.rodata : {
 		*(.rodata)
 		*(.rodata.*)

@@ -33,6 +33,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 void __exception_init(void);
 void __exception_exit(int*);
@@ -130,8 +131,27 @@ int __sig_flush(void)
 /*
  * Exception handler for signal emulation
  */
-static void __exception_handler(int excpt)
+void __exception_handler_c(int excpt, uint32_t *regs)
 {
+#ifdef CONFIG_USR_BACKTRACE
+    if (excpt == SIGILL || excpt == SIGTRAP || excpt == SIGFPE || excpt == SIGSEGV) {
+        backtrace_t bt[16];
+        int count, i;
+        printf("Fault Exception #%d. Backtrace:\n", excpt);
+        if (regs) {
+#ifdef __arm__
+            count = backtrace_unwind_frame(bt, 16, regs[18], regs[14], regs[13], regs[7], regs[11]);
+#else
+            count = 0;
+#endif
+        } else {
+            count = backtrace_unwind(bt, 16);
+        }
+        for (i = 0; i < count; i++) {
+            printf(" [%d] %p %s\n", i, bt[i].address, bt[i].name);
+        }
+    }
+#endif
 
     if (excpt > 0 && excpt <= NSIG) {
 
@@ -145,6 +165,21 @@ static void __exception_handler(int excpt)
     __sig_flush();
     exception_return();
 }
+
+#ifdef __arm__
+static void __attribute__((naked)) __exception_handler(int excpt)
+{
+    __asm__ volatile(
+        "add r1, sp, #8\n\t"
+        "b __exception_handler_c\n\t"
+    );
+}
+#else
+static void __exception_handler(int excpt)
+{
+    __exception_handler_c(excpt, NULL);
+}
+#endif
 
 /*
  * Initialize exception

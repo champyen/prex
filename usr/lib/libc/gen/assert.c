@@ -28,6 +28,7 @@
  */
 
 #include <sys/types.h>
+#include <sys/prex.h>
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,7 +36,18 @@
 void
 __assert(const char* file, int line, const char* failedexpr)
 {
+#ifdef CONFIG_USR_BACKTRACE
+    backtrace_t bt[16];
+    int count, i;
+    printf("Assertion failed: %s at %s:%d\n", failedexpr, file, line);
+    count = backtrace_unwind(bt, 16);
+    printf("Backtrace:\n");
+    for (i = 0; i < count; i++) {
+        printf(" [%d] %p %s\n", i, bt[i].address, bt[i].name);
+    }
+#else
     (void)fprintf(stderr, "assertion \"%s\" failed: file \"%s\", line %d\n", failedexpr, file, line);
+#endif
     abort();
     /* NOTREACHED */
 }

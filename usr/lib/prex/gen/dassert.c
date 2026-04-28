@@ -34,6 +34,17 @@ void __dassert(const char* file, int line, const char* exp)
 {
     char buf[128];
 
+#ifdef CONFIG_USR_BACKTRACE
+    backtrace_t bt[16];
+    int count, i;
+
+    count = backtrace_unwind(bt, 16);
+    printf("Backtrace:\n");
+    for (i = 0; i < count; i++) {
+        printf(" [%d] %p %s\n", i, bt[i].address, bt[i].name);
+    }
+#endif
+
     sprintf(buf, "assertion \"%s\" failed: file \"%s\", line %d\n", exp, file, line);
     sys_panic(buf);
     /* NOTREACHED */

@@ -33,21 +33,32 @@
 #include <sys/prex.h>
 #include <stdio.h>
 
+__attribute__((noinline)) void level3(void)
+{
+    char* ptr = 0;
+    printf("Try to read from NULL pointer in level3\n");
+    *(volatile int*)ptr = 0xdeadbeef;
+}
+
+__attribute__((noinline)) void level2(void)
+{
+    level3();
+}
+
+__attribute__((noinline)) void level1(void)
+{
+    level2();
+}
+
 int main(int argc, char* argv[])
 {
-    volatile int data; /* prevent optimization from gcc */
-    char* ptr;
-
     printf("Fault test program is staring...\n");
     printf("Waiting for key input.\n");
 
     getchar();
 
     printf("Key pressed!\n");
-    printf("Try to read from NULL pointer\n");
-    ptr = 0;
-    data = *ptr;
-    (void)data;
+    level1();
 
     /* Control never comes here */
     panic("Oops!");

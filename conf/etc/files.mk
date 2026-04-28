@@ -47,6 +47,8 @@ endif
 #FILES+= 	$(SRCDIR)/usr/test/stack/stack
 #FILES+= 	$(SRCDIR)/usr/test/stderr/stderr
 #FILES+= 	$(SRCDIR)/usr/test/umount/umount
+FILES+= 	$(SRCDIR)/usr/test/fault/fault
+FILES+= 	$(SRCDIR)/usr/test/assert/assert_test
 
 FILES+=		$(SRCDIR)/doc/LICENSE
 

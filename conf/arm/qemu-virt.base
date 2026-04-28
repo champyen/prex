@@ -68,6 +68,8 @@ options		KERNEL_THUMB	# Thumb mode for kernel
 # Diagnostic options
 #
 options 	DIAG_SERIAL	# Diagnostic via serial port
+options 	USR_BACKTRACE	# Backtrace for user programs
+options 	BACKTRACE	# Backtrace for kernel
 
 #
 # File systems

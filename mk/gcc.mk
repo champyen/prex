@@ -31,6 +31,16 @@ ifeq ($(_STRICT_),1)
 CFLAGS+=	-Werror
 endif
 
+ifeq ($(CONFIG_USR_BACKTRACE),y)
+ifneq ($(_KERNEL_),1)
+CFLAGS+=	-funwind-tables
+ifeq ($(ARCH),arm)
+CFLAGS+=	-mpoke-function-name
+LDFLAGS+=	--no-merge-exidx-entries
+endif
+endif
+endif
+
 ifeq ($(ARCH),arm)
 ifeq ($(CONFIG_THUMB),y)
 ifneq ($(_KERNEL_),1)
@@ -72,6 +82,9 @@ ifndef LIBGCC_PATH
 LIBGCC_PATH := $(dir $(shell $(RAWCC) $(GCCFLAGS) -print-libgcc-file-name))
 export LIBGCC_PATH
 endif
-PLATFORM_LIBS+=	-L$(LIBGCC_PATH) -lgcc
+ifneq ($(_KERNEL_),1)
+PLATFORM_LIBS+= -L$(LIBGCC_PATH) -lgcc
+endif
 
 endif # !_GCC_MK_
+

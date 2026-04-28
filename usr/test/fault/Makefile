@@ -1,3 +1,3 @@
-TASK=	fault.rt
+PROG=	fault
 
-include $(SRCDIR)/mk/task.mk
+include $(SRCDIR)/mk/prog.mk
