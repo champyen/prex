@@ -165,7 +165,6 @@ int sys_log(const char* str)
     return ENOSYS;
 #endif
 }
-
 /*
  * Kernel debug service.
  */
@@ -177,9 +176,13 @@ int sys_debug(int cmd, void* data)
 
     switch (cmd) {
     case DBGC_LOGSIZE:
+        error = dbgctl(cmd, data);
+        break;
+
     case DBGC_GETLOG:
         error = dbgctl(cmd, data);
         break;
+
     case DBGC_TRACE:
         task = (task_t)data;
         if (!task_valid(task)) {
@@ -189,7 +192,9 @@ int sys_debug(int cmd, void* data)
         dbgctl(cmd, (void*)task);
         error = 0;
         break;
+
     case DBGC_FLUSHCACHE:
+
 #ifdef CONFIG_CACHE
         flush_cache();
 #endif

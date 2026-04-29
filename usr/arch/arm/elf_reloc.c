@@ -138,6 +138,13 @@ int relocate_rel(Elf32_Rel* rel, Elf32_Addr sym_val, char* target_sect)
     case R_ARM_V4BX:
         /* nothing to do: bx instruction is supported */
         break;
+    case R_ARM_PREL31:
+        {
+            int32_t addend = (((int32_t)*where) << 1) >> 1;
+            uint32_t val = (sym_val + addend - (Elf32_Addr)where) & 0x7fffffff;
+            *where = (*where & 0x80000000) | val;
+        }
+        break;
     default:
 #ifdef DEBUG
         syslog(LOG_ERR, "relocation fail type=%d\n", ELF32_R_TYPE(rel->r_info));

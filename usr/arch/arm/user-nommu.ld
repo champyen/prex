@@ -22,6 +22,17 @@ SECTIONS
 		*(.rodata.*)
 	} : text
 
+	. = ALIGN(8);
+	.ARM.exidx : {
+		__exidx_start = .;
+		*(.ARM.exidx* .gnu.linkonce.armexidx.*)
+		__exidx_end = .;
+	} : text
+
+	.ARM.extab : {
+		*(.ARM.extab* .gnu.linkonce.armextab.*)
+	} : text
+
 	. = ALIGN(4);
 	.data : {
 		*(.data)
@@ -33,5 +44,5 @@ SECTIONS
 		*(COMMON)
 	}
 
-	/DISCARD/ : { *(.comment .note .ARM.*) }
+	/DISCARD/ : { *(.comment .note) }
 }

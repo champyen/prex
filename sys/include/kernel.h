@@ -33,8 +33,10 @@
 #include <conf/config.h>
 #include <types.h>
 #include <machine/stdarg.h>
-#include <sys/cdefs.h>
+#include <sys/types.h>
 #include <sys/param.h>
+#include <sys/backtrace.h>
+
 #include <sys/errno.h>
 #include <task.h>
 #include <thread.h>

@@ -6,12 +6,16 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. 
  */
 
+#ifdef KERNEL
+#include <kernel.h>
+#else
 #include <sys/prex.h>
 #include <stdint.h>
-#include <stdlib.h>
 #include <string.h>
+#endif
 
-#ifdef CONFIG_USR_BACKTRACE
+
+#if defined(CONFIG_USR_BACKTRACE) || defined(KERNEL)
 
 #ifdef __arm__
 
@@ -417,4 +421,4 @@ const char *backtrace_function_name(uint32_t pc)
 
 #endif /* __arm__ */
 
-#endif /* CONFIG_USR_BACKTRACE */
+#endif /* CONFIG_USR_BACKTRACE || KERNEL */

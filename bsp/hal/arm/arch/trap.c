@@ -84,8 +84,13 @@ void trap_handler(struct cpu_regs* regs)
     else if (trap_no == TRAP_PREFETCH_ABORT)
         printf(" Fault address=%x\n", regs->pc);
     else if (trap_no == TRAP_UNDEFINED) {
-        uint32_t* p = (uint32_t*)regs->pc;
-        printf(" Instruction at %x: %08x\n", regs->pc, *p);
+        if (regs->cpsr & PSR_THUMB) {
+            uint16_t* p = (uint16_t*)(regs->pc & ~1UL);
+            printf(" Instruction at %x: %04x\n", regs->pc, *p);
+        } else {
+            uint32_t* p = (uint32_t*)regs->pc;
+            printf(" Instruction at %x: %08x\n", regs->pc, *p);
+        }
     }
     printf("=============================\n");
 

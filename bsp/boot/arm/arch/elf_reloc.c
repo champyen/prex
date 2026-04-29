@@ -123,6 +123,13 @@ case R_ARM_JUMP24:
     break;
 case R_ARM_V4BX:
     break;
+case R_ARM_PREL31:
+    {
+        int32_t addend = (((int32_t)*where) << 1) >> 1;
+        uint32_t val = ((vaddr_t)ptokv(sym_val) + addend - (vaddr_t)where) & 0x7fffffff;
+        *where = (*where & 0x80000000) | val;
+    }
+    break;
 default:
     panic("relocation fail");
     return -1;

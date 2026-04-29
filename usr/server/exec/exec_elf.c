@@ -279,13 +279,16 @@ static int load_reloc(Elf32_Ehdr* ehdr, task_t task, int fd, vaddr_t* entry)
          *   shdr->sh_offset, shdr->sh_flags));
          */
         sect_addr[i] = 0;
-        if (shdr->sh_type == SHT_PROGBITS) {
+        if (shdr->sh_type == SHT_PROGBITS || shdr->sh_type == SHT_ARM_EXIDX) {
             switch (shdr->sh_flags & SHF_VALID) {
             case (SHF_ALLOC | SHF_EXECINSTR): /* text */
             case (SHF_ALLOC | SHF_WRITE):     /* data */
             case SHF_ALLOC:                   /* rodata */
+            case (SHF_ALLOC | 0x08000000):    /* exidx (SHF_LINK_ORDER) */
                 break;
             default:
+                if (shdr->sh_type == SHT_ARM_EXIDX)
+                    break;
                 continue;
             }
             addr = (char*)((u_long)mapped + shdr->sh_addr);

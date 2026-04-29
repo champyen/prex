@@ -32,12 +32,10 @@ CFLAGS+=	-Werror
 endif
 
 ifeq ($(CONFIG_USR_BACKTRACE),y)
-ifneq ($(_KERNEL_),1)
 CFLAGS+=	-funwind-tables
 ifeq ($(ARCH),arm)
 CFLAGS+=	-mpoke-function-name
 LDFLAGS+=	--no-merge-exidx-entries
-endif
 endif
 endif
 

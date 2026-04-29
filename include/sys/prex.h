@@ -155,18 +155,7 @@ int sys_info(int type, void* buf);
 int sys_time(u_long* ticks);
 int sys_debug(int cmd, void* data);
 
-#ifdef CONFIG_USR_BACKTRACE
-typedef struct backtrace
-{
-	void *function;   /* Address of the current address */
-	void *address;    /* Calling site address */
-	const char *name;
-} backtrace_t;
-
-int backtrace_unwind(backtrace_t *backtrace, int size);
-int backtrace_unwind_frame(backtrace_t *buffer, int size, uint32_t pc, uint32_t lr, uint32_t sp, uint32_t r7, uint32_t r11);
-const char *backtrace_function_name(uint32_t pc);
-#endif
+#include <sys/backtrace.h>
 
 void panic(const char* fmt, ...);
 void dprintf(const char* fmt, ...);

@@ -46,5 +46,11 @@
 #define R_ARM_THM_JUMP24 30
 #define R_ARM_THM_MOVW_ABS_NC 47
 #define R_ARM_THM_MOVT_ABS 48
+#define R_ARM_PREL31 42
+
+/*
+ * Section type
+ */
+#define SHT_ARM_EXIDX 0x70000001
 
 #endif /* !_ARM_ELF_H */

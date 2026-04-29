@@ -285,7 +285,7 @@ static int load_relocatable(char* img, struct module* m)
     /* Copy sections */
     for (i = 0; i < (int)ehdr->e_shnum; i++, shdr++) {
         sect_addr[i] = 0;
-        if (shdr->sh_type == SHT_PROGBITS) {
+        if (shdr->sh_type == SHT_PROGBITS || shdr->sh_type == SHT_ARM_EXIDX) {
 
             ELFDBG(("sh_addr=%x name=%s\n", shdr->sh_addr, shstrtab + shdr->sh_name));
             ELFDBG(("sh_size=%x\n", shdr->sh_size));
@@ -307,7 +307,12 @@ static int load_relocatable(char* img, struct module* m)
                 /* rodata */
                 /* Note: rodata is treated as text. */
                 break;
+            case (SHF_ALLOC | 0x08000000): /* SHF_LINK_ORDER */
+                /* exidx */
+                break;
             default:
+                if (shdr->sh_type == SHT_ARM_EXIDX)
+                    break;
                 continue;
             }
             sect_base = load_base + shdr->sh_addr;
