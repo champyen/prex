@@ -59,6 +59,7 @@ __BEGIN_DECLS
 void printf(const char*, ...);
 void assert(const char*, int, const char*);
 void panic(const char*);
+void dump_backtrace(void);
 int dbgctl(int, void*);
 #endif
 __END_DECLS

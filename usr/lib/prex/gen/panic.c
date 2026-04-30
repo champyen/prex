@@ -40,9 +40,11 @@ void panic(const char* fmt, ...)
 
 #ifdef CONFIG_USR_BACKTRACE
     backtrace_t bt[16];
-    int count, i;
+    int i, count;
 
+    backtrace_save();
     count = backtrace_unwind(bt, 16);
+
     printf("Backtrace:\n");
     for (i = 0; i < count; i++) {
         printf(" [%d] %p %s\n", i, bt[i].address, bt[i].name);

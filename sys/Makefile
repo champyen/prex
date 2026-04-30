@@ -30,7 +30,8 @@ SRCS+=		kern/main.c \
 		sync/sem.c \
 		lib/queue.c \
 		lib/string.c \
-		lib/vsprintf.c
+		lib/vsprintf.c \
+		lib/backtrace.c
 
 ifeq ($(CONFIG_MMU),y)
 SRCS+=		mem/vm.c

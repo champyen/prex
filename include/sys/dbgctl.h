@@ -47,6 +47,7 @@ struct abort_ops
 #define DBGC_GETLOG 0x0002  /* get message log */
 #define DBGC_TRACE 0x0003   /* trace thread */
 #define DBGC_FLUSHCACHE 0x0004 /* flush cache */
+#define DBGC_SAVEBT 0x0005  /* save backtrace */
 
 #ifdef KERNEL
 #define DBGC_DUMPTRAP 0x8001 /* dump trap frame */

@@ -40,6 +40,7 @@ __assert(const char* file, int line, const char* failedexpr)
     backtrace_t bt[16];
     int count, i;
     printf("Assertion failed: %s at %s:%d\n", failedexpr, file, line);
+    backtrace_save();
     count = backtrace_unwind(bt, 16);
     printf("Backtrace:\n");
     for (i = 0; i < count; i++) {

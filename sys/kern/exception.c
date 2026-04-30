@@ -323,7 +323,9 @@ void exception_deliver(void)
         if (handler == EXC_DFL) {
             DPRINTF(("Exception #%d is not handled by task.\n", excno));
             DPRINTF(("Terminate task:%s (id:%lx)\n", self->name, (long)self));
-
+#ifdef DEBUG
+            dump_backtrace();
+#endif
             task_terminate(self);
             /* NOTREACHED */
         }

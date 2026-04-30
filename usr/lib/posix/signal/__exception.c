@@ -140,11 +140,13 @@ void __exception_handler_c(int excpt, uint32_t *regs)
         printf("Fault Exception #%d. Backtrace:\n", excpt);
         if (regs) {
 #ifdef __arm__
+            backtrace_save_frame(regs[18], regs[14], regs[13], regs[7], regs[11]);
             count = backtrace_unwind_frame(bt, 16, regs[18], regs[14], regs[13], regs[7], regs[11]);
 #else
             count = 0;
 #endif
         } else {
+            backtrace_save();
             count = backtrace_unwind(bt, 16);
         }
         for (i = 0; i < count; i++) {

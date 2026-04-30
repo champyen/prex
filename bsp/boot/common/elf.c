@@ -285,7 +285,11 @@ static int load_relocatable(char* img, struct module* m)
     /* Copy sections */
     for (i = 0; i < (int)ehdr->e_shnum; i++, shdr++) {
         sect_addr[i] = 0;
+#ifdef __arm__
         if (shdr->sh_type == SHT_PROGBITS || shdr->sh_type == SHT_ARM_EXIDX) {
+#else
+        if (shdr->sh_type == SHT_PROGBITS) {
+#endif
 
             ELFDBG(("sh_addr=%x name=%s\n", shdr->sh_addr, shstrtab + shdr->sh_name));
             ELFDBG(("sh_size=%x\n", shdr->sh_size));
@@ -311,8 +315,10 @@ static int load_relocatable(char* img, struct module* m)
                 /* exidx */
                 break;
             default:
+#ifdef __arm__
                 if (shdr->sh_type == SHT_ARM_EXIDX)
                     break;
+#endif
                 continue;
             }
             sect_base = load_base + shdr->sh_addr;

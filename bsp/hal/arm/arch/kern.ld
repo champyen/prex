@@ -24,6 +24,11 @@ SECTIONS
 	.rodata : {
 		*(.rodata)
 		*(.rodata.*)
+		. = ALIGN(4);
+		__exidx_start = .;
+		*(.ARM.exidx*)
+		__exidx_end = .;
+		*(.ARM.extab*)
 	} : text
 
 	.data ALIGN(8) : {
@@ -39,5 +44,5 @@ SECTIONS
 	. = ALIGN(8);
 	__end = . ;
 
-	/DISCARD/ : { *(.comment .note .ARM.*) }
+	/DISCARD/ : { *(.comment .note) }
 }

@@ -200,6 +200,10 @@ int sys_debug(int cmd, void* data)
 #endif
         error = 0;
         break;
+
+    case DBGC_SAVEBT:
+        error = dbgctl(cmd, data);
+        break;
     }
     return error;
 #else
@@ -217,8 +221,11 @@ int sys_panic(const char* str)
 
     sched_lock();
     copyinstr(str, buf, DBGMSGSZ - 20);
-    printf("User panic: %s\n", str);
+    printf("User panic: %s\n", buf);
     printf(" task=%s thread=%lx\n", curtask->name, (long)curthread);
+#ifdef DEBUG
+    dump_backtrace();
+#endif
 
     machine_abort();
     /* NOTREACHED */

@@ -6,16 +6,9 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. 
  */
 
-#ifdef KERNEL
 #include <kernel.h>
-#else
-#include <sys/prex.h>
-#include <stdint.h>
-#include <string.h>
-#endif
 
-
-#if defined(CONFIG_USR_BACKTRACE) || defined(KERNEL)
+#ifdef CONFIG_KERNEL_BACKTRACE
 
 #ifdef __arm__
 
@@ -67,15 +60,15 @@ static const struct unwind_index *unwind_search_index(const unwind_index_t *star
 	return start;
 }
 
-static const char *unwind_get_function_name(void *address)
+const char *backtrace_name(uint32_t address)
 {
-	if ((uint32_t)address < 0x1000) /* Safety check */
+	if (address < 0x1000) /* Safety check */
 		return "";
 
-	uint32_t flag_word = *(uint32_t *)((uint32_t)address - 4);
+	uint32_t flag_word = *(uint32_t *)(address - 4);
 	if ((flag_word & 0xff000000) == 0xff000000) {
-		const char *name = (const char *)((uint32_t)address - 4 - (flag_word & 0x00ffffff));
-		if ((uint32_t)name >= 0x1000 && (uint32_t)name < 0x80000000)
+		const char *name = (const char *)(address - 4 - (flag_word & 0x00ffffff));
+		if ((uint32_t)name >= 0x1000)
 			return name;
 	}
 	return "";
@@ -342,7 +335,7 @@ static int _backtrace_unwind(backtrace_t *buffer, int size, backtrace_frame_t *f
 		/* Generate the backtrace information */
 		buffer[count].address = (void *)pc;
 		buffer[count].function = (void *)prel31_to_addr(&index->addr_offset);
-		buffer[count].name = unwind_get_function_name(buffer[count].function);
+		buffer[count].name = backtrace_name((uint32_t)buffer[count].function);
 
 		/* Next backtrace frame */
 		++count;
@@ -391,66 +384,12 @@ const char *backtrace_function_name(uint32_t pc)
 	if (!index)
 		return "";
 
-	return unwind_get_function_name((void *)prel31_to_addr(&index->addr_offset));
-}
-
-#ifndef KERNEL
-void backtrace_save_frame(uint32_t pc, uint32_t lr, uint32_t sp, uint32_t r7, uint32_t r11)
-{
-#ifdef CONFIG_USR_BACKTRACE
-	backtrace_t bt[16];
-	struct {
-		uint32_t pc;
-		uint32_t func;
-	} saved_bt[16];
-	int i, count;
-
-	count = backtrace_unwind_frame(bt, 16, pc, lr, sp, r7, r11);
-	for (i = 0; i < 16; i++) {
-		if (i < count) {
-			saved_bt[i].pc = (uint32_t)bt[i].address;
-			saved_bt[i].func = (uint32_t)bt[i].function;
-		} else {
-			saved_bt[i].pc = 0;
-			saved_bt[i].func = 0;
-		}
-	}
-	sys_debug(DBGC_SAVEBT, saved_bt);
-#endif
-}
-
-void backtrace_save(void)
-{
-#ifdef CONFIG_USR_BACKTRACE
-	backtrace_t bt[16];
-	struct {
-		uint32_t pc;
-		uint32_t func;
-	} saved_bt[16];
-	int i, count;
-
-	count = backtrace_unwind(bt, 16);
-	for (i = 0; i < 16; i++) {
-		if (i < count) {
-			saved_bt[i].pc = (uint32_t)bt[i].address;
-			saved_bt[i].func = (uint32_t)bt[i].function;
-		} else {
-			saved_bt[i].pc = 0;
-			saved_bt[i].func = 0;
-		}
-	}
-	sys_debug(DBGC_SAVEBT, saved_bt);
-#endif
-}
-#else
-void backtrace_save_frame(uint32_t pc, uint32_t lr, uint32_t sp, uint32_t r7, uint32_t r11)
-{
+	return backtrace_name(prel31_to_addr(&index->addr_offset));
 }
 
 void backtrace_save(void)
 {
 }
-#endif
 
 /*
  * __aeabi_unwind_cpp_pr0, __aeabi_unwind_cpp_pr1 and __aeabi_unwind_cpp_pr2 
@@ -460,23 +399,6 @@ void __aeabi_unwind_cpp_pr0(void) {}
 void __aeabi_unwind_cpp_pr1(void) {}
 void __aeabi_unwind_cpp_pr2(void) {}
 
-#else /* !__arm__ */
-
-int backtrace_unwind(backtrace_t *buffer, int size)
-{
-	return 0;
-}
-
-int backtrace_unwind_frame(backtrace_t *buffer, int size, uint32_t pc, uint32_t lr, uint32_t sp, uint32_t r7, uint32_t r11)
-{
-	return 0;
-}
-
-const char *backtrace_function_name(uint32_t pc)
-{
-	return "";
-}
-
 #endif /* __arm__ */
 
-#endif /* CONFIG_USR_BACKTRACE || KERNEL */
+#endif /* CONFIG_KERNEL_BACKTRACE */

@@ -52,6 +52,32 @@ static u_long log_len;         /* length of log */
 
 #define LOGINDEX(x) ((x) & (LOGBUFSZ - 1))
 
+void dump_backtrace(void)
+{
+    int i;
+#ifdef CONFIG_KERNEL_BACKTRACE
+    backtrace_t bt[16];
+    int count;
+
+    count = backtrace_unwind(bt, 16);
+    printf("Kernel backtrace:\n");
+    for (i = 0; i < count; i++) {
+        printf(" [%2d] 0x%08x %s\n", i, (uint32_t)bt[i].address, bt[i].name);
+    }
+#endif
+#ifdef CONFIG_USR_BACKTRACE
+    if (curtask && !(curtask->flags & TF_SYSTEM)) {
+        printf("User backtrace:\n");
+        for (i = 0; i < 16; i++) {
+            if (curtask->backtrace[i].pc == 0)
+                break;
+            printf(" [%2d] 0x%08x %s\n", i, curtask->backtrace[i].pc,
+                   backtrace_name(curtask->backtrace[i].func));
+        }
+    }
+#endif
+}
+
 /*
  * Scaled down version of C Library printf.
  * Only %s %u %d %c %x and zero pad flag are recognized.
@@ -94,6 +120,7 @@ void assert(const char* file, int line, const char* exp)
 {
 
     printf("Assertion failed: %s line:%d '%s'\n", file, line, exp);
+    dump_backtrace();
 
     (*db_abort)();
     /* NOTREACHED */
@@ -106,6 +133,7 @@ void panic(const char* msg)
 {
 
     printf("Kernel panic: %s\n", msg);
+    dump_backtrace();
 
     (*db_abort)();
     /* NOTREACHED */
@@ -188,6 +216,12 @@ int dbgctl(int cmd, void* data)
     case DBGC_SETABORT:
         aops = data;
         db_abort = aops->abort;
+        break;
+
+    case DBGC_SAVEBT:
+#ifdef CONFIG_USR_BACKTRACE
+        error = copyin(data, curtask->backtrace, sizeof(curtask->backtrace));
+#endif
         break;
 
     default:

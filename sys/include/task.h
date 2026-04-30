@@ -60,6 +60,12 @@ struct task
     int nthreads;           /* number of threads */
     int nobjects;           /* number of IPC objects */
     int nsyncs;             /* number of syncronizer objects */
+#ifdef CONFIG_USR_BACKTRACE
+    struct {
+        uint32_t pc;   /* Return address */
+        uint32_t func; /* Function start address for name lookup */
+    } backtrace[16];
+#endif
 };
 
 #define curtask (curthread->task)
