@@ -20,12 +20,14 @@ mmu         CACHE
 #
 memory      RAM_SIZE    0x02000000  # RAM Size
 memory		LOADER_TEXT	0x00010000	# Start of boot loader
-memory		KERNEL_TEXT	0x00200000	# Start of kernel
+memory          KERNEL_TEXT     0x00400000      # Start of kernel
+
 memory		BOOTIMG_BASE	0x00012000	# Location of boot image
 
 #
 # Tunable paramters
 #
+
 options 	HZ=1000		# Ticks/second of the clock
 options 	TIME_SLICE=50	# Context switch ratio (msec)
 options 	OPEN_MAX=16	# Max open files per process
@@ -62,6 +64,7 @@ options 	TINY		# Optimize for size
 options 	DIAG_SERIAL	# Diagnostic via serial port
 options 	USR_BACKTRACE	# Backtrace for user-space
 options 	KERNEL_BACKTRACE	# Backtrace for kernel
+
 
 #
 # File systems

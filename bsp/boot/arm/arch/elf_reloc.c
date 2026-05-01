@@ -131,11 +131,11 @@ case R_ARM_PREL31:
     }
     break;
 default:
-    panic("relocation fail");
+    printf("relocation fail: type=%d\n", (int)ELF32_R_TYPE(rel->r_info));
     return -1;
-}    return 0;
 }
-
+return 0;
+}
 int relocate_rela(Elf32_Rela* rela, Elf32_Addr sym_val, char* target_sec)
 {
 

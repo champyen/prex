@@ -246,8 +246,13 @@ static int relocate_section(char* img, Elf32_Shdr* shdr)
 
     if (shdr->sh_entsize == 0)
         return 0;
-    if ((target_sect = sect_addr[shdr->sh_info]) == 0)
-        return -1;
+    if ((target_sect = sect_addr[shdr->sh_info]) == 0) {
+        /*
+         * Skip relocation if target section is not loaded.
+         * (e.g. debug information)
+         */
+        return 0;
+    }
     if ((symtab = (Elf32_Sym*)sect_addr[shdr->sh_link]) == 0)
         return -1;
     if ((strtab = sect_addr[strshndx]) == 0)
