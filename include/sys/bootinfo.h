@@ -67,6 +67,8 @@ struct module
     size_t textsz;         /* text size */
     size_t datasz;         /* data size */
     size_t bsssz;          /* bss size */
+    vaddr_t exidx_start;   /* start of ARM exidx table */
+    size_t exidx_size;     /* size of ARM exidx table */
 };
 
 /*

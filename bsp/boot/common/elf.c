@@ -119,41 +119,46 @@ static int load_executable(char* img, struct module* m)
     m->data = 0;
 
     for (i = 0; i < (int)ehdr->e_phnum; i++, phdr++) {
-        if (phdr->p_type != PT_LOAD)
-            continue;
+        if (phdr->p_type == PT_LOAD) {
+            ELFDBG(("p_flags=%x\n", (int)phdr->p_flags));
+            ELFDBG(("p_align=%x\n", (int)phdr->p_align));
+            ELFDBG(("p_paddr=%x\n", phdr->p_paddr));
 
-        ELFDBG(("p_flags=%x\n", (int)phdr->p_flags));
-        ELFDBG(("p_align=%x\n", (int)phdr->p_align));
-        ELFDBG(("p_paddr=%x\n", phdr->p_paddr));
-
-        if (!(phdr->p_flags & PF_W)) {
-            /* Text / RO data */
-            if (m->text == 0) {
-                m->text = phdr->p_vaddr;
-                m->textsz = (size_t)phdr->p_memsz;
+            if (!(phdr->p_flags & PF_W)) {
+                /* Text / RO data */
+                if (m->text == 0) {
+                    m->text = phdr->p_vaddr;
+                    m->textsz = (size_t)phdr->p_memsz;
+                } else {
+                    m->textsz = (size_t)((phdr->p_vaddr + phdr->p_memsz) - m->text);
+                }
+                if (phdr->p_filesz > 0) {
+                    memcpy((char*)phys_base + (phdr->p_vaddr - m->text), img + phdr->p_offset, (size_t)phdr->p_filesz);
+                }
             } else {
-                m->textsz = (size_t)((phdr->p_vaddr + phdr->p_memsz) - m->text);
-            }
-            if (phdr->p_filesz > 0) {
-                memcpy((char*)phys_base + (phdr->p_vaddr - m->text), img + phdr->p_offset, (size_t)phdr->p_filesz);
-            }
-        } else {
-            /* Data & BSS */
-            if (m->data == 0) {
-                m->data = phdr->p_vaddr;
-                load_base = phys_base + (m->data - m->text);
-            }
-            m->datasz = (size_t)((phdr->p_vaddr + phdr->p_filesz) - m->data);
-            m->bsssz = (size_t)((phdr->p_vaddr + phdr->p_memsz) - m->data) - m->datasz;
+                /* Data & BSS */
+                if (m->data == 0) {
+                    m->data = phdr->p_vaddr;
+                    load_base = phys_base + (m->data - m->text);
+                }
+                m->datasz = (size_t)((phdr->p_vaddr + phdr->p_filesz) - m->data);
+                m->bsssz = (size_t)((phdr->p_vaddr + phdr->p_memsz) - m->data) - m->datasz;
 
-            if (phdr->p_filesz > 0) {
-                memcpy((char*)load_base + (phdr->p_vaddr - m->data), img + phdr->p_offset, (size_t)phdr->p_filesz);
-            }
-            if (phdr->p_memsz > phdr->p_filesz) {
-                /* Zero fill BSS */
-                memset((char*)load_base + (phdr->p_vaddr - m->data) + phdr->p_filesz, 0, (size_t)(phdr->p_memsz - phdr->p_filesz));
+                if (phdr->p_filesz > 0) {
+                    memcpy((char*)load_base + (phdr->p_vaddr - m->data), img + phdr->p_offset, (size_t)phdr->p_filesz);
+                }
+                if (phdr->p_memsz > phdr->p_filesz) {
+                    /* Zero fill BSS */
+                    memset((char*)load_base + (phdr->p_vaddr - m->data) + phdr->p_filesz, 0, (size_t)(phdr->p_memsz - phdr->p_filesz));
+                }
             }
         }
+#ifdef __arm__
+        else if (phdr->p_type == 0x70000001) { /* PT_ARM_EXIDX */
+            m->exidx_start = phdr->p_vaddr;
+            m->exidx_size = phdr->p_memsz;
+        }
+#endif
     }
 
     if (m->data != 0) {
@@ -310,14 +315,31 @@ static int load_relocatable(char* img, struct module* m)
             case SHF_ALLOC:
                 /* rodata */
                 /* Note: rodata is treated as text. */
+#ifdef __arm__
+                if (shdr->sh_type == SHT_ARM_EXIDX) {
+                    m->exidx_start = (vaddr_t)ptokv(load_base + shdr->sh_addr);
+                    m->exidx_size = (size_t)shdr->sh_size;
+                    ELFDBG(("exidx_start=%lx size=%x\n", m->exidx_start, m->exidx_size));
+                }
+#endif
                 break;
             case (SHF_ALLOC | 0x08000000): /* SHF_LINK_ORDER */
                 /* exidx */
+#ifdef __arm__
+                if (shdr->sh_type == SHT_ARM_EXIDX) {
+                    m->exidx_start = (vaddr_t)ptokv(load_base + shdr->sh_addr);
+                    m->exidx_size = (size_t)shdr->sh_size;
+                    ELFDBG(("exidx_start=%lx size=%x\n", m->exidx_start, m->exidx_size));
+                }
+#endif
                 break;
             default:
 #ifdef __arm__
-                if (shdr->sh_type == SHT_ARM_EXIDX)
+                if (shdr->sh_type == SHT_ARM_EXIDX) {
+                    m->exidx_start = (vaddr_t)ptokv(load_base + shdr->sh_addr);
+                    m->exidx_size = (size_t)shdr->sh_size;
                     break;
+                }
 #endif
                 continue;
             }

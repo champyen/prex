@@ -27,6 +27,17 @@ SECTIONS
 		*(.rodata.*)
 	} : text
 
+	. = ALIGN(4);
+	__exidx_start = .;
+	.ARM.exidx : {
+		*(.ARM.exidx*)
+	} : text
+	__exidx_end = .;
+
+	.ARM.extab : {
+		*(.ARM.extab*)
+	} : text
+
         . = ALIGN(4);
 	.data : {
 		*(.data)
@@ -38,5 +49,5 @@ SECTIONS
 		*(COMMON)
 	}
 
-	/DISCARD/ : { *(.comment .note .debug_* .ARM.*) }
+	/DISCARD/ : { *(.comment .note .debug_*) }
 }

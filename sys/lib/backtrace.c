@@ -39,6 +39,9 @@ typedef struct unwind_index
 extern const unwind_index_t __exidx_start[];
 extern const unwind_index_t __exidx_end[];
 
+#include <hal.h>
+#include <sys/bootinfo.h>
+
 static inline __attribute__((always_inline)) uint32_t prel31_to_addr(const uint32_t *prel31)
 {
 	int32_t offset = (((int32_t)(*prel31)) << 1) >> 1;
@@ -48,6 +51,9 @@ static inline __attribute__((always_inline)) uint32_t prel31_to_addr(const uint3
 static const struct unwind_index *unwind_search_index(const unwind_index_t *start, const unwind_index_t *end, uint32_t ip)
 {
 	const struct unwind_index *middle;
+
+	if (start >= end)
+		return NULL;
 
 	/* Perform a binary search of the unwind index */
 	while (start < end - 1) {
@@ -60,8 +66,55 @@ static const struct unwind_index *unwind_search_index(const unwind_index_t *star
 	return start;
 }
 
+static const struct unwind_index *unwind_search_all_indices(uint32_t ip)
+{
+	const struct unwind_index *index;
+	struct module *m;
+	struct bootinfo *bi;
+
+	machine_bootinfo(&bi);
+
+	/* 1. Search the core kernel's table (usually linked-in) */
+	index = unwind_search_index(__exidx_start, __exidx_end, ip);
+	if (index && ip >= prel31_to_addr(&index->addr_offset)) {
+		if (ip < (uint32_t)bi->kernel.text + bi->kernel.textsz)
+			return index;
+	}
+
+	/* 2. Search the driver module table */
+	m = &bi->driver;
+	if (m->exidx_start && m->exidx_size > 0) {
+		const unwind_index_t *start = (const unwind_index_t *)m->exidx_start;
+		const unwind_index_t *end = (const unwind_index_t *)(m->exidx_start + m->exidx_size);
+		index = unwind_search_index(start, end, ip);
+		if (index && ip >= prel31_to_addr(&index->addr_offset)) {
+			if (ip < (uint32_t)m->text + m->textsz)
+				return index;
+		}
+	}
+
+#ifndef CONFIG_MMU
+	/* 3. Search boot tasks tables (for NOMMU support) */
+	for (int i = 0; i < bi->nr_tasks; i++) {
+		m = &bi->tasks[i];
+		if (m->exidx_start && m->exidx_size > 0) {
+			const unwind_index_t *start = (const unwind_index_t *)m->exidx_start;
+			const unwind_index_t *end = (const unwind_index_t *)(m->exidx_start + m->exidx_size);
+			index = unwind_search_index(start, end, ip);
+			if (index && ip >= prel31_to_addr(&index->addr_offset)) {
+				if (ip < (uint32_t)m->text + m->textsz)
+					return index;
+			}
+		}
+	}
+#endif
+
+	return NULL;
+}
+
 const char *backtrace_name(uint32_t address)
 {
+	address &= ~1U; /* Clear Thumb bit */
 	if (address < 0x1000) /* Safety check */
 		return "";
 
@@ -264,7 +317,7 @@ static int unwind_frame(backtrace_frame_t *frame)
 	int execution_result;
 
 	/* Search the unwind index for the matching unwind table */
-	index = unwind_search_index(__exidx_start, __exidx_end, frame->pc);
+	index = unwind_search_all_indices(frame->pc);
 	if (index == NULL)
 		return -1;
 
@@ -327,15 +380,20 @@ static int _backtrace_unwind(backtrace_t *buffer, int size, backtrace_frame_t *f
 		}
 
 		/* Find the unwind index of the current frame pc */
-		const unwind_index_t *index = unwind_search_index(__exidx_start, __exidx_end, frame->pc);
+		const unwind_index_t *index = unwind_search_all_indices(frame->pc);
 
 		/* Clear last bit (Thumb indicator) */
 		uint32_t pc = frame->pc & 0xfffffffeU;
 
 		/* Generate the backtrace information */
 		buffer[count].address = (void *)pc;
-		buffer[count].function = (void *)prel31_to_addr(&index->addr_offset);
-		buffer[count].name = backtrace_name((uint32_t)buffer[count].function);
+		if (index) {
+			buffer[count].function = (void *)prel31_to_addr(&index->addr_offset);
+			buffer[count].name = backtrace_name((uint32_t)buffer[count].function);
+		} else {
+			buffer[count].function = NULL;
+			buffer[count].name = "";
+		}
 
 		/* Next backtrace frame */
 		++count;
@@ -380,7 +438,7 @@ int backtrace_unwind(backtrace_t *buffer, int size)
 
 const char *backtrace_function_name(uint32_t pc)
 {
-	const unwind_index_t *index = unwind_search_index(__exidx_start, __exidx_end, pc);
+	const unwind_index_t *index = unwind_search_all_indices(pc);
 	if (!index)
 		return "";
 

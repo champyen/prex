@@ -46,3 +46,19 @@ int nullop(void)
 
     return 0;
 }
+
+#ifdef __arm__
+/*
+ * __aeabi_unwind_cpp_pr0, __aeabi_unwind_cpp_pr1 and __aeabi_unwind_cpp_pr2
+ * are the ARM EABI defined C++ personality routines.
+ */
+void __aeabi_unwind_cpp_pr0(void)
+{
+}
+void __aeabi_unwind_cpp_pr1(void)
+{
+}
+void __aeabi_unwind_cpp_pr2(void)
+{
+}
+#endif
