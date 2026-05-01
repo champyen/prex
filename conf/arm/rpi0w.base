@@ -59,6 +59,8 @@ options 	CMDBOX		# Core utilities
 # Diagnostic options
 #
 options 	DIAG_SERIAL	# Diagnostic via serial port
+options 	USR_BACKTRACE	# Backtrace for user-space
+options 	KERNEL_BACKTRACE	# Backtrace for kernel
 
 #
 # File systems
