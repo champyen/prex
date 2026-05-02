@@ -28,8 +28,8 @@
  * SUCH DAMAGE.
  */
 
-#ifndef _RPI0W_PLATFORM_H
-#define _RPI0W_PLATFORM_H
+#ifndef _RASPI0_PLATFORM_H
+#define _RASPI0_PLATFORM_H
 
 #include <conf/config.h>
 
@@ -47,4 +47,4 @@ __BEGIN_DECLS
 void set_vbar(vaddr_t);
 __END_DECLS
 
-#endif /* !_RPI0W_PLATFORM_H */
+#endif /* !_RASPI0_PLATFORM_H */

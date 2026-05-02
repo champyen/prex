@@ -154,7 +154,7 @@ If you compile the Prex+ source with the "make" command, the following OS images
 - **prexos.bin**: The primary boot volume (ARFS). It includes the boot loader, kernel module, driver module, and essential system servers and utilities.
 - **prexos_full.bin**: Similar to `prexos.bin` but includes all POSIX utilities and RTOS tasks in its internal RAM disk (bootdisk).
 - **bin.img**: The secondary volume (ARFS) mounted at `/bin`. It contains the majority of user-mode POSIX utilities and RTOS tasks.
-- **disk.img**: The tertiary volume (FATFS) mounted at `/usr`. It contains large applications (like SQLite, TinyCC) and the Prex SDK.
+- **disk.img**: The tertiary volume (FATFS) mounted at `/usr`. It contains large applications (like SQLite, TinyCC) and the Prex+ SDK.
 
 ### Directory Organization
 
@@ -191,7 +191,7 @@ The structure of the Prex+ source directory is as follows:
 	/task		RTOS/Real-time task programs
 	/test		Functional and audio test programs
 
- /sdk           Generated Prex SDK directory (populated during build)
+ /sdk           Generated Prex+ SDK directory (populated during build)
 
  configure ... Configuration script
 

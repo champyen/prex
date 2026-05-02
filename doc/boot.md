@@ -4,7 +4,7 @@ This document describes the complete boot sequence of the Prex+ operating system
 
 ## 1. Memory Layout and Configuration
 
-The physical and virtual memory layout for each target is defined in its respective configuration file (e.g., `conf/x86/pc.base` for x86, or `conf/arm/rpi0w.base` for ARM). Key memory addresses typically include:
+The physical and virtual memory layout for each target is defined in its respective configuration file (e.g., `conf/x86/pc.base` for x86, or `conf/arm/raspi0.base` for ARM). Key memory addresses typically include:
 
 *   **`SYSPAGE` for NOMMU:** The physical start of RAM (e.g., `0x00000000` for x86-pc and Raspberry Pi Zero W).
 *   **`RAM_SIZE`:** For ARM targets, this explicitly defines the total available memory, as dynamic detection isn't always available via BIOS.

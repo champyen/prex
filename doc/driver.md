@@ -139,7 +139,7 @@ static int null_write(device_t dev, char *buf, size_t *nbyte, int blkno)
 
 ## Interrupt Handling (ISR + IST)
 
-Prex enforces a split interrupt handling architecture to minimize interrupt latency: the Top Half (ISR) and the Bottom Half (IST).
+Prex+ enforces a split interrupt handling architecture to minimize interrupt latency: the Top Half (ISR) and the Bottom Half (IST).
 
 ### Top Half: Interrupt Service Routine (ISR)
 
@@ -172,7 +172,7 @@ Once you have written your driver (e.g., `mydevice.c`), you must integrate it in
 
 1.  Place your source code in the appropriate subdirectory under `bsp/drv/dev/` (for architecture-independent drivers) or `bsp/drv/<arch>/` (for platform-specific drivers).
 2.  Update the corresponding `Makefile` in that directory to include your object file.
-3.  Register your driver in the target board's configuration file (e.g., `conf/x86/pc.base` or `conf/arm/rpi0w.base`). Add a line like:
+3.  Register your driver in the target board's configuration file (e.g., `conf/x86/pc.base` or `conf/arm/raspi0.base`). Add a line like:
     ```
     device    mydevice      # My Custom Device Driver
     ```

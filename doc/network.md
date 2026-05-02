@@ -1,10 +1,10 @@
-# Prex Network Stack
+# Prex+ Network Stack
 
-This document describes the architecture and implementation of the network stack in Prex, covering the layers from hardware drivers to the POSIX socket API.
+This document describes the architecture and implementation of the network stack in Prex+, covering the layers from hardware drivers to the POSIX socket API.
 
 ## Overview
 
-The Prex network stack is built using a microkernel-oriented approach. Networking services are provided by a dedicated **Network Server** task, which communicates with user applications via IPC and with hardware via device drivers.
+The Prex+ network stack is built using a microkernel-oriented approach. Networking services are provided by a dedicated **Network Server** task, which communicates with user applications via IPC and with hardware via device drivers.
 
 ### Layered Architecture
 
@@ -26,7 +26,7 @@ Hardware drivers are implemented as kernel-mode or driver-module components. The
 *   **Zero-Padding**: For VirtIO, a 10-byte header is prepended to each packet.
 
 ### Machine Independent (MI) Interface
-Drivers expose a standard Prex device interface (`read`, `write`, `ioctl`). The Network Server opens these devices (e.g., `/dev/net0`) and uses them as the physical layer for LwIP.
+Drivers expose a standard Prex+ device interface (`read`, `write`, `ioctl`). The Network Server opens these devices (e.g., `/dev/net0`) and uses them as the physical layer for LwIP.
 
 ---
 
@@ -40,7 +40,7 @@ The Network Server is the heart of the networking system.
     *   **TCP/IP Thread**: The core LwIP processing thread.
     *   **Input Thread**: Polls the network device for incoming packets and feeds them to LwIP.
     *   **Monitor Thread**: Periodically checks for DHCP lease status and DNS configuration updates.
-*   **Synchronization**: Implemented via a `sys_arch` port using Prex semaphores and mutexes.
+*   **Synchronization**: Implemented via a `sys_arch` port using Prex+ semaphores and mutexes.
 
 ---
 

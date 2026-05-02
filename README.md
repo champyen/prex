@@ -1,10 +1,10 @@
-This is a github repo, originally rebased from [Prex site](http://prex.sourceforge.net).
+This is a github repo, originally rebased from [Prex+ site](http://prex.sourceforge.net).
 Maintained and developed by me (champ.yen@gmail.com).
 Feel free to submit pull requests.
 
 ## Prex+ 2604 Release
 
-Since the original Prex 0.9.0 release, this project has been significantly enhanced and is now released as **Prex+ (2604 release)**. Key developments include:
+Since the original Prex+ 0.9.0 release, this project has been significantly enhanced and is now released as **Prex+ (2604 release)**. Key developments include:
 
 *   **Expanded ARM Support:** Added support for Raspberry Pi Zero W (ARM1176JZF-S) and improved the Integrator/CP support.
 *   **New Hardware Drivers:** Implemented interrupt-driven BCM2835 SD Host (SDHC) and DMA drivers for the Raspberry Pi.
@@ -34,12 +34,12 @@ The project targets the following goals:
 
 ## License
 
-Prex is royalty-free software released under Revised BSD License.
+Prex+ is royalty-free software released under Revised BSD License.
 [See License Information »](doc/LICENSE)
 
 ## Features
 
-Prex has the following features:
+Prex+ has the following features:
 
 -   Task & Thread Control: preemptive priority scheduling with 256 priority levels
 -   Memory Management: memory protection, virtual address mapping, shared memory, MMU or MMU-less configuration

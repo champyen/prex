@@ -59,8 +59,8 @@ int main(void)
      * Initialize debug port.
      */
     debug_init();
-    printf("\nPrex Boot Loader starting...\n");
-    DPRINTF(("Prex Boot Loader\n"));
+    printf("\nPrex+ Boot Loader starting...\n");
+    DPRINTF(("Prex+ Boot Loader\n"));
 
     /*
      * Do platform dependent initialization.

@@ -1,6 +1,6 @@
 # Current Support Targets
 * arm-gba (no MMU support)
-* arm-rpi0w
+* arm-raspi0
 * arm-qemu-virt
 * x86-pc
 
@@ -24,8 +24,8 @@ $ make clean
 2. Attach all specified devices for each platform
 
 ## COMMANDS
-QEMU command to run Prex on QEMU virt platform and get boot logz:
-* arm-rpi0w
+QEMU command to run Prex+ on QEMU virt platform and get boot logz:
+* arm-raspi0
 $ timeout 15 \
   qemu-system-arm -M raspi0 -kernel prexos_full.bin -nographic -sd disk.img \
   > qemu.log 2>&1 & sleep 16 && cat qemu.log
