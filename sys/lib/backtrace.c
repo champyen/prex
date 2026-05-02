@@ -472,7 +472,7 @@ void __aeabi_unwind_cpp_pr2(void) {}
 
 static inline int safe_read_ptr(uint32_t *addr, uint32_t *val)
 {
-	if ((uint32_t)addr < PAGE_SIZE)
+	if ((uint32_t)addr < 4)
 		return -1;
 	*val = *addr;
 	return 0;
@@ -488,20 +488,27 @@ int backtrace_unwind_frame(backtrace_t *buffer, int size, uint32_t pc, uint32_t 
 	while (count < size) {
 		uint32_t next_fp, ret_addr;
 
+		/* Sanity checks for the frame pointer */
+		if ((uint32_t)fp & 3)
+			break;
 		if (safe_read_ptr(fp, &next_fp) < 0)
 			break;
 		if (safe_read_ptr(fp + 1, &ret_addr) < 0)
 			break;
 
-		if (next_fp == 0 || ret_addr == 0)
+		if (ret_addr == 0)
 			break;
 
 		buffer[count].address = (void *)ret_addr;
 		buffer[count].function = NULL;
 		buffer[count].name = "";
+		count++;
+
+		/* Reached top of stack, invalid frame, or stack corruption */
+		if (next_fp == 0 || next_fp <= (uint32_t)fp)
+			break;
 
 		fp = (uint32_t *)next_fp;
-		count++;
 	}
 
 	return count;

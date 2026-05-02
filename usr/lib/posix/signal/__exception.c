@@ -114,8 +114,7 @@ int __sig_flush(void)
             case SIGTRAP:
             case SIGFPE:
             case SIGSEGV:
-                for (;;)
-                    ; /* exception from kernel */
+                exit(sig);
                 break;
             }
             if (action.sa_handler != SIG_IGN)
@@ -128,44 +127,56 @@ int __sig_flush(void)
     return rc;
 }
 
+#include <sys/backtrace.h>
+#include <unistd.h>
+
+static int __in_exception = 0;
+
 /*
  * Exception handler for signal emulation
  */
 void __exception_handler_c(int excpt, uint32_t *regs)
 {
+	if (__in_exception)
+		_exit(1);
+	__in_exception = 1;
+
 #ifdef CONFIG_USR_BACKTRACE
-    if (excpt == SIGILL || excpt == SIGTRAP || excpt == SIGFPE || excpt == SIGSEGV) {
-        backtrace_t bt[16];
-        int count, i;
-        printf("Fault Exception #%d. Backtrace:\n", excpt);
-        if (regs) {
+	if (excpt == SIGILL || excpt == SIGTRAP || excpt == SIGFPE || excpt == SIGSEGV) {
+		backtrace_t bt[16];
+		int count, i;
+		printf("Fault Exception #%d. Backtrace:\n", excpt);
+		if (regs) {
 #ifdef __arm__
-            backtrace_save_frame(regs[18], regs[14], regs[13], regs[7], regs[11]);
-            count = backtrace_unwind_frame(bt, 16, regs[18], regs[14], regs[13], regs[7], regs[11]);
+			backtrace_save_frame(regs[18], regs[14], regs[13], regs[7], regs[11]);
+			count = backtrace_unwind_frame(bt, 16, regs[18], regs[14], regs[13], regs[7], regs[11]);
+#elif defined(__x86__)
+			/* x86: regs[11]=eip, regs[14]=esp, regs[6]=ebp */
+			backtrace_save_frame(regs[11], 0, regs[14], 0, regs[6]);
+			count = backtrace_unwind_frame(bt, 16, regs[11], 0, regs[14], 0, regs[6]);
 #else
-            count = 0;
+			count = 0;
 #endif
-        } else {
-            backtrace_save();
-            count = backtrace_unwind(bt, 16);
-        }
-        for (i = 0; i < count; i++) {
-            printf(" [%d] %p %s\n", i, bt[i].address, bt[i].name);
-        }
-    }
+		} else {
+			backtrace_save();
+			count = backtrace_unwind(bt, 16);
+		}
+		for (i = 0; i < count; i++) {
+			printf(" [%d] %p %s\n", i, bt[i].address, bt[i].name ? bt[i].name : "");
+		}
+	}
 #endif
 
-    if (excpt > 0 && excpt <= NSIG) {
+	if (excpt > 0 && excpt <= NSIG) {
+		SIGNAL_LOCK();
+		if (__sig_act[excpt].sa_handler != SIG_IGN)
+			__sig_pending |= sigmask(excpt);
+		SIGNAL_UNLOCK();
+	}
 
-        SIGNAL_LOCK();
-
-        if (__sig_act[excpt].sa_handler != SIG_IGN)
-            __sig_pending |= sigmask(excpt);
-
-        SIGNAL_UNLOCK();
-    }
-    __sig_flush();
-    exception_return();
+	__sig_flush();
+	__in_exception = 0;
+	exception_return();
 }
 
 #ifdef __arm__
@@ -178,6 +189,19 @@ static void __attribute__((naked)) __exception_handler(int excpt)
         "add r1, sp, #8\n\t"
         "b __exception_handler_c\n\t"
     );
+}
+#elif defined(__x86__)
+static void __attribute__((naked)) __exception_handler(void)
+{
+	__asm__ volatile(
+		"movl 4(%esp), %eax\n\t"	/* eax = excpt */
+		"leal 8(%esp), %edx\n\t"	/* edx = regs pointer */
+		"pushl %edx\n\t"
+		"pushl %eax\n\t"
+		"call __exception_handler_c\n\t"
+		"addl $8, %esp\n\t"
+		"ret\n\t"
+	);
 }
 #else
 static void __exception_handler(int excpt)
@@ -208,7 +232,7 @@ void __exception_init(void)
     }
 
     /* Install exception handler */
-    exception_setup(__exception_handler);
+    exception_setup((void (*)(int))__exception_handler);
 }
 
 /*
