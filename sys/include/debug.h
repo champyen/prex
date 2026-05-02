@@ -33,7 +33,7 @@
 #include <sys/cdefs.h>
 #include <hal.h>
 
-#ifdef CONFIG_TINY
+#ifdef CONFIG_SIZE_OPT
 #define LOGBUFSZ 512 /* size of log buffer */
 #else
 #define LOGBUFSZ 2048 /* size of log buffer */

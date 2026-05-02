@@ -12,22 +12,6 @@ ifeq ($(CONFIG_CMDBOX),y)
 FILES+= 	$(SRCDIR)/usr/posix/cmdbox/cmdbox/cmdbox
 endif
 
-#FILES+= 	$(SRCDIR)/usr/bin/tcc/tcc
-
-ifeq ($(CONFIG_NET),y)
-endif
-
-
-ifeq ($(CONFIG_SNDIO),y)
-#FILES+=		$(SRCDIR)/usr/server/sndio/sndiod
-#FILES+=		$(SRCDIR)/usr/sample/beep/beep
-endif
-
-ifneq ($(_QUICK_),1)
-ifneq ($(CONFIG_TINY),y)
-endif
-endif
-
 #FILES+= 	$(SRCDIR)/usr/test/args/args
 #FILES+= 	$(SRCDIR)/usr/test/attack/attack
 #FILES+= 	$(SRCDIR)/usr/test/conf/conf
@@ -47,8 +31,8 @@ endif
 #FILES+= 	$(SRCDIR)/usr/test/stack/stack
 #FILES+= 	$(SRCDIR)/usr/test/stderr/stderr
 #FILES+= 	$(SRCDIR)/usr/test/umount/umount
-FILES+= 	$(SRCDIR)/usr/test/fault/fault
-FILES+= 	$(SRCDIR)/usr/test/assert/assert_test
+#FILES+= 	$(SRCDIR)/usr/test/fault/fault
+#FILES+= 	$(SRCDIR)/usr/test/assert/assert_test
 
 FILES+=		$(SRCDIR)/doc/LICENSE
 

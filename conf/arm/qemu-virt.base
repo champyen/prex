@@ -56,7 +56,7 @@ options		USR_THUMB	# Thumb mode for user programs
 options		DRV_THUMB	# Thumb mode for drivers
 options		KERNEL_THUMB	# Thumb mode for kernel
 
-#options 	TINY		# Optimize for size
+#options 	SIZE_OPT		# Optimize for size
 
 #
 # Kernel hacking

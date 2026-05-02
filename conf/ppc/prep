@@ -42,7 +42,7 @@ options		PPC_OEA		# PowerPC OEA
 #
 options 	POSIX		# POSIX support
 options 	CMDBOX		# Core utilities
-#options 	TINY		# Optimize for size
+#options 	SIZE_OPT		# Optimize for size
 
 #
 # Kernel hacking

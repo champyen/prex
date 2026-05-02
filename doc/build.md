@@ -233,6 +233,8 @@ options         MAXMEM=16777216           # Max core per task
 ...
 ```
 
+- **SIZE_OPT**: When enabled, the kernel and user-space programs will be compiled with optimization for size (`-Os`) instead of performance (`-O3`).
+
 **Note:** You must re-run the `./configure` script after changing any options in the platform configuration file to regenerate the header files and `conf/config.mk`.
 
 
