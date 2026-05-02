@@ -172,7 +172,9 @@ void __exception_handler_c(int excpt, uint32_t *regs)
 static void __attribute__((naked)) __exception_handler(int excpt)
 {
     __asm__ volatile(
+#ifdef CONFIG_ARMV7A
         ".thumb_func\n\t"
+#endif
         "add r1, sp, #8\n\t"
         "b __exception_handler_c\n\t"
     );

@@ -6,7 +6,14 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. 
  */
 
+/*
+ * Safety boundaries for memory access:
+ * - PAGE_SIZE: Minimum safe address (skips vector table/NULL page).
+ * - USERLIMIT: Architectural limit for address space access.
+ */
+
 #include <kernel.h>
+#include <machine/memory.h>
 
 #ifdef CONFIG_KERNEL_BACKTRACE
 
@@ -115,13 +122,13 @@ static const struct unwind_index *unwind_search_all_indices(uint32_t ip)
 const char *backtrace_name(uint32_t address)
 {
 	address &= ~1U; /* Clear Thumb bit */
-	if (address < 0x1000) /* Safety check */
+	if (address < PAGE_SIZE) /* Safety check */
 		return "";
 
 	uint32_t flag_word = *(uint32_t *)(address - 4);
 	if ((flag_word & 0xff000000) == 0xff000000) {
 		const char *name = (const char *)(address - 4 - (flag_word & 0x00ffffff));
-		if ((uint32_t)name >= 0x1000)
+		if ((uint32_t)name >= PAGE_SIZE)
 			return name;
 	}
 	return "";
@@ -213,7 +220,7 @@ static int unwind_execute_instruction(unwind_control_block_t *ucb)
 			reg = 4;
 			while (mask != 0) {
 				if ((mask & 0x001) != 0) {
-					if ((uint32_t)vsp < 0x1000) return -1;
+					if ((uint32_t)vsp < PAGE_SIZE) return -1;
 					ucb->vrs[reg] = *vsp++;
 				}
 				mask = mask >> 1;
@@ -234,12 +241,12 @@ static int unwind_execute_instruction(unwind_control_block_t *ucb)
 			vsp = (uint32_t *)ucb->vrs[13];
 
 			for (reg = 4; reg <= (uint32_t)((instruction & 0x07) + 4); ++reg) {
-				if ((uint32_t)vsp < 0x1000) return -1;
+				if ((uint32_t)vsp < PAGE_SIZE) return -1;
 				ucb->vrs[reg] = *vsp++;
 			}
 
 			if (instruction & 0x08) {
-				if ((uint32_t)vsp < 0x1000) return -1;
+				if ((uint32_t)vsp < PAGE_SIZE) return -1;
 				ucb->vrs[14] = *vsp++;
 			}
 
@@ -261,7 +268,7 @@ static int unwind_execute_instruction(unwind_control_block_t *ucb)
 			reg = 0;
 			while (mask != 0) {
 				if ((mask & 0x01) != 0) {
-					if ((uint32_t)vsp < 0x1000) return -1;
+					if ((uint32_t)vsp < PAGE_SIZE) return -1;
 					ucb->vrs[reg] = *vsp++;
 				}
 				mask = mask >> 1;
@@ -331,7 +338,7 @@ static int unwind_frame(backtrace_frame_t *frame)
 	else
 		instructions = (uint32_t *)prel31_to_addr(&index->insn);
 
-	if (!instructions || (uint32_t)instructions < 0x1000)
+	if (!instructions || (uint32_t)instructions < PAGE_SIZE)
 		return -1;
 
 	/* Initialize the unwind control block */
@@ -420,17 +427,19 @@ int backtrace_unwind_frame(backtrace_t *buffer, int size, uint32_t pc, uint32_t 
 
 int backtrace_unwind(backtrace_t *buffer, int size)
 {
-	/* Get the current pc */
-	register uint32_t pc;
-	__asm__ volatile("mov %0, pc" : "=r"(pc));
-
 	/* Initialize the stack frame */
 	backtrace_frame_t frame;
-	frame.sp = (uint32_t)__builtin_frame_address(0);
-	frame.r7 = (uint32_t)__builtin_frame_address(0);
-	frame.r11 = (uint32_t)__builtin_frame_address(0);
-	frame.lr = (uint32_t)__builtin_return_address(0);
-	frame.pc = pc;
+	register uint32_t sp __asm__("sp");
+	register uint32_t r7 __asm__("r7");
+	register uint32_t r11 __asm__("r11");
+
+	/* Get the current pc and lr */
+	__asm__ volatile("mov %0, pc" : "=r"(frame.pc));
+	__asm__ volatile("mov %0, lr" : "=r"(frame.lr));
+
+	frame.sp = sp;
+	frame.r7 = r7;
+	frame.r11 = r11;
 
 	/* Let it rip */
 	return _backtrace_unwind(buffer, size, &frame);
