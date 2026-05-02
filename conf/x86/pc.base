@@ -65,6 +65,9 @@ options 	KD		# Kernel debugger
 #options 	DIAG_SCREEN	# Diagnostic via screen
 options 	DIAG_SERIAL	# Diagnostic via serial port
 
+options 	KERNEL_BACKTRACE	# Kernel backtrace support
+options 	USR_BACKTRACE	# Backtrace for user programs
+
 #options 	DIAG_BOCHS	# Diagnostic via Bochs emulater
 
 #

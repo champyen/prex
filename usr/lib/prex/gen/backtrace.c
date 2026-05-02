@@ -470,7 +470,117 @@ void __aeabi_unwind_cpp_pr0(void) {}
 void __aeabi_unwind_cpp_pr1(void) {}
 void __aeabi_unwind_cpp_pr2(void) {}
 
-#else /* !__arm__ */
+#elif defined(__x86__)
+
+static inline int safe_read_ptr(uint32_t *addr, uint32_t *val)
+{
+	if ((uint32_t)addr < PAGE_SIZE || (uint32_t)addr >= USERLIMIT)
+		return -1;
+	*val = *addr;
+	return 0;
+}
+
+int backtrace_unwind_frame(backtrace_t *buffer, int size, uint32_t pc, uint32_t lr, uint32_t sp, uint32_t r7, uint32_t r11)
+{
+	uint32_t *fp = (uint32_t *)r11; /* ebp is passed in r11 slot for x86 */
+	int count = 0;
+
+	memset(buffer, 0, sizeof(backtrace_t) * size);
+
+	while (count < size) {
+		uint32_t next_fp, ret_addr;
+
+		if (safe_read_ptr(fp, &next_fp) < 0)
+			break;
+		if (safe_read_ptr(fp + 1, &ret_addr) < 0)
+			break;
+
+		if (next_fp == 0 || ret_addr == 0)
+			break;
+
+		buffer[count].address = (void *)ret_addr;
+		buffer[count].function = NULL;
+		buffer[count].name = "";
+
+		fp = (uint32_t *)next_fp;
+		count++;
+	}
+
+	return count;
+}
+
+int backtrace_unwind(backtrace_t *buffer, int size)
+{
+	register uint32_t ebp __asm__("ebp");
+
+	/* We pass ebp in the r11 argument slot */
+	return backtrace_unwind_frame(buffer, size, 0, 0, 0, 0, ebp);
+}
+
+const char *backtrace_function_name(uint32_t pc)
+{
+	return "";
+}
+
+#ifndef KERNEL
+void backtrace_save_frame(uint32_t pc, uint32_t lr, uint32_t sp, uint32_t r7, uint32_t r11)
+{
+#ifdef CONFIG_USR_BACKTRACE
+	backtrace_t bt[16];
+	struct {
+		uint32_t pc;
+		uint32_t func;
+	} saved_bt[16];
+	int i, count;
+
+	count = backtrace_unwind_frame(bt, 16, pc, lr, sp, r7, r11);
+	for (i = 0; i < 16; i++) {
+		if (i < count) {
+			saved_bt[i].pc = (uint32_t)bt[i].address;
+			saved_bt[i].func = (uint32_t)bt[i].function;
+		} else {
+			saved_bt[i].pc = 0;
+			saved_bt[i].func = 0;
+		}
+	}
+	sys_debug(DBGC_SAVEBT, saved_bt);
+#endif
+}
+
+void backtrace_save(void)
+{
+#ifdef CONFIG_USR_BACKTRACE
+	backtrace_t bt[16];
+	struct {
+		uint32_t pc;
+		uint32_t func;
+	} saved_bt[16];
+	int i, count;
+
+	count = backtrace_unwind(bt, 16);
+	for (i = 0; i < 16; i++) {
+		if (i < count) {
+			saved_bt[i].pc = (uint32_t)bt[i].address;
+			saved_bt[i].func = (uint32_t)bt[i].function;
+		} else {
+			saved_bt[i].pc = 0;
+			saved_bt[i].func = 0;
+		}
+	}
+	sys_debug(DBGC_SAVEBT, saved_bt);
+#endif
+}
+#else
+void backtrace_save_frame(uint32_t pc, uint32_t lr, uint32_t sp, uint32_t r7, uint32_t r11)
+{
+}
+
+void backtrace_save(void)
+{
+}
+#endif
+
+#else /* !__arm__ && !__x86__ */
 
 int backtrace_unwind(backtrace_t *buffer, int size)
 {

@@ -468,4 +468,67 @@ void __aeabi_unwind_cpp_pr2(void) {}
 
 #endif /* __arm__ */
 
+#ifdef __x86__
+
+static inline int safe_read_ptr(uint32_t *addr, uint32_t *val)
+{
+	if ((uint32_t)addr < PAGE_SIZE)
+		return -1;
+	*val = *addr;
+	return 0;
+}
+
+int backtrace_unwind_frame(backtrace_t *buffer, int size, uint32_t pc, uint32_t lr, uint32_t sp, uint32_t r7, uint32_t r11)
+{
+	uint32_t *fp = (uint32_t *)r11; /* ebp is passed in r11 slot for x86 */
+	int count = 0;
+
+	memset(buffer, 0, sizeof(backtrace_t) * size);
+
+	while (count < size) {
+		uint32_t next_fp, ret_addr;
+
+		if (safe_read_ptr(fp, &next_fp) < 0)
+			break;
+		if (safe_read_ptr(fp + 1, &ret_addr) < 0)
+			break;
+
+		if (next_fp == 0 || ret_addr == 0)
+			break;
+
+		buffer[count].address = (void *)ret_addr;
+		buffer[count].function = NULL;
+		buffer[count].name = "";
+
+		fp = (uint32_t *)next_fp;
+		count++;
+	}
+
+	return count;
+}
+
+int backtrace_unwind(backtrace_t *buffer, int size)
+{
+	register uint32_t ebp __asm__("ebp");
+
+	/* We pass ebp in the r11 argument slot */
+	return backtrace_unwind_frame(buffer, size, 0, 0, 0, 0, ebp);
+}
+
+const char *backtrace_function_name(uint32_t pc)
+{
+	return "";
+}
+
+const char *backtrace_name(uint32_t address)
+{
+	return "";
+}
+
+void backtrace_save(void)
+{
+}
+
+#endif /* __x86__ */
+
 #endif /* CONFIG_KERNEL_BACKTRACE */

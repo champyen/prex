@@ -134,8 +134,6 @@ void trap_handler(struct cpu_regs* regs)
         interrupt_mask(0);
         spl0();
     }
-    for (;;)
-        ;
 #endif
     if (regs->cs == KERNEL_CS)
         panic("Kernel exception");
@@ -147,8 +145,7 @@ void trap_handler(struct cpu_regs* regs)
 #ifdef DEBUG
 void trap_dump(struct cpu_regs* r)
 {
-    uint32_t ss, esp, *fp;
-    u_int i;
+    uint32_t ss, esp;
     int spl;
 
     /* Get current spl */
@@ -170,18 +167,5 @@ void trap_dump(struct cpu_regs* r)
     printf(" >> interrupt is %s\n", (spl == 0) ? "enabled" : "disabled");
 
     printf(" >> task=%s\n", curtask->name);
-
-    if (r->cs == KERNEL_CS) {
-        printf("Stack trace:\n");
-        fp = (uint32_t*)r->ebp;
-        for (i = 0; i < 8; i++) {
-            if (user_area(fp))
-                break;
-            fp = (uint32_t*)(*fp); /* XXX: may cause fault */
-            if (!(*(fp + 1) && *fp))
-                break;
-            printf(" %08x\n", *(fp + 1));
-        }
-    }
 }
 #endif /* !DEBUG */
