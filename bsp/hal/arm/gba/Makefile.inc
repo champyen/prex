@@ -1,6 +1,7 @@
 
-SRCS:=		arm/arch/locore.S \
-		arm/gba/locore_gba.S \
+SRCS:=          arm/arch/locore.S \
+                arm/arch/div.S \
+                arm/gba/locore_gba.S \
 		arm/arch/cpufunc.S \
 		arm/arch/cpu.c \
 		arm/arch/trap.c \
