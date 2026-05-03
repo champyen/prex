@@ -20,18 +20,79 @@ CPPFLAGS+=	$(DEFINES) -I. $(addprefix -I,$(INCSDIR))
 ACPPFLAGS+=	-D__ASSEMBLY__
 LDFLAGS+=	-static -nostdlib $(addprefix -L,$(LIBSDIR))
 
-ifeq ($(_DEBUG_),1)
-CFLAGS+=	-fno-omit-frame-pointer -g
-else
+# 1. Default code layout: Optimize for performance/register usage
 CFLAGS+=	-fomit-frame-pointer
+
+# 2. Debug features (Only when _DEBUG_ is enabled)
+ifeq ($(_DEBUG_),1)
+
+# Debug symbols: Only for GDB usage
+ifeq ($(CONFIG_GDB),y)
+CFLAGS+=	-g
 endif
 
+# User-space backtrace support
+ifeq ($(CONFIG_USR_BACKTRACE),y)
+ifeq ($(ARCH),arm)
+# ARM Strategy: Table-driven (EABI). Frame pointer is NOT required.
+CFLAGS+=	-funwind-tables -mpoke-function-name
+LDFLAGS+=	--no-merge-exidx-entries
+else
+# x86/RISC-V Strategy: Frame-pointer driven.
+# Must override the default -fomit-frame-pointer.
+CFLAGS:=	$(filter-out -fomit-frame-pointer,$(CFLAGS))
+CFLAGS+=	-fno-omit-frame-pointer
+endif
+endif
+
+# Kernel backtrace support
+ifeq ($(CONFIG_KERNEL_BACKTRACE),y)
+ifeq ($(ARCH),arm)
+# ARM Strategy: Table-driven (EABI). Frame pointer is NOT required.
+CFLAGS+=	-funwind-tables -mpoke-function-name
+LDFLAGS+=	--no-merge-exidx-entries
+else
+# x86/RISC-V Strategy: Frame-pointer driven.
+# Must override the default -fomit-frame-pointer.
+CFLAGS:=	$(filter-out -fomit-frame-pointer,$(CFLAGS))
+CFLAGS+=	-fno-omit-frame-pointer
+endif
+endif
+
+endif # _DEBUG_
+
+# 3. Kernel-specific flags
 ifeq ($(_KERNEL_),1)
 CFLAGS+=	-fno-builtin
 endif
 
+# 4. Strict mode
 ifeq ($(_STRICT_),1)
 CFLAGS+=	-Werror
+endif
+
+ifeq ($(ARCH),arm)
+ifeq ($(CONFIG_THUMB),y)
+ifneq ($(_KERNEL_),1)
+ifeq ($(CONFIG_USR_THUMB),y)
+CFLAGS+=	-mthumb
+ASFLAGS+=	-mthumb
+endif
+endif
+ifeq ($(_DRV_),1)
+ifeq ($(CONFIG_DRV_THUMB),y)
+CFLAGS+=	-mthumb
+ASFLAGS+=	-mthumb
+DEFS+=		CONFIG_DRV_THUMB
+endif
+else ifeq ($(_KERNEL_),1)
+ifeq ($(CONFIG_KERNEL_THUMB),y)
+CFLAGS+=	-mthumb
+ASFLAGS+=	-mthumb
+DEFS+=		CONFIG_KERNEL_THUMB
+endif
+endif
+endif
 endif
 
 ifdef LDSCRIPT
