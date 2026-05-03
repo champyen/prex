@@ -40,8 +40,8 @@ P5   =  4.13813679705723846039e-08; /* 0x3E663769, 0x72BEA4D0 */
 	double x;
 #endif
 {
-	double y,hi,lo,c,t;
-	int k,xsb;
+	double y,hi=0.0,lo=0.0,c,t;
+	int k=0,xsb;
 	unsigned hx;
 
 	hx  = __HI(x);	/* high word of x */

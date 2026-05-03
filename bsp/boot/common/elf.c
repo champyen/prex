@@ -290,7 +290,6 @@ static int load_relocatable(char* img, struct module* m)
     m->phys = load_base;
     ELFDBG(("phys addr=%lx\n", load_base));
 
-    char* shstrtab = img + ((Elf32_Shdr*)(img + ehdr->e_shoff + ehdr->e_shstrndx * ehdr->e_shentsize))->sh_offset;
 
     /* Copy sections */
     for (i = 0; i < (int)ehdr->e_shnum; i++, shdr++) {

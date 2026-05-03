@@ -32,7 +32,6 @@
  */
 
 #ifndef lint
-static char sccsid[] = "@(#)display.c	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 
 #include <sys/param.h>
@@ -63,7 +62,7 @@ display()
 	register int cnt;
 	register u_char *bp;
 	off_t saveaddress;
-	u_char savech, *savebp;
+	u_char savech = 0, *savebp;
 
 	while (bp = get())
 	    for (fs = fshead, savebp = bp, saveaddress = address; fs;
@@ -329,8 +328,7 @@ void
 doskip(char *fname, int statok)
 {
 	register int cnt;
-	struct stat sb;
-
+	struct stat sb = {0};
 	if (statok) {
 		if (fstat(fileno(stdin), &sb))
 			hd_err("%s: %s", fname, strerror(errno));

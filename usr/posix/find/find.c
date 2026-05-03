@@ -16,8 +16,6 @@
 #define MAX_DEPTH 16
 #define EQ(x, y) (strcmp(x, y) == 0)
 
-static char Pathname[MAXPATHLEN + 1];
-static struct stat Statb;
 static long Now;
 
 struct predicate {
@@ -42,7 +40,6 @@ static void find_path(char *start_path, struct predicate *preds, int npreds) {
     int depth = 0;
     DIR *dir;
     struct dirent *entry;
-    char current_full[MAXPATHLEN + 1];
     struct stat st;
 
     stack[depth++] = strdup(start_path);

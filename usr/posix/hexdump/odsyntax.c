@@ -32,7 +32,6 @@
  */
 
 #ifndef lint
-static char sccsid[] = "@(#)odsyntax.c	8.2 (Berkeley) 5/4/95";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -216,15 +215,15 @@ odoffset(int argc, char ***argvp)
 		return;
 	}
 
-	if (*p)
-		if (*p == 'B') {
-			skip *= 1024;
-			++p;
-		} else if (*p == 'b') {
-			skip *= 512;
-			++p;
-		}
-
+	if (*p) {
+	        if (*p == 'B') {
+	                skip *= 1024;
+	                ++p;
+	        } else if (*p == 'b') {
+	                skip *= 512;
+	                ++p;
+	        }
+	}
 	if (*p) {
 		skip = 0;
 		return;

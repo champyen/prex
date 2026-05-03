@@ -32,7 +32,6 @@
  */
 
 #ifndef lint
-static char sccsid[] = "@(#)parse.c	8.1 (Berkeley) 6/6/93";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -203,8 +202,7 @@ void
 rewrite(FS *fs)
 {
 	enum { NOTOKAY, USEBCNT, USEPREC } sokay;
-	register PR *pr, **nextpr;
-	register FU *fu;
+	register PR *pr, **nextpr = NULL;	register FU *fu;
 	register char *p1, *p2;
 	char savech, *fmtp, cs[3];
 	int nconv, prec;
