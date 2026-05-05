@@ -143,4 +143,13 @@ typedef struct context* context_t; /* context id */
 
 #define CTXREGS (4 * 20)
 
+/*
+ * Per-CPU control structure offsets
+ */
+#define CPU_ACTIVE_THREAD 0x00
+#define CPU_IDLE_THREAD 0x04
+#define CPU_NEST_COUNT 0x08
+#define CPU_SPL_LEVEL 0x0c
+#define CPU_INT_STACK 0x10
+
 #endif /* !_ARM_ARCH_H */

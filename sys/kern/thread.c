@@ -44,12 +44,16 @@
 static thread_t thread_allocate(task_t);
 static void thread_deallocate(thread_t);
 
-static struct thread idle_thread; /* idle thread */
+struct thread idle_thread; /* idle thread */
 static thread_t zombie;           /* zombie thread */
 static struct list thread_list;   /* list of all threads */
 
+#ifndef CONFIG_SMP
 /* global variable */
 thread_t curthread = &idle_thread; /* current thread */
+int irq_nesting = 0;               /* interrupt nesting level */
+int curspl = 15;                   /* current spl level */
+#endif
 
 /*
  * Create a new thread.

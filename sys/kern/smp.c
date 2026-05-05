@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2005-2009, Kohsuke Ohtani
+ * Copyright (c) 2026, Gemini CLI
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,42 +27,41 @@
  * SUCH DAMAGE.
  */
 
-#ifndef _KERNEL_H
-#define _KERNEL_H
+/*
+ * smp.c - Symmetric Multiprocessing support.
+ */
 
-#include <conf/config.h>
-#include <types.h>
-#include <machine/stdarg.h>
-#include <sys/types.h>
-#include <sys/param.h>
-#include <sys/backtrace.h>
-
-#include <sys/errno.h>
-#include <task.h>
+#include <kernel.h>
 #include <thread.h>
-#include <version.h>
-#include <debug.h>
-#include <libkern.h>
+#include <smp.h>
+#include <machine/syspage.h>
 
-#define __s(x) __STRING(x)
+#ifdef CONFIG_SMP
 
-#define HOSTNAME "Preky"
-#define PROFILE __s(CONFIG_PROFILE)
-#define MACHINE __s(CONFIG_MACHINE)
-#define VERSION __s(MAJORVERSION) "." __s(MINORVERSION) "." __s(PATCHLEVEL)
-
-#define BANNER                                                                                                         \
-    "Prex+ version " VERSION PROFILE " for " MACHINE " ("__DATE__                                                       \
-    ")\n"                                                                                                              \
-    "Copyright (c) 2005-2009 Kohsuke Ohtani\n"                                                                         \
-    "Copyright (c) 2021      Champ Yen (champ.yen@gmail.com)\n"
+struct cpu_control cpu_table[CONFIG_SMP_NCPUS];
 
 /*
- * Global variables in the kernel.
+ * Initialize SMP support for the current CPU (BSP).
  */
-#ifndef CONFIG_SMP
-extern struct thread* curthread; /* pointer to the current thread */
-#endif
-extern struct task kernel_task;  /* kernel task */
+void smp_init(void)
+{
+    struct cpu_control* cpu = &cpu_table[0];
+    extern struct thread idle_thread;
 
-#endif /* !_KERNEL_H */
+    /*
+     * Setup the BSP's CPU control structure.
+     * Use the global idle_thread as the initial boot thread.
+     */
+    cpu->active_thread = &idle_thread;
+    cpu->idle_thread = &idle_thread;
+    cpu->nest_count = 0;
+    cpu->spl_level = 15;
+    cpu->int_stack = (void*)(INTSTKTOP - 0x100);
+
+    /*
+     * Load the pointer to the CPU control structure into TPIDRPRW.
+     */
+    __asm__ volatile("mcr p15, 0, %0, c13, c0, 4" : : "r"(cpu));
+}
+
+#endif /* CONFIG_SMP */

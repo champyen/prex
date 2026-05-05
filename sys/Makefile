@@ -33,6 +33,10 @@ SRCS+=		kern/main.c \
 		lib/vsprintf.c \
 		lib/backtrace.c
 
+ifeq ($(CONFIG_SMP),y)
+SRCS+=		kern/smp.c
+endif
+
 ifeq ($(CONFIG_MMU),y)
 SRCS+=		mem/vm.c
 else

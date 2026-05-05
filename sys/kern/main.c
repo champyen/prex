@@ -60,7 +60,10 @@
  */
 int main(void)
 {
-
+#ifdef CONFIG_SMP
+    void smp_init(void);
+    smp_init();
+#endif
     sched_lock();
     diag_init();
     DPRINTF((BANNER));

@@ -75,6 +75,27 @@ struct thread
     struct context ctx;      /* machine specific context */
 };
 
+struct cpu_control
+{
+    struct thread* active_thread; /* current thread */
+    struct thread* idle_thread;   /* idle thread */
+    int nest_count;               /* interrupt nesting level */
+    int spl_level;                /* current spl level */
+    void* int_stack;              /* interrupt stack */
+};
+
+#ifdef CONFIG_SMP
+#include <cpu.h>
+#define curthread (hal_get_cpu_control()->active_thread)
+#define irq_nesting (hal_get_cpu_control()->nest_count)
+#define curspl (hal_get_cpu_control()->spl_level)
+
+#else /* !CONFIG_SMP */
+extern thread_t curthread;
+extern int irq_nesting;
+extern int curspl;
+#endif /* CONFIG_SMP */
+
 /*
  * Thread state
  */

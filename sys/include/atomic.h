@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2005-2009, Kohsuke Ohtani
+ * Copyright (c) 2026, Gemini CLI
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,42 +27,38 @@
  * SUCH DAMAGE.
  */
 
-#ifndef _KERNEL_H
-#define _KERNEL_H
+#ifndef _ATOMIC_H
+#define _ATOMIC_H
 
-#include <conf/config.h>
 #include <types.h>
-#include <machine/stdarg.h>
-#include <sys/types.h>
-#include <sys/param.h>
-#include <sys/backtrace.h>
-
-#include <sys/errno.h>
-#include <task.h>
-#include <thread.h>
-#include <version.h>
-#include <debug.h>
-#include <libkern.h>
-
-#define __s(x) __STRING(x)
-
-#define HOSTNAME "Preky"
-#define PROFILE __s(CONFIG_PROFILE)
-#define MACHINE __s(CONFIG_MACHINE)
-#define VERSION __s(MAJORVERSION) "." __s(MINORVERSION) "." __s(PATCHLEVEL)
-
-#define BANNER                                                                                                         \
-    "Prex+ version " VERSION PROFILE " for " MACHINE " ("__DATE__                                                       \
-    ")\n"                                                                                                              \
-    "Copyright (c) 2005-2009 Kohsuke Ohtani\n"                                                                         \
-    "Copyright (c) 2021      Champ Yen (champ.yen@gmail.com)\n"
 
 /*
- * Global variables in the kernel.
+ * Fundamental atomic operations using GCC built-ins.
  */
-#ifndef CONFIG_SMP
-extern struct thread* curthread; /* pointer to the current thread */
-#endif
-extern struct task kernel_task;  /* kernel task */
 
-#endif /* !_KERNEL_H */
+static inline int atomic_cas(volatile int* ptr, int oldval, int newval)
+{
+    return __sync_bool_compare_and_swap(ptr, oldval, newval);
+}
+
+static inline void atomic_inc(volatile int* ptr)
+{
+    (void)__sync_fetch_and_add(ptr, 1);
+}
+
+static inline int atomic_fetch_add(volatile int* ptr, int val)
+{
+    return __sync_fetch_and_add(ptr, val);
+}
+
+static inline int atomic_read(volatile int* ptr)
+{
+    return *ptr;
+}
+
+static inline void atomic_set(volatile int* ptr, int val)
+{
+    *ptr = val;
+}
+
+#endif /* !_ATOMIC_H */

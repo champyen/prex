@@ -40,6 +40,8 @@ options         MAXMEM=16777216           # Max core per task (16MB)
 # Platform settings
 #
 options		ARMV7A		# Processor core
+#options		SMP		# Symmetric Multiprocessing
+#options		SMP_NCPUS=4	# Number of CPUs
 #options 	FPU			# Floating point unit
 #options 	ROMBOOT		# Boot from ROM
 options 	BOOTDISK	# Disk for /boot directory

@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2005-2009, Kohsuke Ohtani
+ * Copyright (c) 2026, Gemini CLI
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,42 +27,64 @@
  * SUCH DAMAGE.
  */
 
-#ifndef _KERNEL_H
-#define _KERNEL_H
+#ifndef _SMP_H
+#define _SMP_H
 
 #include <conf/config.h>
 #include <types.h>
-#include <machine/stdarg.h>
-#include <sys/types.h>
-#include <sys/param.h>
-#include <sys/backtrace.h>
-
-#include <sys/errno.h>
-#include <task.h>
-#include <thread.h>
-#include <version.h>
-#include <debug.h>
-#include <libkern.h>
-
-#define __s(x) __STRING(x)
-
-#define HOSTNAME "Preky"
-#define PROFILE __s(CONFIG_PROFILE)
-#define MACHINE __s(CONFIG_MACHINE)
-#define VERSION __s(MAJORVERSION) "." __s(MINORVERSION) "." __s(PATCHLEVEL)
-
-#define BANNER                                                                                                         \
-    "Prex+ version " VERSION PROFILE " for " MACHINE " ("__DATE__                                                       \
-    ")\n"                                                                                                              \
-    "Copyright (c) 2005-2009 Kohsuke Ohtani\n"                                                                         \
-    "Copyright (c) 2021      Champ Yen (champ.yen@gmail.com)\n"
+#include <atomic.h>
+#include <hal.h>
 
 /*
- * Global variables in the kernel.
+ * SAL Spinlock Interface.
+ * Currently focused on TAS (Test-And-Set) implementation.
  */
-#ifndef CONFIG_SMP
-extern struct thread* curthread; /* pointer to the current thread */
-#endif
-extern struct task kernel_task;  /* kernel task */
 
-#endif /* !_KERNEL_H */
+typedef volatile int spinlock_t;
+#define SPINLOCK_INITIALIZER 0
+
+#ifdef CONFIG_SMP
+
+static inline void spinlock_init(spinlock_t* lock)
+{
+    *lock = 0;
+}
+
+static inline void spinlock_lock(spinlock_t* lock)
+{
+    while (__sync_lock_test_and_set(lock, 1)) {
+        while (*lock)
+            ; /* Spin */
+    }
+}
+
+static inline void spinlock_unlock(spinlock_t* lock)
+{
+    __sync_lock_release(lock);
+}
+
+static inline void spinlock_lock_irq(spinlock_t* lock, int* s)
+{
+    *s = splhigh();
+    spinlock_lock(lock);
+}
+
+static inline void spinlock_unlock_irq(spinlock_t* lock, int s)
+{
+    spinlock_unlock(lock);
+    splx(s);
+}
+
+#else /* !CONFIG_SMP */
+
+typedef int spinlock_t;
+
+#define spinlock_init(lock) (void)0
+#define spinlock_lock(lock) (void)0
+#define spinlock_unlock(lock) (void)0
+#define spinlock_lock_irq(lock, s) (*(s) = splhigh())
+#define spinlock_unlock_irq(lock, s) splx(s)
+
+#endif /* CONFIG_SMP */
+
+#endif /* !_SMP_H */
