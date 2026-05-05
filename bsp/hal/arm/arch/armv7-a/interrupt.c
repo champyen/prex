@@ -48,6 +48,7 @@
 #define GICD_IPRIORITYR(n) (*(volatile uint32_t*)(CONFIG_GIC_DIST_BASE + 0x400 + (n) * 4))
 #define GICD_ITARGETSR(n) (*(volatile uint32_t*)(CONFIG_GIC_DIST_BASE + 0x800 + (n) * 4))
 #define GICD_ICFGR(n) (*(volatile uint32_t*)(CONFIG_GIC_DIST_BASE + 0xc00 + (n) * 4))
+#define GICD_SGIR (*(volatile uint32_t*)(CONFIG_GIC_DIST_BASE + 0xf00))
 
 /* GIC CPU Interface Registers */
 #define GICC_CTLR (*(volatile uint32_t*)(CONFIG_GIC_CPU_BASE + 0x000))
@@ -185,6 +186,25 @@ void interrupt_handler(void)
 }
 
 /*
+ * Inter-Processor Interrupt
+ */
+void hal_cpu_send_ipi(uint32_t cpumask, uint32_t vector)
+{
+    GICD_SGIR = ((cpumask & 0xff) << 16) | (vector & 0x0f);
+}
+
+/*
+ * Initialize GIC per CPU.
+ */
+void interrupt_cpu_init(void)
+{
+    /* CPU Interface */
+    GICC_PMR = 0xf0; /* Allow all interrupts */
+    GICC_BPR = 0;    /* No grouping */
+    GICC_CTLR = 1;   /* Enable CPU interface */
+}
+
+/*
  * Initialize GIC.
  */
 void interrupt_init(void)
@@ -217,8 +237,5 @@ void interrupt_init(void)
     /* Enable Distributor */
     GICD_CTLR = 1;
 
-    /* CPU Interface */
-    GICC_PMR = 0xf0; /* Allow all interrupts */
-    GICC_BPR = 0;    /* No grouping */
-    GICC_CTLR = 1;   /* Enable CPU interface */
+    interrupt_cpu_init();
 }

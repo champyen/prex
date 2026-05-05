@@ -154,4 +154,23 @@ ENTRY(flush_cache)
 	bx	lr
 #endif /* !CONFIG_CACHE */
 
+/*
+ * Get CPU ID (MPIDR)
+ */
+ENTRY(hal_cpu_id)
+	mrc	p15, 0, r0, c0, c0, 5
+	and	r0, r0, #0xff		/* Assume affinity 0 for now */
+	bx	lr
+
+/*
+ * PSCI CPU_ON call
+ */
+ENTRY(hal_psci_cpu_on)
+	mov	r3, #0			/* context_id */
+	mov	r2, r1			/* entry_point_address */
+	mov	r1, r0			/* target_cpu */
+	ldr	r0, =0x84000003		/* PSCI CPU_ON */
+	hvc	#0
+	bx	lr
+
 	.end

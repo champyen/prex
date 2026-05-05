@@ -93,6 +93,16 @@ reload_pc_target:	.word	reload_pc
 #endif
 
 ENTRY(reset_entry)
+#ifdef CONFIG_SMP
+	/*
+	 * Check CPU ID.
+	 * APs (CPU ID != 0) jump to ap_entry.
+	 */
+	mrc	p15, 0, r0, c0, c0, 5
+	and	r0, r0, #0xff
+	cmp	r0, #0
+	bne	ap_entry
+#endif
 	/*
 	 * Setup stack pointer for each processor mode
 	 */
@@ -439,6 +449,71 @@ ENTRY(trap_common)
 
 ENTRY(unused_entry)
 	b	unused_entry		/* Not support... */
+
+#ifdef CONFIG_SMP
+/*
+ * Secondary CPU entry point
+ * r0: cpuid (already set in reset_entry)
+ */
+ENTRY(ap_entry)
+	/*
+	 * Load AP-specific stack.
+	 * sp = &ap_boot_stacks[cpuid][KSTACKSZ]
+	 */
+	ldr	r1, =ap_boot_stacks
+	mov	r2, #768		/* KSTACKSZ */
+	add	r3, r0, #1
+	mul	r4, r3, r2
+	add	sp, r1, r4
+
+	/*
+	 * Setup stack pointer for each processor mode
+	 */
+	mov	r0, #(PSR_IRQ_MODE|PSR_FIQ_DIS|PSR_IRQ_DIS)
+	msr	cpsr, r0
+	mov	sp, sp			/* Reuse same stack for early boot */
+
+	mov	r0, #(PSR_SVC_MODE|PSR_FIQ_DIS|PSR_IRQ_DIS)
+	msr	cpsr, r0
+
+#ifdef CONFIG_MMU
+	/*
+	 * Enable MMU for AP (Reuse BSP's boot page directory)
+	 */
+	dsb
+	ldr	r1, =BOOT_PGD_PHYS
+	mcr	p15, 0, r1, c2, c0, 0		/* Load page table pointer */
+	mov	r0, #0
+	mcr	p15, 0, r0, c8, c7, 0		/* Flush I,D TLBs */
+	dsb
+	isb
+	ldr	r0, =0x55555555				/* AP is defined in page table entries */
+	mcr	p15, 0, r0, c3, c0			/* Load domain access register */
+	mrc	p15, 0, r0, c1, c0, 0		/* Read control register */
+	ldr	r1, =(CTL_ICACHE | CTL_BPRD | CTL_CACHE | CTL_MMU)
+	orr	r0, r0, r1					/* Enable MMU, caches and branch prediction */
+	ldr	r1, =(CTL_AFLT | CTL_AFE | CTL_TRE)
+	bic	r0, r0, r1					/* Disable alignment checks, AFE and TRE */
+	mcr	p15, 0, r0, c1, c0, 0		/* Load control register... */
+	mrc	p15, 0, r0, c1, c0, 0		/* ...and read it back */
+	isb
+
+	/*
+	 * Reload PC register for virtual address.
+	 */
+	ldr	pc, ap_reload_pc_target
+ap_reload_pc:
+#endif
+
+	/* Jump to C code */
+	b	smp_ap_boot
+
+#ifdef CONFIG_MMU
+ap_reload_pc_target:	.word	ap_reload_pc
+#endif
+
+#endif /* CONFIG_SMP */
+		/* Not support... */
 
 ENTRY(fiq_entry)
 	b	fiq_entry		/* Not support... */

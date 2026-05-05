@@ -45,6 +45,9 @@ void known_fault2(void);
 void known_fault3(void);
 void copy_fault(void);
 void cache_init(void);
+void interrupt_cpu_init(void);
+void smp_ap_boot(void);
+void kernel_start(void);
 void sploff(void);
 void splon(void);
 __END_DECLS

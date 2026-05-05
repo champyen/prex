@@ -35,10 +35,14 @@
 #include <thread.h>
 #include <smp.h>
 #include <machine/syspage.h>
+#include <cpufunc.h>
+#include <locore.h>
 
 #ifdef CONFIG_SMP
 
 struct cpu_control cpu_table[CONFIG_SMP_NCPUS];
+char ap_boot_stacks[CONFIG_SMP_NCPUS][KSTACKSZ];
+static volatile int ready_count = 0;
 
 /*
  * Initialize SMP support for the current CPU (BSP).
@@ -47,10 +51,10 @@ void smp_init(void)
 {
     struct cpu_control* cpu = &cpu_table[0];
     extern struct thread idle_thread;
+    int i;
 
     /*
      * Setup the BSP's CPU control structure.
-     * Use the global idle_thread as the initial boot thread.
      */
     cpu->active_thread = &idle_thread;
     cpu->idle_thread = &idle_thread;
@@ -62,6 +66,66 @@ void smp_init(void)
      * Load the pointer to the CPU control structure into TPIDRPRW.
      */
     __asm__ volatile("mcr p15, 0, %0, c13, c0, 4" : : "r"(cpu));
+
+    atomic_inc(&ready_count);
+
+    /*
+     * Start Application Processors (APs).
+     */
+    DPRINTF(("Starting %d secondary CPUs...\n", CONFIG_SMP_NCPUS - 1));
+    for (i = 1; i < CONFIG_SMP_NCPUS; i++) {
+        /*
+         * Setup AP's CPU control structure.
+         * For now, we reuse global stacks for initial boot,
+         * but real SMP will need per-CPU stacks.
+         */
+        cpu_table[i].nest_count = 0;
+        cpu_table[i].spl_level = 15;
+
+        /* Wake up the AP using PSCI */
+        int ret = hal_psci_cpu_on(i, (paddr_t)&kernel_start);
+        if (ret != 0) {
+            DPRINTF(("Failed to start CPU %d, returned %d\n", i, ret));
+        }
+    }
+
+    /* Wait for all CPUs to be ready */
+    while (ready_count < CONFIG_SMP_NCPUS)
+        ;
+
+    DPRINTF(("All CPUs are ready.\n"));
+}
+
+/*
+ * Secondary CPU entry point.
+ */
+void smp_ap_boot(void)
+{
+    int cpuid = hal_cpu_id();
+    struct cpu_control* cpu = &cpu_table[cpuid];
+
+    /*
+     * Load the pointer to the CPU control structure into TPIDRPRW.
+     */
+    __asm__ volatile("mcr p15, 0, %0, c13, c0, 4" : : "r"(cpu));
+
+    /*
+     * Initialize interrupt controller for this CPU.
+     */
+    interrupt_cpu_init();
+
+    /*
+     * Increment ready count to signal that this AP has finished
+     * early architecture initialization.
+     */
+    atomic_inc(&ready_count);
+
+    /*
+     * Enter idle loop.
+     * In Stage 3, we will create real idle threads for APs.
+     */
+    for (;;)
+        cpu_idle();
 }
 
 #endif /* CONFIG_SMP */

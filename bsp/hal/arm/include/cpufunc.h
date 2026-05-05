@@ -50,6 +50,12 @@ uint32_t get_cntfrq(void);
 void set_cntp_tval_reg(uint32_t);
 void set_cntp_ctl_reg(uint32_t);
 uint32_t get_cntp_ctl_reg(void);
+
+// for SMP
+uint32_t hal_cpu_id(void);
+int hal_psci_cpu_on(uint32_t cpuid, paddr_t entry);
+void hal_cpu_send_ipi(uint32_t cpumask, uint32_t vector);
+
 __END_DECLS
 
 #endif /* !_ARM_CPUFUNC_H */
