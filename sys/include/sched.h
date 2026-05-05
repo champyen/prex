@@ -77,6 +77,7 @@ void sched_start(thread_t, int, int);
 void sched_stop(thread_t);
 void sched_lock(void);
 void sched_unlock(void);
+void sched_bkl_unlock(void);
 int sched_getpri(thread_t);
 void sched_setpri(thread_t, int, int);
 int sched_getpolicy(thread_t);

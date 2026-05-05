@@ -40,10 +40,10 @@
  * Currently focused on TAS (Test-And-Set) implementation.
  */
 
+#ifdef CONFIG_SMP
+
 typedef volatile int spinlock_t;
 #define SPINLOCK_INITIALIZER 0
-
-#ifdef CONFIG_SMP
 
 static inline void spinlock_init(spinlock_t* lock)
 {
@@ -78,6 +78,7 @@ static inline void spinlock_unlock_irq(spinlock_t* lock, int s)
 #else /* !CONFIG_SMP */
 
 typedef int spinlock_t;
+#define SPINLOCK_INITIALIZER 0
 
 #define spinlock_init(lock) (void)0
 #define spinlock_lock(lock) (void)0

@@ -38,6 +38,8 @@
 #include <machine/syspage.h>
 #include <machine/memory.h>
 #include <sys/errno.h>
+#define LOCORE
+#include <sys/param.h>
 #include <context.h>
 #include <trap.h>
 #include <cpu.h>
@@ -461,7 +463,7 @@ ENTRY(ap_entry)
 	 * sp = &ap_boot_stacks[cpuid][KSTACKSZ]
 	 */
 	ldr	r1, =ap_boot_stacks
-	mov	r2, #768		/* KSTACKSZ */
+	mov	r2, #KSTACKSZ		/* KSTACKSZ */
 	add	r3, r0, #1
 	mul	r4, r3, r2
 	add	sp, r1, r4
@@ -535,6 +537,9 @@ ENTRY(cpu_switch)
  * Entry point for kernel thread
  */
 ENTRY(kernel_thread_entry)
+#ifdef CONFIG_SMP
+	bl	sched_bkl_unlock
+#endif
 	mov	r0, r5			/* Set argument */
 	bx	r4			/* Jump to kernel thread */
 1:

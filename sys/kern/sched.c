@@ -89,11 +89,25 @@
 #include <sched.h>
 #include <hal.h>
 
+#include <smp.h>
+
 static struct queue runq[NPRI]; /* run queues */
 static struct queue wakeq;      /* queue for waking threads */
 static struct queue dpcq;       /* DPC queue */
 static struct event dpc_event;  /* event for DPC */
 static int maxpri;              /* highest priority in runq */
+
+static spinlock_t kernel_lock = SPINLOCK_INITIALIZER;
+
+/*
+ * Unlock the Big Kernel Lock (BKL).
+ * This is called from the thread entry trampolines to release the
+ * lock inherited during the context switch for newly created threads.
+ */
+void sched_bkl_unlock(void)
+{
+    spinlock_unlock(&kernel_lock);
+}
 
 /*
  * Search for highest-priority runnable thread.
@@ -495,8 +509,12 @@ void sched_stop(thread_t t)
  */
 void sched_lock(void)
 {
-
+    int s = splhigh();
+    if (curthread->locks == 0) {
+        spinlock_lock(&kernel_lock);
+    }
     curthread->locks++;
+    splx(s);
 }
 
 /*
@@ -514,7 +532,8 @@ void sched_unlock(void)
     ASSERT(curthread->locks > 0);
 
     s = splhigh();
-    if (curthread->locks == 1) {
+    curthread->locks--;
+    if (curthread->locks == 0) {
         wakeq_flush();
         while (curthread->resched) {
             /*
@@ -533,8 +552,8 @@ void sched_unlock(void)
             s = splhigh();
             wakeq_flush();
         }
+        spinlock_unlock(&kernel_lock);
     }
-    curthread->locks--;
     splx(s);
 }
 
