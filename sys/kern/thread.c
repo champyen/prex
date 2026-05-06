@@ -554,6 +554,25 @@ void kthread_terminate(thread_t t)
 }
 
 /*
+ * Create an idle thread for a secondary CPU.
+ */
+thread_t thread_create_idle(void)
+{
+    thread_t t;
+
+    if ((t = thread_allocate(&kernel_task)) == NULL)
+        panic("thread_create_idle");
+
+    memset(t->kstack, 0, KSTACKSZ);
+    t->state = TS_RUN;
+    t->locks = 1;
+    t->priority = PRI_IDLE;
+
+    /* Do not call sched_start() to avoid putting it in runq */
+    return t;
+}
+
+/*
  * The first thread in the system is created here by hand.
  * This thread will become an idle thread when thread_idle()
  * is called later in main().

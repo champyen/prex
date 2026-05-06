@@ -37,63 +37,88 @@
 #include <machine/syspage.h>
 #include <cpufunc.h>
 #include <locore.h>
+#include <sched.h>
+#include <irq.h>
 
 #ifdef CONFIG_SMP
 
 struct cpu_control cpu_table[CONFIG_SMP_NCPUS];
 char ap_boot_stacks[CONFIG_SMP_NCPUS][KSTACKSZ];
 static volatile int ready_count = 0;
+static volatile int smp_active = 0;
 
 /*
- * Initialize SMP support for the current CPU (BSP).
+ * IPI handler for rescheduling.
  */
-void smp_init(void)
+static int ipi_isr(void* arg)
+{
+    /* The interrupt exit code will call sched_swtch() if needed */
+    return INT_DONE;
+}
+
+/*
+ * Early SMP initialization for BSP.
+ */
+void smp_init_early(void)
 {
     struct cpu_control* cpu = &cpu_table[0];
     extern struct thread idle_thread;
-    int i;
 
-    /*
-     * Setup the BSP's CPU control structure.
-     */
     cpu->active_thread = &idle_thread;
     cpu->idle_thread = &idle_thread;
     cpu->nest_count = 0;
     cpu->spl_level = 15;
     cpu->int_stack = (void*)(INTSTKTOP - 0x100);
+    cpu->cpu_id = 0;
 
-    /*
-     * Load the pointer to the CPU control structure into TPIDRPRW.
-     */
+    /* Load TPIDRPRW */
     __asm__ volatile("mcr p15, 0, %0, c13, c0, 4" : : "r"(cpu));
+}
+
+/*
+ * Start Application Processors (APs).
+ */
+void smp_start_aps(void)
+{
+    int i;
+
+    /* Register SGI 0 for IPI */
+    irq_attach(0, IPL_HIGH, 0, ipi_isr, IST_NONE, NULL);
 
     atomic_inc(&ready_count);
 
-    /*
-     * Start Application Processors (APs).
-     */
     DPRINTF(("Starting %d secondary CPUs...\n", CONFIG_SMP_NCPUS - 1));
     for (i = 1; i < CONFIG_SMP_NCPUS; i++) {
-        /*
-         * Setup AP's CPU control structure.
-         * For now, we reuse global stacks for initial boot,
-         * but real SMP will need per-CPU stacks.
-         */
+        thread_t t = thread_create_idle();
+
+        cpu_table[i].active_thread = t;
+        cpu_table[i].idle_thread = t;
         cpu_table[i].nest_count = 0;
         cpu_table[i].spl_level = 15;
+        cpu_table[i].int_stack = &ap_boot_stacks[i][KSTACKSZ];
+        cpu_table[i].cpu_id = i;
 
         /* Wake up the AP using PSCI */
-        int ret = hal_psci_cpu_on(i, (paddr_t)&kernel_start);
+        int ret = hal_psci_cpu_on(i, ((paddr_t)&kernel_start) & ~1UL);
         if (ret != 0) {
             DPRINTF(("Failed to start CPU %d, returned %d\n", i, ret));
         }
     }
 
-    /* Wait for all CPUs to be ready */
+    /* Wait for all CPUs to be ready with hardware init */
     while (ready_count < CONFIG_SMP_NCPUS)
         ;
 
-    DPRINTF(("All CPUs are ready.\n"));
+    DPRINTF(("All CPUs have initialized hardware. Activation pending...\n"));
+}
+
+/*
+ * Signal that SMP is active and APs can start scheduling.
+ */
+void smp_activate(void)
+{
+    smp_active = 1;
+    DPRINTF(("SMP is now active.\n"));
 }
 
 /*
@@ -115,15 +140,27 @@ void smp_ap_boot(void)
     interrupt_cpu_init();
 
     /*
+     * Enable physical timer for this AP.
+     */
+    clock_ap_init();
+
+    /*
      * Increment ready count to signal that this AP has finished
      * early architecture initialization.
      */
     atomic_inc(&ready_count);
 
     /*
-     * Enter idle loop.
-     * In Stage 3, we will create real idle threads for APs.
+     * Wait for the BSP to signal that the kernel is ready for SMP scheduling.
      */
+    while (smp_active == 0)
+        ;
+
+    /*
+     * Enter idle loop.
+     * Drop the lock created by thread_create_idle and start scheduling.
+     */
+    sched_unlock();
     for (;;)
         cpu_idle();
 }

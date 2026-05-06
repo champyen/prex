@@ -190,7 +190,13 @@ void interrupt_handler(void)
  */
 void hal_cpu_send_ipi(uint32_t cpumask, uint32_t vector)
 {
-    GICD_SGIR = ((cpumask & 0xff) << 16) | (vector & 0x0f);
+    if (cpumask == 0) {
+        /* Send to all other CPUs */
+        GICD_SGIR = (1 << 24) | (vector & 0x0f);
+    } else {
+        /* Send to CPUs in mask */
+        GICD_SGIR = ((cpumask & 0xff) << 16) | (vector & 0x0f);
+    }
 }
 
 /*
@@ -202,6 +208,9 @@ void interrupt_cpu_init(void)
     GICC_PMR = 0xf0; /* Allow all interrupts */
     GICC_BPR = 0;    /* No grouping */
     GICC_CTLR = 1;   /* Enable CPU interface */
+
+    /* Unmask SGI 0 for IPI and IRQ 30 for Timer */
+    GICD_ISENABLER(0) = (1 << 0) | (1 << 30);
 }
 
 /*

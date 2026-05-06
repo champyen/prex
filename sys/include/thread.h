@@ -82,6 +82,7 @@ struct cpu_control
     int nest_count;               /* interrupt nesting level */
     int spl_level;                /* current spl level */
     void* int_stack;              /* interrupt stack */
+    int cpu_id;                   /* CPU identifier */
 };
 
 #ifdef CONFIG_SMP
@@ -137,6 +138,7 @@ int thread_info(struct threadinfo*);
 thread_t kthread_create(void (*)(void*), void*, int);
 void kthread_terminate(thread_t);
 void thread_init(void);
+thread_t thread_create_idle(void);
 __END_DECLS
 
 #endif /* !_THREAD_H */

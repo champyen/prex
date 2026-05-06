@@ -131,6 +131,7 @@ void machine_abort(void);
 void machine_bootinfo(struct bootinfo**);
 
 void clock_init(void);
+void clock_ap_init(void);
 
 #ifdef DEBUG
 void diag_init(void);

@@ -88,6 +88,7 @@
 #include <task.h>
 #include <sched.h>
 #include <hal.h>
+#include <cpufunc.h>
 
 #include <smp.h>
 
@@ -129,11 +130,24 @@ static int runq_getbest(void)
  */
 static void runq_enqueue(thread_t t)
 {
+#ifdef CONFIG_SMP
+    int i;
+#endif
 
     enqueue(&runq[t->priority], &t->sched_link);
     if (t->priority < maxpri) {
         maxpri = t->priority;
         curthread->resched = 1;
+#ifdef CONFIG_SMP
+        /* Kick other CPUs to pick up the new thread */
+        for (i = 0; i < CONFIG_SMP_NCPUS; i++) {
+            if (i != smp_processor_id()) {
+                if (cpu_table[i].active_thread)
+                    cpu_table[i].active_thread->resched = 1;
+            }
+        }
+        hal_cpu_send_ipi(0, 0);
+#endif
     }
 }
 
@@ -157,6 +171,10 @@ static thread_t runq_dequeue(void)
 {
     queue_t q;
     thread_t t;
+
+    if (maxpri >= PRI_IDLE) {
+        return hal_get_cpu_control()->idle_thread;
+    }
 
     q = dequeue(&runq[maxpri]);
     t = queue_entry(q, struct thread, sched_link);
@@ -226,7 +244,7 @@ static void sched_swtch(void)
      * Put the current thread on the run queue.
      */
     prev = curthread;
-    if (prev->state == TS_RUN) {
+    if (prev->state == TS_RUN && prev->priority < PRI_IDLE) {
         if (prev->priority > maxpri)
             runq_insert(prev); /* preemption */
         else

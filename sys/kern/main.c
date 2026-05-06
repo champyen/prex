@@ -61,9 +61,10 @@
 int main(void)
 {
 #ifdef CONFIG_SMP
-    void smp_init(void);
-    smp_init();
+    void smp_init_early(void);
+    smp_init_early();
 #endif
+
     sched_lock();
     diag_init();
     DPRINTF((BANNER));
@@ -104,6 +105,16 @@ int main(void)
      * Set up boot tasks.
      */
     task_bootstrap();
+
+#ifdef CONFIG_SMP
+    void smp_start_aps(void);
+    smp_start_aps();
+#endif
+
+#ifdef CONFIG_SMP
+    void smp_activate(void);
+    smp_activate();
+#endif
 
     /*
      * Start scheduler and

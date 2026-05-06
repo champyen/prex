@@ -256,9 +256,9 @@ reload_pc:
 	/*
 	 * Initilize spl.
 	 */
-	ldr	r1, curspl		/* curspl = 15 */
+	mrc	p15, 0, r1, c13, c0, 4	/* Get cpu_control* */
 	mov	r2, #15
-	str	r2, [r1]
+	str	r2, [r1, #CPU_SPL_LEVEL]
 
 	/*
 	 * Jump to kernel main routine
@@ -310,6 +310,15 @@ ENTRY(interrupt_entry)
 	stmia	sp, {r0-r14}^		/* Push r0-r14 */
 	nop				/* Instruction gap for stm^ */
 
+#ifdef CONFIG_SMP
+	mrc	p15, 0, r4, c13, c0, 4	/* r4: Get cpu_control* */
+	ldr	r5, [r4, #CPU_NEST_COUNT] /* r5: Previous nesting level */
+	add	r0, r5, #1
+	str	r0, [r4, #CPU_NEST_COUNT]
+
+	mov	r7, sp			/* Save stack */
+	ldr	r3, [r4, #CPU_INT_STACK] /* Adjust stack for IRQ */
+#else
 	ldr	r4, irq_nesting   	/* Increment IRQ nesting level */
 	ldr	r5, [r4]		/* r5: Previous nesting level */
 	add	r0, r5, #1
@@ -317,13 +326,19 @@ ENTRY(interrupt_entry)
 
 	mov	r7, sp			/* Save stack */
 	ldr	r3, int_stack		/* Adjust stack for IRQ */
+#endif
+
 	cmp	r5, #0			/* Outermost interrupt? */
 	moveq	sp, r3			/* If outermost, switch stack */
 	bleq	sched_lock		/* If outermost, lock scheduler */
 	bl	interrupt_handler	/* Call main interrupt handler */
 
 	mov	sp, r7			/* Restore stack */
+#ifdef CONFIG_SMP
+	str	r5, [r4, #CPU_NEST_COUNT] /* Restore IRQ nesting level */
+#else
 	str	r5, [r4]		/* Restore IRQ nesting level */
+#endif
 	cmp	r5, #0			/* Outermost interrupt? */
 	bne	interrupt_ret
 	bl	sched_unlock		/* Try to preempt */
@@ -463,7 +478,7 @@ ENTRY(ap_entry)
 	 * sp = &ap_boot_stacks[cpuid][KSTACKSZ]
 	 */
 	ldr	r1, =ap_boot_stacks
-	mov	r2, #KSTACKSZ		/* KSTACKSZ */
+	ldr	r2, =KSTACKSZ		/* Use ldr to avoid immediate size issues */
 	add	r3, r0, #1
 	mul	r4, r3, r2
 	add	sp, r1, r4
@@ -642,10 +657,17 @@ ENTRY(copy_fault)
  * int spl0(void);
  */
 ENTRY(spl0)
+#ifdef CONFIG_SMP
+	mrc	p15, 0, r1, c13, c0, 4	/* Get cpu_control* */
+	ldr	r0, [r1, #CPU_SPL_LEVEL]
+	mov	r2, #0
+	str	r2, [r1, #CPU_SPL_LEVEL]
+#else
 	ldr	r1, curspl		/* curspl = 0 */
 	ldr	r0, [r1]
 	mov	r2, #0
 	str	r2, [r1]
+#endif
 
 	mrs	r1, cpsr		/* Enable interrupt */
 	bic	r1, r1, #0xc0
@@ -660,10 +682,10 @@ ENTRY(splhigh)
 	orr	r1, r1, #0xc0
 	msr	cpsr_c, r1
 
-	ldr	r1, curspl		/* curspl = 15 */
-	ldr	r0, [r1]
+	mrc	p15, 0, r1, c13, c0, 4	/* Get cpu_control* */
+	ldr	r0, [r1, #CPU_SPL_LEVEL]
 	mov	r2, #15
-	str	r2, [r1]
+	str	r2, [r1, #CPU_SPL_LEVEL]
 	bx	lr
 
 /*
@@ -671,11 +693,19 @@ ENTRY(splhigh)
  */
 ENTRY(splx)
 	mov	r3, r0			/* r3: new spl */
+#ifdef CONFIG_SMP
+	mrc	p15, 0, r2, c13, c0, 4	/* Get cpu_control* */
+	ldr	r0, [r2, #CPU_SPL_LEVEL]
+	cmp	r3, r0
+	bxeq	lr			/* Return if equal */
+	str	r3, [r2, #CPU_SPL_LEVEL]
+#else
 	ldr	r1, curspl
 	ldr	r0, [r1]
 	cmp	r3, r0
-	moveq	pc, lr			/* Return if equal */
+	bxeq	lr			/* Return if equal */
 	str	r3, [r1]
+#endif
 
 	cmp	r3, #0
 	mrs	r1, cpsr
@@ -725,3 +755,4 @@ init_done_value:
 	.end
 
 .section .note.GNU-stack,"",%progbits
+

@@ -40,6 +40,7 @@
 #include <exception.h>
 #include <timer.h>
 #include <sys/signal.h>
+#include <smp.h>
 
 static volatile u_long lbolt;      /* ticks elapsed since bootup */
 static volatile u_long idle_ticks; /* total ticks for idle */
@@ -379,40 +380,42 @@ void timer_handler(void)
     u_long ticks;
     int wakeup = 0;
 
-    /*
-     * Bump time in ticks.
-     * Note that it is allowed to wrap.
-     */
-    lbolt++;
-    if (curthread->priority == PRI_IDLE)
-        idle_ticks++;
-
-    while (!list_empty(&timer_list)) {
+    if (smp_processor_id() == 0) {
         /*
-         * Check timer expiration.
+         * Bump time in ticks.
+         * Note that it is allowed to wrap.
          */
-        tmr = timer_next(&timer_list);
-        if (time_before(lbolt, tmr->expire))
-            break;
+        lbolt++;
+        if (curthread->priority == PRI_IDLE)
+            idle_ticks++;
 
-        list_remove(&tmr->link);
-        if (tmr->interval != 0) {
+        while (!list_empty(&timer_list)) {
             /*
-             * Periodic timer - reprogram timer again.
+             * Check timer expiration.
              */
-            ticks = time_remain(tmr->expire + tmr->interval);
-            timer_add(tmr, ticks);
-            sched_wakeup(&tmr->event);
-        } else {
-            /*
-             * One-shot timer
-             */
-            list_insert(&expire_list, &tmr->link);
-            wakeup = 1;
+            tmr = timer_next(&timer_list);
+            if (time_before(lbolt, tmr->expire))
+                break;
+
+            list_remove(&tmr->link);
+            if (tmr->interval != 0) {
+                /*
+                 * Periodic timer - reprogram timer again.
+                 */
+                ticks = time_remain(tmr->expire + tmr->interval);
+                timer_add(tmr, ticks);
+                sched_wakeup(&tmr->event);
+            } else {
+                /*
+                 * One-shot timer
+                 */
+                list_insert(&expire_list, &tmr->link);
+                wakeup = 1;
+            }
         }
+        if (wakeup)
+            sched_wakeup(&timer_event);
     }
-    if (wakeup)
-        sched_wakeup(&timer_event);
 
     sched_tick();
 }

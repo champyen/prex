@@ -84,3 +84,17 @@ void clock_init(void)
 
     DPRINTF(("ARM Generic Timer: %d Hz, IRQ %d\n", freq, CLOCK_IRQ));
 }
+
+#ifdef CONFIG_SMP
+/*
+ * Initialize clock H/W chip for Application Processors (APs).
+ */
+void clock_ap_init(void)
+{
+    /* Program first timeout */
+    set_cntp_tval_reg(timer_count);
+
+    /* Enable physical timer: ENABLE=1, IMASK=0 */
+    set_cntp_ctl_reg(1);
+}
+#endif

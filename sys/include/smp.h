@@ -45,6 +45,10 @@
 typedef volatile int spinlock_t;
 #define SPINLOCK_INITIALIZER 0
 
+#define smp_processor_id() (hal_get_cpu_control()->cpu_id)
+
+extern struct cpu_control cpu_table[];
+
 static inline void spinlock_init(spinlock_t* lock)
 {
     *lock = 0;
@@ -79,6 +83,8 @@ static inline void spinlock_unlock_irq(spinlock_t* lock, int s)
 
 typedef int spinlock_t;
 #define SPINLOCK_INITIALIZER 0
+
+#define smp_processor_id() 0
 
 #define spinlock_init(lock) (void)0
 #define spinlock_lock(lock) (void)0
