@@ -41,9 +41,12 @@
 #include <irq.h>
 
 #ifdef CONFIG_SMP
-
 struct cpu_control cpu_table[CONFIG_SMP_NCPUS];
 char ap_boot_stacks[CONFIG_SMP_NCPUS][KSTACKSZ];
+#else
+struct cpu_control cpu_table[1];
+#endif
+
 static volatile int ready_count = 0;
 static volatile int smp_active = 0;
 
@@ -71,10 +74,11 @@ void smp_init_early(void)
     cpu->int_stack = (void*)(INTSTKTOP - 0x100);
     cpu->cpu_id = 0;
 
-    /* Load TPIDRPRW */
-    __asm__ volatile("mcr p15, 0, %0, c13, c0, 4" : : "r"(cpu));
+    /* Load hardware-backed CPU control structure */
+    hal_set_cpu_control(cpu);
 }
 
+#ifdef CONFIG_SMP
 /*
  * Start Application Processors (APs).
  */
@@ -99,7 +103,7 @@ void smp_start_aps(void)
         cpu_table[i].cpu_id = i;
 
         /* Wake up the AP using PSCI */
-        int ret = hal_psci_cpu_on(i, ((paddr_t)&kernel_start) & ~1UL);
+        int ret = hal_psci_cpu_on(i, ((paddr_t)kvtop(&kernel_start)) & ~1UL);
         if (ret != 0) {
             DPRINTF(("Failed to start CPU %d, returned %d\n", i, ret));
         }
@@ -130,9 +134,9 @@ void smp_ap_boot(void)
     struct cpu_control* cpu = &cpu_table[cpuid];
 
     /*
-     * Load the pointer to the CPU control structure into TPIDRPRW.
+     * Load the pointer to the CPU control structure into the hardware register.
      */
-    __asm__ volatile("mcr p15, 0, %0, c13, c0, 4" : : "r"(cpu));
+    hal_set_cpu_control(cpu);
 
     /*
      * Initialize interrupt controller for this CPU.

@@ -173,7 +173,11 @@ static thread_t runq_dequeue(void)
     thread_t t;
 
     if (maxpri >= PRI_IDLE) {
+#ifdef CONFIG_SMP
         return hal_get_cpu_control()->idle_thread;
+#else
+        return &idle_thread;
+#endif
     }
 
     q = dequeue(&runq[maxpri]);

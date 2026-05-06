@@ -256,9 +256,17 @@ reload_pc:
 	/*
 	 * Initilize spl.
 	 */
+#ifdef CONFIG_SMP
+	ldr	r1, =cpu_table
+	mcr	p15, 0, r1, c13, c0, 4	/* Set TPIDRPRW for BSP (CPU 0) */
 	mrc	p15, 0, r1, c13, c0, 4	/* Get cpu_control* */
 	mov	r2, #15
 	str	r2, [r1, #CPU_SPL_LEVEL]
+#else
+	ldr	r1, curspl		/* curspl = 15 */
+	mov	r2, #15
+	str	r2, [r1]
+#endif
 
 	/*
 	 * Jump to kernel main routine
@@ -682,10 +690,17 @@ ENTRY(splhigh)
 	orr	r1, r1, #0xc0
 	msr	cpsr_c, r1
 
+#ifdef CONFIG_SMP
 	mrc	p15, 0, r1, c13, c0, 4	/* Get cpu_control* */
 	ldr	r0, [r1, #CPU_SPL_LEVEL]
 	mov	r2, #15
 	str	r2, [r1, #CPU_SPL_LEVEL]
+#else
+	ldr	r1, curspl		/* curspl = 15 */
+	ldr	r0, [r1]
+	mov	r2, #15
+	str	r2, [r1]
+#endif
 	bx	lr
 
 /*

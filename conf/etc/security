@@ -33,7 +33,8 @@ capability	/boot/pow	CAP_RAWIO \
 capability	/boot/init	CAP_KILL
 
 capability	/boot/cmdbox	CAP_NICE \
-				CAP_KILL
+				CAP_KILL \
+				CAP_SYSFILES
 
 capability	/boot/install	CAP_SYSFILES
 

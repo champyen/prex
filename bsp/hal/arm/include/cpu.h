@@ -83,12 +83,9 @@
 #endif
 
 #ifndef __ASSEMBLY__
-
 __BEGIN_DECLS
 void cpu_init(void);
 
-#ifdef CONFIG_SMP
-struct cpu_control;
 /*
  * Hardware-backed CPU storage for ARMv7 (TPIDRPRW).
  */
@@ -98,9 +95,14 @@ static inline struct cpu_control* hal_get_cpu_control(void)
     __asm__ volatile("mrc p15, 0, %0, c13, c0, 4" : "=r"(cpu));
     return cpu;
 }
-#endif
+
+static inline void hal_set_cpu_control(struct cpu_control* cpu)
+{
+    __asm__ volatile("mcr p15, 0, %0, c13, c0, 4" : : "r"(cpu));
+}
 
 __END_DECLS
+
 
 #endif /* !__ASSEMBLY__ */
 #endif /* !_ARM_CPU_H */
