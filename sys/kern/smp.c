@@ -91,6 +91,7 @@ void smp_start_aps(void)
 
     atomic_inc(&ready_count);
 
+    int started_count = 1;
     DPRINTF(("Starting %d secondary CPUs...\n", CONFIG_SMP_NCPUS - 1));
     for (i = 1; i < CONFIG_SMP_NCPUS; i++) {
         thread_t t = thread_create_idle();
@@ -106,12 +107,14 @@ void smp_start_aps(void)
 
         /* Wake up the AP using PSCI */
         int ret = hal_cpu_start(i, ((paddr_t)kvtop(&kernel_start)) & ~1UL);
-        if (ret != 0) {
+        if (ret == 0) {
+            started_count++;
+        } else {
             DPRINTF(("Failed to start CPU %d, returned %d\n", i, ret));
         }
     }
 
-    while (atomic_read(&ready_count) < CONFIG_SMP_NCPUS) {
+    while (atomic_read(&ready_count) < started_count) {
         memory_barrier();
     }
     memory_barrier();

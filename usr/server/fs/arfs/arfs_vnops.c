@@ -57,6 +57,7 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <fcntl.h>
+#include <stdio.h>
 #include <ar.h>
 
 #include "arfs.h"
@@ -122,13 +123,17 @@ static int arfs_readblk(mount_t mp, int blkno)
     /*
      * Read two blocks for archive header
      */
-    if ((error = bread(mp->m_dev, blkno, &bp)) != 0)
+    if ((error = bread(mp->m_dev, blkno, &bp)) != 0) {
+        DPRINTF(("arfs_readblk: bread %d failed\n", blkno));
         return error;
+    }
     memcpy(iobuf, bp->b_data, BSIZE);
     brelse(bp);
 
-    if ((error = bread(mp->m_dev, blkno + 1, &bp)) != 0)
+    if ((error = bread(mp->m_dev, blkno + 1, &bp)) != 0) {
+        DPRINTF(("arfs_readblk: bread %d failed\n", blkno + 1));
         return error;
+    }
     memcpy(iobuf + BSIZE, bp->b_data, BSIZE);
     brelse(bp);
 
@@ -152,6 +157,8 @@ static int arfs_lookup(vnode_t dvp, char* name, vnode_t vp)
     if (*name == '\0')
         return ENOENT;
 
+    DPRINTF(("arfs_lookup: looking for %s on dev %x\n", name, (int)vp->v_mount->m_dev));
+
     mutex_lock(&arfs_lock);
 
     error = ENOENT;
@@ -160,25 +167,37 @@ static int arfs_lookup(vnode_t dvp, char* name, vnode_t vp)
     off = SARMAG; /* offset in archive image */
     for (;;) {
         /* Read two blocks for archive header */
-        if (arfs_readblk(mp, blkno) != 0)
+        if (arfs_readblk(mp, blkno) != 0) {
+            DPRINTF(("arfs_lookup: readblk failed blkno=%d\n", blkno));
             goto out;
+        }
 
         /* Check file header */
         hdr = (struct ar_hdr*)(iobuf + (off % BSIZE));
-        if (strncmp(hdr->ar_fmag, ARFMAG, sizeof(ARFMAG) - 1))
+        if (strncmp(hdr->ar_fmag, ARFMAG, sizeof(ARFMAG) - 1)) {
+            DPRINTF(("arfs_lookup: header magic mismatch at off=%d! found '%.2s'\n", (int)off, hdr->ar_fmag));
             goto out;
+        }
 
         /* Get file size */
         size = (size_t)atol((char*)&hdr->ar_size);
-        if (size == 0)
+
+        if (size == 0) {
+            DPRINTF(("arfs_lookup: zero size file header at off=%d\n", (int)off));
             goto out;
+        }
 
         /* Convert archive name */
-        if ((p = memchr(&hdr->ar_name, '/', 16)) != NULL)
+        char tmp_name[17];
+        memcpy(tmp_name, hdr->ar_name, 16);
+        tmp_name[16] = '\0';
+        if ((p = memchr(tmp_name, '/', 16)) != NULL)
             *p = '\0';
 
-        if (strncmp(name, (char*)&hdr->ar_name, 16) == 0)
+        if (strncmp(name, tmp_name, 16) == 0) {
+            DPRINTF(("arfs_lookup: match found for %s at off=%d\n", name, (int)off));
             break;
+        }
 
         /* Proceed to next archive header */
         off += (sizeof(struct ar_hdr) + size);

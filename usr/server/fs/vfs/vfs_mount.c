@@ -93,9 +93,7 @@ int sys_mount(char* dev, char* dir, char* fsname, int flags, void* data)
     vnode_t vp, vp_covered;
     int error;
 
-#ifdef DEBUG
-    dprintf("VFS: mounting %s at %s\n", fsname, dir);
-#endif
+    DPRINTF(VFSDB_CORE, ("VFS: sys_mount dev=%s dir=%s fsname=%s\n", dev, dir, fsname));
 
     if (!dir || *dir == '\0')
         return ENOENT;
@@ -109,8 +107,12 @@ int sys_mount(char* dev, char* dir, char* fsname, int flags, void* data)
     if (*dev != '\0') {
         if (strncmp(dev, "/dev/", 5))
             return ENOTBLK;
-        if ((error = device_open(dev + 5, DO_RDWR, &device)) != 0)
+        DPRINTF(VFSDB_CORE, ("VFS: opening device %s\n", dev + 5));
+        if ((error = device_open(dev + 5, DO_RDWR, &device)) != 0) {
+            DPRINTF(VFSDB_CORE, ("VFS: device_open failed error=%d\n", error));
             return error;
+        }
+        DPRINTF(VFSDB_CORE, ("VFS: device_open success device=%x\n", (int)device));
     }
 
     MOUNT_LOCK();
@@ -144,11 +146,13 @@ int sys_mount(char* dev, char* dir, char* fsname, int flags, void* data)
         /* Ignore if it mounts to global root directory. */
         vp_covered = NULL;
     } else {
+        DPRINTF(VFSDB_CORE, ("VFS: lookup mount point %s\n", dir));
         if ((error = namei(dir, &vp_covered)) != 0) {
-
+            DPRINTF(VFSDB_CORE, ("VFS: namei failed error=%d\n", error));
             error = ENOENT;
             goto err2;
         }
+        DPRINTF(VFSDB_CORE, ("VFS: namei success vp=%x\n", (int)vp_covered));
         if (vp_covered->v_type != VDIR) {
             error = ENOTDIR;
             goto err3;
@@ -171,8 +175,12 @@ int sys_mount(char* dev, char* dir, char* fsname, int flags, void* data)
     /*
      * Call a file system specific routine.
      */
-    if ((error = VFS_MOUNT(mp, dev, flags, data)) != 0)
+    DPRINTF(VFSDB_CORE, ("VFS: calling VFS_MOUNT for %s\n", fsname));
+    if ((error = VFS_MOUNT(mp, dev, flags, data)) != 0) {
+        DPRINTF(VFSDB_CORE, ("VFS: VFS_MOUNT failed error=%d\n", error));
         goto err4;
+    }
+    DPRINTF(VFSDB_CORE, ("VFS: VFS_MOUNT success\n"));
 
     if (mp->m_flags & MNT_RDONLY)
         vp->v_mode &= ~S_IWUSR;

@@ -39,6 +39,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <stdio.h>
 #include <ar.h>
 
 #include "arfs.h"
@@ -79,11 +80,13 @@ static int arfs_mount(mount_t mp, char* dev, int flags, void* data)
 
     /* Read first block */
     size = BSIZE;
+    DPRINTF(("arfs_mount: reading block 0 from dev %x\n", (int)mp->m_dev));
     error = device_read((device_t)mp->m_dev, buf, &size, 0);
     if (error) {
         DPRINTF(("arfs_mount: read error=%d\n", error));
         goto out;
     }
+    DPRINTF(("arfs_mount: block 0 read success\n"));
 
     /* Check if the device includes valid archive image. */
     if (strncmp(buf, ARMAG, SARMAG)) {
@@ -91,6 +94,7 @@ static int arfs_mount(mount_t mp, char* dev, int flags, void* data)
         error = EINVAL;
         goto out;
     }
+    DPRINTF(("arfs_mount: archive image valid\n"));
 
     /* Ok, we find the archive */
     mp->m_flags |= MNT_RDONLY;

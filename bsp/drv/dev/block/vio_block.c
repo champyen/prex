@@ -33,6 +33,16 @@
 #include <types.h>
 #include <vio_mmio.h>
 
+/* #define DEBUG_VIO_BLOCK 1 */
+
+#ifdef DEBUG_VIO_BLOCK
+#define DPRINTF(a) printf a
+#else
+#define DPRINTF(a)                                                                                                     \
+    do {                                                                                                               \
+    } while (0)
+#endif
+
 /* VirtIO Block Request Types */
 #define VIO_BLK_T_IN            0
 #define VIO_BLK_T_OUT           1
@@ -253,7 +263,7 @@ int vio_block_attach(vaddr_t base, int irq)
     status |= VIO_STATUS_DRIVER_OK;
     bus_write_32(base + VIO_MMIO_STATUS, status);
 
-    sc->irq_handle = irq_attach(irq, IPL_BLOCK, 0, vio_blk_isr, vio_blk_ist, sc);
+    sc->irq_handle = irq_attach(irq, IPL_BLOCK, 1, vio_blk_isr, vio_blk_ist, sc);
 
     sc->req = kmem_alloc(sizeof(struct vio_blk_req));
     sc->status_ptr = kmem_alloc(1);
@@ -353,18 +363,30 @@ static int vio_blk_read(device_t dev, char* buf, size_t* nbyte, int blkno)
 
     psc->avail->ring[psc->avail->idx % 16] = 0;
     __sync_synchronize();
+    psc->last_used_idx = psc->used->idx;
     psc->avail->idx++;
     __sync_synchronize();
 
     bus_write_32(psc->base + VIO_MMIO_QUEUE_NOTIFY, 0);
 
+    int timeout = 1000000;
     while (psc->used->idx == psc->last_used_idx) {
-        sched_sleep(&psc->done_event);
+        if (--timeout == 0) {
+            DPRINTF(("vio_block: timeout waiting for device %lx\n", (long)psc->base));
+            break;
+        }
+        if (timeout > 999900) {
+            delay_usec(1);
+        } else {
+            sched_sleep(&psc->done_event);
+        }
+        __sync_synchronize();
     }
-    psc->last_used_idx = psc->used->idx;
 
     int err = (*psc->status_ptr == VIO_BLK_S_OK) ? 0 : EIO;
-    if (err) printf("vio_blk_read: error status %d\n", *psc->status_ptr);
+    if (err) DPRINTF(("vio_blk_read: error status %d\n", *psc->status_ptr));
+
+    DPRINTF(("vio_blk_read: dev=%lx blkno=%d count=%d err=%d\n", (u_long)dev, blkno, (int)*nbyte, err));
 
     sched_lock();
     psc->busy = 0;
@@ -416,17 +438,29 @@ static int vio_blk_write(device_t dev, char* buf, size_t* nbyte, int blkno)
 
     psc->avail->ring[psc->avail->idx % 16] = 0;
     __sync_synchronize();
+    psc->last_used_idx = psc->used->idx;
     psc->avail->idx++;
     __sync_synchronize();
 
     bus_write_32(psc->base + VIO_MMIO_QUEUE_NOTIFY, 0);
 
+    int timeout = 1000000;
     while (psc->used->idx == psc->last_used_idx) {
-        sched_sleep(&psc->done_event);
+        if (--timeout == 0) {
+            DPRINTF(("vio_block: timeout waiting for device %lx\n", (long)psc->base));
+            break;
+        }
+        if (timeout > 999900) {
+            delay_usec(1);
+        } else {
+            sched_sleep(&psc->done_event);
+        }
+        __sync_synchronize();
     }
-    psc->last_used_idx = psc->used->idx;
 
     int err = (*psc->status_ptr == VIO_BLK_S_OK) ? 0 : EIO;
+
+    DPRINTF(("vio_blk_write: dev=%lx blkno=%d count=%d err=%d\n", (u_long)dev, blkno, (int)*nbyte, err));
 
     sched_lock();
     psc->busy = 0;

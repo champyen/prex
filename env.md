@@ -39,9 +39,18 @@ $ timeout 15 \
 $ timeout 15 \
   qemu-system-arm -M virt -m 256M -kernel prexos.bin -nographic \
   -drive if=none,file=disk.img,id=drv0,format=raw -device virtio-blk-device,drive=drv0 \
+  -drive if=none,file=bin.img,id=drv1,format=raw -device virtio-blk-device,drive=drv1 \
   -device virtio-sound-device,audiodev=audio0 -audiodev pa,id=audio0 \
   -netdev user,id=net0 -device virtio-net-device,netdev=net0 \
   > qemu.log 2>&1 & sleep 16 && cat qemu.log
+
+# tiered volumes (ARFS/FATFS)
+Prex+ supports multiple volumes:
+1. prexos.bin: Core boot volume (ARFS), contains kernel and basic servers.
+2. bin.img: Secondary volume (ARFS), usually mounted at /bin. 
+   Attached as drv1 (vd1) in QEMU for arm-qemu-virt.
+3. disk.img: Tertiary volume (FATFS), usually mounted at /usr.
+   Attached as drv0 (vd0) in QEMU for arm-qemu-virt.
 
 # disk image build
 You don't need to request sudo from me, the following tools to manipulate disk image can be used without sudo
