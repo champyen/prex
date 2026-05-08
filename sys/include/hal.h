@@ -136,6 +136,8 @@ void clock_ap_init(void);
 #ifdef DEBUG
 void diag_init(void);
 void diag_puts(char*);
+int hal_uart_lock(void);
+void hal_uart_unlock(int);
 #else
 #define diag_init() ((void)0)
 #endif

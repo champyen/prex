@@ -133,11 +133,15 @@ ENTRY(switch_ttb)
  * Flush TLB
  */
 ENTRY(flush_tlb)
-	mov	r1,#0
-	mcr	p15, 0, r1, c8, c7, 0	/* invalidate I+D TLBs */
-	dsb
-	isb
-	bx	lr
+        mov     r1,#0
+#ifdef CONFIG_SMP
+        mcr     p15, 0, r1, c8, c3, 0   /* Invalidate entire Unified TLB Inner Shareable */
+#else
+        mcr     p15, 0, r1, c8, c7, 0   /* invalidate I+D TLBs (local) */
+#endif
+        dsb     ish
+        isb
+        bx      lr
 
 #endif /* !CONFIG_MMU */
 
@@ -165,7 +169,7 @@ ENTRY(hal_cpu_id)
 /*
  * PSCI CPU_ON call
  */
-ENTRY(hal_psci_cpu_on)
+ENTRY(hal_cpu_start)
 	mov	r3, #0			/* context_id */
 	mov	r2, r1			/* entry_point_address */
 	mov	r1, r0			/* target_cpu */

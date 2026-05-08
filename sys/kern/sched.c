@@ -533,7 +533,24 @@ void sched_lock(void)
 {
     int s = splhigh();
     if (curthread->locks == 0) {
+#ifdef CONFIG_SMP
+        struct cpu_control* cpu = hal_get_cpu_control();
+        while (__sync_lock_test_and_set(&kernel_lock, 1)) {
+            if (cpu->nest_count == 0) {
+                splx(s);
+                while (kernel_lock) {
+                    memory_barrier();
+                }
+                s = splhigh();
+            } else {
+                while (kernel_lock) {
+                    memory_barrier();
+                }
+            }
+        }
+#else
         spinlock_lock(&kernel_lock);
+#endif
     }
     curthread->locks++;
     splx(s);

@@ -389,10 +389,8 @@ int thread_schedparam(thread_t t, int op, int* param)
  */
 void thread_idle(void)
 {
-
     for (;;) {
         machine_idle();
-        sched_yield();
     }
 }
 
@@ -594,7 +592,6 @@ void thread_init(void)
     idle_thread.kstack = stack;
     idle_thread.task = &kernel_task;
     idle_thread.state = TS_RUN;
-    idle_thread.locks = 1;
     list_init(&idle_thread.mutexes);
 
     list_insert(&thread_list, &idle_thread.link);

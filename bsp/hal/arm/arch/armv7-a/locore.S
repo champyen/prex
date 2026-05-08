@@ -130,11 +130,17 @@ ENTRY(reset_entry)
 
 	/* It is svc mode now. */
 
+#ifdef CONFIG_SMP
+        /* Enable SMP bit in ACTLR */
+        mrc     p15, 0, r0, c1, c0, 1           /* Read ACTLR */
+        orr     r0, r0, #0x40                   /* Set bit 6 (SMP) */
+        mcr     p15, 0, r0, c1, c0, 1           /* Write ACTLR */
+#endif
+
 #ifdef CONFIG_CACHE
-	/*
-	 * Setup control register with default values
-	 */
-	ldr	r1, =(CTL_AFE | CTL_TRE | CTL_ICACHE | CTL_BPRD | CTL_CACHE | CTL_MMU)
+        /*
+         * Setup control register with default values
+         */	ldr	r1, =(CTL_AFE | CTL_TRE | CTL_ICACHE | CTL_BPRD | CTL_CACHE | CTL_MMU)
 	mrc	p15, 0, r0, c1, c0, 0
 	bic	r0, r0, r1
 	mcr	p15, 0, r0, c1, c0, 0
@@ -498,10 +504,16 @@ ENTRY(ap_entry)
 	msr	cpsr, r0
 	mov	sp, sp			/* Reuse same stack for early boot */
 
-	mov	r0, #(PSR_SVC_MODE|PSR_FIQ_DIS|PSR_IRQ_DIS)
-	msr	cpsr, r0
+	mov     r0, #(PSR_SVC_MODE|PSR_FIQ_DIS|PSR_IRQ_DIS)
+	msr     cpsr, r0
 
-#ifdef CONFIG_MMU
+	/* Enable SMP bit in ACTLR */
+	mrc     p15, 0, r0, c1, c0, 1           /* Read ACTLR */
+	orr     r0, r0, #0x40                   /* Set bit 6 (SMP) */
+	mcr     p15, 0, r0, c1, c0, 1           /* Write ACTLR */
+	isb
+
+	#ifdef CONFIG_MMU
 	/*
 	 * Enable MMU for AP (Reuse BSP's boot page directory)
 	 */

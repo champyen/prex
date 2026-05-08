@@ -145,20 +145,23 @@ void cons_pollc(int on)
  */
 void cons_putc(int c)
 {
-
+    int s;
     ASSERT(consdev != NULL);
     if (c) {
+        s = uart_lock();
         consdev->cnputc(consdev->dev, c);
         if (c == '\n')
             consdev->cnputc(consdev->dev, '\r');
+        uart_unlock(s);
     }
 }
 
 void cons_puts(char* str)
 {
-
+    int s;
     ASSERT(consdev != NULL);
 
+    s = uart_lock();
     consdev->cnpollc(consdev->dev, 1);
     while (*str) {
         consdev->cnputc(consdev->dev, *str);
@@ -167,6 +170,7 @@ void cons_puts(char* str)
         str++;
     }
     consdev->cnpollc(consdev->dev, 0);
+    uart_unlock(s);
 }
 
 void cons_attach(struct consdev* cdev, int diag)

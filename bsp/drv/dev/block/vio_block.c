@@ -92,6 +92,8 @@ struct vio_blk_softc {
     int irq;
     irq_t irq_handle;
     struct event done_event;
+    struct event lock_event;
+    int busy;
 
     /* VirtQueue */
     volatile struct vring_desc* desc;
@@ -172,13 +174,13 @@ static void attach_partition(struct vio_blk_softc* parent_sc, const char* name, 
 
     dev = device_create(&vio_block_driver, name, D_BLK | D_PROT);
     sc = device_private(dev);
-    
+
     /* Copy necessary info from parent */
     sc->dev = dev;
     sc->base = parent_sc->base;
     sc->irq = parent_sc->irq;
     sc->irq_handle = parent_sc->irq_handle;
-    
+
     /* Partition info */
     sc->start_sector = start;
     sc->nsectors = size;
@@ -205,7 +207,9 @@ int vio_block_attach(vaddr_t base, int irq)
     sc->start_sector = 0;
     sc->nsectors = 0; /* Unknown yet */
     sc->parent_sc = NULL;
+    sc->busy = 0;
     event_init(&sc->done_event, "vio_blk");
+    event_init(&sc->lock_event, "vio_lock");
 
     /* Reset device */
     bus_write_32(base + VIO_MMIO_STATUS, 0);
@@ -312,12 +316,19 @@ static int vio_blk_read(device_t dev, char* buf, size_t* nbyte, int blkno)
     struct vio_blk_softc* sc = device_private(dev);
     struct vio_blk_softc* psc = sc->parent_sc ? sc->parent_sc : sc;
     void* kbuf;
-    
+
     if (sc->nsectors > 0 && blkno >= (int)sc->nsectors)
         return EIO;
 
     kbuf = kmem_map(buf, *nbyte);
     if (kbuf == NULL) return EFAULT;
+
+    sched_lock();
+    while (psc->busy) {
+        sched_sleep(&psc->lock_event);
+    }
+    psc->busy = 1;
+    sched_unlock();
 
     *psc->status_ptr = 0xFF;
 
@@ -354,7 +365,12 @@ static int vio_blk_read(device_t dev, char* buf, size_t* nbyte, int blkno)
 
     int err = (*psc->status_ptr == VIO_BLK_S_OK) ? 0 : EIO;
     if (err) printf("vio_blk_read: error status %d\n", *psc->status_ptr);
-    
+
+    sched_lock();
+    psc->busy = 0;
+    sched_wakeup(&psc->lock_event);
+    sched_unlock();
+
     return err;
 }
 
@@ -363,12 +379,19 @@ static int vio_blk_write(device_t dev, char* buf, size_t* nbyte, int blkno)
     struct vio_blk_softc* sc = device_private(dev);
     struct vio_blk_softc* psc = sc->parent_sc ? sc->parent_sc : sc;
     void* kbuf;
-    
+
     if (sc->nsectors > 0 && blkno >= (int)sc->nsectors)
         return EIO;
 
     kbuf = kmem_map(buf, *nbyte);
     if (kbuf == NULL) return EFAULT;
+
+    sched_lock();
+    while (psc->busy) {
+        sched_sleep(&psc->lock_event);
+    }
+    psc->busy = 1;
+    sched_unlock();
 
     *psc->status_ptr = 0xFF;
 
@@ -404,6 +427,11 @@ static int vio_blk_write(device_t dev, char* buf, size_t* nbyte, int blkno)
     psc->last_used_idx = psc->used->idx;
 
     int err = (*psc->status_ptr == VIO_BLK_S_OK) ? 0 : EIO;
-    
+
+    sched_lock();
+    psc->busy = 0;
+    sched_wakeup(&psc->lock_event);
+    sched_unlock();
+
     return err;
 }

@@ -36,6 +36,12 @@
  * Fundamental atomic operations using GCC built-ins.
  */
 
+#ifdef __arm__
+#define memory_barrier() __asm__ volatile("dmb ish" : : : "memory")
+#else
+#define memory_barrier() __sync_synchronize()
+#endif
+
 static inline int atomic_cas(volatile int* ptr, int oldval, int newval)
 {
     return __sync_bool_compare_and_swap(ptr, oldval, newval);
@@ -53,12 +59,16 @@ static inline int atomic_fetch_add(volatile int* ptr, int val)
 
 static inline int atomic_read(volatile int* ptr)
 {
-    return *ptr;
+    int val = *ptr;
+    memory_barrier();
+    return val;
 }
 
 static inline void atomic_set(volatile int* ptr, int val)
 {
+    memory_barrier();
     *ptr = val;
+    memory_barrier();
 }
 
 #endif /* !_ATOMIC_H */

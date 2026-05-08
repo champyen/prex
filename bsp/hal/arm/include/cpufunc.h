@@ -53,7 +53,7 @@ uint32_t get_cntp_ctl_reg(void);
 
 // for SMP
 uint32_t hal_cpu_id(void);
-int hal_psci_cpu_on(uint32_t cpuid, paddr_t entry);
+int hal_cpu_start(uint32_t cpuid, paddr_t entry);
 void hal_cpu_send_ipi(uint32_t cpumask, uint32_t vector);
 
 __END_DECLS

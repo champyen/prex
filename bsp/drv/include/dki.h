@@ -110,6 +110,9 @@ struct timer
 typedef struct timer timer_t;
 
 __BEGIN_DECLS
+int uart_lock(void);
+void uart_unlock(int);
+
 device_t device_create(struct driver*, const char*, int);
 int device_destroy(device_t);
 device_t device_lookup(const char*);

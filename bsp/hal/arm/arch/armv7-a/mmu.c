@@ -140,6 +140,11 @@ int mmu_map(pgd_t pgd, paddr_t pa, vaddr_t va, size_t size, int type)
     default:
         panic("mmu_map");
     }
+
+#ifdef CONFIG_SMP
+    if (pte_flag & PTE_CACHE)
+        pte_flag |= PTE_SHAREABLE;
+#endif
     /*
      * Map all pages
      */

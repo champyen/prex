@@ -58,6 +58,7 @@
 
 #include <kernel.h>
 #include <kmem.h>
+#include <atomic.h>
 #include <sched.h>
 #include <task.h>
 #include <ipc.h>
@@ -125,6 +126,9 @@ int object_create(const char* name, object_t* objp)
     list_insert(&curtask->objects, &obj->task_link);
     curtask->nobjects++;
     list_insert(&object_list, &obj->link);
+
+    memory_barrier();
+
     copyout(&obj, objp, sizeof(obj));
 
     sched_unlock();

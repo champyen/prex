@@ -78,6 +78,7 @@ typedef uint32_t* pte_t; /* page table entry */
 #define PTE_SYSTEM 0x00000010  /* PL1:RW, PL0:NA (AP=00, AF=1) */
 #define PTE_USER_RO 0x00000070 /* PL1:RO, PL0:RO (AP=11, AF=1) */
 #define PTE_USER_RW 0x00000030 /* PL1:RW, PL0:RW (AP=01, AF=1) */
+#define PTE_SHAREABLE 0x00000400 /* Shareable */
 
 #define PTE_ATTR_MASK 0x00000ff1
 #define PTE_ADDRESS 0xfffff000

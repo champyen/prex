@@ -68,8 +68,10 @@ STUB(30, device_private)
 STUB(31, machine_bootinfo)
 STUB(32, machine_powerdown)
 STUB(33, sysinfo)
-STUB(34, panic)
-STUB(35, printf)
-STUB(36, dbgctl)
+STUB(34, uart_lock)
+STUB(35, uart_unlock)
+STUB(36, panic)
+STUB(37, printf)
+STUB(38, dbgctl)
 
 .section .note.GNU-stack,"",%progbits

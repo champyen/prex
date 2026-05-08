@@ -36,6 +36,7 @@
 #include <thread.h>
 #include <sched.h>
 #include <hal.h>
+#include <smp.h>
 #include <sys/dbgctl.h>
 
 typedef void (*diagfn_t)(char*);
@@ -49,6 +50,8 @@ static char log_buf[LOGBUFSZ]; /* log buffer */
 static u_long log_head;        /* index for log head */
 static u_long log_tail;        /* iundex for log tail */
 static u_long log_len;         /* length of log */
+
+static spinlock_t log_lock = SPINLOCK_INITIALIZER;
 
 #define LOGINDEX(x) ((x) & (LOGBUFSZ - 1))
 
@@ -89,7 +92,7 @@ void printf(const char* fmt, ...)
     int i, s;
     char c;
 
-    s = splhigh();
+    spinlock_lock_irq(&log_lock, &s);
     va_start(args, fmt);
     vsprintf(db_msg, fmt, args);
 
@@ -110,7 +113,7 @@ void printf(const char* fmt, ...)
             log_head = log_tail - LOGBUFSZ;
     }
     va_end(args);
-    splx(s);
+    spinlock_unlock_irq(&log_lock, s);
 }
 
 /*
@@ -148,7 +151,7 @@ static int getlog(char* buf)
     int s, error = 0;
     char c;
 
-    s = splhigh();
+    spinlock_lock_irq(&log_lock, &s);
     i = log_head;
     len = log_len;
     if (len >= LOGBUFSZ) {
@@ -172,7 +175,7 @@ static int getlog(char* buf)
         i++;
         buf++;
     }
-    splx(s);
+    spinlock_unlock_irq(&log_lock, s);
     return error;
 }
 

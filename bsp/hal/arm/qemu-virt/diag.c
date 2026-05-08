@@ -37,6 +37,7 @@
 #include <cpufunc.h>
 #include <mmu.h>
 
+#include <smp.h>
 #include "platform.h"
 
 #define UART_FR (*(volatile uint32_t*)(UART_BASE + 0x18))
@@ -45,6 +46,20 @@
 /* Flag register */
 #define FR_RXFE 0x10 /* Receive FIFO empty */
 #define FR_TXFF 0x20 /* Transmit FIFO full */
+
+static spinlock_t uart_lock_obj = SPINLOCK_INITIALIZER;
+
+int hal_uart_lock(void)
+{
+    int s;
+    spinlock_lock_irq(&uart_lock_obj, &s);
+    return s;
+}
+
+void hal_uart_unlock(int s)
+{
+    spinlock_unlock_irq(&uart_lock_obj, s);
+}
 
 static void serial_putc(char c)
 {
@@ -56,12 +71,15 @@ static void serial_putc(char c)
 
 void diag_puts(char* buf)
 {
+    int s;
 
+    s = hal_uart_lock();
     while (*buf) {
         if (*buf == '\n')
             serial_putc('\r');
         serial_putc(*buf++);
     }
+    hal_uart_unlock(s);
 }
 
 void diag_init(void)

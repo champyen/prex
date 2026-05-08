@@ -102,18 +102,21 @@ void smp_start_aps(void)
         cpu_table[i].int_stack = &ap_boot_stacks[i][KSTACKSZ];
         cpu_table[i].cpu_id = i;
 
+        memory_barrier();
+
         /* Wake up the AP using PSCI */
-        int ret = hal_psci_cpu_on(i, ((paddr_t)kvtop(&kernel_start)) & ~1UL);
+        int ret = hal_cpu_start(i, ((paddr_t)kvtop(&kernel_start)) & ~1UL);
         if (ret != 0) {
             DPRINTF(("Failed to start CPU %d, returned %d\n", i, ret));
         }
     }
 
-    /* Wait for all CPUs to be ready with hardware init */
-    while (ready_count < CONFIG_SMP_NCPUS)
-        ;
+    while (atomic_read(&ready_count) < CONFIG_SMP_NCPUS) {
+        memory_barrier();
+    }
+    memory_barrier();
 
-    DPRINTF(("All CPUs have initialized hardware. Activation pending...\n"));
+    DPRINTF(("All CPUs have initialized hardware. Kernel ready for SMP.\n"));
 }
 
 /*
@@ -121,7 +124,9 @@ void smp_start_aps(void)
  */
 void smp_activate(void)
 {
+    memory_barrier();
     smp_active = 1;
+    memory_barrier();
     DPRINTF(("SMP is now active.\n"));
 }
 
@@ -130,6 +135,7 @@ void smp_activate(void)
  */
 void smp_ap_boot(void)
 {
+    memory_barrier();
     int cpuid = hal_cpu_id();
     struct cpu_control* cpu = &cpu_table[cpuid];
 
@@ -157,16 +163,14 @@ void smp_ap_boot(void)
     /*
      * Wait for the BSP to signal that the kernel is ready for SMP scheduling.
      */
-    while (smp_active == 0)
+    while (atomic_read(&smp_active) == 0)
         ;
+    memory_barrier();
 
     /*
      * Enter idle loop.
-     * Drop the lock created by thread_create_idle and start scheduling.
      */
-    sched_unlock();
-    for (;;)
-        cpu_idle();
+    thread_idle();
 }
 
 #endif /* CONFIG_SMP */

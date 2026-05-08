@@ -81,15 +81,15 @@ int tty_getc(struct tty_queue* tq)
     char c;
     int s;
 
-    s = splhigh();
+    sched_lock();
     if (ttyq_empty(tq)) {
-        splx(s);
+        sched_unlock();
         return -1;
     }
     c = tq->tq_buf[tq->tq_head];
     tq->tq_head = ttyq_next(tq->tq_head);
     tq->tq_count--;
-    splx(s);
+    sched_unlock();
     return (int)c;
 }
 
@@ -98,17 +98,15 @@ int tty_getc(struct tty_queue* tq)
  */
 static void tty_putc(int c, struct tty_queue* tq)
 {
-    int s;
-
-    s = splhigh();
+    sched_lock();
     if (ttyq_full(tq)) {
-        splx(s);
+        sched_unlock();
         return;
     }
     tq->tq_buf[tq->tq_tail] = (char)(c & 0xff);
     tq->tq_tail = ttyq_next(tq->tq_tail);
     tq->tq_count++;
-    splx(s);
+    sched_unlock();
 }
 
 /*
@@ -117,15 +115,16 @@ static void tty_putc(int c, struct tty_queue* tq)
 static int tty_unputc(struct tty_queue* tq)
 {
     char c;
-    int s;
 
-    if (ttyq_empty(tq))
+    sched_lock();
+    if (ttyq_empty(tq)) {
+        sched_unlock();
         return -1;
-    s = splhigh();
+    }
     tq->tq_tail = ttyq_prev(tq->tq_tail);
     c = tq->tq_buf[tq->tq_tail];
     tq->tq_count--;
-    splx(s);
+    sched_unlock();
     return (int)c;
 }
 

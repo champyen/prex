@@ -58,29 +58,22 @@
 #define GICC_EOIR (*(volatile uint32_t*)(CONFIG_GIC_CPU_BASE + 0x010))
 
 /*
- * Interrupt Priority Level
- */
-volatile int irq_level;
-
-/*
  * Interrupt mapping table
  */
 static int ipl_table[CONFIG_NIRQS];
-static uint32_t mask_table[NIPLS][CONFIG_NIRQS / 32];
 
 /*
  * Set mask for current ipl
  */
 static void update_mask(void)
 {
-    int i;
-    uint32_t mask;
-
-    for (i = 0; i < CONFIG_NIRQS / 32; i++) {
-        mask = mask_table[irq_level][i];
-        GICD_ICENABLER(i) = ~mask;
-        GICD_ISENABLER(i) = mask;
-    }
+    /*
+     * In SMP, we use GICC_PMR to mask interrupts per-CPU.
+     * Prex IPL 0 (spl0) allows all interrupts.
+     * Prex IPL 15 (splhigh) masks all interrupts.
+     * GIC Priority 0 is highest, 0xff is lowest.
+     */
+    GICC_PMR = (uint32_t)(NIPLS - curspl) << 4;
 }
 
 /*
@@ -88,29 +81,30 @@ static void update_mask(void)
  */
 void interrupt_unmask(int vector, int level)
 {
-    int i;
     uint32_t unmask = (uint32_t)1 << (vector % 32);
 
     ipl_table[vector] = level;
 
-    for (i = 0; i < level; i++)
-        mask_table[i][vector / 32] |= unmask;
-
-    /* Set priority: 0 is highest, Prex uses higher numbers for higher priority? 
-       No, Prex spl0 is 0, splhigh is 15. GIC 0 is highest. 
-       We map Prex IPL to GIC priority. */
-    uint32_t prio = (uint32_t)(NIPLS - level) << 4; /* Simplistic mapping */
+    /* Set priority: GIC 0 is highest. */
+    uint32_t prio = (uint32_t)(NIPLS - level) << 4;
     uint32_t reg = GICD_IPRIORITYR(vector / 4);
     int shift = (vector % 4) * 8;
     reg &= ~(0xff << shift);
     reg |= (prio << shift);
     GICD_IPRIORITYR(vector / 4) = reg;
 
-    /* Target CPU0 */
-    uint32_t target = GICD_ITARGETSR(vector / 4);
-    target &= ~(0xff << shift);
-    target |= (0x01 << shift);
-    GICD_ITARGETSR(vector / 4) = target;
+    /* Target CPU0 by default, or all CPUs for SGIs/PPIs */
+    if (vector < 32) {
+        /* SGI/PPI are per-CPU anyway */
+    } else {
+        uint32_t target = GICD_ITARGETSR(vector / 4);
+        target &= ~(0xff << shift);
+        target |= (0x01 << shift);
+        GICD_ITARGETSR(vector / 4) = target;
+    }
+
+    /* Enable the interrupt globally in the distributor */
+    GICD_ISENABLER(vector / 32) = unmask;
 
     update_mask();
 }
@@ -120,13 +114,6 @@ void interrupt_unmask(int vector, int level)
  */
 void interrupt_mask(int vector)
 {
-    int i, level;
-    uint32_t mask = ~((uint32_t)1 << (vector % 32));
-
-    level = ipl_table[vector];
-    for (i = 0; i < level; i++)
-        mask_table[i][vector / 32] &= mask;
-
     ipl_table[vector] = IPL_NONE;
     GICD_ICENABLER(vector / 32) = (1 << (vector % 32));
     update_mask();
@@ -162,11 +149,11 @@ void interrupt_handler(void)
         return;
 
     /* Adjust interrupt level */
-    old_ipl = irq_level;
+    old_ipl = curspl;
     new_ipl = ipl_table[vector];
     if (new_ipl > old_ipl)
-        irq_level = new_ipl;
-    
+        curspl = new_ipl;
+
     update_mask();
 
     /* Allow another interrupt that has higher priority */
@@ -181,7 +168,7 @@ void interrupt_handler(void)
     GICC_EOIR = iar;
 
     /* Restore interrupt level */
-    irq_level = old_ipl;
+    curspl = old_ipl;
     update_mask();
 }
 
@@ -218,16 +205,10 @@ void interrupt_cpu_init(void)
  */
 void interrupt_init(void)
 {
-    int i, j;
-
-    irq_level = IPL_NONE;
+    int i;
 
     for (i = 0; i < CONFIG_NIRQS; i++)
         ipl_table[i] = IPL_NONE;
-
-    for (i = 0; i < NIPLS; i++)
-        for (j = 0; j < CONFIG_NIRQS / 32; j++)
-            mask_table[i][j] = 0;
 
     /* Disable Distributor */
     GICD_CTLR = 0;
