@@ -201,9 +201,12 @@ int mutex_lock(mutex_t* mp)
          * If the mutex is not locked, this routine
          * returns immediately.
          */
-        if (m->holder == NULL)
+        if (m->holder == NULL) {
             m->priority = curthread->priority;
-        else {
+            m->locks = 1;
+            m->holder = curthread;
+            list_insert(&curthread->mutexes, &m->link);
+        } else {
             /*
              * Wait for a mutex.
              */
@@ -219,10 +222,9 @@ int mutex_lock(mutex_t* mp)
                 sched_unlock();
                 return EINTR;
             }
+            m->locks = 1;
+            list_insert(&curthread->mutexes, &m->link);
         }
-        m->locks = 1;
-        m->holder = curthread;
-        list_insert(&curthread->mutexes, &m->link);
     }
     sched_unlock();
     return 0;
@@ -435,6 +437,7 @@ static int prio_inherit(thread_t waiter)
         m = (mutex_t)holder->mutex_waiting;
 
         /* Fail safe... */
+        count++;
         ASSERT(count < MAXINHERIT);
         if (count >= MAXINHERIT)
             break;

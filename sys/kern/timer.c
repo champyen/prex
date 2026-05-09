@@ -44,6 +44,7 @@
 
 static volatile u_long lbolt;      /* ticks elapsed since bootup */
 static volatile u_long idle_ticks; /* total ticks for idle */
+static spinlock_t timer_lock = SPINLOCK_INITIALIZER;
 
 static struct event timer_event; /* event to wakeup a timer thread */
 static struct event delay_event; /* event for the thread delay */
@@ -98,12 +99,12 @@ void timer_stop(struct timer* tmr)
 
     ASSERT(tmr != NULL);
 
-    s = splhigh();
+    spinlock_lock_irq(&timer_lock, &s);
     if (tmr->state == TM_ACTIVE) {
         list_remove(&tmr->link);
         tmr->state = TM_STOP;
     }
-    splx(s);
+    spinlock_unlock_irq(&timer_lock, s);
 }
 
 /*
@@ -120,7 +121,7 @@ void timer_callout(struct timer* tmr, u_long msec, void (*fn)(void*), void* arg)
     ASSERT(tmr != NULL);
     ASSERT(fn != NULL);
 
-    s = splhigh();
+    spinlock_lock_irq(&timer_lock, &s);
 
     if (tmr->state == TM_ACTIVE)
         list_remove(&tmr->link);
@@ -130,7 +131,7 @@ void timer_callout(struct timer* tmr, u_long msec, void (*fn)(void*), void* arg)
     tmr->interval = 0;
     timer_add(tmr, mstohz(msec));
 
-    splx(s);
+    spinlock_unlock_irq(&timer_lock, s);
 }
 
 /*
@@ -200,7 +201,7 @@ int timer_alarm(u_long msec, u_long* remain)
     u_long left = 0;
     int s;
 
-    s = splhigh();
+    spinlock_lock_irq(&timer_lock, &s);
     tmr = &curtask->alarm;
 
     /*
@@ -209,13 +210,13 @@ int timer_alarm(u_long msec, u_long* remain)
      */
     if (tmr->state == TM_ACTIVE)
         left = hztoms(time_remain(tmr->expire));
+    spinlock_unlock_irq(&timer_lock, s);
 
     if (msec == 0)
         timer_stop(tmr);
     else
         timer_callout(tmr, msec, &alarm_expire, curtask);
 
-    splx(s);
     if (remain != NULL) {
         if (copyout(&left, remain, sizeof(left)))
             return EFAULT;
@@ -275,12 +276,12 @@ int timer_periodic(thread_t t, u_long start, u_long period)
         /*
          * Program an interval timer.
          */
-        s = splhigh();
+        spinlock_lock_irq(&timer_lock, &s);
         tmr->interval = mstohz(period);
         if (tmr->interval == 0)
             tmr->interval = 1;
         timer_add(tmr, mstohz(start));
-        splx(s);
+        spinlock_unlock_irq(&timer_lock, s);
     }
     sched_unlock();
     return 0;
@@ -345,6 +346,7 @@ static void timer_thread(void* dummy)
          */
         sched_sleep(&timer_event);
 
+        spinlock_lock(&timer_lock);
         while (!list_empty(&expire_list)) {
             /*
              * callout
@@ -352,6 +354,7 @@ static void timer_thread(void* dummy)
             tmr = timer_next(&expire_list);
             list_remove(&tmr->link);
             tmr->state = TM_STOP;
+            spinlock_unlock(&timer_lock);
             sched_lock();
             spl0();
             (*tmr->func)(tmr->arg);
@@ -362,7 +365,9 @@ static void timer_thread(void* dummy)
              */
             sched_unlock();
             splhigh();
+            spinlock_lock(&timer_lock);
         }
+        spinlock_unlock(&timer_lock);
     }
     /* NOTREACHED */
 }
@@ -389,6 +394,7 @@ void timer_handler(void)
         if (curthread->priority == PRI_IDLE)
             idle_ticks++;
 
+        spinlock_lock(&timer_lock);
         while (!list_empty(&timer_list)) {
             /*
              * Check timer expiration.
@@ -404,7 +410,9 @@ void timer_handler(void)
                  */
                 ticks = time_remain(tmr->expire + tmr->interval);
                 timer_add(tmr, ticks);
+                spinlock_unlock(&timer_lock);
                 sched_wakeup(&tmr->event);
+                spinlock_lock(&timer_lock);
             } else {
                 /*
                  * One-shot timer
@@ -413,6 +421,7 @@ void timer_handler(void)
                 wakeup = 1;
             }
         }
+        spinlock_unlock(&timer_lock);
         if (wakeup)
             sched_wakeup(&timer_event);
     }

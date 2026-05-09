@@ -271,7 +271,35 @@ static void sched_swtch(void)
      */
     if (prev->task != next->task)
         vm_switch(next->task->map);
+
+#ifdef CONFIG_SMP
+    int locks = prev->locks;
+    prev->locks = 0;
+    if (locks > 0) spinlock_unlock(&kernel_lock);
+#endif
+
     context_switch(&prev->ctx, &next->ctx);
+
+#ifdef CONFIG_SMP
+    /* SMP: Re-acquire BKL after context switch. */
+    struct cpu_control* cpu = hal_get_cpu_control();
+    int s = splhigh();
+    while (__sync_lock_test_and_set(&kernel_lock, 1)) {
+        if (cpu->nest_count == 0) {
+            splx(s); /* Drop IPL to allow IPIs */
+            while (kernel_lock) {
+                memory_barrier();
+            }
+            s = splhigh();
+        } else {
+            while (kernel_lock) {
+                memory_barrier();
+            }
+        }
+    }
+    curthread->locks = locks;
+    splx(s);
+#endif
 }
 
 /*
@@ -380,6 +408,7 @@ thread_t sched_wakeone(struct event* evt)
         queue_remove(&top->sched_link);
         top->slpret = 0;
         sched_setrun(top);
+        t = top;
     }
     splx(s);
     sched_unlock();
@@ -571,8 +600,7 @@ void sched_unlock(void)
     ASSERT(curthread->locks > 0);
 
     s = splhigh();
-    curthread->locks--;
-    if (curthread->locks == 0) {
+    if (curthread->locks == 1) {
         wakeq_flush();
         while (curthread->resched) {
             /*
@@ -591,7 +619,14 @@ void sched_unlock(void)
             s = splhigh();
             wakeq_flush();
         }
+        curthread->locks = 0;
+#ifdef CONFIG_SMP
+        __sync_lock_release(&kernel_lock);
+#else
         spinlock_unlock(&kernel_lock);
+#endif
+    } else {
+        curthread->locks--;
     }
     splx(s);
 }
