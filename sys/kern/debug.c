@@ -37,6 +37,7 @@
 #include <sched.h>
 #include <hal.h>
 #include <smp.h>
+#include <deadlock.h>
 #include <sys/dbgctl.h>
 
 typedef void (*diagfn_t)(char*);
@@ -51,7 +52,7 @@ static u_long log_head;        /* index for log head */
 static u_long log_tail;        /* iundex for log tail */
 static u_long log_len;         /* length of log */
 
-static spinlock_t log_lock = SPINLOCK_INITIALIZER;
+spinlock_t log_lock = SPINLOCK_INITIALIZER;
 
 #define LOGINDEX(x) ((x) & (LOGBUFSZ - 1))
 
@@ -225,6 +226,10 @@ int dbgctl(int cmd, void* data)
 #ifdef CONFIG_USR_BACKTRACE
         error = copyin(data, curtask->backtrace, sizeof(curtask->backtrace));
 #endif
+        break;
+
+    case DBGC_DUMPLOCKS:
+        deadlock_dump();
         break;
 
     default:

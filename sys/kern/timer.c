@@ -41,6 +41,7 @@
 #include <timer.h>
 #include <sys/signal.h>
 #include <smp.h>
+#include <deadlock.h>
 
 static volatile u_long lbolt;      /* ticks elapsed since bootup */
 static volatile u_long idle_ticks; /* total ticks for idle */
@@ -346,8 +347,14 @@ static void timer_thread(void* dummy)
          */
         sched_sleep(&timer_event);
 
+#if defined(DEBUG) && defined(CONFIG_KD)
+        uint32_t iters_expire = 0;
+#endif
         spinlock_lock(&timer_lock);
         while (!list_empty(&expire_list)) {
+#if defined(DEBUG) && defined(CONFIG_KD)
+            deadlock_check_loop("timer_thread (expire_list)", &iters_expire);
+#endif
             /*
              * callout
              */
@@ -395,7 +402,13 @@ void timer_handler(void)
             idle_ticks++;
 
         spinlock_lock(&timer_lock);
+#if defined(DEBUG) && defined(CONFIG_KD)
+        uint32_t iters_timer = 0;
+#endif
         while (!list_empty(&timer_list)) {
+#if defined(DEBUG) && defined(CONFIG_KD)
+            deadlock_check_loop("timer_handler (timer_list)", &iters_timer);
+#endif
             /*
              * Check timer expiration.
              */
@@ -424,6 +437,9 @@ void timer_handler(void)
         spinlock_unlock(&timer_lock);
         if (wakeup)
             sched_wakeup(&timer_event);
+
+        deadlock_heartbeat();
+        deadlock_proactive_check();
     }
 
     sched_tick();

@@ -91,6 +91,7 @@
 #include <cpufunc.h>
 
 #include <smp.h>
+#include <deadlock.h>
 
 static struct queue runq[NPRI]; /* run queues */
 static struct queue wakeq;      /* queue for waking threads */
@@ -284,7 +285,14 @@ static void sched_swtch(void)
     /* SMP: Re-acquire BKL after context switch. */
     struct cpu_control* cpu = hal_get_cpu_control();
     int s = splhigh();
+#if defined(DEBUG) && defined(CONFIG_KD)
+    uint32_t sw_start = (uint32_t)timer_ticks();
+    uint32_t sw_iters = 0;
+#endif
     while (__sync_lock_test_and_set(&kernel_lock, 1)) {
+#if defined(DEBUG) && defined(CONFIG_KD)
+        deadlock_check_spin((void*)&kernel_lock, sw_start, &sw_iters);
+#endif
         if (cpu->nest_count == 0) {
             splx(s); /* Drop IPL to allow IPIs */
             while (kernel_lock) {
@@ -297,6 +305,7 @@ static void sched_swtch(void)
             }
         }
     }
+    deadlock_record_lock((void*)&kernel_lock, LOCK_TYPE_BKL);
     curthread->locks = locks;
     splx(s);
 #endif
@@ -342,8 +351,10 @@ int sched_tsleep(struct event* evt, u_long msec)
         timer_callout(&curthread->timeout, msec, &sleep_timeout, curthread);
     }
 
+    deadlock_sleep(evt, evt->name);
     wakeq_flush();
     sched_swtch(); /* Sleep here. Zzzz.. */
+    deadlock_stop_sleep();
 
     splx(s);
     sched_unlock();
@@ -399,7 +410,13 @@ thread_t sched_wakeone(struct event* evt)
          */
         q = queue_first(head);
         top = queue_entry(q, struct thread, sched_link);
+#if defined(DEBUG) && defined(CONFIG_KD)
+        uint32_t iters = 0;
+#endif
         while (!queue_end(head, q)) {
+#if defined(DEBUG) && defined(CONFIG_KD)
+            deadlock_check_loop("sched_wakeone", &iters);
+#endif
             t = queue_entry(q, struct thread, sched_link);
             if (t->priority < top->priority)
                 top = t;
@@ -564,7 +581,14 @@ void sched_lock(void)
     if (curthread->locks == 0) {
 #ifdef CONFIG_SMP
         struct cpu_control* cpu = hal_get_cpu_control();
+#if defined(DEBUG) && defined(CONFIG_KD)
+        uint32_t start = (uint32_t)timer_ticks();
+        uint32_t iters = 0;
+#endif
         while (__sync_lock_test_and_set(&kernel_lock, 1)) {
+#if defined(DEBUG) && defined(CONFIG_KD)
+            deadlock_check_spin((void*)&kernel_lock, start, &iters);
+#endif
             if (cpu->nest_count == 0) {
                 splx(s);
                 while (kernel_lock) {
@@ -580,6 +604,7 @@ void sched_lock(void)
 #else
         spinlock_lock(&kernel_lock);
 #endif
+        deadlock_record_lock((void*)&kernel_lock, LOCK_TYPE_BKL);
     }
     curthread->locks++;
     splx(s);
@@ -620,6 +645,7 @@ void sched_unlock(void)
             wakeq_flush();
         }
         curthread->locks = 0;
+        deadlock_record_unlock((void*)&kernel_lock);
 #ifdef CONFIG_SMP
         __sync_lock_release(&kernel_lock);
 #else

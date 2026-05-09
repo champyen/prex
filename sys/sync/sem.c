@@ -35,8 +35,10 @@
 #include <event.h>
 #include <sched.h>
 #include <kmem.h>
+#include <thread.h>
 #include <task.h>
 #include <sync.h>
+#include <deadlock.h>
 
 /* forward declarations */
 static int sem_valid(sem_t);
@@ -169,7 +171,9 @@ int sem_wait(sem_t* sp, u_long timeout)
     sem_reference(s);
 
     while (s->value == 0) {
+        deadlock_sleep(s, "semaphore");
         rc = sched_tsleep(&s->event, timeout);
+        deadlock_stop_sleep();
         if (rc == SLP_TIMEOUT) {
             error = ETIMEDOUT;
             break;

@@ -34,6 +34,11 @@
 #include <types.h>
 #include <atomic.h>
 #include <hal.h>
+#include <deadlock.h>
+
+#ifdef CONFIG_KD
+#include <timer.h>
+#endif
 
 /*
  * SAL Spinlock Interface.
@@ -56,14 +61,23 @@ static inline void spinlock_init(spinlock_t* lock)
 
 static inline void spinlock_lock(spinlock_t* lock)
 {
+#ifdef CONFIG_KD
+    uint32_t start = (uint32_t)timer_ticks();
+    uint32_t iters = 0;
+#endif
     while (__sync_lock_test_and_set(lock, 1)) {
+#ifdef CONFIG_KD
+        deadlock_check_spin((void*)lock, start, &iters);
+#endif
         while (*lock)
             ; /* Spin */
     }
+    deadlock_record_lock((void*)lock, LOCK_TYPE_SPIN);
 }
 
 static inline void spinlock_unlock(spinlock_t* lock)
 {
+    deadlock_record_unlock((void*)lock);
     __sync_lock_release(lock);
 }
 

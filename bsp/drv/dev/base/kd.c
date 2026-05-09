@@ -59,6 +59,7 @@ static int kd_irq(int, char**);
 static int kd_trap(int, char**);
 static int kd_devstat(int, char**);
 static int kd_trace(int, char**);
+static int kd_locks(int, char**);
 static int kd_examine(int, char**);
 static int kd_write(int, char**);
 
@@ -83,6 +84,7 @@ static const struct cmd_entry cmd_table[] = {
     {"trap", kd_trap, "Dump current trap frame"},
     {"devstat", kd_devstat, "Dump all device state"},
     {"trace", kd_trace, "Set trace flag for task"},
+    {"locks", kd_locks, "Display SMP lock status"},
     {"examine", kd_examine, "Examine data (x [/fmt] [addr])"},
     {"write", kd_write, "Write data (w [/size] addr val)"},
     /* command alias section */
@@ -402,6 +404,12 @@ static int kd_trace(int argc, char** argv)
     printf("Toggle trace flag: %s (%08lx)\n", argv[1], (long)task);
     dbgctl(DBGC_TRACE, (void*)task);
 
+    return 0;
+}
+
+static int kd_locks(int argc, char** argv)
+{
+    dbgctl(DBGC_DUMPLOCKS, NULL);
     return 0;
 }
 

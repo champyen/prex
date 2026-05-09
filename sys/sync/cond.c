@@ -33,10 +33,12 @@
 
 #include <kernel.h>
 #include <sched.h>
-#include <event.h>
 #include <kmem.h>
+#include <event.h>
+#include <thread.h>
 #include <task.h>
 #include <sync.h>
+#include <deadlock.h>
 
 /* forward declarations */
 static int cond_valid(cond_t);
@@ -156,7 +158,9 @@ int cond_wait(cond_t* cp, mutex_t* mp)
     }
 
     /* and block */
+    deadlock_sleep(c, "cond");
     rc = sched_sleep(&c->event);
+    deadlock_stop_sleep();
     if (rc == SLP_INTR)
         error = EINTR;
     sched_unlock();

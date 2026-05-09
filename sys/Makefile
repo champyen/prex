@@ -45,6 +45,9 @@ endif
 
 ifeq ($(DEBUG),1)
 SRCS+=		kern/debug.c
+ifeq ($(CONFIG_KD),y)
+SRCS+=		kern/deadlock.c
+endif
 endif
 
 HAL:=		$(SRCDIR)/bsp/hal/hal.o

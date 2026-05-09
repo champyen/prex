@@ -75,6 +75,7 @@
 #include <thread.h>
 #include <task.h>
 #include <sync.h>
+#include <deadlock.h>
 
 /* forward declarations */
 static int mutex_valid(mutex_t);
@@ -206,17 +207,21 @@ int mutex_lock(mutex_t* mp)
             m->locks = 1;
             m->holder = curthread;
             list_insert(&curthread->mutexes, &m->link);
+            deadlock_record_lock(m, LOCK_TYPE_MUTEX);
         } else {
             /*
              * Wait for a mutex.
              */
+            deadlock_mutex_wait(m, curthread);
             curthread->mutex_waiting = m;
             if ((error = prio_inherit(curthread)) != 0) {
+                deadlock_mutex_stop_wait(curthread);
                 curthread->mutex_waiting = NULL;
                 sched_unlock();
                 return error;
             }
             rc = sched_sleep(&m->event);
+            deadlock_mutex_stop_wait(curthread);
             curthread->mutex_waiting = NULL;
             if (rc == SLP_INTR) {
                 sched_unlock();
@@ -224,6 +229,7 @@ int mutex_lock(mutex_t* mp)
             }
             m->locks = 1;
             list_insert(&curthread->mutexes, &m->link);
+            deadlock_record_lock(m, LOCK_TYPE_MUTEX);
         }
     }
     sched_unlock();
@@ -254,6 +260,7 @@ int mutex_trylock(mutex_t* mp)
             m->locks = 1;
             m->holder = curthread;
             list_insert(&curthread->mutexes, &m->link);
+            deadlock_record_lock(m, LOCK_TYPE_MUTEX);
         }
     }
     sched_unlock();
@@ -280,6 +287,7 @@ int mutex_unlock(mutex_t* mp)
         return EPERM;
     }
     if (--m->locks == 0) {
+        deadlock_record_unlock(m);
         list_remove(&m->link);
         prio_uninherit(curthread);
         /*
@@ -409,9 +417,15 @@ static int prio_inherit(thread_t waiter)
     mutex_t m = waiter->mutex_waiting;
     thread_t holder;
     int count = 0;
+#if defined(DEBUG) && defined(CONFIG_KD)
+    uint32_t iters = 0;
+#endif
 
     do {
         holder = m->holder;
+#if defined(DEBUG) && defined(CONFIG_KD)
+        deadlock_check_loop("prio_inherit", &iters);
+#endif
         /*
          * If the holder of relative mutex has already
          * been waiting for the "waiter" thread, it

@@ -65,6 +65,9 @@ struct thread
     struct list mutexes;     /* mutexes locked by this thread */
     mutex_t mutex_waiting;   /* mutex pointer currently waiting */
     struct queue ipc_link;   /* linkage on IPC queue */
+#if defined(DEBUG) && defined(CONFIG_KD)
+    uint32_t wait_start_tick;/* tick when thread started waiting */
+#endif
     void* msgaddr;           /* kernel address of IPC message */
     size_t msgsize;          /* size of IPC message */
     thread_t sender;         /* thread that sends IPC message */

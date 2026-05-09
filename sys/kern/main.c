@@ -45,6 +45,7 @@
 #include <device.h>
 #include <sync.h>
 #include <hal.h>
+#include <deadlock.h>
 
 /*
  * Initialization code.
@@ -85,6 +86,7 @@ int main(void)
      * Initialize kernel core.
      */
     vm_init();
+    deadlock_init();
     task_init();
     thread_init();
     sched_init();
@@ -126,3 +128,4 @@ int main(void)
     /* NOTREACHED */
     return 0;
 }
+
