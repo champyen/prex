@@ -1,5 +1,6 @@
-/*
+/*-
  * Copyright (c) 2005, Kohsuke Ohtani
+ * Copyright (c) 2026, Champ Yen <champ.yen@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,15 +31,35 @@
 #ifndef _X86_SYSTRAP_H
 #define _X86_SYSTRAP_H
 
+#define __SYSCALL_BODY(id)                                                                                             \
+    movl $(id), %eax;                                                                                                  \
+    int $0x80; \
+    ret
+
+#define SYSCALL_STUB(name, id)                                                                                         \
+    .weak name;                                                                                                        \
+    .align 2;                                                                                                          \
+    name: __SYSCALL_BODY(id)
+
 #define SYSCALL0(name)                                                                                                 \
     .global name;                                                                                                      \
     .align 2;                                                                                                          \
-    name## : movl $(SYS_##name), % eax;                                                                                \
-    jmp __systrap
+    name: __SYSCALL_BODY(SYS_##name)
 
 #define SYSCALL1(name) SYSCALL0(name)
 #define SYSCALL2(name) SYSCALL0(name)
 #define SYSCALL3(name) SYSCALL0(name)
 #define SYSCALL4(name) SYSCALL0(name)
+
+/*
+ * C-style string macros for use in __asm__ volatile()
+ */
+#define __STRINGIFY(x) #x
+#define __TOSTRING(x) __STRINGIFY(x)
+
+#define __SYSCALL_BODY_STR(id)                                                                                         \
+    "movl $" __TOSTRING(id) ", %%eax\n"                                                                                \
+    "int $0x80\n"                                                                                                      \
+    "ret"
 
 #endif /* _X86_SYSTRAP_H */

@@ -1,5 +1,6 @@
 /*-
  * Copyright (c) 2008, Kohsuke Ohtani
+ * Copyright (c) 2026, Champ Yen <champ.yen@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -37,8 +38,8 @@
 
 #include "platform.h"
 
-#define UART_FR (*(volatile uint32_t*)(UART_BASE + 0x18))
 #define UART_DR (*(volatile uint32_t*)(UART_BASE + 0x00))
+#define UART_FR (*(volatile uint32_t*)(UART_BASE + 0x18))
 
 /* Flag register */
 #define FR_RXFE 0x10 /* Receive FIFO empty */
@@ -68,4 +69,14 @@ void diag_init(void)
 #ifdef CONFIG_MMU
     mmu_premap(CONFIG_PL011_PHY_BASE, UART_BASE);
 #endif
+}
+
+int hal_uart_lock(void)
+{
+    return splhigh();
+}
+
+void hal_uart_unlock(int s)
+{
+    splx(s);
 }

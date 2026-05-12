@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2009, Kohsuke Ohtani
+ * Copyright (c) 2026, Champ Yen <champ.yen@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,17 +31,35 @@
 #ifndef _PPC_SYSTRAP_H
 #define _PPC_SYSTRAP_H
 
+#define __SYSCALL_BODY(id)                                                                                             \
+    li r0, id;                                                                                                         \
+    sc;                                                                                                                \
+    blr;
+
+#define SYSCALL_STUB(name, id)                                                                                         \
+    .weak name;                                                                                                        \
+    .align;                                                                                                            \
+    name: __SYSCALL_BODY(id)
+
 #define SYSCALL0(name)                                                                                                 \
     .global name;                                                                                                      \
     .align;                                                                                                            \
-    name##:;                                                                                                           \
-    li r0, SYS_##name;                                                                                                 \
-    sc;                                                                                                                \
-    blr;
+    name: __SYSCALL_BODY(SYS_##name)
 
 #define SYSCALL1(name) SYSCALL0(name)
 #define SYSCALL2(name) SYSCALL0(name)
 #define SYSCALL3(name) SYSCALL0(name)
 #define SYSCALL4(name) SYSCALL0(name)
+
+/*
+ * C-style string macros for use in __asm__ volatile()
+ */
+#define __STRINGIFY(x) #x
+#define __TOSTRING(x) __STRINGIFY(x)
+
+#define __SYSCALL_BODY_STR(id)                                                                                         \
+    "li %r0, " __TOSTRING(id) "\n"                                                                                     \
+    "sc\n"                                                                                                             \
+    "blr"
 
 #endif /* _PPC_SYSTRAP_H */

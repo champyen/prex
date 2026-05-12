@@ -1,6 +1,6 @@
 
 SRCS:=          arm/arch/locore.S \
-                arm/arch/div.S \
+                arm/arch/div.c \
                 arm/gba/locore_gba.S \
 		arm/arch/cpufunc.S \
 		arm/arch/cpu.c \

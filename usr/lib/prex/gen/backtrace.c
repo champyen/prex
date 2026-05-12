@@ -409,7 +409,7 @@ const char *backtrace_function_name(uint32_t pc)
 #ifndef KERNEL
 void backtrace_save_frame(uint32_t pc, uint32_t lr, uint32_t sp, uint32_t r7, uint32_t r11)
 {
-#ifdef CONFIG_USR_BACKTRACE
+#if defined(CONFIG_USR_BACKTRACE) && !defined(_STANDALONE)
 	backtrace_t bt[16];
 	struct {
 		uint32_t pc;
@@ -433,7 +433,7 @@ void backtrace_save_frame(uint32_t pc, uint32_t lr, uint32_t sp, uint32_t r7, ui
 
 void backtrace_save(void)
 {
-#ifdef CONFIG_USR_BACKTRACE
+#if defined(CONFIG_USR_BACKTRACE) && !defined(_STANDALONE)
 	backtrace_t bt[16];
 	struct {
 		uint32_t pc;
@@ -534,7 +534,7 @@ const char *backtrace_function_name(uint32_t pc)
 #ifndef KERNEL
 void backtrace_save_frame(uint32_t pc, uint32_t lr, uint32_t sp, uint32_t r7, uint32_t r11)
 {
-#ifdef CONFIG_USR_BACKTRACE
+#if defined(CONFIG_USR_BACKTRACE) && !defined(_STANDALONE)
 	backtrace_t bt[16];
 	struct {
 		uint32_t pc;
@@ -558,7 +558,7 @@ void backtrace_save_frame(uint32_t pc, uint32_t lr, uint32_t sp, uint32_t r7, ui
 
 void backtrace_save(void)
 {
-#ifdef CONFIG_USR_BACKTRACE
+#if defined(CONFIG_USR_BACKTRACE) && !defined(_STANDALONE)
 	backtrace_t bt[16];
 	struct {
 		uint32_t pc;

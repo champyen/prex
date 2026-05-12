@@ -1,6 +1,6 @@
 /*-
  * Copyright (c) 2008, Kohsuke Ohtani
- * Copyright (c) 2021, Champ Yen (champ.yen@gmail.com)
+ * Copyright (c) 2026, Champ Yen <champ.yen@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -69,4 +69,14 @@ void diag_init(void)
 #ifdef CONFIG_MMU
     mmu_premap(CONFIG_PL011_PHY_BASE, UART_BASE);
 #endif
+}
+
+int hal_uart_lock(void)
+{
+    return splhigh();
+}
+
+void hal_uart_unlock(int s)
+{
+    splx(s);
 }

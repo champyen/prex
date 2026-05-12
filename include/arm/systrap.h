@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2005, Kohsuke Ohtani
+/*-
+ * Copyright (c) 2026, Champ Yen <champ.yen@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,55 +30,75 @@
 #ifndef _ARM_SYSTRAP_H
 #define _ARM_SYSTRAP_H
 
-#if defined(__gba__)
+#include <conf/config.h>
 
 /*
- * Note:
- * GBA BIOS does not allow to an install SWI handler by user. So, the system
- * calls will jump to the system call entry point (0x200007c) in the kernel
- * code. Then, the kernel SWI handler will switch the CPU mode to SVC mode.
- * However, CPU mode can be changed only in privileged CPU mode. By this
- * reason, all applications run in SYS mode with GBA.
- *
+ * SYSCALLn macros for use in standalone assembly files (.S)
  */
-
-#define SYSCALL0(name)                                                                                                 \
-    .global name;                                                                                                      \
-    .type name, %function;                                                                                             \
-    .align;                                                                                                            \
-    name## : stmfd sp !, {r4, r5, lr};                                                                                 \
-    mov r4, #SYS_##name;                                                                                               \
-    ldr r5, = 0x200007c;                                                                                               \
-    add lr, pc, #2;                                                                                                    \
-    bx r5;                                                                                                        \
-    ldmfd sp !, {r4, r5, pc};
-
-#elif defined(CONFIG_USR_THUMB)
-
-#define SYSCALL0(name)                                                                                                 \
+#ifdef CONFIG_USR_THUMB
+#define _SYSCALL_ATTR                                                                                                  \
     .syntax unified;                                                                                                   \
     .thumb;                                                                                                            \
-    .global name;                                                                                                      \
-    .thumb_func;                                                                                                       \
-    .type name, %function;                                                                                             \
-    .align;                                                                                                            \
-    name## : svc #SYS_##name;                                                                                          \
-    bx lr
-
+    .thumb_func;
 #else
+#define _SYSCALL_ATTR
+#endif
+
+#if defined(__gba__)
+#define __SYSCALL_BODY(id)                                                                                             \
+    stmfd sp!, {r4, r5, lr};                                                                                           \
+    ldr r4, =id;                                                                                                       \
+    ldr r5, =0x200007c;                                                                                                \
+    add lr, pc, #2;                                                                                                    \
+    bx r5;                                                                                                             \
+    ldmfd sp!, {r4, r5, pc}
+#elif defined(CONFIG_USR_THUMB)
+#define __SYSCALL_BODY(id)                                                                                             \
+    svc id;                                                                                                            \
+    bx lr
+#else
+#define __SYSCALL_BODY(id)                                                                                             \
+    swi id;                                                                                                            \
+    bx lr
+#endif
+
+#define SYSCALL_STUB(name, id)                                                                                         \
+    _SYSCALL_ATTR ;                                                                                                    \
+    .weak name;                                                                                                        \
+    .type name, %function;                                                                                             \
+    .align 2;                                                                                                          \
+    name: __SYSCALL_BODY(id)
 
 #define SYSCALL0(name)                                                                                                 \
+    _SYSCALL_ATTR ;                                                                                                    \
     .global name;                                                                                                      \
     .type name, %function;                                                                                             \
-    .align;                                                                                                            \
-    name## : swi #SYS_##name;                                                                                          \
-    bx lr
-
-#endif
+    .align 2;                                                                                                          \
+    name: __SYSCALL_BODY(SYS_##name)
 
 #define SYSCALL1(name) SYSCALL0(name)
 #define SYSCALL2(name) SYSCALL0(name)
 #define SYSCALL3(name) SYSCALL0(name)
 #define SYSCALL4(name) SYSCALL0(name)
+
+/*
+ * C-style string macros for use in __asm__ volatile()
+ */
+#define __STRINGIFY(x) #x
+#define __TOSTRING(x) __STRINGIFY(x)
+
+#if defined(__gba__)
+#define __SYSCALL_BODY_STR(id)                                                                                         \
+    "stmfd sp!, {r4, r5, lr}\n"                                                                                        \
+    "ldr r4, =" __TOSTRING(id) "\n"                                                                                    \
+    "ldr r5, =0x200007c\n"                                                                                             \
+    "add lr, pc, #2\n"                                                                                                 \
+    "bx r5\n"                                                                                                          \
+    "ldmfd sp!, {r4, r5, pc}"
+#elif defined(CONFIG_USR_THUMB)
+#define __SYSCALL_BODY_STR(id) "svc " __TOSTRING(id) "\nbx lr"
+#else
+#define __SYSCALL_BODY_STR(id) "swi " __TOSTRING(id) "\nbx lr"
+#endif
 
 #endif /* _ARM_SYSTRAP_H */

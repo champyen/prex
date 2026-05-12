@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2026, Gemini CLI
+ * Copyright (c) 2026, Champ Yen <champ.yen@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,14 +30,16 @@
 #ifndef _ATOMIC_H
 #define _ATOMIC_H
 
-#include <types.h>
-
-/*
- * Fundamental atomic operations using GCC built-ins.
- */
+#include <sys/cdefs.h>
 
 #ifdef __arm__
+#if defined(CONFIG_ARMV7A)
 #define memory_barrier() __asm__ volatile("dmb ish" : : : "memory")
+#elif defined(CONFIG_ARMV6)
+#define memory_barrier() __asm__ volatile("mcr p15, 0, %0, c7, c10, 5" : : "r"(0) : "memory")
+#else
+#define memory_barrier() __asm__ volatile("mcr p15, 0, %0, c7, c10, 4" : : "r"(0) : "memory")
+#endif
 #else
 #define memory_barrier() __sync_synchronize()
 #endif
@@ -47,14 +49,24 @@ static inline int atomic_cas(volatile int* ptr, int oldval, int newval)
     return __sync_bool_compare_and_swap(ptr, oldval, newval);
 }
 
-static inline void atomic_inc(volatile int* ptr)
+static inline int atomic_add(volatile int* ptr, int val)
 {
-    (void)__sync_fetch_and_add(ptr, 1);
+    return __sync_add_and_fetch(ptr, val);
 }
 
-static inline int atomic_fetch_add(volatile int* ptr, int val)
+static inline int atomic_sub(volatile int* ptr, int val)
 {
-    return __sync_fetch_and_add(ptr, val);
+    return __sync_sub_and_fetch(ptr, val);
+}
+
+static inline int atomic_inc(volatile int* ptr)
+{
+    return __sync_add_and_fetch(ptr, 1);
+}
+
+static inline int atomic_dec(volatile int* ptr)
+{
+    return __sync_sub_and_fetch(ptr, 1);
 }
 
 static inline int atomic_read(volatile int* ptr)

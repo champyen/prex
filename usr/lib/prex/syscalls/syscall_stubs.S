@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2006-2008, Kohsuke Ohtani
+/*-
+ * Copyright (c) 2026, Champ Yen <champ.yen@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,9 +27,18 @@
  * SUCH DAMAGE.
  */
 
+#include <sys/syscall.h>
 #include <machine/systrap.h>
-#include "syscall.h"
 
-SYSCALL2(sys_debug)
+/*
+ * Generate syscall stubs automatically from the central metadata list.
+ *
+ * Use the assembler's line separator (usually ;) to separate instructions
+ * within a single C macro expansion.
+ */
 
-.section .note.GNU-stack,"",%progbits
+#define _DO_STUB(name, narg) SYSCALL_STUB(name, SYS_##name) ;
+
+FOR_EACH_SYSCALL(_DO_STUB)
+
+.section .note.GNU-stack, "", %progbits

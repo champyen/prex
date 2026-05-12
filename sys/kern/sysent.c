@@ -1,5 +1,6 @@
 /*-
  * Copyright (c) 2005-2009 Kohsuke Ohtani
+ * Copyright (c) 2026 Champ Yen <champ.yen@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,6 +43,8 @@
 #include <sync.h>
 #include <system.h>
 
+#include <sys/syscall.h>
+
 typedef register_t (*sysfn_t)(register_t, register_t, register_t, register_t);
 
 #ifdef DEBUG
@@ -60,95 +63,21 @@ struct sysent
 
 /*
  * Sysent initialization macros.
- *
- * Initialization macro for system calls which take their args
- * in the C style. In order to reduce the memory space, we
- * store the syscall name and its argument count only when
- * DEBUG is defined.
- *
  */
 #ifdef DEBUG
-#define SYSENT(n, fn)                                                                                                  \
-    {                                                                                                                  \
-        n, __STRING(fn), (sysfn_t)(fn)                                                                                 \
-    }
+#define _SYSENT_DEF(name, narg) { narg, #name, (sysfn_t)name },
 #else
-#define SYSENT(n, fn)                                                                                                  \
-    {                                                                                                                  \
-        (sysfn_t)(fn)                                                                                                  \
-    }
+#define _SYSENT_DEF(name, narg) { (sysfn_t)name },
 #endif
 
 /*
  * This table is the switch used to transfer to the
  * appropriate routine for processing a system call.
- * The first element must be exception_return because
- * it requires special handling in HAL code.
  */
 static const struct sysent sysent[] = {
-    /*  0 */ SYSENT(0, exception_return),
-    /*  1 */ SYSENT(1, exception_setup),
-    /*  2 */ SYSENT(2, exception_raise),
-    /*  3 */ SYSENT(1, exception_wait),
-    /*  4 */ SYSENT(3, task_create),
-    /*  5 */ SYSENT(1, task_terminate),
-    /*  6 */ SYSENT(0, task_self),
-    /*  7 */ SYSENT(1, task_suspend),
-    /*  8 */ SYSENT(1, task_resume),
-    /*  9 */ SYSENT(2, task_setname),
-    /* 10 */ SYSENT(2, task_setcap),
-    /* 11 */ SYSENT(2, task_chkcap),
-    /* 12 */ SYSENT(2, thread_create),
-    /* 13 */ SYSENT(1, thread_terminate),
-    /* 14 */ SYSENT(3, thread_load),
-    /* 15 */ SYSENT(0, thread_self),
-    /* 16 */ SYSENT(0, thread_yield),
-    /* 17 */ SYSENT(1, thread_suspend),
-    /* 18 */ SYSENT(1, thread_resume),
-    /* 19 */ SYSENT(3, thread_schedparam),
-    /* 20 */ SYSENT(4, vm_allocate),
-    /* 21 */ SYSENT(2, vm_free),
-    /* 22 */ SYSENT(3, vm_attribute),
-    /* 23 */ SYSENT(4, vm_map),
-    /* 24 */ SYSENT(2, object_create),
-    /* 25 */ SYSENT(1, object_destroy),
-    /* 26 */ SYSENT(2, object_lookup),
-    /* 27 */ SYSENT(3, msg_send),
-    /* 28 */ SYSENT(3, msg_receive),
-    /* 29 */ SYSENT(3, msg_reply),
-    /* 30 */ SYSENT(2, timer_sleep),
-    /* 31 */ SYSENT(2, timer_alarm),
-    /* 32 */ SYSENT(3, timer_periodic),
-    /* 33 */ SYSENT(0, timer_waitperiod),
-    /* 34 */ SYSENT(3, device_open),
-    /* 35 */ SYSENT(1, device_close),
-    /* 36 */ SYSENT(4, device_read),
-    /* 37 */ SYSENT(4, device_write),
-    /* 38 */ SYSENT(3, device_ioctl),
-    /* 39 */ SYSENT(1, mutex_init),
-    /* 40 */ SYSENT(1, mutex_destroy),
-    /* 41 */ SYSENT(1, mutex_lock),
-    /* 42 */ SYSENT(1, mutex_trylock),
-    /* 43 */ SYSENT(1, mutex_unlock),
-    /* 44 */ SYSENT(1, cond_init),
-    /* 45 */ SYSENT(1, cond_destroy),
-    /* 46 */ SYSENT(2, cond_wait),
-    /* 47 */ SYSENT(1, cond_signal),
-    /* 48 */ SYSENT(1, cond_broadcast),
-    /* 49 */ SYSENT(2, sem_init),
-    /* 50 */ SYSENT(1, sem_destroy),
-    /* 51 */ SYSENT(2, sem_wait),
-    /* 52 */ SYSENT(1, sem_trywait),
-    /* 53 */ SYSENT(1, sem_post),
-    /* 54 */ SYSENT(2, sem_getvalue),
-    /* 55 */ SYSENT(1, sys_log),
-    /* 56 */ SYSENT(1, sys_panic),
-    /* 57 */ SYSENT(2, sys_info),
-    /* 58 */ SYSENT(1, sys_time),
-    /* 59 */ SYSENT(2, sys_debug),
-    /* 60 */ SYSENT(4, device_gather_read),
-    /* 61 */ SYSENT(4, device_scatter_write),
+    FOR_EACH_SYSCALL(_SYSENT_DEF)
 };
+#undef _SYSENT_DEF
 
 #define NSYSCALL (int)(sizeof(sysent) / sizeof(sysent[0]))
 
