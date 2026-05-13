@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2005, Kohsuke Ohtani
+ * Copyright (c) 2026, Champ Yen <champ.yen@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -36,7 +37,7 @@
 __BEGIN_DECLS
 void wrmsr(u_int, u_int, u_int);
 void rdmsr(u_int, u_int*, u_int*);
-void cpuid(u_int eax, u_int* p);
+void cpuid(u_int op, u_int* regs);
 __END_DECLS
 
 #endif /* !_X86_CPUFUNC_H */

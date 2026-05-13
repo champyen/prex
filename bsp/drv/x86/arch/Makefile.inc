@@ -1,4 +1,4 @@
+VPATH:=	$(SRCDIR)/bsp/drv/x86/arch:$(VPATH)
 
-SRCS+=			x86/arch/cpufunc.S \
-			x86/arch/busio.S
-
+SRCS+=	cpufunc.c \
+	busio.c

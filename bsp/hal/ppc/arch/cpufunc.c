@@ -1,5 +1,6 @@
 /*-
- * Copyright (c) 2009, Kohsuke Ohtani
+ * Copyright (c) 2008, Kohsuke Ohtani
+ * Copyright (c) 2026, Champ Yen <champ.yen@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,42 +29,36 @@
  */
 
 /*
- * cpufunc.S - Functions to provide access to PPC specific instructions.
+ * cpufunc.c - CPU specific functions for PowerPC
  */
 
-#include <conf/config.h>
-#include <machine/asm.h>
-#include <cpu.h>
+#include <sys/types.h>
+#include <cpufunc.h>
 
-/*
- * uint32 get_decr(void);
- */
-ENTRY(get_decr)
-	mfdec	r3
-	blr
+uint32_t get_decr(void)
+{
+    uint32_t val;
+    __asm__ volatile("mfdec %0" : "=r"(val));
+    return val;
+}
 
-/*
- * void set_decr(uint32_t);
- */
-ENTRY(set_decr)
-	mtdec	r3
-	blr
+void set_decr(uint32_t val)
+{
+    __asm__ volatile("mtdec %0" : : "r"(val));
+}
 
-/*
- * void cpu_idle(void);
- */
-ENTRY(cpu_idle)
-	mfmsr	r3
-	ori	r3, r3, MSR_EE@l	/* enable ints */
-	mtmsr	r3
-	isync
-	sync
-
-	mfmsr	%r3
-	oris	r3, r3, MSR_POW@h	/* set low power mode */
-	mtmsr	r3
-	isync
-	blr
-
-
-.section .note.GNU-stack,"",%progbits
+void cpu_idle(void)
+{
+    /* Enable interrupts and set low power mode */
+    uint32_t msr;
+    __asm__ volatile("mfmsr %0\n"
+                     "ori %0, %0, 0x8000\n" /* MSR_EE */
+                     "mtmsr %0\n"
+                     "isync\n"
+                     "sync\n"
+                     "mfmsr %0\n"
+                     "oris %0, %0, 0x0040\n" /* MSR_POW */
+                     "mtmsr %0\n"
+                     "isync"
+                     : "=&r"(msr));
+}

@@ -1,13 +1,13 @@
 
-SRCS:=		arm/arch/locore.S \
-		arm/arch/div.c \
-		arm/arch/cpufunc.S \
-		arm/arch/cpu.c \
-		arm/arch/trap.c \
-		arm/arch/context.c \
-		arm/integrator/interrupt.c \
-		arm/integrator/clock.c \
-		arm/integrator/machdep.c
+SRCS:=          arm/arch/locore.S \
+                arm/arch/div.c \
+                arm/arch/cpufunc.c \
+                arm/arch/cpu.c \
+                arm/arch/trap.c \
+                arm/arch/context.c \
+                arm/integrator/interrupt.c \
+                arm/integrator/clock.c \
+                arm/integrator/machdep.c
 
 ifeq ($(CONFIG_MMU),y)
 SRCS+=		arm/arch/mmu.c

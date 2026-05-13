@@ -1,5 +1,6 @@
 /*-
  * Copyright (c) 2008, Kohsuke Ohtani
+ * Copyright (c) 2026, Champ Yen <champ.yen@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,95 +29,23 @@
  */
 
 /*
- * cpufunc.S - Functions to provide access to i386 specific instructions.
+ * cpufunc.c - CPU specific functions for x86 drivers
  */
 
-#include <machine/asm.h>
-#include <cpu.h>
+#include <sys/types.h>
+#include <cpufunc.h>
 
-	.section ".text"
+void rdmsr(u_int msr, u_int* lo, u_int* hi)
+{
+    __asm__ volatile("rdmsr" : "=a"(*lo), "=d"(*hi) : "c"(msr));
+}
 
-ENTRY(cpu_idle)
-	sti
-	hlt
-	ret
+void wrmsr(u_int msr, u_int lo, u_int hi)
+{
+    __asm__ volatile("wrmsr" : : "a"(lo), "d"(hi), "c"(msr));
+}
 
-ENTRY(flush_tlb)
-	movl	%cr3, %eax
-	movl	%eax, %cr3
-	ret
-
-ENTRY(flush_cache)
-	wbinvd
-	ret
-
-ENTRY(load_tr)
-	movl	4(%esp), %eax
-	ltr	%ax
-	ret
-
-ENTRY(load_gdt)
-	movl	4(%esp), %eax
-	lgdt	(%eax)
-	jmp	1f			/* Flush the prefetch queue */
-	nop
-1:
-	movl	$(KERNEL_DS), %eax
-	movl	%eax, %ds
-	movl	%eax, %es
-	movl	%eax, %fs
-	movl	%eax, %gs
-	movl	%eax, %ss
-	movl	$(KERNEL_CS), %eax
-	pushl	%eax
-	pushl	$2f
-	lret
-2:
-	ret
-
-ENTRY(load_idt)
-	movl	4(%esp), %eax
-	lidt	(%eax)
-	ret
-
-ENTRY(get_cr2)
-	movl	%cr2, %eax
-	ret
-
-ENTRY(set_cr3)
-	movl	4(%esp), %eax
-	movl	%eax, %cr3
-	ret
-
-ENTRY(get_cr3)
-	movl	%cr3, %eax
-	ret
-
-ENTRY(outb)
-	movl	4(%esp), %edx
-	movl	8(%esp), %eax
-	outb	%al, %dx
-	ret
-
-ENTRY(inb)
-	movl	4(%esp), %edx
-	xorl	%eax, %eax
-	inb	%dx, %al
-	ret
-
-ENTRY(outb_p)
-	movl	4(%esp), %edx
-	movl	8(%esp), %eax
-	outb	%al, %dx
-	outb	%al, $0x80
-	ret
-
-ENTRY(inb_p)
-	movl	4(%esp), %edx
-	xorl	%eax, %eax
-	inb	%dx, %al
-	outb	%al, $0x80
-	ret
-
-
-.section .note.GNU-stack,"",%progbits
+void cpuid(u_int op, u_int* regs)
+{
+    __asm__ volatile("cpuid" : "=a"(regs[0]), "=b"(regs[1]), "=c"(regs[2]), "=d"(regs[3]) : "a"(op));
+}

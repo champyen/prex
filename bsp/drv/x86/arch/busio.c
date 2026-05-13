@@ -1,5 +1,6 @@
-/*-
- * Copyright (c) 2008, Kohsuke Ohtani
+/*
+ * Copyright (c) 2009, Kohsuke Ohtani
+ * Copyright (c) 2026, Champ Yen <champ.yen@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,43 +28,45 @@
  * SUCH DAMAGE.
  */
 
-#include <machine/asm.h>
+/*
+ * busio.c - BUS i/o operations for x86
+ */
 
+#include <sys/types.h>
+#include <busio.h>
 
-ENTRY(bus_write_8)
-	movl	4(%esp), %edx
-	movl	8(%esp), %eax
-	outb	%al, %dx
-	ret
+void bus_write_8(int addr, uint8_t val)
+{
+    __asm__ volatile("outb %0, %w1" : : "a"(val), "d"(addr));
+}
 
-ENTRY(bus_write_16)
-	movl	4(%esp), %edx
-	movl	8(%esp), %eax
-	outw	%ax, %dx
-	ret
+void bus_write_16(int addr, uint16_t val)
+{
+    __asm__ volatile("outw %0, %w1" : : "a"(val), "d"(addr));
+}
 
-ENTRY(bus_write_32)
-	movl	4(%esp), %edx
-	movl	8(%esp), %eax
-	outl	%eax, %dx
-	ret
+void bus_write_32(int addr, uint32_t val)
+{
+    __asm__ volatile("outl %0, %w1" : : "a"(val), "d"(addr));
+}
 
-ENTRY(bus_read_8)
-	movl	4(%esp), %edx
-	xorl	%eax, %eax
-	inb	%dx, %al
-	ret
+uint8_t bus_read_8(int addr)
+{
+    uint8_t val;
+    __asm__ volatile("inb %w1, %0" : "=a"(val) : "d"(addr));
+    return val;
+}
 
-ENTRY(bus_read_16)
-	movl	4(%esp), %edx
-	xorl	%eax, %eax
-	inw	%dx, %ax
-	ret
+uint16_t bus_read_16(int addr)
+{
+    uint16_t val;
+    __asm__ volatile("inw %w1, %0" : "=a"(val) : "d"(addr));
+    return val;
+}
 
-ENTRY(bus_read_32)
-	movl	4(%esp), %edx
-	inl	%dx, %eax
-	ret
-
-
-.section .note.GNU-stack,"",%progbits
+uint32_t bus_read_32(int addr)
+{
+    uint32_t val;
+    __asm__ volatile("inl %w1, %0" : "=a"(val) : "d"(addr));
+    return val;
+}

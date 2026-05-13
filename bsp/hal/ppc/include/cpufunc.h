@@ -1,5 +1,6 @@
 /*-
  * Copyright (c) 2008, Kohsuke Ohtani
+ * Copyright (c) 2026, Champ Yen <champ.yen@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -34,9 +35,11 @@
 #include <sys/types.h>
 
 __BEGIN_DECLS
+
 uint32_t get_decr(void);
 void set_decr(uint32_t);
 void cpu_idle(void);
+
 __END_DECLS
 
 #endif /* !_PPC_CPUFUNC_H */

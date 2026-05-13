@@ -52,9 +52,6 @@ putc_chk:
  * Default exception vectors at 0x4020ffc8 (SRAM)
  * Use VBAR control register to change it
  */
-ENTRY(set_vbar)
-	mcr	p15, 0, r0, c12, c0, 0
-	mov	pc, lr
 	.end
 
 .section .note.GNU-stack,"",%progbits

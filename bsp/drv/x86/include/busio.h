@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2009, Kohsuke Ohtani
+ * Copyright (c) 2026, Champ Yen <champ.yen@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -38,6 +39,7 @@
 #include <sys/types.h>
 
 __BEGIN_DECLS
+
 void bus_write_8(int addr, uint8_t val);
 void bus_write_16(int addr, uint16_t val);
 void bus_write_32(int addr, uint32_t val);
@@ -45,6 +47,7 @@ void bus_write_32(int addr, uint32_t val);
 uint8_t bus_read_8(int addr);
 uint16_t bus_read_16(int addr);
 uint32_t bus_read_32(int addr);
+
 __END_DECLS
 
 #endif /* !_X86_BUSIO_H */

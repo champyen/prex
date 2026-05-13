@@ -1,5 +1,6 @@
 /*-
  * Copyright (c) 2008, Kohsuke Ohtani
+ * Copyright (c) 2026, Champ Yen <champ.yen@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -34,6 +35,7 @@
 #include <sys/types.h>
 
 __BEGIN_DECLS
+
 void cpu_idle(void);
 void flush_tlb(void);
 void flush_cache(void);
@@ -47,6 +49,10 @@ void outb(int, u_char);
 u_char inb(int);
 void outb_p(int, u_char);
 u_char inb_p(int);
+void rdmsr(uint32_t, uint32_t*, uint32_t*);
+void wrmsr(uint32_t, uint32_t, uint32_t);
+void cpuid(uint32_t, uint32_t*, uint32_t*, uint32_t*, uint32_t*);
+
 __END_DECLS
 
 #endif /* !_X86_CPUFUNC_H */
