@@ -88,7 +88,6 @@ irq_mode_stack:		.word	INTSTKTOP
 sys_mode_stack:		.word	SYSSTKTOP
 abort_mode_stack:	.word	ABTSTKTOP
 irq_nesting:	 	.word	irq_nesting_value
-curspl:	 		.word	curspl_value
 init_done:	 	.word	init_done_value
 #ifdef CONFIG_MMU
 reload_pc_target:	.word	reload_pc
@@ -258,21 +257,6 @@ reload_pc:
 	cmp	r1, r2
 	bls	1b
 2:
-
-	/*
-	 * Initilize spl.
-	 */
-#ifdef CONFIG_SMP
-	ldr	r1, =cpu_table
-	mcr	p15, 0, r1, c13, c0, 4	/* Set TPIDRPRW for BSP (CPU 0) */
-	mrc	p15, 0, r1, c13, c0, 4	/* Get cpu_control* */
-	mov	r2, #15
-	str	r2, [r1, #CPU_SPL_LEVEL]
-#else
-	ldr	r1, curspl		/* curspl = 15 */
-	mov	r2, #15
-	str	r2, [r1]
-#endif
 
 	/*
 	 * Jump to kernel main routine
@@ -674,75 +658,6 @@ ENTRY(copy_fault)
 
 
 /*
- * int spl0(void);
- */
-ENTRY(spl0)
-#ifdef CONFIG_SMP
-	mrc	p15, 0, r1, c13, c0, 4	/* Get cpu_control* */
-	ldr	r0, [r1, #CPU_SPL_LEVEL]
-	mov	r2, #0
-	str	r2, [r1, #CPU_SPL_LEVEL]
-#else
-	ldr	r1, curspl		/* curspl = 0 */
-	ldr	r0, [r1]
-	mov	r2, #0
-	str	r2, [r1]
-#endif
-
-	mrs	r1, cpsr		/* Enable interrupt */
-	bic	r1, r1, #0xc0
-	msr	cpsr_c, r1
-	bx	lr
-
-/*
- * int splhigh(void);
- */
-ENTRY(splhigh)
-	mrs	r1, cpsr		/* Disable interrupt */
-	orr	r1, r1, #0xc0
-	msr	cpsr_c, r1
-
-#ifdef CONFIG_SMP
-	mrc	p15, 0, r1, c13, c0, 4	/* Get cpu_control* */
-	ldr	r0, [r1, #CPU_SPL_LEVEL]
-	mov	r2, #15
-	str	r2, [r1, #CPU_SPL_LEVEL]
-#else
-	ldr	r1, curspl		/* curspl = 15 */
-	ldr	r0, [r1]
-	mov	r2, #15
-	str	r2, [r1]
-#endif
-	bx	lr
-
-/*
- * void splx(int s);
- */
-ENTRY(splx)
-	mov	r3, r0			/* r3: new spl */
-#ifdef CONFIG_SMP
-	mrc	p15, 0, r2, c13, c0, 4	/* Get cpu_control* */
-	ldr	r0, [r2, #CPU_SPL_LEVEL]
-	cmp	r3, r0
-	bxeq	lr			/* Return if equal */
-	str	r3, [r2, #CPU_SPL_LEVEL]
-#else
-	ldr	r1, curspl
-	ldr	r0, [r1]
-	cmp	r3, r0
-	bxeq	lr			/* Return if equal */
-	str	r3, [r1]
-#endif
-
-	cmp	r3, #0
-	mrs	r1, cpsr
-	bic	r1, r1, #0xc0
-	orrne	r1, r1, #0xc0		/* Disable interrupt if curspl != 0 */
-	msr	cpsr_c, r1
-	bx	lr
-
-
-/*
  * void sploff(void);
  */
 ENTRY(sploff)
@@ -765,12 +680,6 @@ ENTRY(splon)
  */
 	.section ".bss"
 irq_nesting_value:
-	.long	0
-
-/*
- * Current spl
- */
-curspl_value:
 	.long	0
 
 /*

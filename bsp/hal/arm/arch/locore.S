@@ -83,7 +83,6 @@ irq_mode_stack:		.word	INTSTKTOP
 sys_mode_stack:		.word	SYSSTKTOP
 abort_mode_stack:	.word	ABTSTKTOP
 irq_nesting:	 	.word	irq_nesting_value
-curspl:	 		.word	curspl_value
 init_done:	 	.word	init_done_value
 #ifdef CONFIG_MMU
 reload_pc_target:	.word	reload_pc
@@ -205,13 +204,6 @@ reload_pc:
 	cmp	r1, r2
 	bls	1b
 2:
-
-	/*
-	 * Initilize spl.
-	 */
-	ldr	r1, curspl		/* curspl = 15 */
-	mov	r2, #15
-	str	r2, [r1]
 
 	/*
 	 * Jump to kernel main routine
@@ -535,53 +527,6 @@ ENTRY(copy_fault)
 	mov	r0, #(EFAULT)
  	ldmfd	sp!, {r4, r5, r11, r12, lr}
 	mov	sp, r12
-	mov	pc, lr
-
-
-/*
- * int spl0(void);
- */
-ENTRY(spl0)
-	ldr	r1, curspl		/* curspl = 0 */
-	ldr	r0, [r1]
-	mov	r2, #0
-	str	r2, [r1]
-
-	mrs	r1, cpsr		/* Enable interrupt */
-	bic	r1, r1, #0xc0
-	msr	cpsr_c, r1
-	mov	pc, lr
-
-/*
- * int splhigh(void);
- */
-ENTRY(splhigh)
-	mrs	r1, cpsr		/* Disable interrupt */
-	orr	r1, r1, #0xc0
-	msr	cpsr_c, r1
-
-	ldr	r1, curspl		/* curspl = 15 */
-	ldr	r0, [r1]
-	mov	r2, #15
-	str	r2, [r1]
-	mov	pc, lr
-
-/*
- * void splx(int s);
- */
-ENTRY(splx)
-	mov	r3, r0			/* r3: new spl */
-	ldr	r1, curspl
-	ldr	r0, [r1]
-	cmp	r3, r0
-	moveq	pc, lr			/* Return if equal */
-	str	r3, [r1]
-
-	cmp	r3, #0
-	mrs	r1, cpsr
-	bic	r1, r1, #0xc0
-	orrne	r1, r1, #0xc0		/* Disable interrupt if curspl != 0 */
-	msr	cpsr_c, r1
 	mov	pc, lr
 
 

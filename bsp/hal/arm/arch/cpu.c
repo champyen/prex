@@ -1,5 +1,6 @@
 /*-
  * Copyright (c) 2005-2008, Kohsuke Ohtani
+ * Copyright (c) 2026, Champ Yen <champ.yen@gmail.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,7 +29,7 @@
  */
 
 /*
- * cpu.c - cpu specific code
+ * cpu.c - cpu dependent routines for ARM
  */
 
 #include <kernel.h>
@@ -36,6 +37,45 @@
 #include <locore.h>
 #include <cpufunc.h>
 
+/*
+ * splhigh - disable all interrupts.
+ * Returns the previous priority level.
+ */
+int splhigh(void)
+{
+    int oldspl = curspl;
+
+    sploff();
+    curspl = 15;
+    return oldspl;
+}
+
+/*
+ * spl0 - enable all interrupts.
+ * Returns the previous priority level.
+ */
+int spl0(void)
+{
+    int oldspl = curspl;
+
+    curspl = 0;
+    splon();
+    return oldspl;
+}
+
+/*
+ * splx - restore interrupt priority level.
+ */
+void splx(int s)
+{
+    curspl = s;
+    if (curspl == 0)
+        splon();
+    else
+        sploff();
+}
+
 void cpu_init(void)
 {
+    /* curspl is initialized in kern/thread.c */
 }

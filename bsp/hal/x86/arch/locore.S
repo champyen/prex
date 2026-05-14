@@ -173,7 +173,7 @@ cs_reset:
 	movl	$(BOOTSTKTOP), %esp
 	movl	%esp, %ebp
 
-	movl	$15, curspl
+	
 
 	/*
 	 * Call kernel main routine
@@ -500,33 +500,14 @@ ENTRY(cache_init)
 /*
  * void splx(int s);
  */
-ENTRY(splx)
-	cli
-	movl	4(%esp), %eax
-	movl	%eax, curspl
-	cmpl	$0, %eax
-	ja	1f
-	sti
-1:
-	ret
 
 /*
  * int splhigh(void);
  */
-ENTRY(splhigh)
-	cli
-	movl	curspl, %eax
-	movl	$15, curspl
-	ret
 
 /*
  * int spl0(void);
  */
-ENTRY(spl0)
-	movl	curspl, %eax
-	movl	$0, curspl
-	sti
-	ret
 
 /*
  * Disable interrupts
@@ -557,7 +538,5 @@ irq_nesting:
 /*
  * Current spl
  */
-curspl:
-	.long	0
 
 .section .note.GNU-stack,"",%progbits
