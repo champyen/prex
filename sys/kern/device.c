@@ -65,57 +65,30 @@ static void* device_private(device_t);
 static int device_control(device_t, u_long, void*);
 static int device_broadcast(u_long, void*, int);
 
+#include <sys/dki_table.h>
+
 #define DKIENT(func) (dkifn_t)(func)
 
 /*
- * Driver-Kernel Interface (DKI)
+ * Driver-Kernel Interface (DKI) internal redirection for DEBUG-dependent functions.
+ */
+#ifdef DEBUG
+#define DKI_INT_PANIC panic
+#define DKI_INT_PRINTF printf
+#define DKI_INT_DBGCTL dbgctl
+#else
+#define DKI_INT_PANIC machine_abort
+#define DKI_INT_PRINTF sys_nosys
+#define DKI_INT_DBGCTL sys_nosys
+#endif
+
+/*
+ * Driver-Kernel Interface (DKI) export table
  */
 static const dkifn_t dkient[] = {
-    /*  0 */ DKIENT(copyin),
-    /*  1 */ DKIENT(copyout),
-    /*  2 */ DKIENT(copyinstr),
-    /*  3 */ DKIENT(kmem_alloc),
-    /*  4 */ DKIENT(kmem_free),
-    /*  5 */ DKIENT(kmem_map),
-    /*  6 */ DKIENT(page_alloc),
-    /*  7 */ DKIENT(page_free),
-    /*  8 */ DKIENT(page_reserve),
-    /*  9 */ DKIENT(irq_attach),
-    /* 10 */ DKIENT(irq_detach),
-    /* 11 */ DKIENT(spl0),
-    /* 12 */ DKIENT(splhigh),
-    /* 13 */ DKIENT(splx),
-    /* 14 */ DKIENT(timer_callout),
-    /* 15 */ DKIENT(timer_stop),
-    /* 16 */ DKIENT(timer_delay),
-    /* 17 */ DKIENT(timer_ticks),
-    /* 18 */ DKIENT(sched_lock),
-    /* 19 */ DKIENT(sched_unlock),
-    /* 20 */ DKIENT(sched_tsleep),
-    /* 21 */ DKIENT(sched_wakeup),
-    /* 22 */ DKIENT(sched_dpc),
-    /* 23 */ DKIENT(task_capable),
-    /* 24 */ DKIENT(exception_post),
-    /* 25 */ DKIENT(device_create),
-    /* 26 */ DKIENT(device_destroy),
-    /* 27 */ DKIENT(device_lookup),
-    /* 28 */ DKIENT(device_control),
-    /* 29 */ DKIENT(device_broadcast),
-    /* 30 */ DKIENT(device_private),
-    /* 31 */ DKIENT(machine_bootinfo),
-    /* 32 */ DKIENT(machine_powerdown),
-    /* 33 */ DKIENT(sysinfo),
-    /* 34 */ DKIENT(hal_uart_lock),
-    /* 35 */ DKIENT(hal_uart_unlock),
-#ifdef DEBUG
-    /* 36 */ DKIENT(panic),
-    /* 37 */ DKIENT(printf),
-    /* 38 */ DKIENT(dbgctl),
-#else
-    /* 36 */ DKIENT(machine_abort),
-    /* 37 */ DKIENT(sys_nosys),
-    /* 38 */ DKIENT(sys_nosys),
-#endif
+#define DO_DKI_TABLE(id, public, internal) [id] = DKIENT(internal),
+    FOR_EACH_DKI(DO_DKI_TABLE)
+#undef DO_DKI_TABLE
 };
 
 /* list head of the devices */
