@@ -65,15 +65,18 @@ static int atoi(const char** s)
  * Flags:
  *   0 - Zero pad
  */
-int vsprintf(char* buf, const char* fmt, va_list args)
+int vsnprintf(char* buf, size_t size, const char* fmt, va_list args)
 {
-    char *p, *str;
+    char *p, *end, *str;
     const char* digits = "0123456789abcdef";
     char pad, tmp[16];
     int width, base, sign, i;
     long num;
 
-    for (p = buf; *fmt; fmt++) {
+    if (size == 0)
+        return 0;
+    end = buf + size - 1;
+    for (p = buf; *fmt && p < end; fmt++) {
         if (*fmt != '%') {
             *p++ = *fmt;
             continue;
@@ -97,16 +100,15 @@ int vsprintf(char* buf, const char* fmt, va_list args)
         sign = 0;
         switch (*fmt) {
         case 'c':
-            *p++ = (char)va_arg(args, int);
+            if (p < end) *p++ = (char)va_arg(args, int);
             continue;
         case 's':
             str = va_arg(args, char*);
             if (str == NULL)
                 str = "<NULL>";
-            for (; *str && width != 0; str++, width--) {
+            for (; *str && width != 0 && p < end; str++, width--)
                 *p++ = *str;
-            }
-            while (width-- > 0)
+            while (width-- > 0 && p < end)
                 *p++ = pad;
             continue;
         case 'X':
@@ -124,7 +126,7 @@ int vsprintf(char* buf, const char* fmt, va_list args)
         num = va_arg(args, long);
         if (sign && num < 0) {
             num = -num;
-            *p++ = '-';
+            if (p < end) *p++ = '-';
             width--;
         }
         i = 0;
@@ -134,11 +136,16 @@ int vsprintf(char* buf, const char* fmt, va_list args)
             while (num != 0)
                 tmp[i++] = digits[divide(&num, base)];
         width -= i;
-        while (width-- > 0)
+        while (width-- > 0 && p < end)
             *p++ = pad;
-        while (i-- > 0)
+        while (i-- > 0 && p < end)
             *p++ = tmp[i];
     }
     *p = '\0';
     return 0;
+}
+
+int vsprintf(char* buf, const char* fmt, va_list args)
+{
+    return vsnprintf(buf, (size_t)-1, fmt, args);
 }
