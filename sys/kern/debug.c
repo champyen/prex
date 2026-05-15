@@ -95,7 +95,7 @@ void printf(const char* fmt, ...)
 
     spinlock_lock_irq(&log_lock, &s);
     va_start(args, fmt);
-    vsprintf(db_msg, fmt, args);
+    vsnprintf(db_msg, DBGMSGSZ, fmt, args);
 
     (*db_puts)(db_msg);
 
