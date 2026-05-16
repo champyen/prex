@@ -9,6 +9,8 @@
 #include "mips/limits.h"
 #elif defined(__sh__)
 #include "sh/limits.h"
+#elif defined(__riscv)
+#include "riscv/limits.h"
 #else
 #error architecture not supported
 #endif

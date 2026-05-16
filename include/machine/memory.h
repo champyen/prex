@@ -9,6 +9,8 @@
 #include "mips/memory.h"
 #elif defined(__sh__)
 #include "sh/memory.h"
+#elif defined(__riscv)
+#include "riscv/memory.h"
 #else
 #error architecture not supported
 #endif

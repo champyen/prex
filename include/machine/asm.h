@@ -9,6 +9,8 @@
 #include "mips/asm.h"
 #elif defined(__sh__)
 #include "sh/asm.h"
+#elif defined(__riscv)
+#include "riscv/asm.h"
 #else
 #error architecture not supported
 #endif

@@ -9,6 +9,8 @@
 #include "mips/systrap.h"
 #elif defined(__sh__)
 #include "sh/systrap.h"
+#elif defined(__riscv)
+#include "riscv/systrap.h"
 #else
 #error architecture not supported
 #endif

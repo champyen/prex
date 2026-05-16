@@ -9,6 +9,8 @@
 #include "mips/elf.h"
 #elif defined(__sh__)
 #include "sh/elf.h"
+#elif defined(__riscv)
+#include "riscv/elf.h"
 #else
 #error architecture not supported
 #endif

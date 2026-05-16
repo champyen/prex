@@ -9,6 +9,8 @@
 #include "mips/types.h"
 #elif defined(__sh__)
 #include "sh/types.h"
+#elif defined(__riscv)
+#include "riscv/types.h"
 #else
 #error architecture not supported
 #endif
