@@ -5,8 +5,9 @@
 #
 # Make options
 #
-makeoptions	GCCFLAGS+= -march=rv32ima -mabi=ilp32
-makeoptions	ASFLAGS+= -march=rv32ima -mabi=ilp32
+makeoptions	GCCFLAGS+= -march=rv32ima_zicsr_zifencei -mabi=ilp32 -mno-relax
+makeoptions	ASFLAGS+= -march=rv32ima_zicsr_zifencei -mabi=ilp32 -mno-relax
+makeoptions	LDFLAGS+= -m elf32lriscv --no-relax
 
 #
 # MMU Option
@@ -120,4 +121,4 @@ command 	grep
 command 	init
 
 # Math library
-#math		fdlibm
+math		fdlibm
