@@ -1,0 +1,123 @@
+#
+# Prex system configuration file for RISC-V Virt
+#
+
+#
+# Make options
+#
+makeoptions	GCCFLAGS+= -march=rv32ima -mabi=ilp32
+makeoptions	ASFLAGS+= -march=rv32ima -mabi=ilp32
+
+#
+# MMU Option
+#
+mmu	        SYSPAGE_BASE	0x80000000  0x80000000 	# Location of start of RAM
+mmu	        IOMEM_BASE      0x00000000	0x00000000  # Location of mmio address
+# mmu         CACHE
+
+#
+# Memory address
+#
+memory      RAM_SIZE        0x10000000  # DRAM Size (256MB)
+memory      LOADER_TEXT     0x80000000  # Start of boot loader
+memory      KERNEL_TEXT     0x80200000  # Start of kernel
+memory      BOOTIMG_BASE    0x80002000  # Location of boot image
+
+#
+# Tunable parameters
+#
+options         HZ=100			# Ticks/second of the clock
+options 	TIME_SLICE=50	# Context switch ratio (msec)
+options 	OPEN_MAX=16		# Max open files per process
+options         BUF_CACHE=32    # Blocks for buffer cache
+options         FS_THREADS=4    # Number of file system threads
+options         MAX_ALLOC_SIZE=0x400000   # Max kernel memory allocation size
+options         USR_STACKSZ=32768         # Default user stack size
+options         MAXMEM=16777216           # Max core per task (16MB)
+
+#
+# Platform settings
+#
+options		RISCV		# Processor arch
+options		RV32		# 32-bit RISC-V
+options		QEMU_VIRT	# Platform
+#options		SMP		# Symmetric Multiprocessing
+#options		SMP_NCPUS=4	# Number of CPUs
+#options 	FPU			# Floating point unit
+options 	BOOTDISK	# Disk for /boot directory
+
+#
+# General setup
+#
+options 	POSIX		# POSIX support
+options 	CMDBOX		# Core utilities
+options 	DEBUG		# Debugging options
+
+#
+# Diagnostic options
+#
+options 	DIAG_SERIAL	# Diagnostic via serial port
+
+#
+# File systems
+#
+options 	FIFOFS		# FIFO & Pipe
+options 	DEVFS		# Device file system
+options 	RAMFS		# RAM file system
+options 	ARFS		# Archive file system
+
+#
+# Power management
+#
+#options 	PM		# Power management
+
+#
+# Device drivers (initialization order)
+#
+device		null		# NULL device
+device		zero		# Zero device
+device		ramdisk		# RAM disk
+device		cons		# System console
+device		rtc		# Real time clock
+device		serial		# Logical serial
+
+#
+# Hardware configurations
+#
+options		NIRQS=32
+options     PLIC_BASE=0x0c000000
+options     NS16550_BASE=0x10000000
+options		NS16550_IRQ=10
+options     NS16550=y
+
+#
+# Command box
+#
+command 	cat
+command 	clear
+command 	cp
+command 	date
+command 	dd
+command 	echo
+command 	free
+command 	ls
+command 	mkdir
+command 	more
+command 	mv
+command 	nice
+command 	ps
+command 	pwd
+command 	rm
+command 	rmdir
+command 	sh
+command 	sleep
+command 	sync
+command 	test
+command 	touch
+command 	uname
+command 	wc
+command 	grep
+command 	init
+
+# Math library
+#math		fdlibm

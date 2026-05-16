@@ -135,7 +135,7 @@ gettarget()
 	platform=`expr "x$target" : 'x[^-]*-\(.*\)'`
 
 	case "$arch" in
-	x86|arm|ppc|sh|mips)
+	x86|arm|ppc|sh|mips|riscv)
 		;;
 	*)
 		quit "Unkown target architecture: $arch"

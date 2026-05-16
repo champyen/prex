@@ -3,6 +3,7 @@
 * arm-raspi0
 * arm-qemu-virt
 * x86-pc
+* riscv-qemu-virt
 
 # Build
 1. configure the target (refer ./doc/integrator.md )
@@ -42,6 +43,11 @@ $ timeout 15 \
   -drive if=none,file=bin.img,id=drv1,format=raw -device virtio-blk-device,drive=drv1 \
   -device virtio-sound-device,audiodev=audio0 -audiodev pa,id=audio0 \
   -netdev user,id=net0 -device virtio-net-device,netdev=net0 \
+  > qemu.log 2>&1 & sleep 16 && cat qemu.log
+
+* riscv-qemu-virt
+$ timeout 15 \
+  qemu-system-riscv32 -M virt -m 256M -bios none -kernel prexos.bin -nographic \
   > qemu.log 2>&1 & sleep 16 && cat qemu.log
 
 # tiered volumes (ARFS/FATFS)
