@@ -18,22 +18,14 @@ static void bootinfo_init(void)
     bi->ram[0].type = MT_USABLE;
 
     /*
-     * Reserved: Bootloader region (0x80000000 - 0x8000FFFF)
-     * This contains the M-mode SBI firmware.
+     * Reserved: System Page (0x80100000 - 0x80100FFF)
+     * Used by M-mode trap handler state in locore.S
      */
-    bi->ram[1].base = 0x80000000;
-    bi->ram[1].size = 0x10000; /* 64KB */
+    bi->ram[1].base = 0x80100000;
+    bi->ram[1].size = 0x1000; /* 4KB */
     bi->ram[1].type = MT_RESERVED;
 
-    /*
-     * Reserved: System Page (0x80100000 - 0x8010FFFF)
-     * This contains BOOTINFO, stacks, and M-mode save area.
-     */
-    bi->ram[2].base = 0x80100000;
-    bi->ram[2].size = 0x10000; /* 64KB */
-    bi->ram[2].type = MT_RESERVED;
-
-    bi->nr_rams = 3;
+    bi->nr_rams = 2;
 }
 
 void startup(void)

@@ -81,6 +81,7 @@ device		ramdisk		# RAM disk
 device		cons		# System console
 device		rtc		# Real time clock
 device		serial		# Logical serial
+device		ns16550		# NS16550 serial
 
 #
 # Hardware configurations

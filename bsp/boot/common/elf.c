@@ -91,6 +91,10 @@ int load_elf(char* img, struct module* m)
         ELFDBG(("task base=%lx\n", load_base));
     }
 
+#ifdef __riscv__
+    m->phys = load_base;
+    DPRINTF(("module %s: base=%lx\n", m->name, m->phys));
+#endif
     switch (ehdr->e_type) {
     case ET_EXEC:
         if (load_executable(img, m) != 0)
@@ -104,6 +108,9 @@ int load_elf(char* img, struct module* m)
         ELFDBG(("Unsupported file type\n"));
         return -1;
     }
+#ifdef __riscv__
+    DPRINTF(("module %s: size=%x\n", m->name, (int)m->size));
+#endif
     nr_img++;
     return 0;
 }
@@ -194,7 +201,13 @@ static int relocate_section_rela(Elf32_Sym* sym_table, Elf32_Rela* rela, char* t
         sym = &sym_table[ELF32_R_SYM(rela->r_info)];
         ELFDBG(("%s\n", strtab + sym->st_name));
         if (sym->st_shndx != STN_UNDEF) {
-            sym_val = (Elf32_Addr)sect_addr[sym->st_shndx] + sym->st_value;
+            sym_val = sym->st_value;
+#ifdef __riscv__
+            if (sym->st_shndx < 32)
+                sym_val += (Elf32_Addr)sect_addr[sym->st_shndx];
+#else
+            sym_val += (Elf32_Addr)sect_addr[sym->st_shndx];
+#endif
             if (relocate_rela(rela, sym_val, target_sect) != 0)
                 return -1;
         } else if (ELF32_R_SYM(rela->r_info) == STN_UNDEF) {
@@ -223,7 +236,13 @@ static int relocate_section_rel(Elf32_Sym* sym_table, Elf32_Rel* rel, char* targ
         sym = &sym_table[ELF32_R_SYM(rel->r_info)];
         ELFDBG(("%s\n", strtab + sym->st_name));
         if (sym->st_shndx != STN_UNDEF) {
-            sym_val = (Elf32_Addr)sect_addr[sym->st_shndx] + sym->st_value;
+            sym_val = sym->st_value;
+#ifdef __riscv__
+            if (sym->st_shndx < 32)
+                sym_val += (Elf32_Addr)sect_addr[sym->st_shndx];
+#else
+            sym_val += (Elf32_Addr)sect_addr[sym->st_shndx];
+#endif
             if (relocate_rel(rel, sym_val, target_sect) != 0)
                 return -1;
         } else if (ELF32_R_SYM(rel->r_info) == STN_UNDEF) {
@@ -283,6 +302,84 @@ static int relocate_section(char* img, Elf32_Shdr* shdr)
     return error;
 }
 
+#ifdef __riscv__
+static int load_relocatable(char* img, struct module* m)
+{
+    Elf32_Ehdr* ehdr;
+    Elf32_Shdr* shdr;
+    char* shstrtab;
+    paddr_t sect_base;
+    paddr_t bss_base = 0;
+    int i;
+    vaddr_t first_text_vma = 0;
+
+    strshndx = 0;
+    ehdr = (Elf32_Ehdr*)img;
+    m->phys = load_base;
+
+    shdr = (Elf32_Shdr*)((paddr_t)ehdr + ehdr->e_shoff);
+    shstrtab = (char*)((paddr_t)ehdr + shdr[ehdr->e_shstrndx].sh_offset);
+
+    for (i = 0; i < (int)ehdr->e_shnum; i++, shdr++) {
+        sect_addr[i] = 0;
+        if (shdr->sh_flags & SHF_ALLOC) {
+            load_base = (load_base + shdr->sh_addralign - 1) & ~(shdr->sh_addralign - 1);
+            sect_base = load_base;
+
+            if (shdr->sh_type == SHT_PROGBITS) {
+                if (shdr->sh_flags & SHF_EXECINSTR) {
+                    if (m->text == 0) {
+                        m->text = (vaddr_t)ptokv(sect_base);
+                        first_text_vma = shdr->sh_addr;
+                    }
+                } else if (!(shdr->sh_flags & SHF_WRITE)) {
+                    /* Rodata */
+                    if (m->text == 0) {
+                        m->text = (vaddr_t)ptokv(sect_base);
+                        first_text_vma = shdr->sh_addr;
+                    }
+                } else {
+                    if (m->data == 0)
+                        m->data = (vaddr_t)ptokv(sect_base);
+                }
+                memcpy((char*)sect_base, img + shdr->sh_offset, (size_t)shdr->sh_size);
+            } else if (shdr->sh_type == SHT_NOBITS) {
+                bss_base = sect_base;
+                m->bsssz = (size_t)shdr->sh_size;
+                memset((char*)sect_base, 0, (size_t)shdr->sh_size);
+            }
+            sect_addr[i] = (char*)sect_base;
+            ELFDBG(("load: section %d (%s) pa=%lx size=%x\n", i, shstrtab + shdr->sh_name, sect_base, (int)shdr->sh_size));
+            load_base += shdr->sh_size;
+        } else if (shdr->sh_type == SHT_SYMTAB || shdr->sh_type == SHT_STRTAB ||
+                   shdr->sh_type == SHT_REL || shdr->sh_type == SHT_RELA) {
+            sect_addr[i] = img + shdr->sh_offset;
+            if (shdr->sh_type == SHT_SYMTAB)
+                strshndx = (int)shdr->sh_link;
+        }
+    }
+    m->textsz = (size_t)(m->data - m->text);
+    m->datasz = (size_t)((char*)ptokv(bss_base) - m->data);
+
+    load_base = round_page(load_base);
+    m->size = (size_t)(load_base - m->phys);
+    m->entry = m->text + (ehdr->e_entry - first_text_vma);
+    ELFDBG(("module size=%x entry=%lx\n", m->size, m->entry));
+
+    /* Process relocation */
+    shdr = (Elf32_Shdr*)((paddr_t)ehdr + ehdr->e_shoff);
+    for (i = 0; i < (int)ehdr->e_shnum; i++, shdr++) {
+        if (shdr->sh_type == SHT_REL || shdr->sh_type == SHT_RELA) {
+            if (relocate_section(img, shdr) != 0) {
+                DPRINTF(("Relocation error: module=%s section=%d\n", m->name, i));
+                return -1;
+            }
+        }
+    }
+    __asm__ volatile("fence.i");
+    return 0;
+}
+#else
 static int load_relocatable(char* img, struct module* m)
 {
     Elf32_Ehdr* ehdr;

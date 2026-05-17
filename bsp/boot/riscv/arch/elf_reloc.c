@@ -27,7 +27,7 @@
  * A small LUT to store the calculated offset of HI20 relocations,
  * so they can be retrieved by the following LO12 relocations.
  */
-#define MAX_HI20 512
+#define MAX_HI20 256
 static struct {
     Elf32_Addr addr;
     int32_t offset;
@@ -45,8 +45,11 @@ static int32_t find_hi20(Elf32_Addr addr)
 {
     int i;
     for (i = 0; i < MAX_HI20; i++) {
-        if (hi20_lut[i].addr == addr)
-            return hi20_lut[i].offset;
+        if (hi20_lut[i].addr == addr) {
+            int32_t off = hi20_lut[i].offset;
+            hi20_lut[i].addr = 0; /* Clear it */
+            return off;
+        }
     }
     return 0;
 }
@@ -121,6 +124,7 @@ int relocate_rela(Elf32_Rela* rela, Elf32_Addr sym_val, char* target_sect)
         offset = (int32_t)val - (int32_t)where;
         hi = (uint32_t)(offset + 0x800) >> 12;
         lo = (uint32_t)offset & 0xfff;
+        DPRINTF(("Reloc CALL at %lx to %lx (off=%lx, hi=%x, lo=%x)\n", (long)where, (long)val, (long)offset, hi, lo));
         /* Patch auipc */
         *where = (*where & 0x00000fff) | (hi << 12);
         /* Patch jalr */
@@ -154,7 +158,7 @@ int relocate_rela(Elf32_Rela* rela, Elf32_Addr sym_val, char* target_sect)
         break;
 
     default:
-        DPRINTF(("RISCV-BOOT: Unknown reloc type %d at %lx\n", type, (long)where));
+        DPRINTF(("RISCV-BOOT: Unknown reloc type %d at %lx sym_val=%lx\n", type, (long)where, (long)sym_val));
         return -1;
     }
     return 0;

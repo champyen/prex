@@ -42,7 +42,7 @@ void context_set(context_t ctx, int type, register_t val)
     case CTX_UENTRY:
         /* User mode program counter */
         u = ctx->uregs;
-        u->pc = (uint32_t)val;
+        u->epc = (uint32_t)val;
         u->ra = 0;
         /* Status for User Mode (SPP=0, SPIE=1) */
         u->status = 0x00000020;
@@ -51,7 +51,9 @@ void context_set(context_t ctx, int type, register_t val)
     case CTX_USTACK:
         /* User mode stack pointer */
         u = ctx->uregs;
-        u->sp = (uint32_t)val;
+        /* RISC-V ABI: 16-byte alignment and argc=1 setup */
+        u->sp = (uint32_t)val & ~15;
+        *(int*)(u->sp) = 1;
         break;
 
     case CTX_UARG:

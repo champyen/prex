@@ -641,5 +641,8 @@ void device_init(void)
     /* Show module location to add the driver symbols for gdb. */
     DPRINTF(("Entering driver module (at 0x%x)\n", (int)entry));
 
+    uint32_t* p = (uint32_t*)entry;
+    DPRINTF(("Code at entry: %08x %08x %08x %08x\n", p[0], p[1], p[2], p[3]));
+
     (*entry)(dkient);
 }

@@ -26,19 +26,17 @@ ENTRY(kernel_start)
 	.align 4
 vector_entry:
     /* Check if we came from user mode */
-    /* We use sscratch as a pointer to the kernel stack top.
-       If it is 0, we are already in the kernel. */
     csrrw sp, sscratch, sp
     bnez sp, 1f
     
-    /* Coming from kernel: restore sp and keep sscratch as 0 */
+    /* Coming from kernel */
     csrrw sp, sscratch, sp
     j 2f
 
 1:  /* Coming from user: sp now points to kernel stack, sscratch has user sp */
     
-2:  /* Allocate space for struct cpu_regs (140 bytes) */
-    addi sp, sp, -140
+2:  /* Allocate 144-byte frame (16-byte aligned) */
+    addi sp, sp, -144
     
     /* Save general purpose registers */
     sw ra, 0(sp)
@@ -72,10 +70,10 @@ vector_entry:
     sw t5, 116(sp)
     sw t6, 120(sp)
 
-    /* Original SP was in sscratch if from user, or sp + 140 if from kernel */
+    /* Original SP was in sscratch if from user, or sp + 144 if from kernel */
     csrr t0, sscratch
     bnez t0, 3f
-    addi t0, sp, 140
+    addi t0, sp, 144
 3:
     sw t0, 4(sp)
 
@@ -89,11 +87,11 @@ vector_entry:
     csrr t0, stval
     sw t0, 136(sp)
 
-    /* Set sscratch to 0 to indicate we are in kernel mode */
+    /* Set sscratch to 0 for kernel mode */
     li t0, 0
     csrw sscratch, t0
 
-    /* Setup Kernel Global Pointer */
+    /* Setup Global Pointer */
     .option push
     .option norelax
     la gp, __global_pointer$
@@ -104,22 +102,20 @@ vector_entry:
     call trap_handler
 
 ENTRY(syscall_ret)
-    /* fence.i to ensure coherence */
     fence.i
 
-    /* Restore CSRs (Supervisor Mode) */
+    /* Restore CSRs */
     lw t0, 124(sp)
     csrw sepc, t0
     lw t0, 128(sp)
     csrw sstatus, t0
     
-    /* Determine if we are returning to user mode */
-    /* If SPP bit (bit 8) in sstatus is 0, it's user mode */
+    /* Returning to user mode? Check SPP (bit 8) */
     andi t0, t0, 0x100
     bnez t0, 4f
     
-    /* Returning to user: restore kernel stack top to sscratch */
-    addi t0, sp, 140
+    /* User mode: Restore kernel stack pointer to sscratch */
+    addi t0, sp, 144
     csrw sscratch, t0
 
 4:  /* Restore general purpose registers */
@@ -167,8 +163,8 @@ irq_nesting:		.word	irq_nesting_value
 init_done:		.word	init_done_value
 
 ENTRY(reset_entry)
-    /* Disable interrupts (SIE bit) */
-    csrci sstatus, 2 /* S-mode SIE is bit 1 (mask 2) */
+    /* Disable interrupts */
+    csrci sstatus, 2
     
     /* Setup Global Pointer */
     .option push
@@ -179,22 +175,19 @@ ENTRY(reset_entry)
     /* Setup stack */
     la sp, BOOTSTKTOP
     
-    /* Setup sscratch to 0 initially (kernel mode) */
+    /* Setup sscratch */
     csrw sscratch, zero
 
-    /* Setup trap vector (Supervisor Mode) */
+    /* Setup trap vector */
     la t0, vector_entry
     csrw stvec, t0
     
-    /* Jump to kernel main */
-    /* Note: BSS was cleared by bootloader */
     call main
 
 /*
  * Context switch
  */
 ENTRY(cpu_switch)
-    /* Save previous context */
     sw s0, 0(a0)
     sw s1, 4(a0)
     sw s2, 8(a0)
@@ -210,7 +203,6 @@ ENTRY(cpu_switch)
     sw sp, 48(a0)
     sw ra, 52(a0)
 
-    /* Restore next context */
     lw s0, 0(a1)
     lw s1, 4(a1)
     lw s2, 8(a1)
@@ -232,26 +224,19 @@ ENTRY(kernel_thread_entry)
     mv a0, s1
     jr s0
 
-/*
- * SPL Level management (Supervisor Mode)
- */
 ENTRY(get_status)
     csrr a0, sstatus
     ret
 
 ENTRY(splon)
-    csrsi sstatus, 2 /* Set SIE bit */
+    csrsi sstatus, 2
     ret
 
 ENTRY(sploff)
-    csrci sstatus, 2 /* Clear SIE bit */
+    csrci sstatus, 2
     ret
 
-/*
- * Copy data from/to user space
- */
 ENTRY(copyin)
-    /* a0: src(user), a1: dest(kernel), a2: len */
     li t0, 0
 1:
     bge t0, a2, 2f
@@ -266,7 +251,6 @@ ENTRY(copyin)
     ret
 
 ENTRY(copyout)
-    /* a0: src(kernel), a1: dest(user), a2: len */
     li t0, 0
 1:
     bge t0, a2, 2f
@@ -281,7 +265,6 @@ ENTRY(copyout)
     ret
 
 ENTRY(copyinstr)
-    /* a0: src(user), a1: dest(kernel), a2: maxlen */
     li t0, 0
 1:
     bge t0, a2, 2f
@@ -294,8 +277,9 @@ ENTRY(copyinstr)
     j 1b
 2:
     li a0, 36 /* ENAMETOOLONG */
+    ret
 3:
-    mv a0, t0
+    li a0, 0
     ret
 4:
     li a0, 14 /* EFAULT */

@@ -4,36 +4,30 @@
 OUTPUT_FORMAT("elf32-littleriscv")
 OUTPUT_ARCH(riscv)
 ENTRY(_start)
-PHDRS
-{
-	text PT_LOAD FILEHDR PHDRS;
-	data PT_LOAD;
-}
+
 SECTIONS
 {
-	. = SIZEOF_HEADERS;
+	. = 0;
 
 	.text : {
 		*(.text)
 		*(.text.*)
-	} : text = 0xff
+	}
 
-	. = ALIGN(4);
 	.rodata : {
 		*(.rodata)
 		*(.rodata.*)
-	} : text
+	}
 
-	. = ALIGN(4);
 	.data : {
+		__global_pointer$ = . + 0x800;
 		*(.data)
 		*(.data.*)
 		*(.sdata)
 		*(.sdata.*)
-	} : data
+	}
 
-	. = ALIGN(4);
-	.bss .  : {
+	.bss : {
 		*(.sbss)
 		*(.sbss.*)
 		*(.bss)

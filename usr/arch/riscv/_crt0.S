@@ -8,6 +8,11 @@
         .global _start
         .type _start, @function
 _start:
+        .option push
+        .option norelax
+        la      gp, __global_pointer$
+        .option pop
+
         lw      a0, 0(sp)       /* a0 = argc */
         addi    a1, sp, 4       /* a1 = argv */
         

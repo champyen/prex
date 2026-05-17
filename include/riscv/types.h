@@ -37,6 +37,7 @@
  * Basic integral types.  Omit the typedef if
  * not possible for a machine/compiler combination.
  */
+#ifndef __ASSEMBLY__
 typedef signed char int8_t;
 typedef unsigned char uint8_t;
 typedef short int16_t;
@@ -52,5 +53,6 @@ typedef unsigned long vaddr_t;
 typedef unsigned long vsize_t;
 
 typedef int register_t;
+#endif /* !__ASSEMBLY__ */
 
 #endif /* _RISCV_TYPES_H */
