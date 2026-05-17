@@ -28,115 +28,95 @@
  */
 
 /*
- * load.c - Load OS modules
+ * load.c - OS image loader
  */
 
 #include <boot.h>
 #include <load.h>
 #include <sys/ar.h>
-#include <sys/bootinfo.h>
 
 /* forward declarations */
 static int load_module(struct ar_hdr*, struct module*);
 static void setup_bootdisk(struct ar_hdr*);
 
-paddr_t load_base;  /* current load address */
-paddr_t load_start; /* start address for loading */
-int nr_img;         /* number of module images */
+paddr_t load_base;
+paddr_t load_start;
+int nr_img = 0;
 
 /*
- * Load OS images - kernel, driver and boot tasks.
- *
- * It reads each module file image and copy it to the appropriate
- * memory area. The image is built as generic an archive (.a) file.
- *
- * The image information is stored into the boot information area.
+ * Load all modules.
+ * The boot image contains the kernel, drivers and boot tasks.
+ * It is an archive file in AR format.
  */
 void load_os(void)
 {
-    char* hdr;
-    struct bootinfo* bi = bootinfo;
-    struct module* m;
     char* magic;
-    int i;
-    long len;
+    struct ar_hdr* hdr;
+    struct module* m;
+    char* base;
+    size_t size;
 
-    /*
-     * Initialize our data.
-     */
-    load_base = 0;
-    load_start = 0;
-    nr_img = 0;
+    DPRINTF(("loading: ...\n"));
 
     /*
      *  Sanity check of archive image.
      */
     magic = (char*)kvtop(CONFIG_BOOTIMG_BASE);
-    if (strncmp(magic, ARMAG, 8))
+    if (strncmp(magic, ARMAG, SARMAG)) {
+        char* scan = (char*)0x80000000;
+        int j;
+        DPRINTF(("Searching 16MB RAM for magic...\n"));
+        for (j = 0; j < 0x1000000; j += 4) {
+            if (scan[j] == '!' && scan[j+1] == '<' && scan[j+2] == 'a') {
+                DPRINTF(("FOUND magic at %lx!\n", (long)(scan + j)));
+            }
+        }
         panic("Invalid OS image");
+    }
 
     /*
      * Load kernel module.
      */
-    hdr = (char*)((paddr_t)magic + 8);
-    if (load_module((struct ar_hdr*)hdr, &bi->kernel))
-        panic("Can not load kernel");
+    hdr = (struct ar_hdr*)(magic + SARMAG);
+    if (load_module(hdr, &bootinfo->kernel) != 0) {
+        panic("Invalid kernel module");
+    }
 
     /*
      * Load driver module.
      */
-    len = atol((char*)&((struct ar_hdr*)hdr)->ar_size);
-    len += len % 2; /* even alignment */
-    if (len == 0)
-        panic("Invalid driver image");
-    hdr = (char*)((paddr_t)hdr + sizeof(struct ar_hdr) + len);
-    if (load_module((struct ar_hdr*)hdr, &bi->driver))
-        panic("Can not load driver");
+    size = (size_t)atol((char*)&hdr->ar_size);
+    hdr = (struct ar_hdr*)((paddr_t)hdr + sizeof(struct ar_hdr) + roundup(size, 2));
+    if (load_module(hdr, &bootinfo->driver) != 0) {
+        panic("Invalid driver module");
+    }
 
     /*
      * Load boot tasks.
      */
-    i = 0;
-    m = (struct module*)&bi->tasks[0];
-    while (1) {
-        /* Proceed to next archive header */
-        len = atol((char*)&((struct ar_hdr*)hdr)->ar_size);
-        len += len % 2; /* even alignment */
-        if (len == 0)
+    for (;;) {
+        size = (size_t)atol((char*)&hdr->ar_size);
+        hdr = (struct ar_hdr*)((paddr_t)hdr + sizeof(struct ar_hdr) + roundup(size, 2));
+        m = &bootinfo->tasks[bootinfo->nr_tasks];
+        if (load_module(hdr, m) != 0) {
             break;
-        hdr = (char*)((paddr_t)hdr + sizeof(struct ar_hdr) + len);
-
-        /* Check archive header */
-        if (strncmp((char*)&((struct ar_hdr*)hdr)->ar_fmag, ARFMAG, 2))
-            break;
-
-        /* Load boot disk image */
-        if (!strncmp((char*)&((struct ar_hdr*)hdr)->ar_name, "bootdisk.a", 10)) {
-            setup_bootdisk((struct ar_hdr*)hdr);
-            continue;
         }
-
-        /* Load task */
-        if (load_module((struct ar_hdr*)hdr, m))
-            break;
-        i++;
-        m++;
+        bootinfo->nr_tasks++;
     }
 
-    bi->nr_tasks = i;
-
-    if (bi->nr_tasks == 0)
-        panic("No boot task found!");
-
     /*
-     * Reserve single memory block for all boot modules.
-     * This includes kernel, driver, and boot tasks.
+     *  Reserve memory for image modules
      */
-    i = bi->nr_rams;
-    bi->ram[i].base = load_start;
-    bi->ram[i].size = (size_t)(load_base - load_start);
-    bi->ram[i].type = MT_RESERVED;
-    bi->nr_rams++;
+    base = (char*)kvtop(CONFIG_BOOTIMG_BASE);
+    size = (size_t)round_page((paddr_t)hdr - (paddr_t)base);
+    bootinfo->ram[bootinfo->nr_rams].base = (paddr_t)base;
+    bootinfo->ram[bootinfo->nr_rams].size = size;
+    bootinfo->ram[bootinfo->nr_rams].type = MT_RESERVED;
+    bootinfo->nr_rams++;
+
+#ifdef CONFIG_BOOTDISK
+    setup_bootdisk(hdr);
+#endif
 }
 
 /*
@@ -148,23 +128,25 @@ static int load_module(struct ar_hdr* hdr, struct module* m)
     char* c;
 
     if (strncmp((char*)&hdr->ar_fmag, ARFMAG, 2)) {
-        DPRINTF(("Invalid image %s\n", hdr->ar_name));
         return -1;
     }
-    strlcpy(m->name, hdr->ar_name, sizeof(m->name));
-    c = m->name;
-    while (*c != '/' && *c != ' ')
-        c++;
-    *c = '\0';
+    c = (char*)&hdr->ar_name[0];
+    strlcpy(m->name, c, sizeof(m->name));
+    for (c = m->name; *c != '\0'; c++) {
+        if (*c == ' ' || *c == '/') {
+            *c = '\0';
+            break;
+        }
+    }
+    DPRINTF(("loading: hdr=%lx module=%lx name=%s\n", (long)hdr, (long)m, m->name));
 
-    DPRINTF(("loading: hdr=%lx module=%lx name=%s\n", (paddr_t)hdr, (paddr_t)m, m->name));
-
-    if (load_elf((char*)hdr + sizeof(struct ar_hdr), m))
-        panic("Load error");
-
+    if (load_elf((char*)hdr + sizeof(struct ar_hdr), m) != 0) {
+        return -1;
+    }
     return 0;
 }
 
+#ifdef CONFIG_BOOTDISK
 /*
  * Setup boot disk
  */
@@ -174,30 +156,19 @@ static void setup_bootdisk(struct ar_hdr* hdr)
     paddr_t base;
     size_t size;
 
-    /*
-     * Store image information.
-     */
     if (strncmp((char*)&hdr->ar_fmag, ARFMAG, 2)) {
-        DPRINTF(("Invalid bootdisk image\n"));
         return;
     }
+
+    base = (paddr_t)round_page((paddr_t)hdr + sizeof(struct ar_hdr));
     size = (size_t)atol((char*)&hdr->ar_size);
-    size += size % 2; /* even alignment */
-    if (size == 0) {
-        DPRINTF(("Size of bootdisk is zero\n"));
-        return;
-    }
-    base = (paddr_t)hdr + sizeof(struct ar_hdr);
+
     bi->bootdisk.base = base;
     bi->bootdisk.size = size;
 
-#if !defined(CONFIG_ROMBOOT)
-    /*
-     * Reserve memory for boot disk if the image
-     * was copied to RAM.
-     */
+    /*  Reserve memory for boot disk */
     bi->ram[bi->nr_rams].base = base;
-    bi->ram[bi->nr_rams].size = size;
+    bi->ram[bi->nr_rams].size = (size_t)round_page(size);
     bi->ram[bi->nr_rams].type = MT_BOOTDISK;
     bi->nr_rams++;
 #endif

@@ -46,7 +46,8 @@ _start:
     csrw mstatus, t0
 
     /* 8. Initialize mscratch with a pointer to a save area */
-    la t0, m_save_area
+    /* Use a safe address in the reserved System Page */
+    li t0, 0x80100000
     csrw mscratch, t0
 
     /* 9. Switch to S-mode */
@@ -55,10 +56,12 @@ _start:
 /* Minimal M-mode Trap Handler (SBI Implementation) */
 .align 4
 m_trap_entry:
-    /* Save t0, t1, t2 to m_save_area */
+    /* Save registers to m_save_area at 0x80100000 */
     csrrw t0, mscratch, t0
     sw t1, 4(t0)
     sw t2, 8(t0)
+    sw a0, 12(t0)
+    sw ra, 16(t0)
     csrr t1, mscratch
     sw t1, 0(t0)
     csrw mscratch, t0
@@ -111,9 +114,11 @@ handle_m_timer:
 
 m_trap_exit:
     /* Restore registers */
-    la t0, m_save_area
+    csrr t0, mscratch
     lw t1, 4(t0)
     lw t2, 8(t0)
+    lw a0, 12(t0)
+    lw ra, 16(t0)
     lw t0, 0(t0)
     mret
 
@@ -136,13 +141,6 @@ s_mode_entry:
 loop:
     wfi
     j loop
-
-.section ".bss"
-.align 4
-m_save_area:
-    .long 0 /* t0 */
-    .long 0 /* t1 */
-    .long 0 /* t2 */
 
 .section .tail, "ax"
 dummy:

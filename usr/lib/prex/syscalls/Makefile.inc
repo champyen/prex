@@ -1,7 +1,7 @@
 VPATH:=	$(SRCDIR)/usr/lib/prex/syscalls:$(VPATH)
 
 SRCS+=	$(SRCDIR)/usr/arch/$(ARCH)/_systrap.S \
-	syscall_stubs.S \
+	$(SRCDIR)/usr/lib/prex/syscalls/syscall_stubs.S \
 	thread_getpri.c \
 	thread_setpri.c \
 	thread_getpolicy.c \

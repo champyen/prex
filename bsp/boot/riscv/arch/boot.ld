@@ -26,9 +26,10 @@ SECTIONS {
 		*(COMMON)
 		__end = . ;
 	}
+
 	. = CONFIG_LOADER_TEXT + 0xffff;
 	.tail : {
-		*(.tail)
+		BYTE(0xff);
 	}
 
 	/DISCARD/ : { *(.note*) *(.comment*) }

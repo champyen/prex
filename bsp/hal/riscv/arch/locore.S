@@ -11,7 +11,7 @@
 #include <trap.h>
 #include <cpu.h>
 
-	.section ".text","ax"
+        .section ".text","ax"
 
 /*
  * Kernel start point
@@ -25,7 +25,19 @@ ENTRY(kernel_start)
  */
 	.align 4
 vector_entry:
-    /* Allocate space for struct cpu_regs (140 bytes) */
+    /* Check if we came from user mode */
+    /* We use sscratch as a pointer to the kernel stack top.
+       If it is 0, we are already in the kernel. */
+    csrrw sp, sscratch, sp
+    bnez sp, 1f
+    
+    /* Coming from kernel: restore sp and keep sscratch as 0 */
+    csrrw sp, sscratch, sp
+    j 2f
+
+1:  /* Coming from user: sp now points to kernel stack, sscratch has user sp */
+    
+2:  /* Allocate space for struct cpu_regs (140 bytes) */
     addi sp, sp, -140
     
     /* Save general purpose registers */
@@ -60,19 +72,32 @@ vector_entry:
     sw t5, 116(sp)
     sw t6, 120(sp)
 
-    /* Original SP was sp + 140 */
+    /* Original SP was in sscratch if from user, or sp + 140 if from kernel */
+    csrr t0, sscratch
+    bnez t0, 3f
     addi t0, sp, 140
+3:
     sw t0, 4(sp)
 
     /* Save CSRs (Supervisor Mode) */
     csrr t0, sepc
-    sw t0, 132(sp)
+    sw t0, 124(sp)
     csrr t0, sstatus
-    sw t0, 132(sp)
+    sw t0, 128(sp)
     csrr t0, scause
     sw t0, 132(sp)
     csrr t0, stval
-    sw t0, 132(sp)
+    sw t0, 136(sp)
+
+    /* Set sscratch to 0 to indicate we are in kernel mode */
+    li t0, 0
+    csrw sscratch, t0
+
+    /* Setup Kernel Global Pointer */
+    .option push
+    .option norelax
+    la gp, __global_pointer$
+    .option pop
 
     /* Call C trap handler */
     mv a0, sp
@@ -83,12 +108,21 @@ ENTRY(syscall_ret)
     fence.i
 
     /* Restore CSRs (Supervisor Mode) */
-    lw t0, 132(sp)
+    lw t0, 124(sp)
     csrw sepc, t0
-    lw t0, 132(sp)
+    lw t0, 128(sp)
     csrw sstatus, t0
     
-    /* Restore general purpose registers */
+    /* Determine if we are returning to user mode */
+    /* If SPP bit (bit 8) in sstatus is 0, it's user mode */
+    andi t0, t0, 0x100
+    bnez t0, 4f
+    
+    /* Returning to user: restore kernel stack top to sscratch */
+    addi t0, sp, 140
+    csrw sscratch, t0
+
+4:  /* Restore general purpose registers */
     lw ra, 0(sp)
     lw gp, 8(sp)
     lw tp, 12(sp)
@@ -129,8 +163,8 @@ ENTRY(syscall_ret)
 bootinfo:		.word	BOOTINFO
 boot_stack:		.word	BOOTSTKTOP
 int_stack:		.word	INTSTKTOP - 0x100
-irq_nesting:	 	.word	irq_nesting_value
-init_done:	 	.word	init_done_value
+irq_nesting:		.word	irq_nesting_value
+init_done:		.word	init_done_value
 
 ENTRY(reset_entry)
     /* Disable interrupts (SIE bit) */
@@ -145,6 +179,9 @@ ENTRY(reset_entry)
     /* Setup stack */
     la sp, BOOTSTKTOP
     
+    /* Setup sscratch to 0 initially (kernel mode) */
+    csrw sscratch, zero
+
     /* Setup trap vector (Supervisor Mode) */
     la t0, vector_entry
     csrw stvec, t0
@@ -188,6 +225,7 @@ ENTRY(cpu_switch)
     lw s11, 44(a1)
     lw sp, 48(a1)
     lw ra, 52(a1)
+
     ret
 
 ENTRY(kernel_thread_entry)
@@ -201,68 +239,62 @@ ENTRY(get_status)
     csrr a0, sstatus
     ret
 
-ENTRY(sploff)
-    csrci sstatus, 2 /* Disable SIE */
-    ret
-
 ENTRY(splon)
-    csrsi sstatus, 2 /* Enable SIE */
+    csrsi sstatus, 2 /* Set SIE bit */
     ret
 
+ENTRY(sploff)
+    csrci sstatus, 2 /* Clear SIE bit */
+    ret
+
+/*
+ * Copy data from/to user space
+ */
 ENTRY(copyin)
+    /* a0: src(user), a1: dest(kernel), a2: len */
     li t0, 0
-    beqz a0, 3f     /* Check NULL source */
-    beqz a1, 3f     /* Check NULL dest */
-    beqz a2, 2f
 1:
+    bge t0, a2, 2f
     lb t1, 0(a0)
     sb t1, 0(a1)
     addi a0, a0, 1
     addi a1, a1, 1
-    addi a2, a2, -1
-    bnez a2, 1b
+    addi t0, t0, 1
+    j 1b
 2:
-    mv a0, t0
-    ret
-3:
-    li a0, 14 /* EFAULT */
+    li a0, 0
     ret
 
 ENTRY(copyout)
+    /* a0: src(kernel), a1: dest(user), a2: len */
     li t0, 0
-    beqz a0, 3f     /* Check NULL source */
-    beqz a1, 3f     /* Check NULL dest */
-    beqz a2, 2f
 1:
+    bge t0, a2, 2f
     lb t1, 0(a0)
     sb t1, 0(a1)
     addi a0, a0, 1
     addi a1, a1, 1
-    addi a2, a2, -1
-    bnez a2, 1b
+    addi t0, t0, 1
+    j 1b
 2:
-    mv a0, t0
-    ret
-3:
-    li a0, 14 /* EFAULT */
+    li a0, 0
     ret
 
 ENTRY(copyinstr)
+    /* a0: src(user), a1: dest(kernel), a2: maxlen */
     li t0, 0
-    beqz a0, 4f
-    beqz a1, 4f
-    beqz a2, 3f
 1:
+    bge t0, a2, 2f
     lb t1, 0(a0)
     sb t1, 0(a1)
-    beqz t1, 2f
+    beqz t1, 3f
     addi a0, a0, 1
     addi a1, a1, 1
-    addi a2, a2, -1
-    bnez a2, 1b
-3:
-    li t0, 36 /* ENAMETOOLONG */
+    addi t0, t0, 1
+    j 1b
 2:
+    li a0, 36 /* ENAMETOOLONG */
+3:
     mv a0, t0
     ret
 4:
@@ -277,4 +309,4 @@ init_done_value:
 
 	.end
 
-.section .note.GNU-stack,\"\",%progbits
+.section .note.GNU-stack,"",%progbits
