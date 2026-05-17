@@ -65,11 +65,18 @@ int load_elf(char* img, struct module* m)
         return -1;
     }
 
-    phdr = (Elf32_Phdr*)((paddr_t)ehdr + ehdr->e_ehsize);
+    phdr = (Elf32_Phdr*)((paddr_t)ehdr + ehdr->e_phoff);
 
     if (nr_img == 0) {
         /*  Initialize the load address */
-        load_base = (paddr_t)kvtop(phdr->p_vaddr);
+        int i;
+        Elf32_Phdr* p = phdr;
+        for (i = 0; i < (int)ehdr->e_phnum; i++, p++) {
+            if (p->p_type == PT_LOAD) {
+                load_base = (paddr_t)kvtop(p->p_vaddr);
+                break;
+            }
+        }
         if (load_base == 0) {
             DPRINTF(("Invalid load address\n"));
             return -1;

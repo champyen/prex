@@ -18,6 +18,8 @@ SECTIONS
 	} : text = 0xff
 
 	. = ALIGN(16);
+	PROVIDE(__global_pointer$ = . + 0x800);
+
 	.rodata : {
 		*(.rodata)
 		*(.rodata.*)

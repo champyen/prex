@@ -13,6 +13,8 @@
 #ifndef _RISCV_SBI_H
 #define _RISCV_SBI_H
 
+#if !defined(__ASSEMBLY__)
+
 #include <sys/types.h>
 
 struct sbiret {
@@ -65,10 +67,12 @@ static inline int sbi_console_getchar(void)
 static inline void sbi_set_timer(uint64_t stime_value)
 {
 #if __riscv_xlen == 32
-    sbi_call(SBI_EXT_0_1_SET_TIMER, 0, stime_value, stime_value >> 32, 0);
+    sbi_call(SBI_EXT_0_1_SET_TIMER, 0, (long)stime_value, (long)(stime_value >> 32), 0);
 #else
-    sbi_call(SBI_EXT_0_1_SET_TIMER, 0, stime_value, 0, 0);
+    sbi_call(SBI_EXT_0_1_SET_TIMER, 0, (long)stime_value, 0, 0);
 #endif
 }
+
+#endif /* !__ASSEMBLY__ */
 
 #endif /* !_RISCV_SBI_H */

@@ -42,4 +42,4 @@ $(TARGET):  $(OBJS) $(LIBS) $(LDSCRIPT)
 	$(LD) $(LDFLAGS) $(OUTPUT_OPTION) $(OBJS) $(LIBS) $(PLATFORM_LIBS)
 	$(ASMGEN)
 	$(SYMGEN)
-	$(STRIP) --strip-debug --strip-unneeded $@
+	# $(STRIP) --strip-debug --strip-unneeded $@

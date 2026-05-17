@@ -14,7 +14,7 @@
 
 #include <conf/config.h>
 
-#define SYSPAGE 0x80100000
+#define SYSPAGE CONFIG_SYSPAGE_BASE
 
 #define INTSTK (SYSPAGE + 0x1000)
 #define SYSSTK (SYSPAGE + 0x2000)

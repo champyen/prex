@@ -1,9 +1,8 @@
 /*
- * elf_reloc.c - RISC-V ELF relocation support
+ * elf_reloc.c - RISC-V ELF relocation support (User-space)
  */
 
 #include <sys/param.h>
-#include <boot.h>
 #include <sys/elf.h>
 
 #define R_RISCV_NONE 0
@@ -18,8 +17,6 @@
 #define R_RISCV_HI20 26
 #define R_RISCV_LO12_I 27
 #define R_RISCV_LO12_S 28
-#define R_RISCV_ADD32 35
-#define R_RISCV_SUB32 39
 #define R_RISCV_RELAX 51
 #define R_RISCV_ALIGN 52
 
@@ -27,7 +24,7 @@
  * A small LUT to store the calculated offset of HI20 relocations,
  * so they can be retrieved by the following LO12 relocations.
  */
-#define MAX_HI20 512
+#define MAX_HI20 256
 static struct {
     Elf32_Addr addr;
     int32_t offset;
@@ -73,28 +70,24 @@ int relocate_rela(Elf32_Rela* rela, Elf32_Addr sym_val, char* target_sect)
         break;
 
     case R_RISCV_HI20:
-        /* LUI type */
         offset = (int32_t)val;
         hi = (uint32_t)(offset + 0x800) >> 12;
         *where = (*where & 0x00000fff) | (hi << 12);
         break;
 
     case R_RISCV_LO12_I:
-        /* ADDI type */
         offset = (int32_t)val;
         lo = (uint32_t)offset & 0xfff;
         *where = (*where & 0x000fffff) | (lo << 20);
         break;
 
     case R_RISCV_LO12_S:
-        /* SW type */
         offset = (int32_t)val;
         lo = (uint32_t)offset & 0xfff;
         *where = (*where & 0x01fff07f) | ((lo & 0xfe0) << 20) | ((lo & 0x01f) << 7);
         break;
 
     case R_RISCV_PCREL_HI20:
-        /* AUIPC type */
         offset = (int32_t)val - (int32_t)where;
         hi = (uint32_t)(offset + 0x800) >> 12;
         *where = (*where & 0x00000fff) | (hi << 12);
@@ -102,14 +95,12 @@ int relocate_rela(Elf32_Rela* rela, Elf32_Addr sym_val, char* target_sect)
         break;
 
     case R_RISCV_PCREL_LO12_I:
-        /* Retrieve offset from LUT */
         offset = find_hi20(sym_val);
         lo = (uint32_t)offset & 0xfff;
         *where = (*where & 0x000fffff) | (lo << 20);
         break;
 
     case R_RISCV_PCREL_LO12_S:
-        /* Retrieve offset from LUT */
         offset = find_hi20(sym_val);
         lo = (uint32_t)offset & 0xfff;
         *where = (*where & 0x01fff07f) | ((lo & 0xfe0) << 20) | ((lo & 0x01f) << 7);
@@ -117,13 +108,10 @@ int relocate_rela(Elf32_Rela* rela, Elf32_Addr sym_val, char* target_sect)
 
     case R_RISCV_CALL:
     case R_RISCV_CALL_PLT:
-        /* AUIPC + JALR */
         offset = (int32_t)val - (int32_t)where;
         hi = (uint32_t)(offset + 0x800) >> 12;
         lo = (uint32_t)offset & 0xfff;
-        /* Patch auipc */
         *where = (*where & 0x00000fff) | (hi << 12);
-        /* Patch jalr */
         *(where + 1) = (*(where + 1) & 0x000fffff) | (lo << 20);
         break;
 
@@ -145,16 +133,7 @@ int relocate_rela(Elf32_Rela* rela, Elf32_Addr sym_val, char* target_sect)
                  (((offset >> 12) & 0xff) << 12);
         break;
 
-    case R_RISCV_ADD32:
-        *where += val;
-        break;
-
-    case R_RISCV_SUB32:
-        *where -= val;
-        break;
-
     default:
-        DPRINTF(("RISCV-BOOT: Unknown reloc type %d at %lx\n", type, (long)where));
         return -1;
     }
     return 0;

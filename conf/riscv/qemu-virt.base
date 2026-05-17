@@ -22,7 +22,7 @@ mmu	        IOMEM_BASE      0x00000000	0x00000000  # Location of mmio address
 memory      RAM_SIZE        0x10000000  # DRAM Size (256MB)
 memory      LOADER_TEXT     0x80000000  # Start of boot loader
 memory      KERNEL_TEXT     0x80200000  # Start of kernel
-memory      BOOTIMG_BASE    0x80002000  # Location of boot image
+memory      BOOTIMG_BASE    0x80010000  # Location of boot image
 
 #
 # Tunable parameters

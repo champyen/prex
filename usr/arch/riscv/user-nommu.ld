@@ -1,10 +1,9 @@
 /*
- * Linker script for driver (RISC-V)
+ * Linker script for user-space applications (RISC-V NOMMU)
  */
-INCLUDE config.ld
 OUTPUT_FORMAT("elf32-littleriscv")
 OUTPUT_ARCH(riscv)
-ENTRY(driver_main)
+ENTRY(_start)
 PHDRS
 {
 	text PT_LOAD FILEHDR PHDRS;
@@ -12,20 +11,20 @@ PHDRS
 }
 SECTIONS
 {
-	. = SIZEOF_HEADERS ;
+	. = SIZEOF_HEADERS;
 
 	.text : {
 		*(.text)
+		*(.text.*)
 	} : text = 0xff
 
 	. = ALIGN(4);
-
 	.rodata : {
 		*(.rodata)
 		*(.rodata.*)
 	} : text
 
-        . = ALIGN(4);
+	. = ALIGN(4);
 	.data : {
 		*(.data)
 		*(.data.*)
@@ -33,8 +32,8 @@ SECTIONS
 		*(.sdata.*)
 	} : data
 
-        . = ALIGN(4);
-	.bss . : {
+	. = ALIGN(4);
+	.bss .  : {
 		*(.sbss)
 		*(.sbss.*)
 		*(.bss)
@@ -42,5 +41,5 @@ SECTIONS
 		*(COMMON)
 	}
 
-	/DISCARD/ : { *(.comment .note .debug_*) }
+	/DISCARD/ : { *(.comment .note) }
 }

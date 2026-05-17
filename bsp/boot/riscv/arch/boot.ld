@@ -21,10 +21,12 @@ SECTIONS {
 	}
 	. = ALIGN(16);
 	.bss . : {
+		__bss = . ;
 		*(.bss)
 		*(COMMON)
+		__end = . ;
 	}
-	. = CONFIG_LOADER_TEXT + 0x1fff;
+	. = CONFIG_LOADER_TEXT + 0xffff;
 	.tail : {
 		*(.tail)
 	}
