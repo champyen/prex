@@ -2,11 +2,11 @@
 # Prex Multi-Target Strict Verification Script
 # Criteria: Must reach the interactive shell prompt [prex:/]#
 
-# Target list (RISC-V excluded for now)
-TARGETS=("arm-qemu-virt" "arm-raspi0" "arm-integrator" "x86-pc" "arm-gba")
+# Target list
+TARGETS=("arm-qemu-virt" "arm-raspi0" "arm-integrator" "x86-pc" "arm-gba" "riscv-qemu-virt")
 
 echo "=================================================="
-echo "STARTING STRICT MULTI-TARGET VERIFICATION (Legacy Targets)"
+echo "STARTING STRICT MULTI-TARGET VERIFICATION"
 echo "=================================================="
 
 # Results collection
@@ -14,7 +14,7 @@ declare -a RESULTS
 
 for TARGET in "${TARGETS[@]}"; do
     # Determine variants to test
-    if [[ "$TARGET" == "arm-gba" ]]; then
+    if [[ "$TARGET" == "arm-gba" || "$TARGET" == "riscv-qemu-virt" ]]; then
         VARIANTS=("nommu")
     else
         VARIANTS=("mmu" "nommu")
@@ -34,8 +34,10 @@ for TARGET in "${TARGETS[@]}"; do
         OPTS=""
         [[ "$VARIANT" == "mmu" ]] && OPTS="--enable-mmu"
         
-        PREFIX=""
-        if [[ "$TARGET" == "x86-pc" ]]; then
+        if [[ "$TARGET" == "riscv-qemu-virt" ]]; then
+            PREFIX="riscv64-unknown-elf"
+            QEMU="qemu-system-riscv32 -M virt -m 256M -nographic -bios none -kernel prexos.bin"
+        elif [[ "$TARGET" == "x86-pc" ]]; then
             PREFIX=""
             QEMU="qemu-system-i386 -fda floppy.img -boot a -nographic"
         else
@@ -62,6 +64,7 @@ for TARGET in "${TARGETS[@]}"; do
         # 2. Build
         echo "    Building..."
         MAKE_OPTS="-j4"
+        [[ "$TARGET" == "riscv-qemu-virt" ]] && MAKE_OPTS="-j1"
         
         LOG_BUILD="build_${TARGET}_${VARIANT}.log"
         if ! LC_ALL=C make $MAKE_OPTS all image > "$LOG_BUILD" 2>&1; then

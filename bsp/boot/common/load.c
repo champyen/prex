@@ -128,13 +128,31 @@ void load_os(void)
     if (bi->nr_tasks == 0)
         panic("No boot task found!");
 
+#ifdef __riscv__
+    /*
+     * RISC-V specific: Reserve memory for OS archive to avoid it being overwritten.
+     * This reservation also covers the bootdisk which is part of the archive.
+     */
+    i = bi->nr_rams;
+    bi->ram[i].base = (paddr_t)magic;
+    bi->ram[i].size = (size_t)round_page((paddr_t)hdr - (paddr_t)magic);
+    bi->ram[i].type = MT_RESERVED;
+    bi->nr_rams++;
+#endif
+
     /*
      * Reserve single memory block for all boot modules.
      * This includes kernel, driver, and boot tasks.
      */
     i = bi->nr_rams;
+#ifdef __riscv__
+    /* RISC-V specific: ensure reservation is page-aligned to prevent page_init panic */
+    bi->ram[i].base = trunc_page(load_start);
+    bi->ram[i].size = (size_t)round_page(load_base - load_start);
+#else
     bi->ram[i].base = load_start;
     bi->ram[i].size = (size_t)(load_base - load_start);
+#endif
     bi->ram[i].type = MT_RESERVED;
     bi->nr_rams++;
 }
@@ -196,10 +214,14 @@ static void setup_bootdisk(struct ar_hdr* hdr)
      * Reserve memory for boot disk if the image
      * was copied to RAM.
      */
+#ifndef __riscv__
+    /* For non-RISC-V, we do the reservation here.
+     * For RISC-V, it's already covered by the OS archive reservation in load_os. */
     bi->ram[bi->nr_rams].base = base;
     bi->ram[bi->nr_rams].size = size;
     bi->ram[bi->nr_rams].type = MT_BOOTDISK;
     bi->nr_rams++;
+#endif
 #endif
     DPRINTF(("bootdisk base=%lx size=%lx\n", bi->bootdisk.base, bi->bootdisk.size));
 }

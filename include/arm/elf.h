@@ -53,4 +53,9 @@
  */
 #define SHT_ARM_EXIDX 0x70000001
 
+/*
+ * Program header type
+ */
+#define PT_ARM_EXIDX 0x70000001
+
 #endif /* !_ARM_ELF_H */

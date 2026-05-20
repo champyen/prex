@@ -7,33 +7,38 @@ ENTRY(_start)
 
 SECTIONS
 {
-	. = 0;
+        . = 0;
 
-	.text : {
-		*(.text)
-		*(.text.*)
-	}
+        .text : {
+                *(.text)
+                *(.text.*)
+        }
 
-	.rodata : {
-		*(.rodata)
-		*(.rodata.*)
-	}
+        . = ALIGN(4);
+        .rodata : {
+                *(.rodata)
+                *(.rodata.*)
+                *(.srodata)
+                *(.srodata.*)
+        }
 
-	.data : {
-		__global_pointer$ = . + 0x800;
-		*(.data)
-		*(.data.*)
-		*(.sdata)
-		*(.sdata.*)
-	}
+        . = ALIGN(4);
+        .data : {
+                __global_pointer$ = . + 0x800;
+                *(.data)
+                *(.data.*)
+                *(.sdata)
+                *(.sdata.*)
+        }
 
-	.bss : {
-		*(.sbss)
-		*(.sbss.*)
-		*(.bss)
-		*(.bss.*)
-		*(COMMON)
-	}
+        . = ALIGN(4);
+        .bss : {
+                *(.sbss)
+                *(.sbss.*)
+                *(.bss)
+                *(.bss.*)
+                *(COMMON)
+        }
 
-	/DISCARD/ : { *(.comment .note) }
+        /DISCARD/ : { *(.comment .note) }
 }

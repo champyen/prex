@@ -40,7 +40,7 @@
 static int load_executable(char*, struct module*);
 static int load_relocatable(char*, struct module*);
 
-#define SHF_VALID (SHF_ALLOC | SHF_EXECINSTR | SHF_ALLOC | SHF_WRITE)
+#define SHF_VALID (SHF_ALLOC | SHF_EXECINSTR | SHF_WRITE | SHF_LINK_ORDER)
 
 static char* sect_addr[32]; /* array of section address */
 static int strshndx;        /* index of string section */
@@ -177,7 +177,7 @@ static int load_executable(char* img, struct module* m)
             }
         }
 #ifdef __arm__
-        else if (phdr->p_type == 0x70000001) { /* PT_ARM_EXIDX */
+        else if (phdr->p_type == PT_ARM_EXIDX) {
             m->exidx_start = phdr->p_vaddr;
             m->exidx_size = phdr->p_memsz;
         }
@@ -442,7 +442,7 @@ static int load_relocatable(char* img, struct module* m)
                 }
 #endif
                 break;
-            case (SHF_ALLOC | 0x08000000): /* SHF_LINK_ORDER */
+            case (SHF_ALLOC | SHF_LINK_ORDER):
                 /* exidx */
 #ifdef __arm__
                 if (shdr->sh_type == SHT_ARM_EXIDX) {

@@ -80,6 +80,7 @@ void interrupt_init(void)
     /* Set threshold to 0 to allow all */
     PLIC_S_THRESHOLD = 0;
 
-    /* Disable all interrupts in sie */
-    __asm__ volatile("csrw sie, zero");
+    /* Enable Timer and External interrupts in sie */
+    uint32_t sie = 0x220; /* STIE (bit 5) and SEIE (bit 9) */
+    __asm__ volatile("csrw sie, %0" : : "r"(sie));
 }

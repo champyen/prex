@@ -6,7 +6,26 @@
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
- * ...
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the author nor the names of any co-contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
  */
 
 #ifndef _RISCV_SYSPAGE_H
@@ -20,14 +39,15 @@
  * Memory layout for RISC-V QEMU-Virt (NOMMU)
  * 0x80000000 - 0x8000FFFF: Bootloader (64KB)
  * 0x80010000 - ...       : OS Image Archive
- * 0x80100000 - 0x8010FFFF: System Page (64KB)
+ * 0x80100000 - 0x80100FFF: M-Mode Save Area (4KB)
+ * 0x80101000 - 0x8010FFFF: System Page / Boot Info (60KB)
  */
 
-#define BOOTINFO (SYSPAGE + 0x100000)
-#define INTSTK (SYSPAGE + 0x101000)
-#define SYSSTK (SYSPAGE + 0x102000)
-#define BOOTSTK (SYSPAGE + 0x103000)
-#define BOOT_PGD (SYSPAGE + 0x105000)
+#define BOOTINFO (SYSPAGE + 0x01000)
+#define INTSTK (SYSPAGE + 0x02000)
+#define SYSSTK (SYSPAGE + 0x03000)
+#define BOOTSTK (SYSPAGE + 0x04000)
+#define BOOT_PGD (SYSPAGE + 0x06000)
 
 #define RAMBASE CONFIG_SYSPAGE_PHY_BASE
 #define BOOT_PGD_PHYS (BOOT_PGD)
@@ -40,6 +60,6 @@
 #define SYSSTKTOP (SYSSTK + SYSSTKSZ)
 #define BOOTSTKTOP (BOOTSTK + BOOTSTKSZ)
 
-#define SYSPAGESZ 0x10000
+#define SYSPAGESZ 0x20000
 
 #endif /* !_RISCV_SYSPAGE_H */

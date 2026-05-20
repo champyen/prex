@@ -51,7 +51,11 @@
 
 #include "exec.h"
 
+#ifdef __riscv__
+#define SP_ALIGN(p) ((unsigned)(p) & ~15)
+#else
 #define SP_ALIGN(p) ((unsigned)(p) & ~_ALIGNBYTES)
+#endif
 
 /* forward declarations */
 static int build_args(task_t, void*, char*, struct exec_msg*, char*, char*, void**);
@@ -354,6 +358,15 @@ static int build_args(task_t task, void* stack, char* path, struct exec_msg* msg
         argc++;
     }
 
+#ifdef __riscv__
+    /* Calculate space for argc, argv pointers, and envp pointers */
+    len = sizeof(int) + (argc + 2) * sizeof(char*) + (envc + 1) * sizeof(char*);
+    sp = SP_ALIGN(sp - len);
+
+    *(int*)sp = argc + 1;
+    argv = (char**)(sp + sizeof(int));
+    envp = (char**)(sp + sizeof(int) + (argc + 2) * sizeof(char*));
+#else
     /* envp[] */
     sp -= ((envc + 1) * sizeof(char*));
     envp = (char**)sp;
@@ -365,6 +378,7 @@ static int build_args(task_t task, void* stack, char* path, struct exec_msg* msg
     /* argc */
     sp -= sizeof(int);
     *(int*)(sp) = argc + 1;
+#endif
 
     /*
      * Build argument list

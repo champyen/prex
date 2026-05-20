@@ -17,6 +17,8 @@
 #define R_RISCV_HI20 26
 #define R_RISCV_LO12_I 27
 #define R_RISCV_LO12_S 28
+#define R_RISCV_ADD32 35
+#define R_RISCV_SUB32 39
 #define R_RISCV_RELAX 51
 #define R_RISCV_ALIGN 52
 
@@ -42,8 +44,11 @@ static int32_t find_hi20(Elf32_Addr addr)
 {
     int i;
     for (i = 0; i < MAX_HI20; i++) {
-        if (hi20_lut[i].addr == addr)
-            return hi20_lut[i].offset;
+        if (hi20_lut[i].addr == addr) {
+            int32_t off = hi20_lut[i].offset;
+            hi20_lut[i].addr = 0; /* Clear it */
+            return off;
+        }
     }
     return 0;
 }
@@ -67,6 +72,14 @@ int relocate_rela(Elf32_Rela* rela, Elf32_Addr sym_val, char* target_sect)
 
     case R_RISCV_32:
         *where = val;
+        break;
+
+    case R_RISCV_ADD32:
+        *where += val;
+        break;
+
+    case R_RISCV_SUB32:
+        *where -= val;
         break;
 
     case R_RISCV_HI20:

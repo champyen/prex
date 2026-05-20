@@ -18,13 +18,21 @@ static void bootinfo_init(void)
     bi->ram[0].type = MT_USABLE;
 
     /*
-     * Reserved: System Page
+     * Reserved: Bootloader (0x80000000 - 0x8000FFFF)
      */
-    bi->ram[1].base = CONFIG_SYSPAGE_BASE;
-    bi->ram[1].size = 0x20000; /* 128KB */
+    bi->ram[1].base = 0x80000000;
+    bi->ram[1].size = 0x10000; /* 64KB */
     bi->ram[1].type = MT_RESERVED;
 
-    bi->nr_rams = 2;
+    /*
+     * Reserved: System Page / Boot Info (0x80100000 - 0x8011FFFF)
+     * Used by M-mode trap handler state and bootinfo
+     */
+    bi->ram[2].base = 0x80100000;
+    bi->ram[2].size = 0x20000; /* 128KB */
+    bi->ram[2].type = MT_RESERVED;
+
+    bi->nr_rams = 3;
 }
 
 void startup(void)

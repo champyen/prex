@@ -230,7 +230,13 @@ static int load_reloc(Elf32_Ehdr* ehdr, task_t task, int fd, vaddr_t* entry)
 
     DPRINTF(("exec: load_reloc\n"));
 
-    /* Read section header */
+    #ifdef __riscv__
+        u_long load_off = 0;
+        vaddr_t first_text_off = 0xffffffff;
+    #endif
+
+        /* Read section header. */
+
     shdr_size = ehdr->e_shentsize * ehdr->e_shnum;
     if ((buf = malloc(shdr_size)) == NULL) {
         error = ENOMEM;
@@ -247,6 +253,19 @@ static int load_reloc(Elf32_Ehdr* ehdr, task_t task, int fd, vaddr_t* entry)
     }
 
     /* Allocate memory for text, data and bss. */
+#ifdef __riscv__
+    /* Calculate total required size with sequential packing (RISC-V specific) */
+    shdr = (Elf32_Shdr*)buf;
+    total_size = 0;
+    for (i = 0; i < ehdr->e_shnum; i++, shdr++) {
+        if (shdr->sh_flags & SHF_ALLOC) {
+            if (shdr->sh_addralign > 0)
+                total_size = (total_size + shdr->sh_addralign - 1) & ~(shdr->sh_addralign - 1);
+            total_size += shdr->sh_size;
+        }
+    }
+#else
+    /* Original Prex logic for total size (works for older ARM/x86 toolchains) */
     shdr = (Elf32_Shdr*)buf;
     total_size = 0;
     for (i = 0; i < ehdr->e_shnum; i++, shdr++) {
@@ -255,6 +274,7 @@ static int load_reloc(Elf32_Ehdr* ehdr, task_t task, int fd, vaddr_t* entry)
             break;
         }
     }
+#endif
     if (total_size == 0) {
         error = ENOEXEC;
         goto out1;
@@ -279,6 +299,48 @@ static int load_reloc(Elf32_Ehdr* ehdr, task_t task, int fd, vaddr_t* entry)
          *   shdr->sh_offset, shdr->sh_flags));
          */
         sect_addr[i] = 0;
+#ifdef __riscv__
+        if (shdr->sh_flags & SHF_ALLOC) {
+            /* Align the current load offset */
+            if (shdr->sh_addralign > 0)
+                load_off = (load_off + shdr->sh_addralign - 1) & ~(shdr->sh_addralign - 1);
+            addr = (char*)mapped + load_off;
+
+            if (shdr->sh_type == SHT_PROGBITS) {
+                if (shdr->sh_flags & SHF_EXECINSTR) {
+                    if (first_text_off == 0xffffffff)
+                        first_text_off = load_off;
+                }
+                if (shdr->sh_size > 0) {
+                    if (lseek(fd, shdr->sh_offset, SEEK_SET) < 0) {
+                        error = EIO;
+                        goto out2;
+                    }
+                    /* Read into a local buffer first for NOMMU safety (RISC-V) */
+                    void *tmp_buf = malloc(shdr->sh_size);
+                    if (tmp_buf == NULL) {
+                        error = ENOMEM;
+                        goto out2;
+                    }
+                    if (read(fd, tmp_buf, shdr->sh_size) < 0) {
+                        free(tmp_buf);
+                        error = EIO;
+                        goto out2;
+                    }
+                    memcpy(addr, tmp_buf, shdr->sh_size);
+                    free(tmp_buf);
+                }
+                sect_addr[i] = addr;
+                load_off += shdr->sh_size;
+            } else if (shdr->sh_type == SHT_NOBITS) {
+                if (shdr->sh_size > 0)
+                    memset(addr, 0, shdr->sh_size);
+                sect_addr[i] = addr;
+                load_off += shdr->sh_size;
+            }
+        }
+#else
+        /* Standard Prex logic for ARM/x86 */
 #ifdef __arm__
         if (shdr->sh_type == SHT_PROGBITS || shdr->sh_type == SHT_ARM_EXIDX) {
 #else
@@ -323,6 +385,27 @@ static int load_reloc(Elf32_Ehdr* ehdr, task_t task, int fd, vaddr_t* entry)
             goto out2;
         }
         sect_addr[i] = addr;
+#endif
+        /* Symbol table / Relocations (handled above for non-RISC-V) */
+#ifdef __riscv__
+        if (shdr->sh_type == SHT_SYMTAB || shdr->sh_type == SHT_RELA || shdr->sh_type == SHT_REL) {
+            if (shdr->sh_size > 0) {
+                if ((addr = malloc(shdr->sh_size)) == NULL) {
+                    error = ENOMEM;
+                    goto out2;
+                }
+                if (lseek(fd, shdr->sh_offset, SEEK_SET) < 0) {
+                    error = EIO;
+                    goto out2;
+                }
+                if (read(fd, addr, shdr->sh_size) < 0) {
+                    error = EIO;
+                    goto out2;
+                }
+                sect_addr[i] = addr;
+            }
+        }
+#endif
     }
 
     /* Process relocation */
@@ -336,7 +419,13 @@ static int load_reloc(Elf32_Ehdr* ehdr, task_t task, int fd, vaddr_t* entry)
             }
         }
     }
+#ifdef __riscv__
+    if (first_text_off == 0xffffffff)
+        first_text_off = 0;
+    *entry = (vaddr_t)((u_long)base + first_text_off + ehdr->e_entry);
+#else
     *entry = (vaddr_t)((u_long)mapped + ehdr->e_entry);
+#endif
     sys_debug(DBGC_FLUSHCACHE, NULL);
 out2:
     /* Release symbol table */
