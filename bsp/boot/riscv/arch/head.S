@@ -7,6 +7,11 @@
 
 #define MSTATUS_MPP_S (1 << 11)
 
+.section ".entry", "ax"
+.global _entry
+_entry:
+    j _start
+
 .section ".start", "ax"
 .global _start
 _start:
@@ -46,8 +51,8 @@ _start:
     csrw mstatus, t0
 
     /* 8. Initialize mscratch with a pointer to a save area */
-    /* Use a safe address in the reserved System Page */
-    li t0, 0x80100000
+    /* Use a safe address in the reserved System Page (first 4KB) */
+    li t0, 0x80000800
     csrw mscratch, t0
 
     /* 9. Switch to S-mode */
@@ -56,7 +61,7 @@ _start:
 /* Minimal M-mode Trap Handler (SBI Implementation) */
 .align 4
 m_trap_entry:
-    /* Save registers to m_save_area at 0x80100000 */
+    /* Save registers to m_save_area at 0x80000800 */
     csrrw t0, mscratch, t0
     sw t1, 4(t0)
     sw t2, 8(t0)
@@ -88,7 +93,8 @@ handle_s_ecall:
     sw a1, 4(t1) /* mtimecmp hi */
     sw a0, 0(t1) /* mtimecmp lo */
     
-    /* Clear STIP in mip */
+    /* Clear STIP in mip (Actually we want to CLEAR it, but it's read-only in mip) */
+    /* We just cleared mtimecmp to far future, which should clear the interrupt condition */
     li t0, 0x20
     csrc mip, t0
 

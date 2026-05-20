@@ -4,6 +4,7 @@
 
 #include <sys/param.h>
 #include <sys/bootinfo.h>
+#include <machine/syspage.h>
 #include <boot.h>
 
 static void bootinfo_init(void)
@@ -18,18 +19,19 @@ static void bootinfo_init(void)
     bi->ram[0].type = MT_USABLE;
 
     /*
-     * Reserved: Bootloader (0x80000000 - 0x8000FFFF)
+     * Reserved: System Page (0x80000000 - 0x8000FFFF)
+     * This covers M-mode jump, System Page, BootInfo, Loader Stacks, and PGT.
      */
-    bi->ram[1].base = 0x80000000;
-    bi->ram[1].size = 0x10000; /* 64KB */
+    bi->ram[1].base = CONFIG_SYSPAGE_BASE;
+    bi->ram[1].size = SYSPAGESZ;
     bi->ram[1].type = MT_RESERVED;
 
     /*
-     * Reserved: System Page / Boot Info (0x80100000 - 0x8011FFFF)
-     * Used by M-mode trap handler state and bootinfo
+     * Reserved: Bootloader (0x80010000 - 0x80013FFF)
+     * For RISC-V, the M-mode trap handler stays resident in the bootloader.
      */
-    bi->ram[2].base = 0x80100000;
-    bi->ram[2].size = 0x20000; /* 128KB */
+    bi->ram[2].base = CONFIG_LOADER_TEXT;
+    bi->ram[2].size = 0x4000; /* 16KB */
     bi->ram[2].type = MT_RESERVED;
 
     bi->nr_rams = 3;

@@ -12,17 +12,18 @@ makeoptions     LDFLAGS+= -m elf32lriscv --no-relax
 #
 # MMU Option
 #
-mmu             SYSPAGE_BASE    0x80100000  0x80100000  # Relocated to avoid bios overlap
+mmu             SYSPAGE_BASE    0x80000000  0x80000000  # Location of system page
 mmu             IOMEM_BASE      0x00000000      0x00000000  # Location of mmio address
 # mmu         CACHE
+options         CACHE
 
 #
 # Memory address
 #
 memory      RAM_SIZE        0x10000000  # DRAM Size (256MB)
-memory      LOADER_TEXT     0x80000000
+memory      LOADER_TEXT     0x80010000  # Start of boot loader (after 64KB syspage)
 memory      KERNEL_TEXT     0x80200000  # Start of kernel
-memory      BOOTIMG_BASE    0x80010000
+memory      BOOTIMG_BASE    0x80014000  # Location of boot image (LOADER_TEXT + 16KB)
 
 #
 # Tunable parameters

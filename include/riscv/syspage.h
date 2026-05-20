@@ -36,11 +36,11 @@
 #define SYSPAGE CONFIG_SYSPAGE_BASE
 
 /* 
- * Memory layout for RISC-V QEMU-Virt (NOMMU)
- * 0x80000000 - 0x8000FFFF: Bootloader (64KB)
- * 0x80010000 - ...       : OS Image Archive
- * 0x80100000 - 0x80100FFF: M-Mode Save Area (4KB)
- * 0x80101000 - 0x8010FFFF: System Page / Boot Info (60KB)
+ * Memory layout for RISC-V QEMU-Virt
+ * 0x80000000 - 0x80000FFF: M-Mode Save Area (4KB)
+ * 0x80001000 - 0x8000FFFF: System Page / Boot Info / Stacks / PGT (60KB)
+ * 0x80010000 - 0x80013FFF: Bootloader (LOADER_TEXT) (16KB padded)
+ * 0x80014000 - ...       : OS Image Archive (BOOTIMG_BASE)
  */
 
 #define BOOTINFO (SYSPAGE + 0x01000)
@@ -48,9 +48,13 @@
 #define SYSSTK (SYSPAGE + 0x03000)
 #define BOOTSTK (SYSPAGE + 0x04000)
 #define BOOT_PGD (SYSPAGE + 0x06000)
+#define BOOT_PTE0 (SYSPAGE + 0x07000)
+#define BOOT_PTE1 (SYSPAGE + 0x08000)
 
 #define RAMBASE CONFIG_SYSPAGE_PHY_BASE
-#define BOOT_PGD_PHYS (BOOT_PGD)
+#define BOOT_PGD_PHYS (RAMBASE + 0x06000)
+#define BOOT_PTE0_PHYS (RAMBASE + 0x07000)
+#define BOOT_PTE1_PHYS (RAMBASE + 0x08000)
 
 #define INTSTKSZ 0x1000
 #define SYSSTKSZ 0x1000
@@ -60,6 +64,6 @@
 #define SYSSTKTOP (SYSSTK + SYSSTKSZ)
 #define BOOTSTKTOP (BOOTSTK + BOOTSTKSZ)
 
-#define SYSPAGESZ 0x20000
+#define SYSPAGESZ 0x10000
 
 #endif /* !_RISCV_SYSPAGE_H */
