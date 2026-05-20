@@ -9,7 +9,7 @@
 #include "mips/stdarg.h"
 #elif defined(__sh__)
 #include "sh/stdarg.h"
-#elif defined(__riscv)
+#elif defined(__riscv__)
 #include "riscv/stdarg.h"
 #else
 #error architecture not supported

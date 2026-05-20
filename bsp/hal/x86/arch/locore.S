@@ -523,20 +523,4 @@ ENTRY(splon)
 	sti
 	ret
 
-/*
- * Interrupt nest counter.
- *
- * This counter is incremented in the entry of interrupt handler
- * to switch the interrupt stack. Since all interrupt handlers
- * share same one interrupt stack, each handler must pay attention
- * to the stack overflow.
- */
-	.section ".bss"
-irq_nesting:
-	.long	0
-
-/*
- * Current spl
- */
-
 .section .note.GNU-stack,"",%progbits

@@ -36,31 +36,39 @@ endif
 
 # User-space backtrace support
 ifeq ($(CONFIG_USR_BACKTRACE),y)
+ifneq ($(_KERNEL_),1)
 ifeq ($(ARCH),arm)
 # ARM Strategy: Table-driven (EABI). Frame pointer is NOT required.
-CFLAGS+=	-funwind-tables -mpoke-function-name
-LDFLAGS+=	--no-merge-exidx-entries
+CFLAGS+=        -funwind-tables -mpoke-function-name
+LDFLAGS+=       --no-merge-exidx-entries
 else
 # x86/RISC-V Strategy: Frame-pointer driven.
 # Must override the default -fomit-frame-pointer.
-CFLAGS:=	$(filter-out -fomit-frame-pointer,$(CFLAGS))
-CFLAGS+=	-fno-omit-frame-pointer
+CFLAGS:=        $(filter-out -fomit-frame-pointer,$(CFLAGS))
+CFLAGS+=        -fno-omit-frame-pointer
+endif
 endif
 endif
 
 # Kernel backtrace support
 ifeq ($(CONFIG_KERNEL_BACKTRACE),y)
+# Bootloader should be excluded from backtrace to save space (bootloader sets DEFS+=KERNEL but we can check if it's the kernel by checking if it's NOT the bootloader, but we don't have a specific bootloader variable, so we'll check if target is not bootldr, or we can just filter it inside bsp/boot/Makefile).
+# Wait, actually, let's just make sure we only enable it for sys/prex, which defines KERNEL.
+# Instead of complex logic here, let's use a new flag _CORE_KERNEL_.
+ifeq ($(_CORE_KERNEL_),1)
 ifeq ($(ARCH),arm)
 # ARM Strategy: Table-driven (EABI). Frame pointer is NOT required.
-CFLAGS+=	-funwind-tables -mpoke-function-name
-LDFLAGS+=	--no-merge-exidx-entries
+CFLAGS+=        -funwind-tables -mpoke-function-name
+LDFLAGS+=       --no-merge-exidx-entries
 else
 # x86/RISC-V Strategy: Frame-pointer driven.
 # Must override the default -fomit-frame-pointer.
-CFLAGS:=	$(filter-out -fomit-frame-pointer,$(CFLAGS))
-CFLAGS+=	-fno-omit-frame-pointer
+CFLAGS:=        $(filter-out -fomit-frame-pointer,$(CFLAGS))
+CFLAGS+=        -fno-omit-frame-pointer
 endif
 endif
+endif
+
 
 endif # _DEBUG_
 
@@ -115,9 +123,7 @@ ifndef LIBGCC_PATH
 LIBGCC_PATH := $(dir $(shell $(RAWCC) $(GCCFLAGS) -print-libgcc-file-name))
 export LIBGCC_PATH
 endif
-ifneq ($(_KERNEL_),1)
 PLATFORM_LIBS+= -L$(LIBGCC_PATH) -lgcc
-endif
 
 endif # !_GCC_MK_
 

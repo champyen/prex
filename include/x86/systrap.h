@@ -33,8 +33,7 @@
 
 #define __SYSCALL_BODY(id)                                                                                             \
     movl $(id), %eax;                                                                                                  \
-    int $0x80; \
-    ret
+    jmp __systrap
 
 #define SYSCALL_STUB(name, id)                                                                                         \
     .weak name;                                                                                                        \
@@ -53,13 +52,15 @@
 
 /*
  * C-style string macros for use in __asm__ volatile()
+ * Note: x86 system calls via __asm__ should probably use a C wrapper
+ * or call __systrap correctly if they have arguments.
+ * For now, we preserve the metadata-driven approach.
  */
 #define __STRINGIFY(x) #x
 #define __TOSTRING(x) __STRINGIFY(x)
 
 #define __SYSCALL_BODY_STR(id)                                                                                         \
     "movl $" __TOSTRING(id) ", %%eax\n"                                                                                \
-    "int $0x80\n"                                                                                                      \
-    "ret"
+    "jmp __systrap"
 
 #endif /* _X86_SYSTRAP_H */

@@ -26,6 +26,8 @@
 #define USERLIMIT 0xffffffff
 #endif
 
+#ifndef KSTACKSZ
 #define KSTACKSZ 4096
+#endif
 
 #endif /* _RISCV_MEMORY_H */

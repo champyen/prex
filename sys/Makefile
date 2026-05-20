@@ -2,7 +2,9 @@
 
 include $(SRCDIR)/mk/own.mk
 
-TARGET:=	prex
+TARGET:=        prex
+
+_CORE_KERNEL_:= 1
 
 #MAP:=		prex.map
 #DISASM:= 	prex.lst

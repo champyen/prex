@@ -9,7 +9,7 @@
 #include "mips/signal.h"
 #elif defined(__sh__)
 #include "sh/signal.h"
-#elif defined(__riscv)
+#elif defined(__riscv__)
 #include "riscv/signal.h"
 #else
 #error architecture not supported

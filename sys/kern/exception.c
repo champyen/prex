@@ -320,7 +320,6 @@ void exception_deliver(void)
                 break;
         }
         handler = self->handler;
-        DPRINTF(("exception_deliver: excno=%d handler=%lx task=%s\n", excno, (long)handler, self->name));
         if (handler == EXC_DFL) {
             DPRINTF(("Exception #%d is not handled by task.\n", excno));
             DPRINTF(("Terminate task:%s (id:%lx)\n", self->name, (long)self));

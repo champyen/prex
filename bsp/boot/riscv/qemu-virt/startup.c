@@ -11,18 +11,17 @@ static void bootinfo_init(void)
     struct bootinfo* bi = bootinfo;
 
     /*
-     * Usable: Entire DRAM
+     * Usable: Entire DRAM (starting from 0x80000000)
      */
     bi->ram[0].base = 0x80000000;
     bi->ram[0].size = CONFIG_RAM_SIZE;
     bi->ram[0].type = MT_USABLE;
 
     /*
-     * Reserved: System Page (0x80100000 - 0x80100FFF)
-     * Used by M-mode trap handler state in locore.S
+     * Reserved: System Page
      */
-    bi->ram[1].base = 0x80100000;
-    bi->ram[1].size = 0x1000; /* 4KB */
+    bi->ram[1].base = CONFIG_SYSPAGE_BASE;
+    bi->ram[1].size = 0x20000; /* 128KB */
     bi->ram[1].type = MT_RESERVED;
 
     bi->nr_rams = 2;

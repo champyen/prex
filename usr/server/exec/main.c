@@ -158,7 +158,6 @@ int main(int argc, char* argv[])
     object_t obj;
     int error;
 
-    sys_log("DEBUG: exec main\n");
     sys_log("Starting exec server\n");
 
     /* Boost thread priority. */

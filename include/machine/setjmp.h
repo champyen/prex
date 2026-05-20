@@ -9,7 +9,7 @@
 #include "mips/setjmp.h"
 #elif defined(__sh__)
 #include "sh/setjmp.h"
-#elif defined(__riscv)
+#elif defined(__riscv__)
 #include "riscv/setjmp.h"
 #else
 #error architecture not supported

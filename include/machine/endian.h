@@ -9,7 +9,7 @@
 #include "mips/endian.h"
 #elif defined(__sh__)
 #include "sh/endian.h"
-#elif defined(__riscv)
+#elif defined(__riscv__)
 #include "riscv/endian.h"
 #else
 #error architecture not supported

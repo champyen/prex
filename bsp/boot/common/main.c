@@ -51,7 +51,6 @@ typedef void (*entry_t)(void);
  */
 int main(void)
 {
-    extern char _start;
     entry_t entry;
 
     memset(bootinfo, 0, BOOTINFOSZ);
@@ -61,7 +60,6 @@ int main(void)
      */
     debug_init();
     DPRINTF(("Prex+ Boot Loader\n"));
-    DPRINTF(("_start is at %lx\n", (long)&_start));
 
     /*
      * Do platform dependent initialization.

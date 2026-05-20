@@ -33,6 +33,9 @@
 /*
  * Driver-Kernel Interface (DKI) function list.
  * Syntax: DO(index, public_name, internal_kernel_symbol)
+ *
+ * Indices 0-36 are preserved from original Prex 0.9.0 to maintain
+ * driver binary compatibility where possible.
  */
 #define FOR_EACH_DKI(DO)                                                                                               \
     DO(0, copyin, copyin)                                                                                              \
@@ -69,11 +72,11 @@
     DO(31, machine_bootinfo, machine_bootinfo)                                                                         \
     DO(32, machine_powerdown, machine_powerdown)                                                                       \
     DO(33, sysinfo, sysinfo)                                                                                           \
-    DO(34, uart_lock, hal_uart_lock)                                                                                   \
-    DO(35, uart_unlock, hal_uart_unlock)                                                                               \
-    DO(36, panic, DKI_INT_PANIC)                                                                                       \
-    DO(37, printf, DKI_INT_PRINTF)                                                                                     \
-    DO(38, dbgctl, DKI_INT_DBGCTL)
+    DO(34, panic, DKI_INT_PANIC)                                                                                       \
+    DO(35, printf, DKI_INT_PRINTF)                                                                                     \
+    DO(36, dbgctl, DKI_INT_DBGCTL)                                                                                     \
+    DO(37, uart_lock, hal_uart_lock)                                                                                   \
+    DO(38, uart_unlock, hal_uart_unlock)
 
 #define MAX_DKI 39
 

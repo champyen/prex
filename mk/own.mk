@@ -21,9 +21,11 @@ endif
 
 LINT:=		splint
 #LINT:=		lint
-RM:=		rm -f
-MV:=		mv
-CAT:=		cat
+RM:=            rm -f
+CAT:=           cat
+MV:=            mv
+CP:=            cp
+
 ifdef SHELL_PATH
 SHELL:=		$(SHELL_PATH)
 endif

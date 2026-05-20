@@ -52,8 +52,13 @@ setdefaults()
 	objcopy="objcopy"
 	objdump="objdump"
 	strip="strip"
-}
 
+	if [ "$target" = "riscv-qemu-virt" ]; then
+	        GCCFLAGS="$GCCFLAGS -march=rv32ima_zicsr_zifencei -mabi=ilp32 -mno-relax"
+	        ASFLAGS="$ASFLAGS -march=rv32ima_zicsr_zifencei -mabi=ilp32 -mno-relax"
+	        LDFLAGS="$LDFLAGS -m elf32lriscv --no-relax"
+	fi
+	}
 checkpath()
 {
 	# Input files
@@ -136,7 +141,8 @@ gettarget()
 
 	case "$arch" in
 	x86|arm|ppc|sh|mips|riscv)
-		;;
+	        ;;
+
 	*)
 		quit "Unkown target architecture: $arch"
 		;;

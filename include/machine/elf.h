@@ -9,7 +9,7 @@
 #include "mips/elf.h"
 #elif defined(__sh__)
 #include "sh/elf.h"
-#elif defined(__riscv)
+#elif defined(__riscv__)
 #include "riscv/elf.h"
 #else
 #error architecture not supported

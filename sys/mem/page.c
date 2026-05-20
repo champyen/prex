@@ -285,8 +285,11 @@ void page_init(void)
             total_size -= ram->size;
             /* FALLTHROUGH */
         case MT_RESERVED:
-            if (page_reserve(ram->base, ram->size))
+            DPRINTF(("page_init: reserving base=%lx size=%lx type=%d\n", (long)ram->base, (long)ram->size, (int)ram->type));
+            if (page_reserve(ram->base, ram->size)) {
+                printf("page_init: failed to reserve base=%lx size=%lx\n", (long)ram->base, (long)ram->size);
                 panic("page_init");
+            }
             break;
         }
     }

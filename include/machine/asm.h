@@ -9,7 +9,7 @@
 #include "mips/asm.h"
 #elif defined(__sh__)
 #include "sh/asm.h"
-#elif defined(__riscv)
+#elif defined(__riscv__)
 #include "riscv/asm.h"
 #else
 #error architecture not supported

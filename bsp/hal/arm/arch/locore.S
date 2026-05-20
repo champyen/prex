@@ -82,7 +82,7 @@ int_stack:		.word	INTSTKTOP - 0x100
 irq_mode_stack:		.word	INTSTKTOP
 sys_mode_stack:		.word	SYSSTKTOP
 abort_mode_stack:	.word	ABTSTKTOP
-irq_nesting:	 	.word	irq_nesting_value
+irq_nesting_ptr:	.word	irq_nesting
 init_done:	 	.word	init_done_value
 #ifdef CONFIG_MMU
 reload_pc_target:	.word	reload_pc
@@ -258,7 +258,7 @@ ENTRY(interrupt_entry)
 	stmia	sp, {r0-r14}^		/* Push r0-r14 */
 	nop				/* Instruction gap for stm^ */
 
-	ldr	r4, irq_nesting   	/* Increment IRQ nesting level */
+	ldr	r4, irq_nesting_ptr   	/* Increment IRQ nesting level */
 	ldr	r5, [r4]		/* r5: Previous nesting level */
 	add	r0, r5, #1
  	str	r0, [r4]
@@ -547,19 +547,6 @@ ENTRY(splon)
 	bic	r0, r0, #0xc0
 	msr	cpsr_c, r0
 	mov	pc, lr
-
-/*
- * Interrupt nest counter.
- */
-	.section ".bss"
-irq_nesting_value:
-	.long	0
-
-/*
- * Current spl
- */
-curspl_value:
-	.long	0
 
 /*
  * Init flag for debug

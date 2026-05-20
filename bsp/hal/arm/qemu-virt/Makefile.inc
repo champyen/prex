@@ -5,7 +5,6 @@
 
 SRCS:=          arm/arch/armv7-a/locore.S \
                 arm/qemu-virt/locore.S \
-                arm/arch/div.c \
                 arm/arch/armv7-a/cpufunc.c \
                 arm/arch/armv7-a/clock.c \
                 arm/arch/cpu.c \

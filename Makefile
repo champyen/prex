@@ -13,7 +13,7 @@ sys: bsp
 usr: sys
 $(TARGET): bsp $(SUBDIR)
 
-all: $(BIN_IMG) $(DISK_IMG) $(TARGET)
+all: $(BIN_IMG) $(DISK_IMG)
 
 # Add volume artifacts to clean list
 CLEANFILES+= $(BIN_IMG) $(DISK_IMG)
