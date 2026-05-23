@@ -24,8 +24,8 @@ void context_set(context_t ctx, int type, register_t val)
         /* Reset minimum user mode registers */
         u = ctx->uregs;
         memset(u, 0, sizeof(*u));
-        /* Initial status for Supervisor Mode (SPP=1, SPIE=1) */
-        u->status = 0x00000120; /* SPP=1 (Bit 8), SPIE=1 (Bit 5) */
+        /* Initial status for Supervisor Mode (SPP=1, SPIE=1, SUM=1) */
+        u->status = 0x00040120; /* SPP=1 (Bit 8), SPIE=1 (Bit 5), SUM=1 (Bit 18) */
         break;
 
     case CTX_KENTRY:
@@ -44,16 +44,18 @@ void context_set(context_t ctx, int type, register_t val)
         u = ctx->uregs;
         u->epc = (uint32_t)val;
         u->ra = 0;
-        /* Status for User Mode (SPP=0, SPIE=1) */
-        u->status = 0x00000020;
+        /* Status for User Mode (SPP=0, SPIE=1, SUM=1) */
+        u->status = 0x00040020;
         break;
 
     case CTX_USTACK:
         /* User mode stack pointer */
         u = ctx->uregs;
-        /* RISC-V ABI: 16-byte alignment and argc=1 setup */
+        /* RISC-V ABI: 16-byte alignment and argc=1 setup for NOMMU */
         u->sp = (uint32_t)val & ~15;
+#ifndef CONFIG_MMU
         *(int*)(u->sp) = 1;
+#endif
         break;
 
     case CTX_UARG:
@@ -74,6 +76,9 @@ void context_save(context_t ctx)
     copyout(cur, sav, sizeof(struct cpu_regs));
 
     ctx->saved_regs = sav;
+
+    /* Adjust user stack pointer to protect the saved context */
+    cur->sp = (uint32_t)sav;
 }
 
 void context_restore(context_t ctx)

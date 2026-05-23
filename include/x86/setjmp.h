@@ -38,5 +38,6 @@
 #define _X86_SETJMP_H
 
 #define _JBLEN 10
+#define _JB_SP 2
 
 #endif /* !_X86_SETJMP_H */

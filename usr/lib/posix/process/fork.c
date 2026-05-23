@@ -123,7 +123,7 @@ static pid_t fork(void)
         /*
          * Start child task
          */
-        thread_load(t, __child_entry, NULL);
+        thread_load(t, __child_entry, (void*)((long*)__fork_env)[_JB_SP]);
         thread_resume(t);
     } else {
         /*
@@ -140,7 +140,6 @@ static pid_t fork(void)
 
 static void __child_entry(void)
 {
-
     longjmp(__fork_env, 1);
     /* NOTREACHED */
 }

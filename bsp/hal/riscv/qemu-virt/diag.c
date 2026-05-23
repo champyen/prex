@@ -8,7 +8,7 @@
 #include <mmu.h>
 #include <smp.h>
 
-#define UART_BASE 0x10000000
+#define UART_BASE CONFIG_NS16550_BASE
 
 #define UART_THR (*(volatile uint8_t*)(UART_BASE + 0))
 #define UART_LSR (*(volatile uint8_t*)(UART_BASE + 5))

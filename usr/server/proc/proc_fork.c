@@ -169,6 +169,7 @@ void cleanup(struct proc* p)
 
 static int vfork_start(struct proc* p)
 {
+#ifndef CONFIG_MMU
     void* stack;
 
     /*
@@ -183,6 +184,7 @@ static int vfork_start(struct proc* p)
 
     memcpy(stack, p->p_stackbase, DFLSTKSZ);
     p->p_stacksaved = stack;
+#endif
 
     p->p_vforked = 1;
     return 0;
@@ -192,11 +194,13 @@ void vfork_end(struct proc* p)
 {
 
     DPRINTF(("proc: vfork_end org=%x saved=%x\n", p->p_stackbase, p->p_stacksaved));
+#ifndef CONFIG_MMU
     /*
      * Restore parent's stack
      */
     memcpy(p->p_stackbase, p->p_stacksaved, DFLSTKSZ);
     vm_free(p->p_task, p->p_stacksaved);
+#endif
 
     /*
      * Resume parent

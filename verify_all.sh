@@ -14,26 +14,26 @@ declare -a RESULTS
 
 for TARGET in "${TARGETS[@]}"; do
     # Determine variants to test
-    if [[ "$TARGET" == "arm-gba" || "$TARGET" == "riscv-qemu-virt" ]]; then
+    if [[ "$TARGET" == "arm-gba" ]]; then
         VARIANTS=("nommu")
     else
         VARIANTS=("mmu" "nommu")
     fi
-    
+
     for VARIANT in "${VARIANTS[@]}"; do
         echo ">>> Testing $TARGET ($VARIANT)..."
-        
+
         # 0. Aggressive Clean BEFORE Configure
         echo "    Cleaning workspace..."
         find . -name "*.o" -delete
         find . -name "*.a" -delete
         find . -name "Makefile.dep" -delete
         rm -f prexos.bin prexos_full.bin floppy.img disk.img bin.img
-        
+
         # 1. Configure
         OPTS=""
         [[ "$VARIANT" == "mmu" ]] && OPTS="--enable-mmu"
-        
+
         if [[ "$TARGET" == "riscv-qemu-virt" ]]; then
             PREFIX="riscv64-unknown-elf"
             QEMU="qemu-system-riscv32 -M virt -m 256M -nographic -bios none -kernel prexos.bin"
@@ -65,7 +65,7 @@ for TARGET in "${TARGETS[@]}"; do
         echo "    Building..."
         MAKE_OPTS="-j4"
         [[ "$TARGET" == "riscv-qemu-virt" ]] && MAKE_OPTS="-j1"
-        
+
         LOG_BUILD="build_${TARGET}_${VARIANT}.log"
         if ! LC_ALL=C make $MAKE_OPTS all image > "$LOG_BUILD" 2>&1; then
             echo "    BUILD FAILED! Check $LOG_BUILD"
@@ -88,7 +88,7 @@ for TARGET in "${TARGETS[@]}"; do
             echo "    Booting..."
             LOG_QEMU="qemu_${TARGET}_${VARIANT}.log"
             timeout 30 $QEMU < /dev/null > "$LOG_QEMU" 2>&1 || true
-            
+
             if grep -q "\[prex:/" "$LOG_QEMU"; then
                 echo "    BOOT SUCCESS: Shell prompt detected."
                 RESULTS+=("$TARGET|$VARIANT|PASS")

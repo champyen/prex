@@ -15,5 +15,6 @@
 #define _JBLEN 14
 #define _JB_MAGIC__SETJMP 0x52563332
 #define _JB_MAGIC_SETJMP 0x52563333
+#define _JB_SP 1
 
 #endif /* !_RISCV_SETJMP_H */

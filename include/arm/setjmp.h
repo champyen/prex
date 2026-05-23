@@ -40,5 +40,6 @@
 #define _JBLEN (29 - 13)
 #define _JB_MAGIC__SETJMP 0x4278f500
 #define _JB_MAGIC_SETJMP 0x4278f501
+#define _JB_SP 10
 
 #endif /* !_ARM_SETJMP_H */

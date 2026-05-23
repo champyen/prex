@@ -10,6 +10,7 @@
 #include <context.h>
 #include <trap.h>
 #include <cpu.h>
+#include <mmu.h>
 
         .section ".text","ax"
 
@@ -108,6 +109,8 @@ ENTRY(syscall_ret)
     lw t0, 124(sp)
     csrw sepc, t0
     lw t0, 128(sp)
+    li t1, 1 << 18      /* Force SUM=1 */
+    or t0, t0, t1
     csrw sstatus, t0
     
     /* Returning to user mode? Check SPP (bit 8) */
@@ -165,6 +168,10 @@ init_done:		.word	init_done_value
 ENTRY(reset_entry)
     /* Disable interrupts */
     csrci sstatus, 2
+
+    /* Enable SUM (Supervisor User Memory access) */
+    li t0, 1 << 18
+    csrs sstatus, t0
     
     /* Setup Global Pointer */
     .option push
@@ -183,6 +190,62 @@ ENTRY(reset_entry)
     csrw stvec, t0
     
     call main
+
+#ifdef CONFIG_MMU
+    /*
+     * Initialize boot page directory (BOOT_PGD_PHYS)
+     * Zero fill 4KB.
+     */
+    li t0, BOOT_PGD_PHYS
+    li t1, 1024
+1:
+    sw zero, 0(t0)
+    addi t0, t0, 4
+    addi t1, t1, -1
+    bnez t1, 1b
+
+    /*
+     * Map first 4MB of RAM (0x80000000) to 0x80000000 (1:1 and KERNBASE)
+     * BOOT_PGD_PHYS[512] = (0x80000000 >> 2) | PTE_SYSTEM
+     * PPN for 0x80000000 is 0x80000.
+     * PPN << 10 = 0x20000000.
+     * PTE_SYSTEM = PTE_V | PTE_R | PTE_W | PTE_X | PTE_A | PTE_D = 0xcf.
+     * Entry = 0x200000cf.
+     */
+    li t0, BOOT_PGD_PHYS + 2048
+    li t1, 0x200000cf
+    sw t1, 0(t0)
+
+    /*
+     * Map UART0 (0x10000000) to 0x10000000 (1:1) for early console
+     * BOOT_PGD_PHYS[64] = (0x10000000 >> 2) | (PTE_V | PTE_R | PTE_W | PTE_A | PTE_D)
+     * PPN for 0x10000000 is 0x10000.
+     * PPN << 10 = 0x04000000.
+     * Flags = 0xc7.
+     * Entry = 0x040000c7.
+     */
+    li t0, BOOT_PGD_PHYS + 256      /* 64 * 4 = 256 */
+    li t1, 0x040000c7
+    sw t1, 0(t0)
+
+    /*
+     * Enable MMU
+     * satp = (1 << 31) | (BOOT_PGD_PHYS >> 12)
+     * MODE = 1 (Sv32)
+     */
+    li t0, BOOT_PGD_PHYS
+    srli t0, t0, 12
+    li t1, 1 << 31
+    or t0, t0, t1
+    csrw satp, t0
+
+    /*
+     * Flush TLB and synchronize
+     */
+    sfence.vma
+    fence rw, rw
+    fence.i
+#endif
 
 /*
  * Context switch
