@@ -66,4 +66,4 @@ $(TARGET): $(OBJS) $(HAL) $(LDSCRIPT)
 	$(LD) $(LDFLAGS) $(OUTPUT_OPTION) $(HAL) $(OBJS) $(PLATFORM_LIBS)
 	$(ASMGEN)
 	$(SYMGEN)
-	$(STRIP) -s $@
+	#$(STRIP) -s $@

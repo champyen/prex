@@ -8,6 +8,7 @@
 #include <irq.h>
 #include <hal.h>
 #include <machine/sbi.h>
+#include <riscv_csr.h>
 
 static uint64_t get_time(void)
 {
@@ -46,11 +47,19 @@ void clock_init(void)
     /* Program first interrupt */
     set_timer(get_time() + ticks_per_intr);
 
-    /* Enable S-mode timer interrupt (bit 5 in sie) */
-    __asm__ volatile("csrs sie, %0" : : "r"(0x20));
+    /* Enable timer interrupt (bit 5/7 in CSR_IE) */
+#ifdef CONFIG_SMODE
+    __asm__ volatile("csrs " STR(CSR_IE) ", %0" : : "r"(0x20));
+#else
+    __asm__ volatile("csrs " STR(CSR_IE) ", %0" : : "r"(0x80));
+#endif
 
-    /* Enable interrupts globally (bit 1 in sstatus) */
-    __asm__ volatile("csrsi sstatus, 2");
+    /* Enable interrupts globally (bit 1/3 in CSR_STATUS) */
+#ifdef CONFIG_SMODE
+    __asm__ volatile("csrsi " STR(CSR_STATUS) ", 2");
+#else
+    __asm__ volatile("csrsi " STR(CSR_STATUS) ", 8");
+#endif
 
     DPRINTF(("Clock rate: %d ticks/sec\n", CONFIG_HZ));
 }

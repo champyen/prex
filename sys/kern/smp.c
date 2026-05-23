@@ -40,6 +40,8 @@
 #include <sched.h>
 #include <irq.h>
 
+extern void kernel_start(void);
+
 #ifdef CONFIG_SMP
 struct cpu_control cpu_table[CONFIG_SMP_NCPUS];
 char ap_boot_stacks[CONFIG_SMP_NCPUS][KSTACKSZ];

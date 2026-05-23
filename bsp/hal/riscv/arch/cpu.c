@@ -6,13 +6,21 @@
 #include <hal.h>
 #include <cpufunc.h>
 #include <context.h>
+#include <riscv_csr.h>
 
 void splx(int s)
 {
+#ifdef CONFIG_SMODE
     if (s & 0x2) /* SIE is bit 1 */
         splon();
     else
         sploff();
+#else
+    if (s & 0x8) /* MIE is bit 3 */
+        splon();
+    else
+        sploff();
+#endif
 }
 
 int spl0(void)
@@ -39,11 +47,11 @@ void cpu_init(void)
     /* Initialize kernel_task safely */
     kernel_task.handler = EXC_DFL;
 
-    /* Initialize sstatus: Disable FPU (FS=0), Disable interrupts */
+    /* Initialize status: Disable FPU (FS=0), Disable interrupts */
     /* FS is bits 13-14. Mask = ~(3 << 13) = 0xffff9fff */
     uint32_t status;
-    __asm__ volatile("csrr %0, sstatus" : "=r"(status));
+    __asm__ volatile("csrr %0, " STR(CSR_STATUS) : "=r"(status));
     status &= ~0x6000;
-    __asm__ volatile("csrw sstatus, %0" : : "r"(status));
+    __asm__ volatile("csrw " STR(CSR_STATUS) ", %0" : : "r"(status));
 }
 

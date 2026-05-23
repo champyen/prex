@@ -29,6 +29,7 @@
 
 #ifndef __ASSEMBLY__
 #include <sys/types.h>
+#include <riscv_csr.h>
 
 typedef uint32_t* pgd_t;
 typedef uint32_t* pte_t;
@@ -55,8 +56,9 @@ static inline void mmu_invalidate_tlb_by_vaddr(vaddr_t va)
 
 static inline void set_satp(uint32_t satp)
 {
+#ifdef CONFIG_SMODE
     __asm__ __volatile__(
-        "csrw satp, %0\n"
+        "csrw " STR(CSR_SATP) ", %0\n"
         "sfence.vma x0, x0\n"
         "fence rw, rw\n"
         "fence.i\n"
@@ -64,6 +66,7 @@ static inline void set_satp(uint32_t satp)
         : "r" (satp)
         : "memory"
     );
+#endif
 }
 #endif /* !__ASSEMBLY__ */
 

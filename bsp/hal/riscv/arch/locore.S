@@ -11,6 +11,7 @@
 #include <trap.h>
 #include <cpu.h>
 #include <mmu.h>
+#include <riscv_csr.h>
 
         .section ".text","ax"
 
@@ -27,14 +28,14 @@ ENTRY(kernel_start)
 	.align 4
 vector_entry:
     /* Check if we came from user mode */
-    csrrw sp, sscratch, sp
+    csrrw sp, CSR_SCRATCH, sp
     bnez sp, 1f
     
     /* Coming from kernel */
-    csrrw sp, sscratch, sp
+    csrrw sp, CSR_SCRATCH, sp
     j 2f
 
-1:  /* Coming from user: sp now points to kernel stack, sscratch has user sp */
+1:  /* Coming from user: sp now points to kernel stack, CSR_SCRATCH has user sp */
     
 2:  /* Allocate 144-byte frame (16-byte aligned) */
     addi sp, sp, -144
@@ -71,26 +72,26 @@ vector_entry:
     sw t5, 116(sp)
     sw t6, 120(sp)
 
-    /* Original SP was in sscratch if from user, or sp + 144 if from kernel */
-    csrr t0, sscratch
+    /* Original SP was in CSR_SCRATCH if from user, or sp + 144 if from kernel */
+    csrr t0, CSR_SCRATCH
     bnez t0, 3f
     addi t0, sp, 144
 3:
     sw t0, 4(sp)
 
     /* Save CSRs (Supervisor Mode) */
-    csrr t0, sepc
+    csrr t0, CSR_EPC
     sw t0, 124(sp)
-    csrr t0, sstatus
+    csrr t0, CSR_STATUS
     sw t0, 128(sp)
-    csrr t0, scause
+    csrr t0, CSR_CAUSE
     sw t0, 132(sp)
-    csrr t0, stval
+    csrr t0, CSR_TVAL
     sw t0, 136(sp)
 
-    /* Set sscratch to 0 for kernel mode */
+    /* Set CSR_SCRATCH to 0 for kernel mode */
     li t0, 0
-    csrw sscratch, t0
+    csrw CSR_SCRATCH, t0
 
     /* Setup Global Pointer */
     .option push
@@ -107,19 +108,26 @@ ENTRY(syscall_ret)
 
     /* Restore CSRs */
     lw t0, 124(sp)
-    csrw sepc, t0
+    csrw CSR_EPC, t0
     lw t0, 128(sp)
+#ifdef CONFIG_SMODE
     li t1, 1 << 18      /* Force SUM=1 */
     or t0, t0, t1
-    csrw sstatus, t0
+#endif
+    csrw CSR_STATUS, t0
     
-    /* Returning to user mode? Check SPP (bit 8) */
-    andi t0, t0, 0x100
+    /* Returning to user mode? Check privilege bit */
+#ifdef CONFIG_SMODE
+    andi t0, t0, 0x100  /* Check SPP (bit 8) */
+#else
+    li t1, 0x1800       /* Check MPP (bits 11-12) */
+    and t0, t0, t1
+#endif
     bnez t0, 4f
     
-    /* User mode: Restore kernel stack pointer to sscratch */
+    /* User mode: Restore kernel stack pointer to CSR_SCRATCH */
     addi t0, sp, 144
-    csrw sscratch, t0
+    csrw CSR_SCRATCH, t0
 
 4:  /* Restore general purpose registers */
     lw ra, 0(sp)
@@ -167,11 +175,17 @@ init_done:		.word	init_done_value
 
 ENTRY(reset_entry)
     /* Disable interrupts */
+#ifdef CONFIG_SMODE
     csrci sstatus, 2
+#else
+    csrci mstatus, 8
+#endif
 
     /* Enable SUM (Supervisor User Memory access) */
+#ifdef CONFIG_SMODE
     li t0, 1 << 18
     csrs sstatus, t0
+#endif
     
     /* Setup Global Pointer */
     .option push
@@ -182,12 +196,15 @@ ENTRY(reset_entry)
     /* Setup stack */
     la sp, BOOTSTKTOP
     
-    /* Setup sscratch */
-    csrw sscratch, zero
+    /* Initialize tp to 0 */
+    li tp, 0
+
+    /* Setup CSR_SCRATCH */
+    csrw CSR_SCRATCH, zero
 
     /* Setup trap vector */
     la t0, vector_entry
-    csrw stvec, t0
+    csrw CSR_TVEC, t0
     
 #ifdef CONFIG_MMU
     /*
@@ -243,7 +260,7 @@ ENTRY(reset_entry)
     srli t0, t0, 12
     li t1, 1 << 31
     or t0, t0, t1
-    csrw satp, t0
+    csrw CSR_SATP, t0
 
     /*
      * Flush TLB and synchronize
@@ -296,15 +313,23 @@ ENTRY(kernel_thread_entry)
     jr s0
 
 ENTRY(get_status)
-    csrr a0, sstatus
+    csrr a0, CSR_STATUS
     ret
 
 ENTRY(splon)
+#ifdef CONFIG_SMODE
     csrsi sstatus, 2
+#else
+    csrsi mstatus, 8
+#endif
     ret
 
 ENTRY(sploff)
+#ifdef CONFIG_SMODE
     csrci sstatus, 2
+#else
+    csrci mstatus, 8
+#endif
     ret
 
 ENTRY(copyin)

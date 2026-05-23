@@ -8,6 +8,7 @@
 #include <mmu.h>
 #include <cpu.h>
 #include <cpufunc.h>
+#include <riscv_csr.h>
 
 static pgd_t boot_pgd = (pgd_t)BOOT_PGD;
 
@@ -147,11 +148,14 @@ void mmu_switch(pgd_t pgd)
     uint32_t satp = (1U << 31) | (phys >> 12); // Sv32 mode
     uint32_t current_satp;
 
-    __asm__ __volatile__("csrr %0, satp" : "=r"(current_satp));
+#ifdef CONFIG_SMODE
+    __asm__ __volatile__("csrr %0, " STR(CSR_SATP) : "=r"(current_satp));
 
     if (satp != current_satp) {
-        set_satp(satp);
+        __asm__ __volatile__("csrw " STR(CSR_SATP) ", %0" : : "r"(satp));
+        __asm__ __volatile__("sfence.vma");
     }
+#endif
 }
 
 /*

@@ -9,6 +9,7 @@ SRCS:=          riscv/arch/locore.S \
                 riscv/arch/context.c \
                 riscv/arch/clock.c \
                 riscv/arch/interrupt.c \
+                riscv/arch/smp.c \
                 riscv/qemu-virt/machdep.c \
                 riscv/qemu-virt/diag.c
 
