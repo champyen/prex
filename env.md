@@ -11,6 +11,8 @@
   $ ./configure --target=$TARGET --cross-prefix=arm-none-eabi [--enable-mmu]
   * x86 targets
   $ ./configure --target=$TARGET [--enable-mmu]
+  * RISC-V targets
+  $ ./configure --target=$TARGET --cross-prefix=riscv64-unknown-elf [--enable-mmu]
 
 2. build & clean
 * to build
@@ -48,15 +50,19 @@ $ timeout 15 \
 * riscv-qemu-virt
 $ timeout 15 \
   qemu-system-riscv32 -M virt -m 256M -bios none -kernel prexos.bin -nographic \
+  -drive if=none,file=disk.img,id=drv0,format=raw -device virtio-blk-device,drive=drv0 \
+  -drive if=none,file=bin.img,id=drv1,format=raw -device virtio-blk-device,drive=drv1 \
+  -device virtio-sound-device,audiodev=audio0 -audiodev none,id=audio0 \
+  -netdev user,id=net0 -device virtio-net-device,netdev=net0 \
   > qemu.log 2>&1 & sleep 16 && cat qemu.log
 
 # tiered volumes (ARFS/FATFS)
 Prex+ supports multiple volumes:
 1. prexos.bin: Core boot volume (ARFS), contains kernel and basic servers.
 2. bin.img: Secondary volume (ARFS), usually mounted at /bin. 
-   Attached as drv1 (vd1) in QEMU for arm-qemu-virt.
+   Attached as drv1 (vd1) in QEMU for arm-qemu-virt and riscv-qemu-virt.
 3. disk.img: Tertiary volume (FATFS), usually mounted at /usr.
-   Attached as drv0 (vd0) in QEMU for arm-qemu-virt.
+   Attached as drv0 (vd0) in QEMU for arm-qemu-virt and riscv-qemu-virt.
 
 # disk image build
 You don't need to request sudo from me, the following tools to manipulate disk image can be used without sudo

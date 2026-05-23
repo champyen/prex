@@ -6,11 +6,12 @@
 #include <kernel.h>
 #include <hal.h>
 #include <irq.h>
+#include <sched.h>
 #include <cpufunc.h>
 #include <context.h>
 #include <locore.h>
 
-#define PLIC_BASE 0x0c000000
+#define PLIC_BASE CONFIG_PLIC_BASE
 
 /* 
  * PLIC Registers for QEMU Virt (RV32)
@@ -51,6 +52,8 @@ void riscv_irq_handler(uint32_t cause)
 {
     int irq;
 
+    sched_lock();
+
     if (cause == 9) {
         /* Supervisor External Interrupt */
         irq = PLIC_S_CLAIM;
@@ -62,6 +65,8 @@ void riscv_irq_handler(uint32_t cause)
         /* Supervisor Timer Interrupt */
         irq_handler(0);
     }
+
+    sched_unlock();
 }
 
 void interrupt_init(void)

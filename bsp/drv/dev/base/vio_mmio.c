@@ -43,6 +43,18 @@ extern int vio_audio_attach(vaddr_t base, int irq);
 extern int vio_net_attach(vaddr_t base, int irq);
 #endif
 
+#if defined(__arm__)
+#define VIO_MMIO_SLOTS   32
+#define VIO_MMIO_SPACING 0x200
+#define VIO_MMIO_IRQ(i)  (48 + (i))
+#elif defined(__riscv)
+#define VIO_MMIO_SLOTS   8
+#define VIO_MMIO_SPACING 0x1000
+#define VIO_MMIO_IRQ(i)  (1 + (i))
+#else
+#error "Unsupported architecture for VirtIO MMIO"
+#endif
+
 static int vio_mmio_init(struct driver* self)
 {
     vaddr_t base;
@@ -53,18 +65,16 @@ static int vio_mmio_init(struct driver* self)
     printf("VirtIO MMIO scan...\n");
 
     /*
-     * Scan from high to low address to match QEMU's device assignment order.
-     * Ref: https://lists.libreplanet.org/archive/html/qemu-devel/2015-01/msg04406.html
-     * TODO: Implement a robust identification method (e.g. UUID) for real hardware.
+     * Scan the VirtIO slots from high to low to match standard device assignment order.
      */
-    for (int i = 31; i >= 0; i--) {
-        base = CONFIG_VIO_MMIO_BASE + (i * 0x200);
+    for (int i = VIO_MMIO_SLOTS - 1; i >= 0; i--) {
+        base = CONFIG_VIO_MMIO_BASE + (i * VIO_MMIO_SPACING);
         magic = bus_read_32(base + VIO_MMIO_MAGIC_ID);
 
         if (magic == VIO_MMIO_MAGIC_VALUE) {
             dev_id = bus_read_32(base + VIO_MMIO_DEV_ID);
             uint32_t ver = bus_read_32(base + VIO_MMIO_VER);
-            irq = 48 + i; // QEMU virt SPI 16+i (48+i)
+            irq = VIO_MMIO_IRQ(i);
 
             switch (dev_id) {
 #ifdef CONFIG_VIO_BLOCK

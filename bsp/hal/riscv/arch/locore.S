@@ -189,8 +189,6 @@ ENTRY(reset_entry)
     la t0, vector_entry
     csrw stvec, t0
     
-    call main
-
 #ifdef CONFIG_MMU
     /*
      * Initialize boot page directory (BOOT_PGD_PHYS)
@@ -217,7 +215,7 @@ ENTRY(reset_entry)
     sw t1, 0(t0)
 
     /*
-     * Map UART0 (0x10000000) to 0x10000000 (1:1) for early console
+     * Map UART0 (0x10000000) to 0x10000000 (1:1) for early physical access
      * BOOT_PGD_PHYS[64] = (0x10000000 >> 2) | (PTE_V | PTE_R | PTE_W | PTE_A | PTE_D)
      * PPN for 0x10000000 is 0x10000.
      * PPN << 10 = 0x04000000.
@@ -225,6 +223,14 @@ ENTRY(reset_entry)
      * Entry = 0x040000c7.
      */
     li t0, BOOT_PGD_PHYS + 256      /* 64 * 4 = 256 */
+    li t1, 0x040000c7
+    sw t1, 0(t0)
+
+    /*
+     * Map UART0 to CONFIG_NS16550_BASE (0x10000000 + CONFIG_IOMEM_BASE) for early virtual access
+     * Index = (0x10000000 + CONFIG_IOMEM_BASE) >> 22
+     */
+    li t0, BOOT_PGD_PHYS + (((0x10000000 + CONFIG_IOMEM_BASE) >> 22) * 4)
     li t1, 0x040000c7
     sw t1, 0(t0)
 
@@ -246,6 +252,8 @@ ENTRY(reset_entry)
     fence rw, rw
     fence.i
 #endif
+
+    call main
 
 /*
  * Context switch

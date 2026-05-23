@@ -36,7 +36,11 @@ for TARGET in "${TARGETS[@]}"; do
 
         if [[ "$TARGET" == "riscv-qemu-virt" ]]; then
             PREFIX="riscv64-unknown-elf"
-            QEMU="qemu-system-riscv32 -M virt -m 256M -nographic -bios none -kernel prexos.bin"
+            QEMU="qemu-system-riscv32 -M virt -m 256M -nographic -bios none -kernel prexos.bin \
+                  -drive if=none,file=disk.img,id=drv0,format=raw -device virtio-blk-device,drive=drv0 \
+                  -drive if=none,file=bin.img,id=drv1,format=raw -device virtio-blk-device,drive=drv1 \
+                  -device virtio-sound-device,audiodev=audio0 -audiodev none,id=audio0 \
+                  -netdev user,id=net0 -device virtio-net-device,netdev=net0"
         elif [[ "$TARGET" == "x86-pc" ]]; then
             PREFIX=""
             QEMU="qemu-system-i386 -fda floppy.img -boot a -nographic"
@@ -87,7 +91,7 @@ for TARGET in "${TARGETS[@]}"; do
 
             echo "    Booting..."
             LOG_QEMU="qemu_${TARGET}_${VARIANT}.log"
-            timeout 30 $QEMU < /dev/null > "$LOG_QEMU" 2>&1 || true
+            timeout 15 $QEMU < /dev/null > "$LOG_QEMU" 2>&1 || true
 
             if grep -q "\[prex:/" "$LOG_QEMU"; then
                 echo "    BOOT SUCCESS: Shell prompt detected."

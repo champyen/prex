@@ -10,3 +10,5 @@ SRCS-$(CONFIG_WSCONS)+=	dev/base/wscons.c
 ifeq ($(DEBUG),1)
 SRCS-$(CONFIG_KD)+=	dev/base/kd.c
 endif
+
+SRCS-$(CONFIG_VIO_MMIO)+= dev/base/vio_mmio.c

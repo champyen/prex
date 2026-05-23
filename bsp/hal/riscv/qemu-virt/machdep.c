@@ -25,6 +25,10 @@ static struct mmumap mmumap_table[] = {
     {CONFIG_PLIC_BASE, CONFIG_PLIC_PHY_BASE, 0x00400000, VMT_IO}, // Map 4MB of PLIC
     /* UART */
     {CONFIG_NS16550_BASE, CONFIG_NS16550_PHY_BASE, 0x00001000, VMT_IO}, // Map 4KB of UART
+    /* VirtIO MMIO */
+#ifdef CONFIG_VIO_MMIO
+    {CONFIG_VIO_MMIO_BASE, CONFIG_VIO_MMIO_PHY_BASE, 0x00008000, VMT_IO}, // Map 8 VirtIO slots (32KB)
+#endif
     {0, 0, 0, 0}
 };
 #endif

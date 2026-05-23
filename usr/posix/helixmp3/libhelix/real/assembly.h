@@ -162,11 +162,8 @@ static ALWAYS_INLINE int FASTABS(int x)
 
 static ALWAYS_INLINE int CLZ(int x)
 {
-	int count;
-
-	__asm__ __volatile__("clz %0, %1" : "=r" (count) : "r" (x));
-
-	return count;
+	if (x == 0) return 32;
+	return __builtin_clz(x);
 }
 
 static ALWAYS_INLINE Word64 MADD64(Word64 sum, int a, int b)

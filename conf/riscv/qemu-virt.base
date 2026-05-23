@@ -13,7 +13,7 @@ makeoptions     LDFLAGS+= -m elf32lriscv --no-relax
 # MMU Option
 #
 mmu             SYSPAGE_BASE    0x80000000  0x80000000  # Location of system page
-mmu             IOMEM_BASE      0x00000000      0x00000000  # Location of mmio address
+mmu             IOMEM_BASE      0xC0000000      0x00000000  # Location of mmio address
 # mmu         CACHE
 options         CACHE
 
@@ -52,9 +52,10 @@ options         BOOTDISK        # Disk for /boot directory
 # General setup
 #
 options         POSIX           # POSIX support
+options         SNDIO           # Audio server
+options         NET             # Network support
 options         CMDBOX          # Core utilities
 options         DEBUG           # Debugging options
-options         CACHE
 
 #
 # Diagnostic options
@@ -68,6 +69,7 @@ options         FIFOFS          # FIFO & Pipe
 options         DEVFS           # Device file system
 options         RAMFS           # RAM file system
 options         ARFS            # Archive file system
+options 	FATFS		# FAT file system
 
 #
 # Power management
@@ -84,6 +86,11 @@ device          cons            # System console
 device          rtc             # Real time clock
 device          serial          # Logical serial
 device          ns16550         # NS16550 serial
+device          audio           # Generic Audio
+device          vio_mmio        # VirtIO MMIO bus
+device          vio_audio       # VirtIO Audio
+device          vio_block       # VirtIO Block
+device          vio_net         # VirtIO Net
 
 #
 # Hardware configurations
@@ -93,6 +100,7 @@ options     PLIC_BASE=0x0c000000
 options     NS16550_BASE=0x10000000
 options         NS16550_IRQ=10
 options     NS16550=y
+options     VIO_MMIO_BASE=0x10001000
 
 #
 # Command box
@@ -125,3 +133,6 @@ command         init
 
 # Math library
 math            fdlibm
+
+# Extra samples
+#options 	SQLITE
