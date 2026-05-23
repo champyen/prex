@@ -6,24 +6,54 @@
 #include <boot.h>
 #include <sys/elf.h>
 
-#define R_RISCV_NONE 0
-#define R_RISCV_32 1
-#define R_RISCV_BRANCH 16
-#define R_RISCV_JAL 17
-#define R_RISCV_CALL 18
-#define R_RISCV_CALL_PLT 19
-#define R_RISCV_PCREL_HI20 23
-#define R_RISCV_PCREL_LO12_I 24
-#define R_RISCV_PCREL_LO12_S 25
-#define R_RISCV_HI20 26
-#define R_RISCV_LO12_I 27
-#define R_RISCV_LO12_S 28
-#define R_RISCV_ADD32 35
-#define R_RISCV_SUB32 39
-#define R_RISCV_RELAX 51
-#define R_RISCV_ALIGN 52
+#define R_RISCV_NONE            0
+#define R_RISCV_32              1
+#define R_RISCV_64              2
+#define R_RISCV_RELATIVE        3
+#define R_RISCV_COPY            4
+#define R_RISCV_JUMP_SLOT       5
+#define R_RISCV_BRANCH          16
+#define R_RISCV_JAL             17
+#define R_RISCV_CALL            18
+#define R_RISCV_CALL_PLT        19
+#define R_RISCV_GOT_HI20        20
+#define R_RISCV_PCREL_HI20      23
+#define R_RISCV_PCREL_LO12_I    24
+#define R_RISCV_PCREL_LO12_S    25
+#define R_RISCV_HI20            26
+#define R_RISCV_LO12_I          27
+#define R_RISCV_LO12_S          28
+#define R_RISCV_TPREL_HI20      29
+#define R_RISCV_TPREL_LO12_I    30
+#define R_RISCV_TPREL_LO12_S    31
+#define R_RISCV_TPREL_ADD       32
+#define R_RISCV_ADD8            33
+#define R_RISCV_ADD16           34
+#define R_RISCV_ADD32           35
+#define R_RISCV_ADD64           36
+#define R_RISCV_SUB8            37
+#define R_RISCV_SUB16           38
+#define R_RISCV_SUB32           39
+#define R_RISCV_SUB64           40
+#define R_RISCV_GNU_VTINHERIT   41
+#define R_RISCV_GNU_VTENTRY     42
+#define R_RISCV_ALIGN           43
+#define R_RISCV_RVC_BRANCH      44
+#define R_RISCV_RVC_JUMP        45
+#define R_RISCV_RVC_LUI         46
+#define R_RISCV_GPREL_I         47
+#define R_RISCV_GPREL_S         48
+#define R_RISCV_TPREL_I         49
+#define R_RISCV_TPREL_S         50
+#define R_RISCV_RELAX           51
+#define R_RISCV_SUB6            52
+#define R_RISCV_SET6            53
+#define R_RISCV_SET8            54
+#define R_RISCV_SET16           55
+#define R_RISCV_SET32           56
+#define R_RISCV_32_PCREL        57
 
-/* 
+/*
  * A small LUT to store the calculated offset of HI20 relocations,
  * so they can be retrieved by the following LO12 relocations.
  */
@@ -133,7 +163,7 @@ int relocate_rela(Elf32_Rela* rela, Elf32_Addr sym_val, char* target_sect)
 
     case R_RISCV_BRANCH:
         offset = (int32_t)val - (int32_t)where;
-        *where = (*where & 0x01fff07f) | 
+        *where = (*where & 0x01fff07f) |
                  (((offset >> 12) & 0x01) << 31) |
                  (((offset >> 5) & 0x3f) << 25) |
                  (((offset >> 1) & 0x0f) << 8) |
@@ -142,7 +172,7 @@ int relocate_rela(Elf32_Rela* rela, Elf32_Addr sym_val, char* target_sect)
 
     case R_RISCV_JAL:
         offset = (int32_t)val - (int32_t)where;
-        *where = (*where & 0x0000007f) | 
+        *where = (*where & 0x0000007f) |
                  (((offset >> 20) & 0x01) << 31) |
                  (((offset >> 1) & 0x3ff) << 21) |
                  (((offset >> 11) & 0x01) << 20) |
@@ -155,6 +185,38 @@ int relocate_rela(Elf32_Rela* rela, Elf32_Addr sym_val, char* target_sect)
 
     case R_RISCV_SUB32:
         *where -= val;
+        break;
+
+    case R_RISCV_32_PCREL:
+        *where = val - (Elf32_Addr)where;
+        break;
+
+    case R_RISCV_SUB8:
+        *(uint8_t *)where = (*(uint8_t *)where) - (uint8_t)(val);
+        break;
+
+    case R_RISCV_SUB16:
+        *(uint16_t *)where = (*(uint16_t *)where) - (uint16_t)(val);
+        break;
+
+    case R_RISCV_SUB6:
+        *(uint8_t *)where = (*(uint8_t *)where & 0xc0) | (((*(uint8_t *)where & 0x3f) - (val & 0x3f)) & 0x3f);
+        break;
+
+    case R_RISCV_SET6:
+        *(uint8_t *)where = (*(uint8_t *)where & 0xc0) | (val & 0x3f);
+        break;
+
+    case R_RISCV_SET8:
+        *(uint8_t *)where = (uint8_t)val;
+        break;
+
+    case R_RISCV_SET16:
+        *(uint16_t *)where = (uint16_t)val;
+        break;
+
+    case R_RISCV_SET32:
+        *(uint32_t *)where = (uint32_t)val;
         break;
 
     default:
