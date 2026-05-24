@@ -173,7 +173,76 @@ int_stack:		.word	INTSTKTOP - 0x100
 irq_nesting:		.word	irq_nesting_value
 init_done:		.word	init_done_value
 
+#ifdef CONFIG_SMP
+    /*
+     * Secondary hart entry point
+     * a0 = hartid
+     * a1 = opaque (0)
+     */
+ENTRY(ap_reset_entry)
+    /* Disable interrupts */
+#ifdef CONFIG_SMODE
+    csrci sstatus, 2
+#else
+    csrci mstatus, 8
+#endif
+
+    /* Setup Global Pointer */
+    .option push
+    .option norelax
+    la gp, __global_pointer$
+    .option pop
+
+    /* 
+     * Get local cpu_control
+     * tp = &cpu_table[hartid]
+     * sizeof(struct cpu_control) = 24 = 16 + 8
+     */
+    la t0, cpu_table
+    slli t1, a0, 4      /* t1 = id * 16 */
+    slli t2, a0, 3      /* t2 = id * 8 */
+    add t1, t1, t2      /* t1 = id * 24 */
+    add tp, t0, t1
+
+#ifdef CONFIG_MMU
+    /* Enable MMU using the same boot page directory as BSP */
+    li t0, BOOT_PGD_PHYS
+    srli t0, t0, 12
+    li t1, 1 << 31
+    or t0, t0, t1
+    csrw CSR_SATP, t0
+    sfence.vma
+    fence rw, rw
+    fence.i
+#endif
+
+    /* Setup stack for AP */
+    la t0, ap_boot_stacks
+    li t1, 768          /* KSTACKSZ */
+    addi a1, a0, 1      /* stack_top = stacks[id+1] */
+    
+    /* Manual multiply: t1 = a1 * 768 = a1 * (512 + 256) */
+    slli t2, a1, 9      /* t2 = a1 * 512 */
+    slli t3, a1, 8      /* t3 = a1 * 256 */
+    add t1, t2, t3
+    
+    add sp, t0, t1
+    addi sp, sp, -16
+
+    /* Jump to C entry */
+    call smp_ap_boot
+#endif
+
 ENTRY(reset_entry)
+    /* Get hartid */
+#ifdef CONFIG_SMODE
+    /* In S-mode, we might be here with a0 = hartid from SBI */
+#else
+    csrr a0, mhartid
+#endif
+    bnez a0, ap_reset_entry
+
+
     /* Disable interrupts */
 #ifdef CONFIG_SMODE
     csrci sstatus, 2
@@ -196,11 +265,18 @@ ENTRY(reset_entry)
     /* Setup stack */
     la sp, BOOTSTKTOP
     
-    /* Initialize tp to 0 */
-    li tp, 0
-
     /* Setup CSR_SCRATCH */
     csrw CSR_SCRATCH, zero
+
+    /* Clear BSS */
+    la t0, __bss
+    la t1, __end
+    bgeu t0, t1, 2f
+1:
+    sw zero, 0(t0)
+    addi t0, t0, 4
+    bltu t0, t1, 1b
+2:
 
     /* Setup trap vector */
     la t0, vector_entry
@@ -268,6 +344,10 @@ ENTRY(reset_entry)
     sfence.vma
     fence rw, rw
     fence.i
+#endif
+
+#ifdef CONFIG_SMP
+    la tp, cpu_table
 #endif
 
     call main

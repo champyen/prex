@@ -47,6 +47,13 @@ static inline struct sbiret sbi_call(long ext, long fid, long arg0, long arg1, l
 #define SBI_EXT_BASE 0x10
 #define SBI_EXT_TIME 0x54494D45
 #define SBI_EXT_SRST 0x53525354
+#define SBI_EXT_HSM  0x48534D
+
+/* SBI HSM Function IDs */
+#define SBI_HSM_HART_START   0x0
+#define SBI_HSM_HART_STOP    0x1
+#define SBI_HSM_HART_GET_STATUS 0x2
+#define SBI_HSM_HART_SUSPEND 0x3
 
 /* SBI Function IDs for Base Extension */
 #define SBI_EXT_BASE_GET_SPEC_VERSION 0x0

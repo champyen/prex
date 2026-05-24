@@ -7,6 +7,8 @@
 #include <cpufunc.h>
 #include <riscv_csr.h>
 
+#include <machine/sbi.h>
+
 #ifdef CONFIG_SMP
 
 /*
@@ -14,8 +16,15 @@
  */
 int hal_cpu_start(int cpuid, paddr_t entry)
 {
-    /* To be implemented in Stage 2 */
+#ifdef CONFIG_SMODE
+    struct sbiret ret;
+    /* SBI HSM HART_START: ext=0x48534D, fid=0, hartid, start_addr, opaque */
+    ret = sbi_call(SBI_EXT_HSM, SBI_HSM_HART_START, cpuid, (long)entry, 0);
+    return (int)ret.error;
+#else
+    /* Bare-metal start logic (e.g., Pico 2 SIO) would go here */
     return -1;
+#endif
 }
 
 /*

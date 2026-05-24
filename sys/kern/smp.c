@@ -41,6 +41,7 @@
 #include <irq.h>
 
 extern void kernel_start(void);
+extern void ap_reset_entry(void);
 
 #ifdef CONFIG_SMP
 struct cpu_control cpu_table[CONFIG_SMP_NCPUS];
@@ -107,12 +108,10 @@ void smp_start_aps(void)
 
         memory_barrier();
 
-        /* Wake up the AP using PSCI */
-        int ret = hal_cpu_start(i, ((paddr_t)kvtop(&kernel_start)) & ~1UL);
+        /* Wake up the AP using platform mechanism (SBI HSM / SIO) */
+        int ret = hal_cpu_start(i, kvtop(&ap_reset_entry));
         if (ret == 0) {
             started_count++;
-        } else {
-            DPRINTF(("Failed to start CPU %d, returned %d\n", i, ret));
         }
     }
 
@@ -120,8 +119,6 @@ void smp_start_aps(void)
         memory_barrier();
     }
     memory_barrier();
-
-    DPRINTF(("All CPUs have initialized hardware. Kernel ready for SMP.\n"));
 }
 
 /*
@@ -132,7 +129,6 @@ void smp_activate(void)
     memory_barrier();
     smp_active = 1;
     memory_barrier();
-    DPRINTF(("SMP is now active.\n"));
 }
 
 /*
