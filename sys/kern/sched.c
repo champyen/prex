@@ -241,7 +241,7 @@ static void sched_setrun(thread_t t)
  * threads. For other scheduling reason, the current thread is
  * inserted into the tail of the run queue.
  */
-static void sched_swtch(void)
+void sched_swtch(void)
 {
     thread_t prev, next;
 

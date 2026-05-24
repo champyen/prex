@@ -389,6 +389,9 @@ ENTRY(cpu_switch)
     ret
 
 ENTRY(kernel_thread_entry)
+#ifdef CONFIG_SMP
+    call sched_bkl_unlock
+#endif
     mv a0, s1
     jr s0
 

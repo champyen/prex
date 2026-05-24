@@ -46,6 +46,7 @@ static inline struct sbiret sbi_call(long ext, long fid, long arg0, long arg1, l
 #define SBI_EXT_0_1_CONSOLE_GETCHAR 0x2
 #define SBI_EXT_BASE 0x10
 #define SBI_EXT_TIME 0x54494D45
+#define SBI_EXT_IPI  0x735049
 #define SBI_EXT_SRST 0x53525354
 #define SBI_EXT_HSM  0x48534D
 

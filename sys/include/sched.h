@@ -72,6 +72,7 @@ void sched_unsleep(thread_t, int);
 void sched_yield(void);
 void sched_suspend(thread_t);
 void sched_resume(thread_t);
+void sched_swtch(void);
 void sched_tick(void);
 void sched_start(thread_t, int, int);
 void sched_stop(thread_t);
