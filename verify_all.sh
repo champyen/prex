@@ -3,7 +3,13 @@
 # Criteria: Must reach the interactive shell prompt [prex:/]#
 
 # Target list
-TARGETS=("arm-qemu-virt" "arm-raspi0" "arm-integrator" "x86-pc" "arm-gba" "riscv-qemu-virt")
+ALL_TARGETS=("arm-qemu-virt" "arm-raspi0" "arm-integrator" "x86-pc" "arm-gba" "riscv-qemu-virt")
+
+if [ -n "$1" ]; then
+    TARGETS=("$1")
+else
+    TARGETS=("${ALL_TARGETS[@]}")
+fi
 
 echo "=================================================="
 echo "STARTING STRICT MULTI-TARGET VERIFICATION"
@@ -14,8 +20,12 @@ declare -a RESULTS
 
 for TARGET in "${TARGETS[@]}"; do
     # Determine variants to test
-    if [[ "$TARGET" == "arm-gba" ]]; then
+    if [ -n "$2" ]; then
+        VARIANTS=("$2")
+    elif [[ "$TARGET" == "arm-gba" ]]; then
         VARIANTS=("nommu")
+    elif [[ "$TARGET" == "arm-qemu-virt" ]]; then
+        VARIANTS=("mmu" "nommu" "mmu-smp" "nommu-smp")
     else
         VARIANTS=("mmu" "nommu")
     fi
@@ -32,7 +42,8 @@ for TARGET in "${TARGETS[@]}"; do
 
         # 1. Configure
         OPTS=""
-        [[ "$VARIANT" == "mmu" ]] && OPTS="--enable-mmu"
+        [[ "$VARIANT" == "mmu" || "$VARIANT" == "mmu-smp" ]] && OPTS="$OPTS --enable-mmu"
+        [[ "$VARIANT" == *"smp"* ]] && OPTS="$OPTS --enable-smp"
 
         if [[ "$TARGET" == "riscv-qemu-virt" ]]; then
             PREFIX="riscv64-unknown-elf"
@@ -47,10 +58,12 @@ for TARGET in "${TARGETS[@]}"; do
         else
             PREFIX="arm-none-eabi"
             if [[ "$TARGET" == "arm-qemu-virt" ]]; then
-                QEMU="qemu-system-arm -M virt -m 256M -kernel prexos.bin -nographic \
+                SMP_OPTS=""
+                [[ "$VARIANT" == *"smp"* ]] && SMP_OPTS="-smp 4"
+                QEMU="qemu-system-arm -M virt -m 256M -kernel prexos.bin -nographic $SMP_OPTS \
                       -drive if=none,file=disk.img,id=drv0,format=raw -device virtio-blk-device,drive=drv0 \
                       -drive if=none,file=bin.img,id=drv1,format=raw -device virtio-blk-device,drive=drv1 \
-                      -device virtio-sound-device,audiodev=audio0 -audiodev pa,id=audio0 \
+                      -device virtio-sound-device,audiodev=audio0 -audiodev none,id=audio0 \
                       -netdev user,id=net0 -device virtio-net-device,netdev=net0"
             elif [[ "$TARGET" == "arm-raspi0" ]]; then
                 QEMU="qemu-system-arm -M raspi0 -kernel prexos_full.bin -nographic"

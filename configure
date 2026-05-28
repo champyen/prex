@@ -19,6 +19,7 @@ usage()
 	echo "	--cc=CC			use CC as C compiler"
 	echo "	--mem-size=SIZE		overwrite default RAM_SIZE (e.g. 256M, 1G)"
 	echo "	--enable-mmu		enable MMU support"
+	echo "	--enable-smp		enable SMP support"
 	echo "	--no-debug		disable all debug features"
 
 	exit 1
@@ -34,6 +35,7 @@ setdefaults()
 {
 	target=""
 	enable_mmu=0
+	enable_smp=0
 	prefix=""
 	srcdir=`pwd`
 	SYSPAGE_BASE=0
@@ -103,6 +105,9 @@ parseargs()
 			;;
 		--enable-mmu)
 			enable_mmu=1
+			;;
+		--enable-smp)
+			enable_smp=1
 			;;
 		--cross-prefix)
 			prefix=$optarg
@@ -523,6 +528,10 @@ main()
 	if [ $enable_mmu -eq 1 ]; then
 		echo "#define CONFIG_MMU y" >> $CONFIG_H
 		echo "CONFIG_MMU=y" >> $CONFIG_MK
+	fi
+	if [ $enable_smp -eq 1 ]; then
+		echo "#define CONFIG_SMP y" >> $CONFIG_H
+		echo "CONFIG_SMP=y" >> $CONFIG_MK
 	fi
 
 	parseconfig $CONFIG_IN

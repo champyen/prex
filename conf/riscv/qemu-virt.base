@@ -44,8 +44,7 @@ options         RISCV           # Processor arch
 options         RV32            # 32-bit RISC-V
 options         SMODE           # Run in Supervisor mode
 options         QEMU_VIRT       # Platform
-#options                SMP             # Symmetric Multiprocessing
-#options                SMP_NCPUS=4     # Number of CPUs
+options         SMP_NCPUS=4     # Number of CPUs
 #options        FPU                     # Floating point unit
 options         BOOTDISK        # Disk for /boot directory
 

@@ -97,12 +97,12 @@ ENTRY(reset_entry)
 #ifdef CONFIG_SMP
 	/*
 	 * Check CPU ID.
-	 * APs (CPU ID != 0) jump to ap_entry.
+	 * APs (CPU ID != 0) jump to ap_reset_entry.
 	 */
 	mrc	p15, 0, r0, c0, c0, 5
 	and	r0, r0, #0xff
 	cmp	r0, #0
-	bne	ap_entry
+	bne	ap_reset_entry
 #endif
 	/*
 	 * Setup stack pointer for each processor mode
@@ -470,7 +470,7 @@ ENTRY(unused_entry)
  * Secondary CPU entry point
  * r0: cpuid (already set in reset_entry)
  */
-ENTRY(ap_entry)
+ENTRY(ap_reset_entry)
 	/*
 	 * Load AP-specific stack.
 	 * sp = &ap_boot_stacks[cpuid][KSTACKSZ]

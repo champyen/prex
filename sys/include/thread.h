@@ -81,13 +81,14 @@ struct thread
 #include <cpu_control.h>
 #include <cpu.h>
 
+extern struct thread idle_thread;
+
 #ifdef CONFIG_SMP
 #define curthread (hal_get_cpu_control()->active_thread)
 #define irq_nesting (hal_get_cpu_control()->nest_count)
 #define curspl (hal_get_cpu_control()->spl_level)
 
 #else /* !CONFIG_SMP */
-extern struct thread idle_thread;
 extern thread_t curthread;
 extern int irq_nesting;
 extern int curspl;
