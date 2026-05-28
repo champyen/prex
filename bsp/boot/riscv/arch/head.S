@@ -193,7 +193,8 @@ m_trap_exit:
 
 s_mode_entry:
     la sp, BOOTSTKTOP
-    csrr t0, mhartid
+    /* hartid is in a0 */
+    mv t0, a0
     bnez t0, 3f
     la t0, __bss
     la t1, __end

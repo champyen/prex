@@ -41,6 +41,7 @@ struct cpu_control
     int spl_level;                /* current spl level */
     void* int_stack;              /* interrupt stack */
     int cpu_id;                   /* CPU identifier */
-};
+    long padding[10];             /* Pad to 64 bytes (cache line) */
+} __attribute__((aligned(64)));
 
 #endif /* !_CPU_CONTROL_H */

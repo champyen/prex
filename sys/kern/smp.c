@@ -44,10 +44,30 @@ extern void kernel_start(void);
 extern void ap_reset_entry(void);
 
 #ifdef CONFIG_SMP
-struct cpu_control cpu_table[CONFIG_SMP_NCPUS];
+struct cpu_control cpu_table[CONFIG_SMP_NCPUS] = {
+    {
+        .active_thread = &idle_thread,
+        .idle_thread = &idle_thread,
+        .nest_count = 0,
+        .spl_level = 15,
+        .int_stack = (void*)(INTSTKTOP - 0x100),
+        .cpu_id = 0,
+        .padding = {0},
+    }
+};
 char ap_boot_stacks[CONFIG_SMP_NCPUS][KSTACKSZ];
 #else
-struct cpu_control cpu_table[1];
+struct cpu_control cpu_table[1] = {
+    {
+        .active_thread = &idle_thread,
+        .idle_thread = &idle_thread,
+        .nest_count = 0,
+        .spl_level = 15,
+        .int_stack = (void*)(INTSTKTOP - 0x100),
+        .cpu_id = 0,
+        .padding = {0},
+    }
+};
 #endif
 
 static volatile int ready_count = 0;

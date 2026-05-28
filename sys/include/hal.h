@@ -133,8 +133,8 @@ void machine_bootinfo(struct bootinfo**);
 void clock_init(void);
 void clock_ap_init(void);
 
-int hal_cpu_start(int, paddr_t);
-void hal_cpu_send_ipi(int, int);
+int hal_cpu_start(uint32_t, paddr_t);
+void hal_cpu_send_ipi(uint32_t, uint32_t);
 void interrupt_cpu_init(void);
 
 #ifdef DEBUG

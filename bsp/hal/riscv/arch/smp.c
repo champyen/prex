@@ -14,12 +14,12 @@
 /*
  * Start secondary CPU.
  */
-int hal_cpu_start(int cpuid, paddr_t entry)
+int hal_cpu_start(uint32_t cpuid, paddr_t entry)
 {
 #ifdef CONFIG_SMODE
     struct sbiret ret;
     /* SBI HSM HART_START: ext=0x48534D, fid=0, hartid, start_addr, opaque */
-    ret = sbi_call(SBI_EXT_HSM, SBI_HSM_HART_START, cpuid, (long)entry, 0);
+    ret = sbi_call(SBI_EXT_HSM, SBI_HSM_HART_START, (long)cpuid, (long)entry, 0);
     return (int)ret.error;
 #else
     /* Bare-metal start logic (e.g., Pico 2 SIO) would go here */
@@ -30,7 +30,7 @@ int hal_cpu_start(int cpuid, paddr_t entry)
 /*
  * Send IPI to other CPUs.
  */
-void hal_cpu_send_ipi(int mask, int vector)
+void hal_cpu_send_ipi(uint32_t mask, uint32_t vector)
 {
 #ifdef CONFIG_SMODE
     /* 
@@ -39,7 +39,7 @@ void hal_cpu_send_ipi(int mask, int vector)
      * If mask is 0, it means all other CPUs in Prex context.
      * We pass mask as a0 and 0 as a1 to target specific harts.
      */
-    sbi_call(SBI_EXT_IPI, 0, mask, 0, 0);
+    sbi_call(SBI_EXT_IPI, 0, (long)mask, 0, 0);
 #else
     /* Bare-metal CLINT MSIP write would go here */
 #endif

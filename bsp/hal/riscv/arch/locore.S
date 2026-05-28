@@ -20,6 +20,11 @@
  */
 ENTRY(kernel_start)
     fence.i
+    /* 
+     * Identify as BSP (hart 0).
+     * The bootloader might not pass a0 correctly.
+     */
+    li a0, 0
 	j	reset_entry
 
 /*
@@ -196,12 +201,10 @@ ENTRY(ap_reset_entry)
     /* 
      * Get local cpu_control
      * tp = &cpu_table[hartid]
-     * sizeof(struct cpu_control) = 24 = 16 + 8
+     * sizeof(struct cpu_control) = 64 (aligned)
      */
     la t0, cpu_table
-    slli t1, a0, 4      /* t1 = id * 16 */
-    slli t2, a0, 3      /* t2 = id * 8 */
-    add t1, t1, t2      /* t1 = id * 24 */
+    slli t1, a0, 6      /* t1 = id * 64 */
     add tp, t0, t1
 
 #ifdef CONFIG_MMU
@@ -240,7 +243,12 @@ ENTRY(reset_entry)
 #else
     csrr a0, mhartid
 #endif
+#ifdef CONFIG_SMP
     bnez a0, ap_reset_entry
+#else
+    /* Non-BSP harts should park if SMP is not enabled */
+    bnez a0, 1f
+#endif
 
 
     /* Disable interrupts */
@@ -249,7 +257,11 @@ ENTRY(reset_entry)
 #else
     csrci mstatus, 8
 #endif
+    j 2f
 
+1:  wfi
+    j 1b
+2:
     /* Enable SUM (Supervisor User Memory access) */
 #ifdef CONFIG_SMODE
     li t0, 1 << 18
