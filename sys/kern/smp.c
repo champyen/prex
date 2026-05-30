@@ -43,6 +43,10 @@
 extern void kernel_start(void);
 extern void ap_reset_entry(void);
 
+#ifndef IPI_IRQ
+#define IPI_IRQ 0
+#endif
+
 #ifdef CONFIG_SMP
 struct cpu_control cpu_table[CONFIG_SMP_NCPUS] = {
     {
@@ -55,7 +59,7 @@ struct cpu_control cpu_table[CONFIG_SMP_NCPUS] = {
         .padding = {0},
     }
 };
-char ap_boot_stacks[CONFIG_SMP_NCPUS][KSTACKSZ];
+char ap_boot_stacks[CONFIG_SMP_NCPUS][KSTACKSZ] __attribute__((aligned(16)));
 #else
 struct cpu_control cpu_table[1] = {
     {
@@ -82,9 +86,6 @@ static int ipi_isr(void* arg)
     return INT_DONE;
 }
 
-/*
- * Early SMP initialization for BSP.
- */
 void smp_init_early(void)
 {
     struct cpu_control* cpu = &cpu_table[0];
@@ -110,12 +111,12 @@ void smp_start_aps(void)
     int i;
 
     /* Register SGI 0 for IPI */
-    irq_attach(0, IPL_HIGH, 0, ipi_isr, IST_NONE, NULL);
+    irq_attach(IPI_IRQ, IPL_HIGH, 0, ipi_isr, IST_NONE, NULL);
 
     atomic_inc(&ready_count);
 
     int started_count = 1;
-    DPRINTF(("Starting %d secondary CPUs...\n", CONFIG_SMP_NCPUS - 1));
+    DPRINTF(("Starting %d secondary CPUs... IPI_IRQ=%d\n", CONFIG_SMP_NCPUS - 1, IPI_IRQ));
     for (i = 1; i < CONFIG_SMP_NCPUS; i++) {
         thread_t t = thread_create_idle();
 

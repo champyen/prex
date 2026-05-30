@@ -33,12 +33,10 @@ int hal_cpu_start(uint32_t cpuid, paddr_t entry)
 void hal_cpu_send_ipi(uint32_t mask, uint32_t vector)
 {
 #ifdef CONFIG_SMODE
-    /* 
-     * SBI IPI Extension (0x735049), Function 0: SEND_IPI
-     * a0 = hart_mask, a1 = hart_mask_base
-     * If mask is 0, it means all other CPUs in Prex context.
-     * We pass mask as a0 and 0 as a1 to target specific harts.
-     */
+    if (mask == 0) {
+        uint32_t cpuid = hal_cpu_id();
+        mask = ((1 << CONFIG_SMP_NCPUS) - 1) & ~(1 << cpuid);
+    }
     sbi_call(SBI_EXT_IPI, 0, (long)mask, 0, 0);
 #else
     /* Bare-metal CLINT MSIP write would go here */
@@ -48,15 +46,7 @@ void hal_cpu_send_ipi(uint32_t mask, uint32_t vector)
 /*
  * Initialize interrupt controller for secondary CPU.
  */
-void interrupt_cpu_init(void)
-{
-    /* 
-     * Standard RISC-V interrupt setup.
-     * Specific PLIC context setup is handled in interrupt.c
-     */
-    extern void plic_cpu_init(void);
-    plic_cpu_init();
-}
+
 
 /*
  * Initialize timer for secondary CPU.

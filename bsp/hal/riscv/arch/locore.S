@@ -11,8 +11,11 @@
 #include <trap.h>
 #include <cpu.h>
 #include <mmu.h>
+#define LOCORE
+#include <sys/param.h>
 #include <riscv_csr.h>
 
+        .option norelax
         .section ".text","ax"
 
 /*
@@ -32,24 +35,61 @@ ENTRY(kernel_start)
  */
 	.align 4
 vector_entry:
-    /* Check if we came from user mode */
-    csrrw sp, CSR_SCRATCH, sp
-    bnez sp, 1f
-    
-    /* Coming from kernel */
-    csrrw sp, CSR_SCRATCH, sp
-    j 2f
+    /* Swap tp and CSR_SCRATCH.
+     * tp = &riscv_cpu, CSR_SCRATCH = user_tp (if from user)
+     * tp = &cpu_control, CSR_SCRATCH = &riscv_cpu (if from kernel)
+     */
+    csrrw tp, CSR_SCRATCH, tp
 
-1:  /* Coming from user: sp now points to kernel stack, CSR_SCRATCH has user sp */
+    /* Save original t0 to riscv_cpu->temp_t0 (offset 12) */
+    sw t0, 12(tp)
+
+    /* Check if we came from Kernel Mode directly using sstatus.SPP */
+    csrr t0, CSR_STATUS
+    andi t0, t0, 0x100          /* Check SPP (bit 8) */
+    bnez t0, kernel_trap
+
+    /* Coming from user */
+    /* Save sp temporarily in riscv_cpu->user_sp */
+    sw sp, 4(tp)
     
-2:  /* Allocate 144-byte frame (16-byte aligned) */
+    /* Load kernel_sp from riscv_cpu->kernel_sp */
+    lw sp, 0(tp)
+    
+    /* Clear kernel_sp to indicate we are in kernel */
+    sw zero, 0(tp)
+    j 1f
+
+kernel_trap:
+    /* Restore tp and CSR_SCRATCH */
+    csrrw tp, CSR_SCRATCH, tp
+    j kernel_vector_entry
+
+1:  /* Coming from user */
+    /* tp = &riscv_cpu, CSR_SCRATCH = user_tp, sp = kernel_sp */
     addi sp, sp, -144
     
-    /* Save general purpose registers */
+    /* Save ra, gp */
     sw ra, 0(sp)
     sw gp, 8(sp)
-    sw tp, 12(sp)
+    
+    /* Save user tp (from CSR_SCRATCH) */
+    csrr t0, CSR_SCRATCH
+    sw t0, 12(sp)
+    
+    /* Save user sp (from riscv_cpu->user_sp) */
+    lw t0, 4(tp)
+    sw t0, 4(sp)
+    
+    /* Restore and save original t0 (from riscv_cpu->temp_t0) */
+    lw t0, 12(tp)
     sw t0, 16(sp)
+    
+    /* Restore CSR_SCRATCH to &riscv_cpu and load real tp */
+    csrw CSR_SCRATCH, tp        /* CSR_SCRATCH = &riscv_cpu */
+    lw tp, 8(tp)                /* tp = riscv_cpu->cpu_control */
+    
+    /* Save remaining registers */
     sw t1, 20(sp)
     sw t2, 24(sp)
     sw s0, 28(sp)
@@ -77,14 +117,67 @@ vector_entry:
     sw t5, 116(sp)
     sw t6, 120(sp)
 
-    /* Original SP was in CSR_SCRATCH if from user, or sp + 144 if from kernel */
-    csrr t0, CSR_SCRATCH
-    bnez t0, 3f
-    addi t0, sp, 144
-3:
-    sw t0, 4(sp)
 
-    /* Save CSRs (Supervisor Mode) */
+    /* Save CSRs for user path */
+    csrr t0, CSR_EPC
+    sw t0, 124(sp)
+    csrr t0, CSR_STATUS
+    sw t0, 128(sp)
+    csrr t0, CSR_CAUSE
+    sw t0, 132(sp)
+    csrr t0, CSR_TVAL
+    sw t0, 136(sp)
+    
+    j 3f
+
+kernel_vector_entry:
+    /* We came from kernel. tp is already real kernel tp. sp is kernel sp. */
+    addi sp, sp, -144
+    
+    /* Save ra first so we can use it as temp */
+    sw ra, 0(sp)
+    
+    /* Restore and save original t0 (from riscv_cpu->temp_t0) */
+    csrr ra, CSR_SCRATCH        /* ra = &riscv_cpu */
+    lw ra, 12(ra)               /* ra = original kernel_t0 */
+    sw ra, 16(sp)               /* u->t0 = original kernel_t0 */
+    
+    /* Restore ra */
+    lw ra, 0(sp)
+    
+    /* Save other registers */
+    addi t0, sp, 144
+    sw t0, 4(sp)                /* Save original sp */
+    sw gp, 8(sp)
+    sw tp, 12(sp)               /* Save kernel tp */
+    sw t1, 20(sp)
+    sw t2, 24(sp)
+    sw s0, 28(sp)
+    sw s1, 32(sp)
+    sw a0, 36(sp)
+    sw a1, 40(sp)
+    sw a2, 44(sp)
+    sw a3, 48(sp)
+    sw a4, 52(sp)
+    sw a5, 56(sp)
+    sw a6, 60(sp)
+    sw a7, 64(sp)
+    sw s2, 68(sp)
+    sw s3, 72(sp)
+    sw s4, 76(sp)
+    sw s5, 80(sp)
+    sw s6, 84(sp)
+    sw s7, 88(sp)
+    sw s8, 92(sp)
+    sw s9, 96(sp)
+    sw s10, 100(sp)
+    sw s11, 104(sp)
+    sw t3, 108(sp)
+    sw t4, 112(sp)
+    sw t5, 116(sp)
+    sw t6, 120(sp)
+
+    /* Save CSRs */
     csrr t0, CSR_EPC
     sw t0, 124(sp)
     csrr t0, CSR_STATUS
@@ -94,9 +187,7 @@ vector_entry:
     csrr t0, CSR_TVAL
     sw t0, 136(sp)
 
-    /* Set CSR_SCRATCH to 0 for kernel mode */
-    li t0, 0
-    csrw CSR_SCRATCH, t0
+3:  /* Common trap handler call */
 
     /* Setup Global Pointer */
     .option push
@@ -104,17 +195,54 @@ vector_entry:
     la gp, __global_pointer$
     .option pop
 
-    /* Call C trap handler */
+    /* Check if it is an interrupt (cause < 0) */
+    lw t0, 132(sp)              /* t0 = cause */
+    bge t0, zero, 1f            /* Skip if exception (cause >= 0) */
+
+    /* Interrupt entry path */
+    lw t1, 8(tp)                /* t1 = nest_count */
+    addi t2, t1, 1
+    sw t2, 8(tp)                /* nest_count++ */
+
+    bnez t1, 2f                 /* Skip sched_lock if nested (prev nest_count > 0) */
+    call sched_lock
+2:
     mv a0, sp
     call trap_handler
 
+    /* Interrupt exit path */
+    lw t1, 8(tp)                /* t1 = nest_count */
+    addi t1, t1, -1
+    sw t1, 8(tp)                /* nest_count-- */
+
+    bnez t1, 3f                 /* Skip sched_unlock if nested (new nest_count > 0) */
+    call sched_unlock
+3:
+    j syscall_ret
+
+1:  /* Exception path */
+    mv a0, sp
+    call trap_handler
+    /* Fall through to syscall_ret */
+
 ENTRY(syscall_ret)
+#ifdef CONFIG_SMODE
+    csrci sstatus, 2
+#else
+    csrci mstatus, 8
+#endif
     fence.i
 
     /* Restore CSRs */
     lw t0, 124(sp)
     csrw CSR_EPC, t0
     lw t0, 128(sp)
+    
+    /* Clear SIE bit (bit 1) to ensure interrupts are disabled in S-mode
+     * during the return path. They will be enabled by sret restoring from SPIE.
+     */
+    andi t0, t0, ~2
+
 #ifdef CONFIG_SMODE
     li t1, 1 << 18      /* Force SUM=1 */
     or t0, t0, t1
@@ -122,22 +250,26 @@ ENTRY(syscall_ret)
     csrw CSR_STATUS, t0
     
     /* Returning to user mode? Check privilege bit */
-#ifdef CONFIG_SMODE
     andi t0, t0, 0x100  /* Check SPP (bit 8) */
-#else
-    li t1, 0x1800       /* Check MPP (bits 11-12) */
-    and t0, t0, t1
-#endif
-    bnez t0, 4f
+    bnez t0, returning_to_kernel
     
-    /* User mode: Restore kernel stack pointer to CSR_SCRATCH */
-    addi t0, sp, 144
-    csrw CSR_SCRATCH, t0
+    /* Returning to user mode: Save kernel stack top to riscv_cpu->kernel_sp */
+    csrr t1, CSR_SCRATCH        /* t1 = &riscv_cpu */
+    addi t2, sp, 144
+    sw t2, 0(t1)                 /* riscv_cpu->kernel_sp = sp + 144 */
 
-4:  /* Restore general purpose registers */
+    /* Returning to user mode: Restore user tp */
+    lw tp, 12(sp)
+    j restore_regs
+
+returning_to_kernel:
+    /* Returning to kernel mode: Keep current kernel tp */
+    /* (do not load tp) */
+
+restore_regs:  /* Restore general purpose registers */
     lw ra, 0(sp)
     lw gp, 8(sp)
-    lw tp, 12(sp)
+    /* tp is conditionally restored above */
     lw t0, 16(sp)
     lw t1, 20(sp)
     lw t2, 24(sp)
@@ -185,12 +317,27 @@ init_done:		.word	init_done_value
      * a1 = opaque (0)
      */
 ENTRY(ap_reset_entry)
+    /* Park harts that are out of bounds */
+    li t0, CONFIG_SMP_NCPUS
+    blt a0, t0, 2f
+1:  wfi
+    j 1b
+2:
+
     /* Disable interrupts */
 #ifdef CONFIG_SMODE
     csrci sstatus, 2
 #else
     csrci mstatus, 8
 #endif
+
+    /* Initialize CSR_SCRATCH to &riscv_cpus[hartid] */
+    la t0, riscv_cpus
+    slli t1, a0, 4              /* t1 = hartid * 16 */
+    add t0, t0, t1              /* t0 = &riscv_cpus[hartid] */
+    csrw CSR_SCRATCH, t0
+
+
 
     /* Setup Global Pointer */
     .option push
@@ -201,7 +348,7 @@ ENTRY(ap_reset_entry)
     /* 
      * Get local cpu_control
      * tp = &cpu_table[hartid]
-     * sizeof(struct cpu_control) = 64 (aligned)
+     * sizeof(struct cpu_control) = 32 (aligned)
      */
     la t0, cpu_table
     slli t1, a0, 6      /* t1 = id * 64 */
@@ -221,16 +368,15 @@ ENTRY(ap_reset_entry)
 
     /* Setup stack for AP */
     la t0, ap_boot_stacks
-    li t1, 768          /* KSTACKSZ */
+    li t1, KSTACKSZ
     addi a1, a0, 1      /* stack_top = stacks[id+1] */
-    
-    /* Manual multiply: t1 = a1 * 768 = a1 * (512 + 256) */
-    slli t2, a1, 9      /* t2 = a1 * 512 */
-    slli t3, a1, 8      /* t3 = a1 * 256 */
-    add t1, t2, t3
+    mul  t1, a1, t1     /* t1 = a1 * KSTACKSZ */
     
     add sp, t0, t1
-    addi sp, sp, -16
+    addi sp, sp, -1024
+
+    la t0, vector_entry
+    csrw CSR_TVEC, t0
 
     /* Jump to C entry */
     call smp_ap_boot
@@ -277,8 +423,9 @@ ENTRY(reset_entry)
     /* Setup stack */
     la sp, BOOTSTKTOP
     
-    /* Setup CSR_SCRATCH */
-    csrw CSR_SCRATCH, zero
+    /* Setup CSR_SCRATCH to &riscv_cpus[0] */
+    la t0, riscv_cpus
+    csrw CSR_SCRATCH, t0
 
     /* Clear BSS */
     la t0, __bss
@@ -308,16 +455,40 @@ ENTRY(reset_entry)
     bnez t1, 1b
 
     /*
-     * Map first 4MB of RAM (0x80000000) to 0x80000000 (1:1 and KERNBASE)
-     * BOOT_PGD_PHYS[512] = (0x80000000 >> 2) | PTE_SYSTEM
-     * PPN for 0x80000000 is 0x80000.
-     * PPN << 10 = 0x20000000.
+     * Initialize boot page table (BOOT_PTE0_PHYS)
+     * Zero fill 4KB.
+     */
+    li t0, BOOT_PTE0_PHYS
+    li t1, 1024
+1:
+    sw zero, 0(t0)
+    addi t0, t0, 4
+    addi t1, t1, -1
+    bnez t1, 1b
+
+    /*
+     * Populate BOOT_PTE0_PHYS to map first 4MB of RAM (0x80000000)
      * PTE_SYSTEM = PTE_V | PTE_R | PTE_W | PTE_X | PTE_A | PTE_D = 0xcf.
-     * Entry = 0x200000cf.
+     */
+    li t0, BOOT_PTE0_PHYS
+    li t1, 1024
+    li t2, (0x80000000 >> 2) | 0xcf
+    li t3, 0x400           /* PPN offset per page (0x1000 >> 2) */
+2:
+    sw t2, 0(t0)
+    addi t0, t0, 4
+    add t2, t2, t3
+    addi t1, t1, -1
+    bnez t1, 2b
+
+    /*
+     * Map BOOT_PTE0_PHYS in BOOT_PGD_PHYS[512] (0x80000000 >> 22 = 512)
+     * BOOT_PGD_PHYS[512] = (BOOT_PTE0_PHYS >> 2) | PTE_V
      */
     li t0, BOOT_PGD_PHYS + 2048
-    li t1, 0x200000cf
+    li t1, (BOOT_PTE0_PHYS >> 2) | 0x01 /* PTE_V */
     sw t1, 0(t0)
+
 
     /*
      * Map UART0 (0x10000000) to 0x10000000 (1:1) for early physical access
@@ -358,9 +529,7 @@ ENTRY(reset_entry)
     fence.i
 #endif
 
-#ifdef CONFIG_SMP
     la tp, cpu_table
-#endif
 
     call main
 
@@ -398,9 +567,15 @@ ENTRY(cpu_switch)
     lw sp, 48(a1)
     lw ra, 52(a1)
 
+    /* Update riscv_cpu->kernel_sp for next thread */
+    csrr t0, CSR_SCRATCH        /* t0 = &riscv_cpu */
+    lw t1, 64(a1)               /* t1 = next->kernel_sp */
+    sw t1, 0(t0)                /* riscv_cpu->kernel_sp = next->kernel_sp */
+
     ret
 
 ENTRY(kernel_thread_entry)
+
 #ifdef CONFIG_SMP
     call sched_bkl_unlock
 #endif

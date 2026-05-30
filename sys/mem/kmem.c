@@ -285,27 +285,32 @@ void kmem_free(void* ptr)
     if (blk->magic != BLOCK_MAGIC)
         panic("kmem_free: invalid address");
 
-    /*
-     * Return the block to free list. Since kernel code will
-     * request fixed size of memory block, we don't merge the
-     * blocks to use it as cache.
-     */
-    list_insert(&free_blocks[BLKNDX(blk)], &blk->link);
-
-    /*
-     * Decrement allocation count of this page.
-     */
     pg = PAGETOP(blk);
-    if (--pg->nallocs == 0) {
-        /*
-         * No allocated block in this page.
-         * Remove all blocks and deallocate this page.
-         */
-        for (blk = &pg->first_blk; blk != NULL; blk = blk->pg_next) {
-            list_remove(&blk->link); /* Remove from free list */
+    if (blk->size > (PAGE_SIZE - PGHDR_SIZE)) {
+        /* Large block: Bypasses free list, free pages directly if last allocation! */
+        if (--pg->nallocs == 0) {
+            struct block_hdr* tmp;
+            for (tmp = &pg->first_blk; tmp != NULL; tmp = tmp->pg_next) {
+                if (tmp != blk) {
+                    list_remove(&tmp->link);
+                }
+            }
+            pg->magic = 0;
+            page_free(kvtop(pg), ALLOC_SIZE(blk->size + PGHDR_SIZE));
+        } else {
+            panic("kmem_free: large block split free not supported");
         }
-        pg->magic = 0;
-        page_free(kvtop(pg), PAGE_SIZE);
+    } else {
+        /* Normal block: Return to free list */
+        list_insert(&free_blocks[BLKNDX(blk)], &blk->link);
+        if (--pg->nallocs == 0) {
+            struct block_hdr* tmp;
+            for (tmp = &pg->first_blk; tmp != NULL; tmp = tmp->pg_next) {
+                list_remove(&tmp->link);
+            }
+            pg->magic = 0;
+            page_free(kvtop(pg), PAGE_SIZE);
+        }
     }
     sched_unlock();
 }

@@ -154,7 +154,6 @@ int relocate_rela(Elf32_Rela* rela, Elf32_Addr sym_val, char* target_sect)
         offset = (int32_t)val - (int32_t)where;
         hi = (uint32_t)(offset + 0x800) >> 12;
         lo = (uint32_t)offset & 0xfff;
-        DPRINTF(("Reloc CALL at %lx to %lx (off=%lx, hi=%x, lo=%x)\n", (long)where, (long)val, (long)offset, hi, lo));
         /* Patch auipc */
         *where = (*where & 0x00000fff) | (hi << 12);
         /* Patch jalr */

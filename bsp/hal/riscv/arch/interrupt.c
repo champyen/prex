@@ -10,6 +10,7 @@
 #include <cpufunc.h>
 #include <context.h>
 #include <locore.h>
+#include <cpu.h>
 
 #include <riscv_csr.h>
 
@@ -66,8 +67,6 @@ void riscv_irq_handler(uint32_t cause)
     uint32_t cpuid = hal_cpu_id();
     uint32_t ctx = plic_s_context(cpuid);
 
-    sched_lock();
-
     if (cause == 9) {
         /* Supervisor External Interrupt */
         irq = PLIC_CLAIM_REG(ctx);
@@ -82,21 +81,11 @@ void riscv_irq_handler(uint32_t cause)
         /* Supervisor Software Interrupt (IPI) */
         /* Clear pending software interrupt */
         __asm__ volatile("csrc " STR(CSR_IP) ", %0" : : "r"(0x2));
-        
-        /* 
-         * Reschedule if flag is set.
-         * Prex scheduler uses resched flag in active thread.
-         */
-        struct cpu_control* cpu = hal_get_cpu_control();
-        if (cpu->active_thread && cpu->active_thread->resched) {
-            sched_swtch();
-        }
+        irq_handler(IPI_IRQ);
     }
-
-    sched_unlock();
 }
 
-void plic_cpu_init(void)
+void interrupt_cpu_init(void)
 {
     uint32_t cpuid = hal_cpu_id();
     uint32_t ctx = plic_s_context(cpuid);
@@ -130,5 +119,5 @@ void interrupt_init(void)
     }
 
     /* Perform per-CPU initialization for BSP */
-    plic_cpu_init();
+    interrupt_cpu_init();
 }

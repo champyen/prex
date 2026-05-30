@@ -35,7 +35,9 @@ SRCS+=		kern/main.c \
 		lib/vsprintf.c \
 		lib/backtrace.c
 
-ifeq ($(CONFIG_SMP),y)
+ifeq ($(ARCH),riscv)
+SRCS+=		kern/smp.c
+else ifeq ($(CONFIG_SMP),y)
 SRCS+=		kern/smp.c
 endif
 

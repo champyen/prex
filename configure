@@ -56,7 +56,7 @@ setdefaults()
 	strip="strip"
 
 	if [ "$target" = "riscv-qemu-virt" ]; then
-	        GCCFLAGS="$GCCFLAGS -march=rv32ima_zicsr_zifencei -mabi=ilp32 -mno-relax"
+	        GCCFLAGS="$GCCFLAGS -march=rv32ima_zicsr_zifencei -mabi=ilp32 -mno-relax -ffixed-tp"
 	        ASFLAGS="$ASFLAGS -march=rv32ima_zicsr_zifencei -mabi=ilp32 -mno-relax"
 	        LDFLAGS="$LDFLAGS -m elf32lriscv --no-relax"
 	fi

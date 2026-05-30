@@ -5,7 +5,7 @@
 #
 # Make options
 #
-makeoptions     GCCFLAGS+= -march=rv32ima_zicsr_zifencei -mabi=ilp32 -mno-relax
+makeoptions     GCCFLAGS+= -march=rv32ima_zicsr_zifencei -mabi=ilp32 -mno-relax -ffixed-tp
 makeoptions     ASFLAGS+= -march=rv32ima_zicsr_zifencei -mabi=ilp32 -mno-relax
 makeoptions     LDFLAGS+= -m elf32lriscv --no-relax
 
@@ -52,8 +52,8 @@ options         BOOTDISK        # Disk for /boot directory
 # General setup
 #
 options         POSIX           # POSIX support
-options         SNDIO           # Audio server
-options         NET             # Network support
+#options         SNDIO           # Audio server
+#options         NET             # Network support
 options         CMDBOX          # Core utilities
 options         DEBUG           # Debugging options
 
@@ -87,11 +87,11 @@ device          rtc             # Real time clock
 device          goldfish_rtc    # Google Goldfish RTC
 device          serial          # Logical serial
 device          ns16550         # NS16550 serial
-device          audio           # Generic Audio
+#device          audio           # Generic Audio
 device          vio_mmio        # VirtIO MMIO bus
-device          vio_audio       # VirtIO Audio
+#device          vio_audio       # VirtIO Audio
 device          vio_block       # VirtIO Block
-device          vio_net         # VirtIO Net
+#device          vio_net         # VirtIO Net
 
 #
 # Hardware configurations

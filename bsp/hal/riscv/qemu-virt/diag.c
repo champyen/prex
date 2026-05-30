@@ -24,7 +24,7 @@ void hal_uart_unlock(int s)
 {
 }
 
-static void serial_putc(char c)
+void diag_putc(char c)
 {
     while (!(UART_LSR & LSR_THRE))
         ;
@@ -35,8 +35,8 @@ void diag_puts(char* buf)
 {
     while (*buf) {
         if (*buf == '\n')
-            serial_putc('\r');
-        serial_putc(*buf++);
+            diag_putc('\r');
+        diag_putc(*buf++);
     }
 }
 

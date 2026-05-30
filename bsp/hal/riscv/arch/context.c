@@ -20,6 +20,7 @@ void context_set(context_t ctx, int type, register_t val)
         /* Set kernel mode stack pointer */
         ctx->uregs = (struct cpu_regs*)((vaddr_t)val - sizeof(struct cpu_regs));
         k->sp = (uint32_t)ctx->uregs;
+        ctx->kernel_sp = (void*)val;
         
         /* Reset minimum user mode registers */
         u = ctx->uregs;

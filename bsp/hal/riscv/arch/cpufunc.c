@@ -9,7 +9,11 @@
 
 void cpu_idle(void)
 {
-    __asm__ volatile("wfi");
+#ifdef CONFIG_SMODE
+    __asm__ volatile("csrsi sstatus, 2; wfi");
+#else
+    __asm__ volatile("csrsi mstatus, 8; wfi");
+#endif
 }
 
 uint32_t hal_cpu_id(void)

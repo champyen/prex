@@ -83,6 +83,7 @@ struct context
     struct kern_regs kregs;      /* kernel mode registers */
     struct cpu_regs* uregs;      /* user mode registers */
     struct cpu_regs* saved_regs; /* saved user mode registers */
+    void* kernel_sp;             /* kernel stack top */
 };
 
 typedef struct context *context_t;

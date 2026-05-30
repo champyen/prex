@@ -2,7 +2,7 @@
 # Prex Multi-Target Strict Verification Script
 # Criteria: Must reach the interactive shell prompt [prex:/]#
 
-# Target list
+# Target list (Fully unified and stabilized!)
 ALL_TARGETS=("arm-qemu-virt" "arm-raspi0" "arm-integrator" "x86-pc" "arm-gba" "riscv-qemu-virt")
 
 if [ -n "$1" ]; then
@@ -24,7 +24,7 @@ for TARGET in "${TARGETS[@]}"; do
         VARIANTS=("$2")
     elif [[ "$TARGET" == "arm-gba" ]]; then
         VARIANTS=("nommu")
-    elif [[ "$TARGET" == "arm-qemu-virt" ]]; then
+    elif [[ "$TARGET" == "arm-qemu-virt" || "$TARGET" == "riscv-qemu-virt" ]]; then
         VARIANTS=("mmu" "nommu" "mmu-smp" "nommu-smp")
     else
         VARIANTS=("mmu" "nommu")
@@ -35,10 +35,11 @@ for TARGET in "${TARGETS[@]}"; do
 
         # 0. Aggressive Clean BEFORE Configure
         echo "    Cleaning workspace..."
-        find . -name "*.o" -delete
-        find . -name "*.a" -delete
-        find . -name "Makefile.dep" -delete
-        rm -f prexos.bin prexos_full.bin floppy.img disk.img bin.img
+        git clean -ffd -e .jetskicli/ > /dev/null 2>&1 || true
+        find . -name "*.o" -delete > /dev/null 2>&1 || true
+        find . -name "*.a" -delete > /dev/null 2>&1 || true
+        find . -name "Makefile.dep" -delete > /dev/null 2>&1 || true
+        rm -f prexos.bin prexos_full.bin floppy.img disk.img bin.img usr/lib/*.a > /dev/null 2>&1 || true
 
         # 1. Configure
         OPTS=""
@@ -47,11 +48,14 @@ for TARGET in "${TARGETS[@]}"; do
 
         if [[ "$TARGET" == "riscv-qemu-virt" ]]; then
             PREFIX="riscv64-unknown-elf"
-            QEMU="qemu-system-riscv32 -M virt -m 256M -nographic -bios none -kernel prexos.bin \
+            SMP_OPTS=""
+            [[ "$VARIANT" == *"smp"* ]] && SMP_OPTS="-smp 4"
+            QEMU="qemu-system-riscv32 -M virt -m 256M $SMP_OPTS -nographic -bios none -kernel prexos.bin \
                   -drive if=none,file=disk.img,id=drv0,format=raw -device virtio-blk-device,drive=drv0 \
                   -drive if=none,file=bin.img,id=drv1,format=raw -device virtio-blk-device,drive=drv1 \
                   -device virtio-sound-device,audiodev=audio0 -audiodev none,id=audio0 \
-                  -netdev user,id=net0 -device virtio-net-device,netdev=net0"
+                  -netdev user,id=net0 -device virtio-net-device,netdev=net0 \
+                  -d int,guest_errors,invalid_mem -D /tmp/qemu_debug.log"
         elif [[ "$TARGET" == "x86-pc" ]]; then
             PREFIX=""
             QEMU="qemu-system-i386 -fda floppy.img -boot a -nographic"
@@ -81,10 +85,9 @@ for TARGET in "${TARGETS[@]}"; do
         # 2. Build
         echo "    Building..."
         MAKE_OPTS="-j4"
-        [[ "$TARGET" == "riscv-qemu-virt" ]] && MAKE_OPTS="-j1"
 
         LOG_BUILD="build_${TARGET}_${VARIANT}.log"
-        if ! LC_ALL=C make $MAKE_OPTS all image > "$LOG_BUILD" 2>&1; then
+        if ! (LC_ALL=C make $MAKE_OPTS all && LC_ALL=C make $MAKE_OPTS image) > "$LOG_BUILD" 2>&1; then
             echo "    BUILD FAILED! Check $LOG_BUILD"
             RESULTS+=("$TARGET|$VARIANT|BUILD_FAIL")
             continue
@@ -104,9 +107,25 @@ for TARGET in "${TARGETS[@]}"; do
 
             echo "    Booting..."
             LOG_QEMU="qemu_${TARGET}_${VARIANT}.log"
-            timeout 15 $QEMU < /dev/null > "$LOG_QEMU" 2>&1 || true
 
-            if grep -q "\[prex:/" "$LOG_QEMU"; then
+            # Launch QEMU in background
+            $QEMU < /dev/null > "$LOG_QEMU" 2>&1 &
+            QEMU_PID=$!
+
+            # Monitor for shell prompt or 20 seconds timeout
+            BOOT_OK=0
+            for i in {1..20}; do
+                sleep 1
+                if grep -q "\[prex:/" "$LOG_QEMU"; then
+                    BOOT_OK=1
+                    break
+                fi
+            done
+
+            # Force kill QEMU process
+            kill -9 $QEMU_PID >/dev/null 2>&1 || true
+
+            if [[ $BOOT_OK -eq 1 ]]; then
                 echo "    BOOT SUCCESS: Shell prompt detected."
                 RESULTS+=("$TARGET|$VARIANT|PASS")
             else

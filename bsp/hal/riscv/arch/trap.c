@@ -69,5 +69,13 @@ void trap_dump(struct cpu_regs* r)
     printf(" a3  %08x a4  %08x a5  %08x a6  %08x\n", r->a3, r->a4, r->a5, r->a6);
     printf(" a7  %08x s2  %08x s3  %08x s4  %08x\n", r->a7, r->s2, r->s3, r->s4);
     printf(" pc  %08x status %08x cause %08x badaddr %08x\n", r->epc, r->status, r->cause, r->badaddr);
+    
+    /* Print stack dump */
+    printf(" Stack dump from %08x:\n", r->sp);
+    uint32_t* sp = (uint32_t*)r->sp;
+    for (int i = 0; i < 32; i++) {
+        printf("  %08x", sp[i]);
+        if ((i + 1) % 4 == 0) printf("\n");
+    }
 }
 #endif

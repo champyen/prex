@@ -115,6 +115,7 @@ command 	sh
 #command 	test
 #command 	touch
 command 	uname
+command     init
 
 #
 # Adminisrative tools

@@ -198,6 +198,7 @@ struct tss
 #endif
 
 __BEGIN_DECLS
+static inline void hal_set_cpu_control(void* cpu) {}
 void tss_set(uint32_t);
 uint32_t tss_get(void);
 void cpu_init(void);

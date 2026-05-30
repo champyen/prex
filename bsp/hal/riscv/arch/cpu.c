@@ -3,6 +3,7 @@
  */
 
 #include <kernel.h>
+#include <machine/syspage.h>
 #include <hal.h>
 #include <cpufunc.h>
 #include <context.h>
@@ -10,37 +11,38 @@
 
 void splx(int s)
 {
-#ifdef CONFIG_SMODE
-    if (s & 0x2) /* SIE is bit 1 */
+    curspl = s;
+    if (curspl == 0 && irq_nesting == 0)
         splon();
     else
         sploff();
-#else
-    if (s & 0x8) /* MIE is bit 3 */
-        splon();
-    else
-        sploff();
-#endif
 }
 
 int spl0(void)
 {
-    int s = get_status();
+    int s = curspl;
     splon();
+    curspl = 0;
     return s;
 }
 
 int splhigh(void)
 {
-    int s = get_status();
+    int s = curspl;
     sploff();
+    curspl = 15;
     return s;
 }
 
 #include <task.h>
 #include <exception.h>
 
+#include <cpu.h>
+
+struct riscv_cpu riscv_cpus[RISCV_NCPUS];
+
 extern struct task kernel_task;
+
 
 void cpu_init(void)
 {
@@ -53,5 +55,9 @@ void cpu_init(void)
     __asm__ volatile("csrr %0, " STR(CSR_STATUS) : "=r"(status));
     status &= ~0x6000;
     __asm__ volatile("csrw " STR(CSR_STATUS) ", %0" : : "r"(status));
+
+    extern struct cpu_control cpu_table[];
+    riscv_cpus[0].cpu_control = &cpu_table[0];
 }
+
 

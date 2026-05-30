@@ -195,7 +195,7 @@ ENTRY(reset_entry)
 	 */
 	ldr	r1, =(BOOT_PGD_PHYS + (KERNBASE >> 18))
 	ldr	r2, =(BOOT_PGD_PHYS + (RAMBASE  >> 18))
-	ldr	r0, =(BOOT_PTE0_PHYS | 0x01)
+	ldr	r0, =(BOOT_PTE0_PHYS | 0x09)	/* Page table descriptor (NS = 1) */
 	str	r0, [r1], #4
 	str	r0, [r2], #4
 	add	r0, r0, #0x400
@@ -207,13 +207,11 @@ ENTRY(reset_entry)
 	add	r0, r0, #0x400
 	str	r0, [r1]
 	str	r0, [r2], #4
-
-	/* Map BOOT_PTE1_PHYS at UART_BASE (0xC9000000) */
-/*
-	ldr	r1, =(BOOT_PGD_PHYS + (0xC9000000 >> 18))
-	ldr	r0, =(BOOT_PTE1_PHYS | 0x01)
+ 
+	/* Map UART0 (0x09000000) identity-mapped */
+	ldr	r1, =(BOOT_PGD_PHYS + (0x09000000 >> 18))
+	ldr	r0, =0x09080012				/* Section descriptor (NS = 1) */
 	str	r0, [r1]
-*/
 	dsb
 	ldr	r1, =BOOT_PGD_PHYS
 	mcr	p15, 0, r1, c2, c0, 0		/* Load page table pointer */
@@ -471,6 +469,10 @@ ENTRY(unused_entry)
  * r0: cpuid (already set in reset_entry)
  */
 ENTRY(ap_reset_entry)
+	/* Get actual CPU ID from MPIDR */
+	mrc     p15, 0, r0, c0, c0, 5           /* Read MPIDR */
+	and     r0, r0, #0xff                   /* cpuid = MPIDR & 0xff */
+
 	/*
 	 * Load AP-specific stack.
 	 * sp = &ap_boot_stacks[cpuid][KSTACKSZ]
@@ -490,12 +492,6 @@ ENTRY(ap_reset_entry)
 
 	mov     r0, #(PSR_SVC_MODE|PSR_FIQ_DIS|PSR_IRQ_DIS)
 	msr     cpsr, r0
-
-	/* Enable SMP bit in ACTLR */
-	mrc     p15, 0, r0, c1, c0, 1           /* Read ACTLR */
-	orr     r0, r0, #0x40                   /* Set bit 6 (SMP) */
-	mcr     p15, 0, r0, c1, c0, 1           /* Write ACTLR */
-	isb
 
 	#ifdef CONFIG_MMU
 	/*
