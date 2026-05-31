@@ -93,7 +93,7 @@
 #define __noreturn /* delete */
 #endif
 
-#if defined(__arm__)
+#if defined(__arm__) && !defined(CONFIG_ARMV8M)
 #define __isr __attribute__((target("arm")))
 #else
 #define __isr

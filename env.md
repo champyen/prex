@@ -2,6 +2,7 @@
 * arm-gba (no MMU support)
 * arm-raspi0
 * arm-qemu-virt
+* arm-musca-b1 (no MMU support, Cortex-M33)
 * x86-pc
 * riscv-qemu-virt
 
@@ -54,6 +55,11 @@ $ timeout 15 \
   -drive if=none,file=bin.img,id=drv1,format=raw -device virtio-blk-device,drive=drv1 \
   -device virtio-sound-device,audiodev=audio0 -audiodev none,id=audio0 \
   -netdev user,id=net0 -device virtio-net-device,netdev=net0 \
+  > qemu.log 2>&1 & sleep 16 && cat qemu.log
+
+* arm-musca-b1
+$ timeout 15 \
+  qemu-system-arm -M musca-b1 -kernel prexos.bin -nographic \
   > qemu.log 2>&1 & sleep 16 && cat qemu.log
 
 # tiered volumes (ARFS/FATFS)

@@ -3,7 +3,7 @@
 # Criteria: Must reach the interactive shell prompt [prex:/]#
 
 # Target list (Fully unified and stabilized!)
-ALL_TARGETS=("arm-qemu-virt" "arm-raspi0" "arm-integrator" "x86-pc" "arm-gba" "riscv-qemu-virt")
+ALL_TARGETS=("arm-qemu-virt" "arm-raspi0" "arm-integrator" "x86-pc" "arm-gba" "riscv-qemu-virt" "arm-musca-b1")
 
 if [ -n "$1" ]; then
     TARGETS=("$1")
@@ -22,7 +22,7 @@ for TARGET in "${TARGETS[@]}"; do
     # Determine variants to test
     if [ -n "$2" ]; then
         VARIANTS=("$2")
-    elif [[ "$TARGET" == "arm-gba" ]]; then
+    elif [[ "$TARGET" == "arm-gba" || "$TARGET" == "x86-pc" || "$TARGET" == "arm-musca-b1" ]]; then
         VARIANTS=("nommu")
     elif [[ "$TARGET" == "arm-qemu-virt" || "$TARGET" == "riscv-qemu-virt" ]]; then
         VARIANTS=("mmu" "nommu" "mmu-smp" "nommu-smp")
@@ -33,13 +33,13 @@ for TARGET in "${TARGETS[@]}"; do
     for VARIANT in "${VARIANTS[@]}"; do
         echo ">>> Testing $TARGET ($VARIANT)..."
 
-        # 0. Aggressive Clean BEFORE Configure
+        # 0. Targeted Clean BEFORE Configure
         echo "    Cleaning workspace..."
-        git clean -ffd -e .jetskicli/ > /dev/null 2>&1 || true
         find . -name "*.o" -delete > /dev/null 2>&1 || true
         find . -name "*.a" -delete > /dev/null 2>&1 || true
         find . -name "Makefile.dep" -delete > /dev/null 2>&1 || true
         rm -f prexos.bin prexos_full.bin floppy.img disk.img bin.img usr/lib/*.a > /dev/null 2>&1 || true
+        rm -f conf/config.h conf/config.mk conf/config.ld conf/drvtab.h conf/captab.h > /dev/null 2>&1 || true
 
         # 1. Configure
         OPTS=""
@@ -73,6 +73,8 @@ for TARGET in "${TARGETS[@]}"; do
                 QEMU="qemu-system-arm -M raspi0 -kernel prexos_full.bin -nographic"
             elif [[ "$TARGET" == "arm-integrator" ]]; then
                 QEMU="qemu-system-arm -M integratorcp -kernel prexos_full.bin -nographic"
+            elif [[ "$TARGET" == "arm-musca-b1" ]]; then
+                QEMU="qemu-system-arm -M musca-b1 -kernel prexos.bin -nographic"
             fi
         fi
 
@@ -93,8 +95,8 @@ for TARGET in "${TARGETS[@]}"; do
             continue
         fi
 
-        # 3. Boot Verification (except GBA)
-        if [[ "$TARGET" != "arm-gba" ]]; then
+        # 3. Boot Verification (except GBA and Musca-B1)
+        if [[ "$TARGET" != "arm-gba" && "$TARGET" != "arm-musca-b1" ]]; then
             # x86 needs floppy.img
             if [[ "$TARGET" == "x86-pc" ]]; then
                 echo "    Creating floppy.img..."

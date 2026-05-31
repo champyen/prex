@@ -1,0 +1,102 @@
+#
+# Prex system configuration file for Musca-B1 (Cortex-M33)
+#
+
+#
+# Make options
+#
+makeoptions	GCCFLAGS+= -mcpu=cortex-m33 -mthumb -mfloat-abi=soft -ffixed-r9
+makeoptions	ASFLAGS+= -mcpu=cortex-m33 -mthumb
+
+#
+# MMU Option (NOMMU / Flat mapping)
+#
+mmu	        SYSPAGE_BASE	0x30000000  0x30000000 	# 1:1 mapping for NOMMU
+mmu	        IOMEM_BASE      0x00000000	0x00000000  # Flat mapping
+
+#
+# Memory address
+#
+memory      RAM_SIZE        0x00080000  # 512KB SRAM
+memory      LOADER_TEXT     0x1A000000  # Start of boot loader in Flash
+memory      BOOTIMG_BASE    0x1A002000  # Location of boot image (LOADER_TEXT + 8KB)
+memory      KERNEL_TEXT     0x30020000  # Start of kernel (relocated to SRAM)
+
+#
+# Tunable parameters
+#
+options     HZ=100			# Ticks/second of the clock
+options 	TIME_SLICE=50	# Context switch ratio (msec)
+options 	OPEN_MAX=16		# Max open files per process
+options     BUF_CACHE=16    # Blocks for buffer cache
+options     FS_THREADS=1    # Number of file system threads
+options     MAX_ALLOC_SIZE=0x20000   # Max kernel memory allocation size (128KB)
+options     USR_STACKSZ=4096         # Smaller stack for MCU
+options     MAXMEM=0x40000           # Max core per task (256KB)
+
+#
+# Platform settings
+#
+options		ARMV8M		# Processor core
+#options		SMP_NCPUS=2	# Dual-core SMP (Phase 2)
+options 	BOOTDISK	# Disk for /boot directory
+options     SIZE_OPT    # Optimize for size
+
+#
+# General setup
+#
+options 	POSIX		# POSIX support
+options 	CMDBOX		# Core utilities
+options		THUMB		# Thumb mode support
+options		BOOT_THUMB	# Build bootloader in Thumb-2 mode
+options		USR_THUMB	# Thumb mode for user programs
+options		DRV_THUMB	# Thumb mode for drivers
+options		KERNEL_THUMB	# Thumb mode for kernel
+
+#
+# Diagnostic options
+#
+options 	DIAG_SERIAL	# Diagnostic via serial port
+
+#
+# File systems
+#
+options 	DEVFS		# Device file system
+options 	RAMFS		# RAM file system
+options 	ARFS		# Archive file system
+
+#
+# Device drivers (initialization order)
+#
+device		null		# NULL device
+device		zero		# Zero device
+device		ramdisk		# RAM disk
+device		cons		# System console
+device		serial		# Logical serial
+device      pl011       # Serial (PL011)
+
+#
+# Hardware configuations
+#
+options		ARM_VECTORS=0x30020000  # Vector table at KERNEL_TEXT
+options		NIRQS=96
+options     PL011_BASE=0x50105000   # Musca-B1 UART0
+options		PL011_IRQ=0             # Placeholder
+options		PL011_CLK=24000000      # Placeholder
+
+#
+# Command box (Minimal for size)
+#
+command 	cat
+command 	clear
+command 	cp
+command 	echo
+command 	free
+command 	ls
+command 	ps
+command 	sh
+command 	uname
+command 	init
+
+# Math library
+math		fdlibm

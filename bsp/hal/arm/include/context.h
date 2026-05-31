@@ -63,6 +63,37 @@
  * passed via registers, the system call library is completely
  * dependent on this register format.
  */
+#ifdef CONFIG_ARMV8M
+/*
+ * Common register frame for Cortex-M.
+ * Hardware stacks: r0, r1, r2, r3, r12, lr, pc, xPSR
+ * We push: r4, r5, r6, r7, r8, r9, r10, r11
+ */
+struct cpu_regs
+{
+    uint32_t r4;
+    uint32_t r5;
+    uint32_t r6;
+    uint32_t r7;
+    uint32_t r8;
+    uint32_t r9;
+    uint32_t r10;
+    uint32_t r11;
+    /* Hardware stacked follows */
+    uint32_t r0;
+    uint32_t r1;
+    uint32_t r2;
+    uint32_t r3;
+    uint32_t r12;
+    uint32_t lr;
+    uint32_t pc;
+    uint32_t cpsr; /* xPSR */
+    /* Padding/Compatibility */
+    uint32_t sp;
+    uint32_t svc_sp;
+    uint32_t svc_lr;
+};
+#else
 struct cpu_regs
 {
     uint32_t r0;     /*  +0 (00) */
@@ -86,6 +117,7 @@ struct cpu_regs
     uint32_t pc;     /* +72 (48) */
     uint32_t pad;    /* +76 (4C) */
 };
+#endif
 
 /*
  * Kernel mode context for context switching.
@@ -118,6 +150,28 @@ typedef struct context* context_t; /* context id */
 
 #endif /* !__ASSEMBLY__ */
 
+#ifdef CONFIG_ARMV8M
+#define REG_R4 0x00
+#define REG_R5 0x04
+#define REG_R6 0x08
+#define REG_R7 0x0c
+#define REG_R8 0x10
+#define REG_R9 0x14
+#define REG_R10 0x18
+#define REG_R11 0x1c
+#define REG_R0 0x20
+#define REG_R1 0x24
+#define REG_R2 0x28
+#define REG_R3 0x2c
+#define REG_R12 0x30
+#define REG_LR 0x34
+#define REG_PC 0x38
+#define REG_CPSR 0x3c
+#define REG_SP 0x40
+#define REG_SVCSP 0x44
+#define REG_SVCLR 0x48
+#define CTXREGS (4 * 19)
+#else
 /*
  * Register offset in cpu_regs
  */
@@ -142,6 +196,7 @@ typedef struct context* context_t; /* context id */
 #define REG_PC 0x48
 
 #define CTXREGS (4 * 20)
+#endif
 
 /*
  * Per-CPU control structure offsets
