@@ -5,7 +5,7 @@
 #include <sys/param.h>
 #include <boot.h>
 
-#define UART_BASE 0x10000000
+#define UART_BASE CONFIG_NS16550_PHY_BASE
 
 #define UART_RHR (*(volatile uint8_t*)(UART_BASE + 0))
 #define UART_THR (*(volatile uint8_t*)(UART_BASE + 0))

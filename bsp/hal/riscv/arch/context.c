@@ -25,8 +25,13 @@ void context_set(context_t ctx, int type, register_t val)
         /* Reset minimum user mode registers */
         u = ctx->uregs;
         memset(u, 0, sizeof(*u));
+#ifdef CONFIG_SMODE
         /* Initial status for Supervisor Mode (SPP=1, SPIE=1, SUM=1) */
         u->status = 0x00040120; /* SPP=1 (Bit 8), SPIE=1 (Bit 5), SUM=1 (Bit 18) */
+#else
+        /* Initial status for Machine Mode (MPP=3, MPIE=1, SUM=1) */
+        u->status = 0x00041880; /* MPP=3 (Bits 11-12), MPIE=1 (Bit 7), SUM=1 (Bit 18) */
+#endif
         break;
 
     case CTX_KENTRY:

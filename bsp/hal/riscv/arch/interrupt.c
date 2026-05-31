@@ -25,9 +25,14 @@
 #define PLIC_PRIORITY(irq)   (*(volatile uint32_t*)(PLIC_BASE + 4 * (irq)))
 
 /* S-mode Context index = 2 * hartid + 1 */
-static inline uint32_t plic_s_context(uint32_t hartid)
+/* M-mode Context index = 2 * hartid */
+static inline uint32_t plic_context(uint32_t hartid)
 {
+#ifdef CONFIG_SMODE
     return 2 * hartid + 1;
+#else
+    return 2 * hartid;
+#endif
 }
 
 /* Enable bits for a context: 0x2000 + context * 0x80 */
@@ -40,7 +45,7 @@ void interrupt_unmask(int vector, int level)
 {
     if (vector > 0 && vector < 1024) {
         PLIC_PRIORITY(vector) = 1;
-        uint32_t ctx = plic_s_context(hal_cpu_id());
+        uint32_t ctx = plic_context(hal_cpu_id());
         *(volatile uint32_t*)(PLIC_ENABLE_BASE(ctx) + ((vector) / 32) * 4) |= (1 << (vector % 32));
     }
 }
@@ -48,7 +53,7 @@ void interrupt_unmask(int vector, int level)
 void interrupt_mask(int vector)
 {
     if (vector > 0 && vector < 1024) {
-        uint32_t ctx = plic_s_context(hal_cpu_id());
+        uint32_t ctx = plic_context(hal_cpu_id());
         *(volatile uint32_t*)(PLIC_ENABLE_BASE(ctx) + ((vector) / 32) * 4) &= ~(1 << (vector % 32));
     }
 }
@@ -65,8 +70,9 @@ void riscv_irq_handler(uint32_t cause)
 {
     int irq;
     uint32_t cpuid = hal_cpu_id();
-    uint32_t ctx = plic_s_context(cpuid);
+    uint32_t ctx = plic_context(cpuid);
 
+#ifdef CONFIG_SMODE
     if (cause == 9) {
         /* Supervisor External Interrupt */
         irq = PLIC_CLAIM_REG(ctx);
@@ -83,12 +89,30 @@ void riscv_irq_handler(uint32_t cause)
         __asm__ volatile("csrc " STR(CSR_IP) ", %0" : : "r"(0x2));
         irq_handler(IPI_IRQ);
     }
+#else
+    if (cause == 11) {
+        /* Machine External Interrupt */
+        irq = PLIC_CLAIM_REG(ctx);
+        if (irq) {
+            irq_handler(irq);
+            PLIC_CLAIM_REG(ctx) = irq;
+        }
+    } else if (cause == 7) {
+        /* Machine Timer Interrupt */
+        irq_handler(0);
+    } else if (cause == 3) {
+        /* Machine Software Interrupt (IPI) */
+        /* Clear pending software interrupt */
+        *(volatile uint32_t*)(CONFIG_CLINT_PHY_BASE + cpuid * 4) = 0;
+        irq_handler(IPI_IRQ);
+    }
+#endif
 }
 
 void interrupt_cpu_init(void)
 {
     uint32_t cpuid = hal_cpu_id();
-    uint32_t ctx = plic_s_context(cpuid);
+    uint32_t ctx = plic_context(cpuid);
     int i;
 
     /* Disable enables for this CPU's S-mode context */
@@ -99,12 +123,14 @@ void interrupt_cpu_init(void)
     /* Set threshold to 0 to allow all */
     PLIC_THRESHOLD_REG(ctx) = 0;
 
-    /* Enable Timer, External, and Software interrupts in CSR_IE */
+    /* Enable External interrupts in CSR_IE. 
+     * Timer and Software interrupts are enabled later in clock_init and smp_init. 
+     */
     uint32_t ie;
 #ifdef CONFIG_SMODE
-    ie = 0x222; /* SSIE (bit 1), STIE (bit 5), SEIE (bit 9) */
+    ie = 0x200; /* SEIE (bit 9) */
 #else
-    ie = 0x888; /* MSIE (bit 3), MTIE (bit 7), MEIE (bit 11) */
+    ie = 0x800; /* MEIE (bit 11) */
 #endif
     __asm__ volatile("csrw " STR(CSR_IE) ", %0" : : "r"(ie));
 }

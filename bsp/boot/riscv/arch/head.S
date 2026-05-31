@@ -30,11 +30,13 @@ _start:
     add t0, t0, t1
     csrw mscratch, t0
 
-    /* 6. Delegate interrupts and exceptions to S-mode */
+    /* 6. Delegate interrupts and exceptions to S-mode if configured */
+#ifdef CONFIG_SMODE
     li t0, 0xbfff
     csrw mideleg, t0
     li t0, 0xfdff
     csrw medeleg, t0
+#endif
 
     /* 7. Configure PMP */
     li t0, 0xffffffff
@@ -52,14 +54,18 @@ _start:
 
     /* --- BSP (Hart 0) Path --- */
 
-    /* 9. Switch to S-mode */
+    /* 9. Switch to S-mode (or stay in M-mode) */
+    li a0, 0
+    li a1, 0
+#ifdef CONFIG_SMODE
     la t0, s_mode_entry
     csrw mepc, t0
     li t0, MSTATUS_MPP_S
     csrw mstatus, t0
-    li a0, 0
-    li a1, 0
     mret
+#else
+    j s_mode_entry
+#endif
 
 ap_wait_loop:
     /* Clear our own MSIP to ensure no stale interrupts */
@@ -90,14 +96,17 @@ ap_wait_loop:
     /* Clear satp explicitly to ensure physical addressing */
     csrw satp, zero
 
-    /* Transition to S-mode */
+    /* Transition to S-mode (or stay in M-mode) */
+    csrr a0, mhartid
+    li a1, 0
+#ifdef CONFIG_SMODE
     csrw mepc, t0
     li t1, MSTATUS_MPP_S
     csrw mstatus, t1
-    
-    csrr a0, mhartid
-    li a1, 0
     mret
+#else
+    jr t0
+#endif
 
 /* Minimal SBI */
 .align 4
@@ -106,7 +115,7 @@ m_trap_entry:
     bnez t0, 2f
     
     /* If mscratch was 0, print 'X' and hang */
-    li t1, 0x10000000
+    li t1, CONFIG_NS16550_PHY_BASE
     li t2, 'X'
     sb t2, 0(t1)
 1:  j 1b
@@ -269,7 +278,7 @@ s_mode_entry:
 3:  call main
 
 m_print_hex:
-    li t3, 0x10000000
+    li t3, CONFIG_NS16550_PHY_BASE
     li t4, 8
 1:
     srli t5, a0, 28

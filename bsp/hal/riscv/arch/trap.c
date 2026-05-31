@@ -39,8 +39,8 @@ void trap_handler(struct cpu_regs* regs)
         extern void riscv_irq_handler(uint32_t cause);
         riscv_irq_handler(cause & 0x7fffffff);
     } else {
-        if (cause == 8 || cause == 9) {
-            /* System call (ECALL from U-mode or S-mode) */
+        if (cause == 8 || cause == 9 || cause == 11) {
+            /* System call (ECALL from U-mode, S-mode or M-mode) */
             extern register_t syscall_handler(register_t, register_t, register_t, register_t, register_t);
             /* Skip ecall instruction (4 bytes) */
             regs->epc += 4;

@@ -8,10 +8,12 @@
 #include <irq.h>
 #include <hal.h>
 #include <machine/sbi.h>
+#include <cpufunc.h>
 #include <riscv_csr.h>
 
 static uint64_t get_time(void)
 {
+#ifdef CONFIG_SMODE
     uint32_t lo, hi, hi2;
     do {
         __asm__ volatile("rdtimeh %0" : "=r"(hi));
@@ -19,6 +21,16 @@ static uint64_t get_time(void)
         __asm__ volatile("rdtimeh %0" : "=r"(hi2));
     } while (hi != hi2);
     return ((uint64_t)hi << 32) | lo;
+#else
+    volatile uint32_t* mtime = (uint32_t*)(CONFIG_CLINT_PHY_BASE + 0xbff8);
+    uint32_t lo, hi, hi2;
+    do {
+        hi = mtime[1];
+        lo = mtime[0];
+        hi2 = mtime[1];
+    } while (hi != hi2);
+    return ((uint64_t)hi << 32) | lo;
+#endif
 }
 
 static uint32_t clock_freq = 10000000; /* QEMU virt timer frequency (10MHz) */
@@ -26,7 +38,15 @@ static uint32_t ticks_per_intr;
 
 static void set_timer(uint64_t next)
 {
+#ifdef CONFIG_SMODE
     sbi_set_timer(next);
+#else
+    uint32_t hartid = hal_cpu_id();
+    volatile uint32_t* mtimecmp = (uint32_t*)(CONFIG_CLINT_PHY_BASE + 0x4000 + hartid * 8);
+    mtimecmp[0] = 0xffffffff;
+    mtimecmp[1] = (uint32_t)(next >> 32);
+    mtimecmp[0] = (uint32_t)(next & 0xffffffff);
+#endif
 }
 
 static int clock_isr(void* arg)
@@ -43,6 +63,14 @@ void clock_init(void)
     /* Install ISR */
     /* Prex expects IRQ 0 for system timer */
     irq_attach(0, IPL_CLOCK, 0, &clock_isr, IST_NONE, NULL);
+
+#ifndef CONFIG_SMODE
+    /* Clear pending timer interrupt by setting mtimecmp to a large value */
+    uint32_t hartid = hal_cpu_id();
+    volatile uint32_t* mtimecmp = (uint32_t*)(CONFIG_CLINT_PHY_BASE + 0x4000 + hartid * 8);
+    mtimecmp[0] = 0xffffffff;
+    mtimecmp[1] = 0xffffffff;
+#endif
 
     /* Program first interrupt */
     set_timer(get_time() + ticks_per_intr);

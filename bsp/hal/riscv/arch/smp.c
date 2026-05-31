@@ -39,7 +39,15 @@ void hal_cpu_send_ipi(uint32_t mask, uint32_t vector)
     }
     sbi_call(SBI_EXT_IPI, 0, (long)mask, 0, 0);
 #else
-    /* Bare-metal CLINT MSIP write would go here */
+    if (mask == 0) {
+        uint32_t cpuid = hal_cpu_id();
+        mask = ((1 << CONFIG_SMP_NCPUS) - 1) & ~(1 << cpuid);
+    }
+    for (int i = 0; i < CONFIG_SMP_NCPUS; i++) {
+        if (mask & (1 << i)) {
+            *(volatile uint32_t*)(CONFIG_CLINT_PHY_BASE + i * 4) = 1;
+        }
+    }
 #endif
 }
 

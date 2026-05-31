@@ -29,7 +29,8 @@
 #define CSR_IP      mip
 #define CSR_SCRATCH mscratch
 #define CSR_TVEC    mtvec
-/* SATP is not available in M-mode */
 #endif
+
+#define CSR_SATP    satp
 
 #endif /* !_RISCV_CSR_H */

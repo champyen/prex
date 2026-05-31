@@ -44,9 +44,14 @@ vector_entry:
     /* Save original t0 to riscv_cpu->temp_t0 (offset 12) */
     sw t0, 12(tp)
 
-    /* Check if we came from Kernel Mode directly using sstatus.SPP */
+    /* Check if we came from Kernel Mode directly using CSR_STATUS.MPP/SPP */
     csrr t0, CSR_STATUS
+#ifdef CONFIG_SMODE
     andi t0, t0, 0x100          /* Check SPP (bit 8) */
+#else
+    li t1, 0x1800               /* Check MPP (bits 11-12) */
+    and t0, t0, t1
+#endif
     bnez t0, kernel_trap
 
     /* Coming from user */
@@ -238,10 +243,14 @@ ENTRY(syscall_ret)
     csrw CSR_EPC, t0
     lw t0, 128(sp)
     
-    /* Clear SIE bit (bit 1) to ensure interrupts are disabled in S-mode
-     * during the return path. They will be enabled by sret restoring from SPIE.
+    /* Clear SIE/MIE bit to ensure interrupts are disabled
+     * during the return path. They will be enabled by sret/mret restoring from SPIE/MPIE.
      */
+#ifdef CONFIG_SMODE
     andi t0, t0, ~2
+#else
+    andi t0, t0, ~8
+#endif
 
 #ifdef CONFIG_SMODE
     li t1, 1 << 18      /* Force SUM=1 */
@@ -250,7 +259,12 @@ ENTRY(syscall_ret)
     csrw CSR_STATUS, t0
     
     /* Returning to user mode? Check privilege bit */
+#ifdef CONFIG_SMODE
     andi t0, t0, 0x100  /* Check SPP (bit 8) */
+#else
+    li t1, 0x1800
+    and t0, t0, t1      /* Check MPP (bits 11-12) */
+#endif
     bnez t0, returning_to_kernel
     
     /* Returning to user mode: Save kernel stack top to riscv_cpu->kernel_sp */
@@ -301,7 +315,11 @@ restore_regs:  /* Restore general purpose registers */
     /* Restore SP */
     lw sp, 4(sp)
 
+#ifdef CONFIG_SMODE
     sret
+#else
+    mret
+#endif
 
 	.global bootinfo
 bootinfo:		.word	BOOTINFO
@@ -491,29 +509,23 @@ ENTRY(reset_entry)
 
 
     /*
-     * Map UART0 (0x10000000) to 0x10000000 (1:1) for early physical access
-     * BOOT_PGD_PHYS[64] = (0x10000000 >> 2) | (PTE_V | PTE_R | PTE_W | PTE_A | PTE_D)
-     * PPN for 0x10000000 is 0x10000.
-     * PPN << 10 = 0x04000000.
-     * Flags = 0xc7.
-     * Entry = 0x040000c7.
+     * Map UART0 (CONFIG_NS16550_PHY_BASE) to CONFIG_NS16550_PHY_BASE (1:1) for early physical access
+     * Index = CONFIG_NS16550_PHY_BASE >> 22
      */
-    li t0, BOOT_PGD_PHYS + 256      /* 64 * 4 = 256 */
-    li t1, 0x040000c7
+    li t0, BOOT_PGD_PHYS + ((CONFIG_NS16550_PHY_BASE >> 22) * 4)
+    li t1, ((CONFIG_NS16550_PHY_BASE >> 2) | 0xc7)
     sw t1, 0(t0)
 
     /*
-     * Map UART0 to CONFIG_NS16550_BASE (0x10000000 + CONFIG_IOMEM_BASE) for early virtual access
-     * Index = (0x10000000 + CONFIG_IOMEM_BASE) >> 22
+     * Map UART0 to CONFIG_NS16550_BASE (early virtual access)
+     * Index = CONFIG_NS16550_BASE >> 22
      */
-    li t0, BOOT_PGD_PHYS + (((0x10000000 + CONFIG_IOMEM_BASE) >> 22) * 4)
-    li t1, 0x040000c7
+    li t0, BOOT_PGD_PHYS + ((CONFIG_NS16550_BASE >> 22) * 4)
     sw t1, 0(t0)
 
     /*
      * Enable MMU
      * satp = (1 << 31) | (BOOT_PGD_PHYS >> 12)
-     * MODE = 1 (Sv32)
      */
     li t0, BOOT_PGD_PHYS
     srli t0, t0, 12
@@ -528,6 +540,7 @@ ENTRY(reset_entry)
     fence rw, rw
     fence.i
 #endif
+
 
     la tp, cpu_table
 
