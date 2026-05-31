@@ -11,6 +11,11 @@ TARGET:=	bootldr
 _KERNEL_:=	1
 DEFS+=		KERNEL
 
+ifeq ($(CONFIG_BOOT_THUMB),y)
+CFLAGS+=	-mthumb -mthumb-interwork
+ASFLAGS+=	-mthumb
+endif
+
 include $(CURDIR)/$(ARCH)/$(PLATFORM)/Makefile.inc
 include $(CURDIR)/$(ARCH)/arch/Makefile.inc
 include $(CURDIR)/common/Makefile.inc

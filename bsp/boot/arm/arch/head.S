@@ -38,22 +38,48 @@
 #define ENTRY(x) .global x; .align 2; x##:
 
 	.section ".start","ax"
+#ifdef CONFIG_BOOT_THUMB
+	.syntax unified
+	.thumb
+	.thumb_func
+#else
 	.code 32
+#endif
 /*
  * Loader entry point
  */
 ENTRY(boot_entry)
+#ifdef CONFIG_BOOT_THUMB
+	/* If we started in ARM mode, switch to Thumb */
+	.code 32
+	adr	r0, 1f + 1
+	bx	r0
+	.thumb
+1:
+#endif
 	b	start_vector
 
 	.align 2
+#ifdef CONFIG_BOOT_THUMB
+	.thumb
+#else
 	.code 32
+#endif
 stack_end:	.word	(BOOTSTKTOP - KERNOFFSET)
 
 start_vector:
+#ifdef CONFIG_BOOT_THUMB
+	mov.w	r0, #0xd3		/* Enter SVC mode, Disable IRQ,FIQ */
+#else
 	mov	r0, #0xd3		/* Enter SVC mode, Disable IRQ,FIQ */
+#endif
 	msr	cpsr_c, r0
 	ldr	sp, stack_end
 
+#ifdef CONFIG_BOOT_THUMB
+	ldr	r0, =main
+	bx	r0
+#else
 	adr	r0, thumb_mode + 1
 	bx	r0
 	.code 16
@@ -61,6 +87,7 @@ thumb_mode:
 
 	ldr	r0, =main
 	bx	r0			/* Change to ARM mode */
+#endif
 
 	.section .tail,"ax"
 dummy:

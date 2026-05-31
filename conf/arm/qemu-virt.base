@@ -53,6 +53,7 @@ options 	POSIX		# POSIX support
 options 	NET		    # Network support
 options 	CMDBOX		# Core utilities
 options		THUMB		# Thumb mode support
+options		BOOT_THUMB	# Build bootloader in Thumb-2 mode
 options		USR_THUMB	# Thumb mode for user programs
 options		DRV_THUMB	# Thumb mode for drivers
 options		KERNEL_THUMB	# Thumb mode for kernel
