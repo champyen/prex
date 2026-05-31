@@ -42,7 +42,7 @@ options         MAXMEM=16777216           # Max core per task (16MB)
 #
 options         RISCV           # Processor arch
 options         RV32            # 32-bit RISC-V
-options         SMODE           # Run in Supervisor mode
+#options         SMODE           # Run in Supervisor mode
 options         QEMU_VIRT       # Platform
 options         SMP_NCPUS=4     # Number of CPUs
 #options        FPU                     # Floating point unit
@@ -97,6 +97,7 @@ device          vio_block       # VirtIO Block
 # Hardware configurations
 #
 options         NIRQS=32
+options     CLINT_BASE=0x02000000
 options     PLIC_BASE=0x0c000000
 options     NS16550_BASE=0x10000000
 options         NS16550_IRQ=10
