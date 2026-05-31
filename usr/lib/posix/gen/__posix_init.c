@@ -33,7 +33,6 @@
 extern void __exception_init(void);
 extern void __process_init(void);
 extern void __file_init(void);
-
 void __posix_init(void)
 {
     __exception_init();

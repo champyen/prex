@@ -149,6 +149,27 @@ In order to reduce the development time of mobilie applications, Prex+ is provid
 | setpgid | int setpgid(pid_t pid, pid_t pgid); | set process group                               | ![Yes](img/posix/checkmark.png) |
 | getpgrp | pid_t getpgrp(void);                | get process group                               | ![Yes](img/posix/checkmark.png) |
 
+### POSIX Threads - <pthread.h>
+
+| Name                    | Synopsis                                                                                   | Description                             | Support?                        |
+| ----------------------- | ------------------------------------------------------------------------------------------ | --------------------------------------- | ------------------------------- |
+| pthread_create          | int pthread_create(pthread_t *t, const pthread_attr_t *a, void *(*f)(void *), void *arg);  | create a new thread                     | ![Yes](img/posix/checkmark.png) |
+| pthread_join            | int pthread_join(pthread_t thread, void **retval);                                         | wait for thread termination             | ![Yes](img/posix/checkmark.png) |
+| pthread_exit            | void pthread_exit(void *retval);                                                           | terminate calling thread                | ![Yes](img/posix/checkmark.png) |
+| pthread_self            | pthread_t pthread_self(void);                                                              | get the calling thread ID               | ![Yes](img/posix/checkmark.png) |
+| pthread_detach          | int pthread_detach(pthread_t thread);                                                      | detach a thread                         | ![Yes](img/posix/checkmark.png) |
+| pthread_yield           | int pthread_yield(void);                                                                   | yield the processor                     | ![Yes](img/posix/checkmark.png) |
+| pthread_mutex_init      | int pthread_mutex_init(pthread_mutex_t *m, const pthread_mutexattr_t *a);                  | initialize a mutex                      | ![Yes](img/posix/checkmark.png) |
+| pthread_mutex_destroy   | int pthread_mutex_destroy(pthread_mutex_t *m);                                             | destroy a mutex                         | ![Yes](img/posix/checkmark.png) |
+| pthread_mutex_lock      | int pthread_mutex_lock(pthread_mutex_t *m);                                                | lock a mutex                            | ![Yes](img/posix/checkmark.png) |
+| pthread_mutex_trylock   | int pthread_mutex_trylock(pthread_mutex_t *m);                                             | try to lock a mutex                     | ![Yes](img/posix/checkmark.png) |
+| pthread_mutex_unlock    | int pthread_mutex_unlock(pthread_mutex_t *m);                                              | unlock a mutex                          | ![Yes](img/posix/checkmark.png) |
+| pthread_cond_init       | int pthread_cond_init(pthread_cond_t *c, const pthread_condattr_t *a);                     | initialize condition variable           | ![Yes](img/posix/checkmark.png) |
+| pthread_cond_destroy    | int pthread_cond_destroy(pthread_cond_t *c);                                               | destroy condition variable              | ![Yes](img/posix/checkmark.png) |
+| pthread_cond_wait       | int pthread_cond_wait(pthread_cond_t *c, pthread_mutex_t *m);                              | wait on a condition variable            | ![Yes](img/posix/checkmark.png) |
+| pthread_cond_signal     | int pthread_cond_signal(pthread_cond_t *c);                                                | signal a condition variable             | ![Yes](img/posix/checkmark.png) |
+| pthread_cond_broadcast  | int pthread_cond_broadcast(pthread_cond_t *c);                                             | broadcast a condition variable          | ![Yes](img/posix/checkmark.png) |
+
 
 
 Copyright© 2005-2009 Kohsuke Ohtani

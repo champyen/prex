@@ -44,9 +44,7 @@ struct sigaction __sig_act[NSIG];
 sigset_t __sig_mask;
 sigset_t __sig_pending;
 
-#ifdef _REENTRANT
-volatile mutex_t __sig_lock;
-#endif
+mutex_t __sig_lock;
 
 /*
  * Process all pending and unmasked signal

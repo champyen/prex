@@ -34,6 +34,7 @@ endif
 #FILES+= 	$(SRCDIR)/usr/test/fault/fault
 #FILES+= 	$(SRCDIR)/usr/test/assert/assert_test
 
+#FILES+= 	$(SRCDIR)/usr/task/pthread/pthread
 FILES+=		$(SRCDIR)/doc/LICENSE
 
 endif	# !CONFIG_POSIX
