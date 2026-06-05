@@ -14,7 +14,11 @@ STRIPFLAG:=	-s
 else
 LDSCRIPT:=	$(SRCDIR)/usr/arch/$(ARCH)/user-nommu.ld
 STRIPFLAG:=	--strip-debug --strip-unneeded
+ifeq ($(CONFIG_ARMV8M),y)
+_RELOC_OBJ_:=
+else
 _RELOC_OBJ_:=	1
+endif
 endif
 
 ifdef TASK

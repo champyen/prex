@@ -36,6 +36,11 @@ SECTIONS
 	. = ALIGN(4);
 	.data : {
 		*(.data)
+		*(.data.*)
+	} : data
+
+	.got : {
+		*(.got*)
 	} : data
 
 	. = ALIGN(4);

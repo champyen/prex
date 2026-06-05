@@ -102,6 +102,16 @@ CFLAGS+=	-mthumb
 ASFLAGS+=	-mthumb
 DEFS+=		CONFIG_KERNEL_THUMB
 endif
+
+endif
+endif
+# ROPI/RWPI Position-Independent flags for user-space tasks on Cortex-M33
+ifeq ($(CONFIG_ARMV8M),y)
+ifneq ($(_KERNEL_),1)
+ifneq ($(_DRV_),1)
+CFLAGS:=	$(filter-out -ffixed-r9,$(CFLAGS))
+CFLAGS+=	-fpic -msingle-pic-base -mpic-register=r9 -mno-pic-data-is-text-relative
+endif
 endif
 endif
 endif
