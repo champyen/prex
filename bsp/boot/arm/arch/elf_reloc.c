@@ -31,12 +31,31 @@
 #include <sys/elf.h>
 #include <boot.h>
 
+#ifndef R_ARM_GOT_BREL
+#define R_ARM_GOT_BREL 26
+#endif
+
+extern Elf32_Addr sram_got_base;
+
 int relocate_rel(Elf32_Rel* rel, Elf32_Addr sym_val, char* target_sect)
 {
     Elf32_Addr *where, tmp;
     Elf32_Sword addend;
 
     where = (Elf32_Addr*)(target_sect + rel->r_offset);
+#ifdef CONFIG_ARMV8M
+    if (ELF32_R_TYPE(rel->r_info) == R_ARM_GOT_BREL) {
+        Elf32_Addr got_offset = *where;
+        Elf32_Addr *got_entry = (Elf32_Addr *)(sram_got_base + got_offset);
+        *got_entry = (vaddr_t)ptokv(sym_val);
+        return 0;
+    }
+    /* Skip write if the target address is not in SRAM */
+    if (!(((vaddr_t)where >= 0x20000000 && (vaddr_t)where < 0x20080000) ||
+          ((vaddr_t)where >= 0x30000000 && (vaddr_t)where < 0x30080000))) {
+        return 0;
+    }
+#endif
     switch (ELF32_R_TYPE(rel->r_info)) {
     case R_ARM_NONE:
         break;

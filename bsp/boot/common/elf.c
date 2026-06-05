@@ -39,11 +39,25 @@
 /* forward declarations */
 static int load_executable(char*, struct module*);
 static int load_relocatable(char*, struct module*);
+static int relocate_section(char*, Elf32_Shdr*);
 
 #define SHF_VALID (SHF_ALLOC | SHF_EXECINSTR | SHF_WRITE | SHF_LINK_ORDER)
 
 static char* sect_addr[32]; /* array of section address */
 static int strshndx;        /* index of string section */
+
+#ifdef CONFIG_ARMV8M
+Elf32_Addr sram_got_base;
+
+static int strcmp(const char* s1, const char* s2)
+{
+    while (*s1 && (*s1 == *s2)) {
+        s1++;
+        s2++;
+    }
+    return *(const unsigned char*)s1 - *(const unsigned char*)s2;
+}
+#endif
 
 /*
  * Load the program from specified ELF image stored in memory.
@@ -130,6 +144,12 @@ static int load_executable(char* img, struct module* m)
     Elf32_Phdr* phdr;
     paddr_t phys_base;
     int i;
+#ifdef CONFIG_ARMV8M
+    Elf32_Shdr* shdr;
+    char* shstrtab;
+    vaddr_t text_vma = 0;
+    vaddr_t data_vma = 0;
+#endif
 
     phys_base = load_base;
     ehdr = (Elf32_Ehdr*)img;
@@ -137,6 +157,20 @@ static int load_executable(char* img, struct module* m)
     m->phys = load_base;
     phys_base = load_base;
     ELFDBG(("phys addr=%lx\n", phys_base));
+
+#ifdef CONFIG_ARMV8M
+    /* Pre-scan program headers to find segment link-time virtual addresses */
+    for (i = 0; i < (int)ehdr->e_phnum; i++, phdr++) {
+        if (phdr->p_type == PT_LOAD) {
+            if (!(phdr->p_flags & PF_W)) {
+                text_vma = phdr->p_vaddr;
+            } else {
+                data_vma = phdr->p_vaddr;
+            }
+        }
+    }
+    phdr = (Elf32_Phdr*)((paddr_t)ehdr + ehdr->e_phoff);
+#endif
 
     m->text = 0;
     m->data = 0;
@@ -147,6 +181,33 @@ static int load_executable(char* img, struct module* m)
             ELFDBG(("p_align=%x\n", (int)phdr->p_align));
             ELFDBG(("p_paddr=%x\n", phdr->p_paddr));
 
+#ifdef CONFIG_ARMV8M
+            if (!(phdr->p_flags & PF_W)) {
+                /* Text / RO data (XIP from QSPI Flash) */
+                if (m->text == 0) {
+                    m->text = (vaddr_t)ptokv(img + phdr->p_offset); // Point directly to Flash
+                    m->textsz = (size_t)phdr->p_memsz;
+                } else {
+                    m->textsz = (size_t)((phdr->p_vaddr + phdr->p_memsz) - m->text);
+                }
+                /* DO NOT memcpy to phys_base. Code executes in-place. */
+            } else {
+                /* Data & BSS (Relocated to SRAM) */
+                if (m->data == 0) {
+                    m->data = (vaddr_t)ptokv(load_base); // SRAM location
+                }
+                m->datasz = (size_t)((phdr->p_vaddr + phdr->p_filesz) - m->data);
+                m->bsssz = (size_t)((phdr->p_vaddr + phdr->p_memsz) - m->data) - m->datasz;
+
+                if (phdr->p_filesz > 0) {
+                    memcpy((char*)load_base, img + phdr->p_offset, (size_t)phdr->p_filesz);
+                }
+                if (phdr->p_memsz > phdr->p_filesz) {
+                    memset((char*)load_base + phdr->p_filesz, 0, (size_t)(phdr->p_memsz - phdr->p_filesz));
+                }
+                load_base = round_page(load_base + phdr->p_memsz);
+            }
+#else
             if (!(phdr->p_flags & PF_W)) {
                 /* Text / RO data */
                 if (m->text == 0) {
@@ -175,6 +236,7 @@ static int load_executable(char* img, struct module* m)
                     memset((char*)load_base + (phdr->p_vaddr - m->data) + phdr->p_filesz, 0, (size_t)(phdr->p_memsz - phdr->p_filesz));
                 }
             }
+#endif
         }
 #ifdef __arm__
         else if (phdr->p_type == PT_ARM_EXIDX) {
@@ -184,19 +246,72 @@ static int load_executable(char* img, struct module* m)
 #endif
     }
 
+#ifdef CONFIG_ARMV8M
+    /* load_base is already updated and rounded inside the loop */
+#else
     if (m->data != 0) {
         load_base = phys_base + (m->data - m->text) + m->datasz + m->bsssz;
     } else {
         load_base = phys_base + m->textsz;
     }
+#endif
 
     load_base = round_page(load_base);
     m->size = (size_t)(load_base - m->phys);
+#ifdef CONFIG_ARMV8M
+    m->entry = m->text + (ehdr->e_entry - text_vma);
+#else
     m->entry = ehdr->e_entry;
+#endif
     ELFDBG(("module size=%x entry=%lx\n", m->size, m->entry));
 
     if (m->size == 0)
         panic("Module size is 0!");
+
+#ifdef CONFIG_ARMV8M
+    /* Populate sect_addr array and locate GOT section */
+    shdr = (Elf32_Shdr*)((paddr_t)ehdr + ehdr->e_shoff);
+    shstrtab = (char*)((paddr_t)ehdr + shdr[ehdr->e_shstrndx].sh_offset);
+    strshndx = 0;
+
+    for (i = 0; i < (int)ehdr->e_shnum; i++) {
+        sect_addr[i] = 0;
+        if (shdr[i].sh_flags & SHF_ALLOC) {
+            if (!(shdr[i].sh_flags & SHF_WRITE)) {
+                /* Text/ROData in QSPI Flash */
+                sect_addr[i] = img + shdr[i].sh_offset;
+            } else {
+                /* Data/BSS in SRAM */
+                sect_addr[i] = (char*)ptokv(m->phys + (shdr[i].sh_addr - data_vma));
+            }
+        } else if (shdr[i].sh_type == SHT_SYMTAB || shdr[i].sh_type == SHT_STRTAB) {
+            sect_addr[i] = img + shdr[i].sh_offset;
+            if (shdr[i].sh_type == SHT_SYMTAB)
+                strshndx = (int)shdr[i].sh_link;
+        }
+    }
+
+    /* Set sram_got_base for relocation helper */
+    sram_got_base = 0;
+    shdr = (Elf32_Shdr*)((paddr_t)ehdr + ehdr->e_shoff);
+    for (i = 0; i < (int)ehdr->e_shnum; i++) {
+        if (shdr[i].sh_type == SHT_PROGBITS && strcmp(shstrtab + shdr[i].sh_name, ".got") == 0) {
+            sram_got_base = (Elf32_Addr)sect_addr[i];
+            break;
+        }
+    }
+
+    /* Process relocations */
+    shdr = (Elf32_Shdr*)((paddr_t)ehdr + ehdr->e_shoff);
+    for (i = 0; i < (int)ehdr->e_shnum; i++, shdr++) {
+        if (shdr->sh_type == SHT_REL || shdr->sh_type == SHT_RELA) {
+            if (relocate_section(img, shdr) != 0) {
+                DPRINTF(("Relocation error: module=%s\n", m->name));
+                return -1;
+            }
+        }
+    }
+#endif
     return 0;
 }
 

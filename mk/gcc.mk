@@ -111,6 +111,7 @@ ifneq ($(_KERNEL_),1)
 ifneq ($(_DRV_),1)
 CFLAGS:=	$(filter-out -ffixed-r9,$(CFLAGS))
 CFLAGS+=	-fpic -msingle-pic-base -mpic-register=r9 -mno-pic-data-is-text-relative
+LDFLAGS+=	--emit-relocs
 endif
 endif
 endif
