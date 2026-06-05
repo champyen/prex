@@ -78,7 +78,7 @@ Please execute the implementation in the following sequential stages:
 * **MSP/PSP stack separation:** Rewrite `syscall_entry` and `syscall_ret` in `locore.S` to copy hardware exception frames between user stack (PSP) and kernel stack (MSP).
 * **Context switching:** Implement context switching via `cpu_switch` in `locore.S` (which naturally preserves `r9` as part of `r4-r11`).
 
-### Stage 5: System Configuration & Synchronization (Steps 5.6, 5.8, 5.9)
+### Stage 5: System Configuration & Synchronization (Steps 5.6, 5.8, 5.9) (Completed)
 * **Interrupt priorities:** Update SysTick priority in `clock.c`.
 * **Memory Barriers:** Add `dsb` and `isb` instructions to `sau_init` (after SAU enable) and `machine_startup` (after VTOR update) to enforce instruction pipeline synchronization.
 * **TrustZone Integration:** Ensure that Non-Secure user task execution (via SAU memory regions) matches the initialized `0xFFFFFFBC` EXC_RETURN context configuration from Stage 4.
