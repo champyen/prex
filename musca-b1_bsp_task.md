@@ -70,7 +70,7 @@ Please execute the implementation in the following sequential stages:
     * Resolve `.rel.data` (e.g. `R_ARM_ABS32`) absolute address relocations by updating their values directly in SRAM.
     * Identify the GOT base in SRAM using the offset of the separate `.got` section relative to `.data` in the ELF section headers.
 
-### Stage 4: Execution Context & Stack Unification (Steps 5.3, 5.4, 5.5)
+### Stage 4: Execution Context & Stack Unification (Steps 5.3, 5.4, 5.5) (Completed)
 * **r9 register setup:** 
   - Add `vaddr_t got_base` to `struct task` in `sys/include/task.h` under `CONFIG_ARMV8M`.
   - Copy `mod->exidx_start` (the runtime GOT base address) to `task->got_base` during task bootstrapping/load time in `task.c`.
@@ -81,6 +81,7 @@ Please execute the implementation in the following sequential stages:
 ### Stage 5: System Configuration & Synchronization (Steps 5.6, 5.8, 5.9)
 * **Interrupt priorities:** Update SysTick priority in `clock.c`.
 * **Memory Barriers:** Add `dsb` and `isb` instructions to `sau_init` (after SAU enable) and `machine_startup` (after VTOR update) to enforce instruction pipeline synchronization.
+* **TrustZone Integration:** Ensure that Non-Secure user task execution (via SAU memory regions) matches the initialized `0xFFFFFFBC` EXC_RETURN context configuration from Stage 4.
 * **Base configuration:** Confirm that `conf/arm/musca-b1.base` contains the correct `BOOTIMG_BASE`, `KERNEL_TEXT`, `ARM_VECTORS`, and `LDFLAGS` makeoptions.
 
 ### Stage 6: Validation and QEMU Testing (Step 5.7)

@@ -9,6 +9,8 @@
 #include <context.h>
 #include <locore.h>
 #include <trap.h>
+#include <thread.h>
+#include <task.h>
 
 void context_set(context_t ctx, int type, register_t val)
 {
@@ -26,6 +28,7 @@ void context_set(context_t ctx, int type, register_t val)
         u->r0 = 0;
         u->svc_sp = (uint32_t)val;
         u->cpsr = 0x01000000; /* Default xPSR: Thumb bit set */
+        u->svc_lr = 0xFFFFFFBC; /* Default EXC_RETURN: Non-Secure Thread Mode using PSP */
         break;
 
     case CTX_KENTRY:
@@ -46,6 +49,12 @@ void context_set(context_t ctx, int type, register_t val)
         u = ctx->uregs;
         u->cpsr = 0x01000000; /* Thumb bit */
         u->pc = (uint32_t)val;
+        {
+            struct thread *thr = list_entry(ctx, struct thread, ctx);
+            if (thr && thr->task) {
+                u->r9 = (uint32_t)thr->task->got_base;
+            }
+        }
         break;
 
     case CTX_UARG:

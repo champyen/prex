@@ -474,6 +474,9 @@ void task_bootstrap(void)
             break;
         if ((error = vm_load(task->map, mod, &stack)) != 0)
             break;
+#ifdef CONFIG_ARMV8M
+        task->got_base = mod->exidx_start;
+#endif
         task_setname(task, mod->name);
 
         /*

@@ -129,31 +129,88 @@ ENTRY(debugmon_handler)
  * System call entry (SVCall)
  */
 ENTRY(syscall_entry)
-    /* 
-     * In Cortex-M, hardware stacks r0-r3, r12, lr, pc, xPSR.
-     * We need to build the rest of struct cpu_regs.
-     */
-    push    {r4-r11}                /* Save remaining registers */
-    mov     r0, sp                  /* r0: Pointer to struct cpu_regs */
-    
-    /* 
-     * Get SVC number from stacked PC.
-     * Hardware stacked frame starts at SP + (8 * 4).
-     * PC is at offset 24 from that.
-     */
-    ldr     r1, [sp, #32 + 24]      /* Stacked PC */
-    ldrb    r4, [r1, #-2]           /* SVC number (immediate) */
-    
-    /* Call syscall_handler(int num, struct cpu_regs *regs) */
-    mov     r0, r4                  /* num */
-    mov     r1, sp                  /* regs */
-    bl      syscall_handler
+    /* Check if exception was taken from user space (PSP) */
+    tst     lr, #4                  /* EXC_RETURN bit 2 is 1 if PSP was active */
+    bne     syscall_from_user
 
-    /* Restore and return */
+    /* ----------------------------------------------------
+     * Case A: SVC called from Kernel Mode (MSP)
+     * ---------------------------------------------------- */
+    push    {r4-r11}
+    push    {lr}                    /* Save EXC_RETURN */
+    add     r1, sp, #4              /* r1 = regs (pointer to cpu_regs) */
+    ldr     r2, [r1, #32 + 24]      /* Stacked PC */
+    ldrb    r0, [r2, #-2]           /* Get SVC immediate number */
+    bl      syscall_handler         /* Call C dispatcher */
+    str     r0, [sp, #4 + 32]       /* Store return value in cpu_regs.r0 */
+    pop     {lr}                    /* Restore EXC_RETURN */
+    pop     {r4-r11}
+    bx      lr                      /* Return to kernel */
+
+    /* ----------------------------------------------------
+     * Case B: SVC called from User Mode (PSP)
+     * ---------------------------------------------------- */
+syscall_from_user:
+    mrs     r12, psp                /* r12 = User PSP pointer */
+
+    /* Allocate space for struct cpu_regs on MSP (76 bytes) */
+    sub     sp, sp, #76
+
+    /* Save software-saved registers r4-r11 at MSP offset 0 */
+    stmia   sp, {r4-r11}
+
+    /* Copy hardware frame {r0-r3, r12, lr, pc, xPSR} from PSP to MSP offset 32 */
+    ldmia   r12!, {r4-r11}          /* Pop user registers into temp regs */
+    add     r0, sp, #32
+    stmia   r0, {r4-r11}            /* Store into MSP frame */
+
+    /* Restore clobbered r4-r11 from MSP offset 0 */
+    ldmia   sp, {r4-r11}
+
+    /* Save user SP (original PSP before exception = current r12) */
+    str     r12, [sp, #64]          /* cpu_regs.sp = original PSP */
+
+    /* Save EXC_RETURN to svc_lr */
+    str     lr, [sp, #72]           /* cpu_regs.svc_lr = EXC_RETURN */
+
+    /* Retrieve SVC number from copied stacked PC (offset 56 on MSP) */
+    ldr     r1, [sp, #56]           /* Stacked PC */
+    ldrb    r0, [r1, #-2]           /* SVC number (1st parameter) */
+
+    /* Update PSP to reflect hardware frame removal */
+    msr     psp, r12
+
+    mov     r1, sp                  /* regs (2nd parameter) */
+    bl      syscall_handler         /* Call C dispatcher */
+
+    /* Store the system call return value (in r0) into the stacked r0 */
+    str     r0, [sp, #32]           /* cpu_regs.r0 = return value */
+
     .global syscall_ret
 syscall_ret:
-    pop     {r4-r11}
-    bx      lr
+    /* Restore EXC_RETURN */
+    ldr     lr, [sp, #72]           /* Restore EXC_RETURN */
+
+    /* ----------------------------------------------------
+     * Return to User Mode (PSP)
+     * ---------------------------------------------------- */
+    /* Read current PSP and allocate space for hardware frame */
+    mrs     r0, psp
+    sub     r0, r0, #32
+    msr     psp, r0                 /* Update PSP first */
+
+    /* Copy hardware frame from MSP offset 32 to user stack */
+    add     r1, sp, #32
+    ldmia   r1, {r4-r11}            /* Load saved hardware registers from MSP */
+    stmia   r0, {r4-r11}            /* Store onto user stack (PSP) */
+
+    /* Restore user r4-r11 from MSP offset 0 */
+    ldmia   sp, {r4-r11}
+
+    /* Deallocate cpu_regs on MSP */
+    add     sp, sp, #76
+
+    bx      lr                      /* Return to user via EXC_RETURN */
 
 /*
  * PendSV entry (Context Switch)

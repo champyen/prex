@@ -66,6 +66,9 @@ struct task
         uint32_t func; /* Function start address for name lookup */
     } backtrace[16];
 #endif
+#ifdef CONFIG_ARMV8M
+    vaddr_t got_base;       /* GOT base address in SRAM for the task */
+#endif
 };
 
 #define curtask (curthread->task)
