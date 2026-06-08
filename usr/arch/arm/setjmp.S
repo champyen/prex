@@ -126,7 +126,8 @@ ENTRY(longjmp)
 	/* Restore integer registers */
 #ifdef CONFIG_USR_THUMB
         ldmia	r0!, {r4-r12}
-        ldr     sp, [r0], #4
+        ldr     sp, [r0]
+        add     r0, r0, #4
         ldr     lr, [r0], #4
 #else
         ldmia	r0, {r4-r14}

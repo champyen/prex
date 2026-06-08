@@ -59,7 +59,7 @@ $ timeout 15 \
 
 * arm-musca-b1
 $ timeout 15 \
-  qemu-system-arm -M musca-b1 -kernel prexos.bin -nographic \
+  qemu-system-arm -M musca-b1 -kernel prexos.elf -nographic \
   > qemu.log 2>&1 & sleep 16 && cat qemu.log
 
 # tiered volumes (ARFS/FATFS)

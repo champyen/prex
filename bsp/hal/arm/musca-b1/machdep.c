@@ -36,14 +36,32 @@ static void sau_init(void)
     SAU_RBAR = 0x20020000 & 0xFFFFFFE0;       /* Start at 128KB offset (1:3 split) */
     SAU_RLAR = (0x2007FFFF & 0xFFFFFFE0) | 1; /* Enable, Non-secure */
 
-    /* 5. Enable SAU */
-    SAU_CTRL |= 1;
+    /* 5. Enable SAU - DISABLED for debugging */
+    /* SAU_CTRL |= 1; */
     __asm__ volatile("dsb" : : : "memory");
     __asm__ volatile("isb" : : : "memory");
 }
 
 void machine_idle(void)
 {
+    uint32_t ipsr;
+    __asm__ volatile("mrs %0, ipsr" : "=r"(ipsr));
+    if (ipsr != 0) {
+        /* We are in Handler Mode! Let's do an exception return to Thread Mode. */
+        __asm__ volatile(
+            "mov     r0, sp\n"
+            "sub     r0, r0, #32\n"       /* Allocate dummy exception frame */
+            "ldr     r1, =1f\n"           /* pc = label 1 */
+            "str     r1, [r0, #24]\n"
+            "ldr     r1, =0x01000000\n"   /* xPSR = Thumb */
+            "str     r1, [r0, #28]\n"
+            "mov     sp, r0\n"
+            "ldr     lr, =0xFFFFFFF9\n"   /* EXC_RETURN to Thread Mode using MSP */
+            "bx      lr\n"                /* Exception return! */
+            "1:\n"                        /* We resume here in Thread Mode! */
+            : : : "r0", "r1", "lr", "memory"
+        );
+    }
     __asm__ volatile("wfi");
 }
 

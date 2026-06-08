@@ -61,8 +61,8 @@ void clock_init(void)
     uint32_t freq = 50000000; 
     uint32_t ticks = freq / CONFIG_HZ;
     
-    /* Set SysTick priority (0x40) */
-    SCB_SHPR3 = (SCB_SHPR3 & 0x00FFFFFF) | 0x40000000; 
+    /* Set SysTick priority (0x60, matching IPL_CLOCK mask) */
+    SCB_SHPR3 = (SCB_SHPR3 & 0x00FFFFFF) | 0x60000000; 
 
     SYST_RVR = ticks - 1;
     SYST_CVR = 0;

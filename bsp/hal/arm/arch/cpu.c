@@ -37,6 +37,10 @@
 #include <locore.h>
 #include <cpufunc.h>
 
+#if defined(CONFIG_ARMV7A) || defined(CONFIG_ARMV8M)
+extern void update_mask(void);
+#endif
+
 /*
  * splhigh - disable all interrupts.
  * Returns the previous priority level.
@@ -47,6 +51,9 @@ int splhigh(void)
 
     sploff();
     curspl = 15;
+#if defined(CONFIG_ARMV7A) || defined(CONFIG_ARMV8M)
+    update_mask();
+#endif
     return oldspl;
 }
 
@@ -59,6 +66,9 @@ int spl0(void)
     int oldspl = curspl;
 
     curspl = 0;
+#if defined(CONFIG_ARMV7A) || defined(CONFIG_ARMV8M)
+    update_mask();
+#endif
     splon();
     return oldspl;
 }
@@ -69,6 +79,9 @@ int spl0(void)
 void splx(int s)
 {
     curspl = s;
+#if defined(CONFIG_ARMV7A) || defined(CONFIG_ARMV8M)
+    update_mask();
+#endif
     if (curspl == 0)
         splon();
     else

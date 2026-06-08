@@ -48,7 +48,16 @@
 #define SHF_VALID (SHF_ALLOC | SHF_EXECINSTR | SHF_ALLOC | SHF_WRITE)
 
 #ifndef CONFIG_MMU
+#ifdef __arm__
+Elf32_Addr sram_got_base;
+#endif
 static char* sect_addr[32]; /* Array of section address */
+Elf32_Half elf_type;
+Elf32_Addr text_vma;
+Elf32_Addr data_vma;
+Elf32_Addr text_runtime;
+Elf32_Addr data_runtime;
+Elf32_Sym* current_symtab;
 #endif
 
 #ifdef CONFIG_MMU
@@ -150,7 +159,16 @@ static int relocate_section_rela(Elf32_Sym* sym_table, Elf32_Rela* rela, char* t
             /* Empty symbol used for R_ARM_V4BX, etc */
             sym_val = sym->st_value;
         } else if (sym->st_shndx != STN_UNDEF) {
-            sym_val = (Elf32_Addr)sect_addr[sym->st_shndx] + sym->st_value;
+            if (elf_type == ET_EXEC) {
+                sym_val = sym->st_value;
+                if (sym_val < data_vma) {
+                    sym_val = text_runtime + (sym_val - text_vma);
+                } else {
+                    sym_val = data_runtime + (sym_val - data_vma);
+                }
+            } else {
+                sym_val = (Elf32_Addr)sect_addr[sym->st_shndx] + sym->st_value;
+            }
             if (relocate_rela(rela, sym_val, target_sect) != 0)
                 return -1;
         } else if (ELF32_ST_BIND(sym->st_info) == STB_WEAK) {
@@ -173,7 +191,16 @@ static int relocate_section_rel(Elf32_Sym* sym_table, Elf32_Rel* rel, char* targ
             /* Empty symbol used for R_ARM_V4BX, etc */
             sym_val = sym->st_value;
         } else if (sym->st_shndx != STN_UNDEF) {
-            sym_val = (Elf32_Addr)sect_addr[sym->st_shndx] + sym->st_value;
+            if (elf_type == ET_EXEC) {
+                sym_val = sym->st_value;
+                if (sym_val < data_vma) {
+                    sym_val = text_runtime + (sym_val - text_vma);
+                } else {
+                    sym_val = data_runtime + (sym_val - data_vma);
+                }
+            } else {
+                sym_val = (Elf32_Addr)sect_addr[sym->st_shndx] + sym->st_value;
+            }
             if (relocate_rel(rel, sym_val, target_sect) != 0)
                 return -1;
         } else if (ELF32_ST_BIND(sym->st_info) == STB_WEAK) {
@@ -199,6 +226,7 @@ static int relocate_section(Elf32_Shdr* shdr, char* rel_data)
         return 0; /* Target section not loaded (e.g. debug section), skip relocations! */
     if ((sym_table = (Elf32_Sym*)sect_addr[shdr->sh_link]) == 0)
         return -1;
+    current_symtab = sym_table;
 
     nr_reloc = (int)(shdr->sh_size / shdr->sh_entsize);
     switch (shdr->sh_type) {
@@ -220,16 +248,24 @@ static int relocate_section(Elf32_Shdr* shdr, char* rel_data)
 /*
  * Load ELF relocatable file.
  */
-static int load_reloc(Elf32_Ehdr* ehdr, task_t task, int fd, vaddr_t* entry)
+static int load_reloc(Elf32_Ehdr* ehdr, struct exec* exec, int fd)
 {
+    task_t task = exec->task;
     Elf32_Shdr* shdr;
     char* buf;
     void *base, *addr, *mapped;
     size_t shdr_size, total_size;
     int i, error = 0;
     u_long load_off = 0;
-    vaddr_t first_text_off = 0xffffffff;
+    u_long first_text_off = 0xffffffff;
     u_long first_text_addr = 0;
+    u_long first_data_addr = 0;
+
+    elf_type = ehdr->e_type;
+    text_vma = 0;
+    data_vma = 0;
+    text_runtime = 0;
+    data_runtime = 0;
 
     DPRINTF(("exec: load_reloc\n"));
 
@@ -249,20 +285,43 @@ static int load_reloc(Elf32_Ehdr* ehdr, task_t task, int fd, vaddr_t* entry)
         goto out1;
     }
 
-    /* Calculate total required size with sequential packing */
     shdr = (Elf32_Shdr*)buf;
     total_size = 0;
+    u_long max_addr = 0;
+    first_text_addr = 0xffffffff;
+    first_data_addr = 0xffffffff;
     for (i = 0; i < ehdr->e_shnum; i++, shdr++) {
         if (shdr->sh_flags & SHF_ALLOC) {
-            if (shdr->sh_addralign > 0)
-                total_size = (total_size + shdr->sh_addralign - 1) & ~(shdr->sh_addralign - 1);
-            total_size += shdr->sh_size;
+            if (ehdr->e_type == ET_EXEC) {
+                if (shdr->sh_flags & SHF_EXECINSTR) {
+                    if (first_text_addr == 0xffffffff)
+                        first_text_addr = shdr->sh_addr;
+                }
+                if (shdr->sh_flags & SHF_WRITE) {
+                    if (first_data_addr == 0xffffffff)
+                        first_data_addr = shdr->sh_addr;
+                }
+                if (shdr->sh_addr + shdr->sh_size > max_addr)
+                    max_addr = shdr->sh_addr + shdr->sh_size;
+            } else {
+                if (shdr->sh_addralign > 0)
+                    total_size = (total_size + shdr->sh_addralign - 1) & ~(shdr->sh_addralign - 1);
+                total_size += shdr->sh_size;
+            }
         }
     }
-
-    if (total_size == 0) {
-        error = ENOEXEC;
-        goto out1;
+    if (ehdr->e_type == ET_EXEC) {
+        if (first_text_addr == 0xffffffff || max_addr == 0) {
+            error = ENOEXEC;
+            goto out1;
+        }
+        total_size = max_addr - first_text_addr;
+    } else {
+        if (total_size == 0) {
+            error = ENOEXEC;
+            goto out1;
+        }
+        first_text_addr = 0;
     }
     if (vm_allocate(task, &base, total_size, 1) != 0) {
         DPRINTF(("exec: out of text\n"));
@@ -277,21 +336,26 @@ static int load_reloc(Elf32_Ehdr* ehdr, task_t task, int fd, vaddr_t* entry)
 
     /* Copy sections */
     shdr = (Elf32_Shdr*)buf;
+    load_off = 0;
     for (i = 0; i < ehdr->e_shnum; i++, shdr++) {
         sect_addr[i] = 0;
         if (shdr->sh_flags & SHF_ALLOC) {
-            /* Align the current load offset */
-            if (shdr->sh_addralign > 0)
-                load_off = (load_off + shdr->sh_addralign - 1) & ~(shdr->sh_addralign - 1);
-            addr = (char*)mapped + load_off;
-
-            if (shdr->sh_type != SHT_NOBITS) {
+            if (ehdr->e_type == ET_EXEC) {
+                load_off = shdr->sh_addr - first_text_addr;
+            } else {
+                /* Align the current load offset */
+                if (shdr->sh_addralign > 0)
+                    load_off = (load_off + shdr->sh_addralign - 1) & ~(shdr->sh_addralign - 1);
                 if (shdr->sh_flags & SHF_EXECINSTR) {
                     if (first_text_off == 0xffffffff) {
                         first_text_off = load_off;
                         first_text_addr = shdr->sh_addr;
                     }
                 }
+            }
+            addr = (char*)mapped + load_off;
+
+            if (shdr->sh_type != SHT_NOBITS) {
                 if (shdr->sh_size > 0) {
                     if (lseek(fd, shdr->sh_offset, SEEK_SET) < 0) {
                         error = EIO;
@@ -303,12 +367,14 @@ static int load_reloc(Elf32_Ehdr* ehdr, task_t task, int fd, vaddr_t* entry)
                     }
                 }
                 sect_addr[i] = addr;
-                load_off += shdr->sh_size;
+                if (ehdr->e_type != ET_EXEC)
+                    load_off += shdr->sh_size;
             } else { /* SHT_NOBITS */
                 if (shdr->sh_size > 0)
                     memset(addr, 0, shdr->sh_size);
                 sect_addr[i] = addr;
-                load_off += shdr->sh_size;
+                if (ehdr->e_type != ET_EXEC)
+                    load_off += shdr->sh_size;
             }
         } else if (shdr->sh_type == SHT_SYMTAB || shdr->sh_type == SHT_RELA || shdr->sh_type == SHT_REL) {
             if (shdr->sh_size > 0) {
@@ -329,23 +395,67 @@ static int load_reloc(Elf32_Ehdr* ehdr, task_t task, int fd, vaddr_t* entry)
         }
     }
 
+#if defined(__arm__)
+    /* Locate GOT base */
+    sram_got_base = 0;
+    exec->gp = NULL;
+    shdr = (Elf32_Shdr*)buf;
+    if (ehdr->e_shstrndx != SHN_UNDEF) {
+        Elf32_Shdr* shstr_hdr = &shdr[ehdr->e_shstrndx];
+        char* shstrtab = malloc(shstr_hdr->sh_size);
+        if (shstrtab != NULL) {
+            if (lseek(fd, shstr_hdr->sh_offset, SEEK_SET) >= 0 &&
+                read(fd, shstrtab, shstr_hdr->sh_size) >= 0) {
+                for (i = 0; i < ehdr->e_shnum; i++) {
+                    if (shdr[i].sh_type == SHT_PROGBITS && strcmp(shstrtab + shdr[i].sh_name, ".got") == 0) {
+                        sram_got_base = (Elf32_Addr)sect_addr[i];
+                        exec->gp = (void*)((u_long)base + (sram_got_base - (u_long)mapped));
+                        break;
+                    }
+                }
+            }
+            free(shstrtab);
+        }
+    }
+#endif
+
+    if (elf_type == ET_EXEC) {
+        text_vma = first_text_addr;
+        data_vma = first_data_addr;
+        text_runtime = (vaddr_t)mapped;
+        shdr = (Elf32_Shdr*)buf;
+        for (i = 0; i < ehdr->e_shnum; i++, shdr++) {
+            if (shdr->sh_flags & SHF_ALLOC) {
+                if (shdr->sh_flags & SHF_WRITE) {
+                    if (data_runtime == 0)
+                        data_runtime = (vaddr_t)sect_addr[i];
+                }
+            }
+        }
+    }
+
     /* Process relocation */
     shdr = (Elf32_Shdr*)buf;
     for (i = 0; i < ehdr->e_shnum; i++, shdr++) {
         if (shdr->sh_type == SHT_REL || shdr->sh_type == SHT_RELA) {
             if (relocate_section(shdr, sect_addr[i]) != 0) {
                 error = EIO;
-                DPRINTF(("exec: relocation failed\n"));
                 goto out2;
             }
         }
     }
 
-    if (first_text_off == 0xffffffff) {
-        first_text_off = 0;
-        first_text_addr = 0;
+
+
+    if (ehdr->e_type == ET_EXEC) {
+        exec->entry = (vaddr_t)((u_long)base + (ehdr->e_entry - first_text_addr));
+    } else {
+        if (first_text_off == 0xffffffff) {
+            first_text_off = 0;
+            first_text_addr = 0;
+        }
+        exec->entry = (vaddr_t)((u_long)base + first_text_off + (ehdr->e_entry - first_text_addr));
     }
-    *entry = (vaddr_t)((u_long)base + first_text_off + (ehdr->e_entry - first_text_addr));
 
     sys_debug(DBGC_FLUSHCACHE, NULL);
 out2:
@@ -388,7 +498,7 @@ int elf_load(struct exec* exec)
 #ifdef CONFIG_MMU
     error = load_exec((Elf32_Ehdr*)exec->header, exec->task, fd, &exec->entry);
 #else
-    error = load_reloc((Elf32_Ehdr*)exec->header, exec->task, fd, &exec->entry);
+    error = load_reloc((Elf32_Ehdr*)exec->header, exec, fd);
 #endif
     close(fd);
     return error;
@@ -414,8 +524,13 @@ int elf_probe(struct exec* exec)
     if (ehdr->e_type != ET_EXEC)
         return PROBE_ERROR;
 #else
+#ifdef CONFIG_ARMV8M
+    if (ehdr->e_type != ET_EXEC && ehdr->e_type != ET_REL)
+        return PROBE_ERROR;
+#else
     if (ehdr->e_type != ET_REL)
         return PROBE_ERROR;
+#endif
 #endif
     return PROBE_MATCH;
 }

@@ -37,12 +37,39 @@
 
 extern Elf32_Addr sram_got_base;
 
+
+
 int relocate_rel(Elf32_Rel* rel, Elf32_Addr sym_val, char* target_sect)
 {
     Elf32_Addr *where, tmp;
     Elf32_Sword addend;
 
+#ifdef CONFIG_ARMV8M
+    extern Elf32_Half elf_type;
+    extern Elf32_Addr text_vma;
+    extern Elf32_Addr data_vma;
+    extern Elf32_Addr text_runtime;
+    extern Elf32_Addr data_runtime;
+    extern Elf32_Sym* current_symtab;
+
+    Elf32_Sym* sym = &current_symtab[ELF32_R_SYM(rel->r_info)];
+
+    if (elf_type == ET_EXEC) {
+        if (rel->r_offset < data_vma) {
+            where = (Elf32_Addr*)(text_runtime + (rel->r_offset - text_vma));
+        } else {
+            where = (Elf32_Addr*)(data_runtime + (rel->r_offset - data_vma));
+        }
+    } else {
+        where = (Elf32_Addr*)(target_sect + rel->r_offset);
+    }
+
+    Elf32_Addr adj_sym_val = (elf_type == ET_EXEC) ? (sym_val - sym->st_value) : sym_val;
+#else
     where = (Elf32_Addr*)(target_sect + rel->r_offset);
+    Elf32_Addr adj_sym_val = sym_val;
+#endif
+
 #ifdef CONFIG_ARMV8M
     if (ELF32_R_TYPE(rel->r_info) == R_ARM_GOT_BREL) {
         Elf32_Addr got_offset = *where;
@@ -56,22 +83,23 @@ int relocate_rel(Elf32_Rel* rel, Elf32_Addr sym_val, char* target_sect)
         return 0;
     }
 #endif
+
     switch (ELF32_R_TYPE(rel->r_info)) {
     case R_ARM_NONE:
         break;
     case R_ARM_ABS32:
-        *where += (vaddr_t)ptokv(sym_val);
+        *where += (vaddr_t)ptokv(adj_sym_val);
         break;
     case R_ARM_MOVW_ABS_NC:
         addend = *where;
         addend = ((addend & 0xf0000) >> 4) | (addend & 0xfff);
-        tmp = (vaddr_t)ptokv(sym_val) + addend;
+        tmp = (vaddr_t)ptokv(adj_sym_val) + addend;
         *where = (*where & 0xfff0f000) | ((tmp & 0xf000) << 4) | (tmp & 0xfff);
         break;
     case R_ARM_MOVT_ABS:
         addend = *where;
         addend = ((addend & 0xf0000) >> 4) | (addend & 0xfff);
-        tmp = (vaddr_t)ptokv(sym_val) + addend;
+        tmp = (vaddr_t)ptokv(adj_sym_val) + addend;
         tmp >>= 16;
         *where = (*where & 0xfff0f000) | ((tmp & 0xf000) << 4) | (tmp & 0xfff);
         break;
@@ -83,7 +111,7 @@ int relocate_rel(Elf32_Rel* rel, Elf32_Addr sym_val, char* target_sect)
         addend = ((upper_insn & 0x000f) << 12) | ((upper_insn & 0x0400) << 1) | ((lower_insn & 0x7000) >> 4) |
                  (lower_insn & 0x00ff);
 
-        tmp = (vaddr_t)ptokv(sym_val) + addend;
+        tmp = (vaddr_t)ptokv(adj_sym_val) + addend;
 
         if (ELF32_R_TYPE(rel->r_info) == R_ARM_THM_MOVT_ABS)
             tmp >>= 16;

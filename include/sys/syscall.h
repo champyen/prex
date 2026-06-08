@@ -48,7 +48,7 @@
     DO(task_chkcap, 2) \
     DO(thread_create, 2) \
     DO(thread_terminate, 1) \
-    DO(thread_load, 3) \
+    DO(thread_setup, 4) \
     DO(thread_self, 0) \
     DO(thread_yield, 0) \
     DO(thread_suspend, 1) \
@@ -114,7 +114,7 @@
 #define SYS_task_chkcap 11
 #define SYS_thread_create 12
 #define SYS_thread_terminate 13
-#define SYS_thread_load 14
+#define SYS_thread_setup 14
 #define SYS_thread_self 15
 #define SYS_thread_yield 16
 #define SYS_thread_suspend 17

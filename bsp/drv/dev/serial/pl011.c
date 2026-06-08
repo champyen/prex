@@ -146,7 +146,7 @@ static void pl011_set_poll(struct serial_port* sp, int on)
          */
         bus_write_32(UART_IMSC, 0);
     } else
-        bus_write_32(UART_IMSC, (IMSC_RX | IMSC_TX | IMSC_RT));
+        bus_write_32(UART_IMSC, (IMSC_RX | IMSC_RT));
 }
 
 static void pl011_ist(void* arg)
@@ -180,7 +180,7 @@ static void pl011_ist(void* arg)
     }
 
     /* Re-enable interrupts */
-    bus_write_32(UART_IMSC, (IMSC_RX | IMSC_TX | IMSC_RT));
+    bus_write_32(UART_IMSC, (IMSC_RX | IMSC_RT));
 }
 
 __isr
@@ -188,11 +188,19 @@ static int pl011_isr(void* arg)
 {
     uint32_t mis = bus_read_32(UART_MIS);
 
+
+
     if (mis == 0)
         return INT_DONE;
 
     /* Disable interrupts; IST will re-enable them */
     bus_write_32(UART_IMSC, 0);
+
+#ifdef CONFIG_ARMV8M
+    (void)bus_read_32(UART_IMSC); /* Force write to complete */
+    /* Clear pending bit in NVIC (IRQ 39 => ICPR1 bit 7) to prevent immediate re-entry */
+    *(volatile uint32_t*)0xE000E284 = 0x80;
+#endif
 
     return INT_CONTINUE;
 }
@@ -226,7 +234,7 @@ static void pl011_start(struct serial_port* sp)
     sp->irq = irq_attach(UART_IRQ, IPL_COMM, 0, pl011_isr, pl011_ist, sp);
 
     /* Enable TX/RX interrupt */
-    bus_write_32(UART_IMSC, (IMSC_RX | IMSC_TX | IMSC_RT));
+    bus_write_32(UART_IMSC, (IMSC_RX | IMSC_RT));
 }
 
 static void pl011_stop(struct serial_port* sp)

@@ -71,6 +71,10 @@
  */
 struct cpu_regs
 {
+    uint32_t sp;
+    uint32_t svc_sp;
+    uint32_t pad;
+    uint32_t svc_lr;
     uint32_t r4;
     uint32_t r5;
     uint32_t r6;
@@ -88,10 +92,6 @@ struct cpu_regs
     uint32_t lr;
     uint32_t pc;
     uint32_t cpsr; /* xPSR */
-    /* Padding/Compatibility */
-    uint32_t sp;
-    uint32_t svc_sp;
-    uint32_t svc_lr;
 };
 #else
 struct cpu_regs
@@ -144,6 +144,14 @@ struct context
     struct kern_regs kregs;      /* kernel mode registers */
     struct cpu_regs* uregs;      /* user mode registers */
     struct cpu_regs* saved_regs; /* savecd user mode registers */
+#ifndef CONFIG_MMU
+    struct cpu_regs saved_uregs;
+    struct cpu_regs* saved_uregs_ptr;
+    int saved_uregs_valid;
+    char kstack_copy[512];
+    uint32_t kstack_copy_sp;
+    size_t kstack_copy_size;
+#endif
 };
 
 typedef struct context* context_t; /* context id */
@@ -151,26 +159,27 @@ typedef struct context* context_t; /* context id */
 #endif /* !__ASSEMBLY__ */
 
 #ifdef CONFIG_ARMV8M
-#define REG_R4 0x00
-#define REG_R5 0x04
-#define REG_R6 0x08
-#define REG_R7 0x0c
-#define REG_R8 0x10
-#define REG_R9 0x14
-#define REG_R10 0x18
-#define REG_R11 0x1c
-#define REG_R0 0x20
-#define REG_R1 0x24
-#define REG_R2 0x28
-#define REG_R3 0x2c
-#define REG_R12 0x30
-#define REG_LR 0x34
-#define REG_PC 0x38
-#define REG_CPSR 0x3c
-#define REG_SP 0x40
-#define REG_SVCSP 0x44
-#define REG_SVCLR 0x48
-#define CTXREGS (4 * 19)
+#define REG_SP 0x00
+#define REG_SVCSP 0x04
+#define REG_PAD 0x08
+#define REG_SVCLR 0x0c
+#define REG_R4 0x10
+#define REG_R5 0x14
+#define REG_R6 0x18
+#define REG_R7 0x1c
+#define REG_R8 0x20
+#define REG_R9 0x24
+#define REG_R10 0x28
+#define REG_R11 0x2c
+#define REG_R0 0x30
+#define REG_R1 0x34
+#define REG_R2 0x38
+#define REG_R3 0x3c
+#define REG_R12 0x40
+#define REG_LR 0x44
+#define REG_PC 0x48
+#define REG_CPSR 0x4c
+#define CTXREGS (4 * 20)
 #else
 /*
  * Register offset in cpu_regs

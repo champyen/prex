@@ -84,6 +84,29 @@ static const struct sysent sysent[] = {
 /*
  * System call dispatcher.
  */
+#ifdef CONFIG_ARMV8M
+register_t syscall_handler(struct cpu_regs* regs, register_t id)
+{
+    register_t retval = EINVAL;
+    const struct sysent* callp;
+
+    curthread->ctx.uregs = regs;
+
+#ifdef DEBUG
+    strace_entry(regs->r0, regs->r1, regs->r2, regs->r3, id);
+#endif
+
+    if (id < NSYSCALL) {
+        callp = &sysent[id];
+        retval = (*callp->sy_call)(regs->r0, regs->r1, regs->r2, regs->r3);
+    }
+
+#ifdef DEBUG
+    strace_return(retval, id);
+#endif
+    return retval;
+}
+#else /* !CONFIG_ARMV8M */
 register_t syscall_handler(register_t a1, register_t a2, register_t a3, register_t a4, register_t id)
 {
     register_t retval = EINVAL;
@@ -103,6 +126,7 @@ register_t syscall_handler(register_t a1, register_t a2, register_t a3, register
 #endif
     return retval;
 }
+#endif /* CONFIG_ARMV8M */
 
 #ifdef DEBUG
 /*

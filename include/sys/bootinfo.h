@@ -69,6 +69,9 @@ struct module
     size_t bsssz;          /* bss size */
     vaddr_t exidx_start;   /* start of ARM exidx table */
     size_t exidx_size;     /* size of ARM exidx table */
+#ifdef CONFIG_ARMV8M
+    vaddr_t got_base;      /* GOT base address in SRAM */
+#endif
 };
 
 /*

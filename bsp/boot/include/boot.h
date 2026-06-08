@@ -30,6 +30,8 @@
 #ifndef _BOOT_H
 #define _BOOT_H
 
+#include <conf/config.h>
+#include <machine/syspage.h>
 #include <sys/cdefs.h>
 #include <sys/param.h>
 #include <sys/types.h>
@@ -68,5 +70,7 @@ size_t strnlen(const char*, size_t);
 void* memcpy(void*, const void*, size_t);
 void* memset(void*, int, size_t);
 __END_DECLS
+
+#include <elf_reloc.h>
 
 #endif /* !_BOOT_H */

@@ -33,7 +33,9 @@
 #include <sys/cdefs.h>
 
 #ifdef __arm__
-#if defined(CONFIG_ARMV7A)
+#if defined(CONFIG_ARMV8M)
+#define memory_barrier() __asm__ volatile("dmb" : : : "memory")
+#elif defined(CONFIG_ARMV7A)
 #define memory_barrier() __asm__ volatile("dmb ish" : : : "memory")
 #elif defined(CONFIG_ARMV6)
 #define memory_barrier() __asm__ volatile("mcr p15, 0, %0, c7, c10, 5" : : "r"(0) : "memory")

@@ -37,12 +37,22 @@
 
 #define _ALIGN_TEXT .align 0
 #define _ASM_TYPE_FUNCTION #function
+#ifdef CONFIG_KERNEL_THUMB
+#define _ENTRY(x)                                                                                                      \
+    .text;                                                                                                             \
+    _ALIGN_TEXT;                                                                                                       \
+    .globl x;                                                                                                          \
+    .thumb_func;                                                                                                       \
+    .type x, _ASM_TYPE_FUNCTION;                                                                                       \
+    x:
+#else
 #define _ENTRY(x)                                                                                                      \
     .text;                                                                                                             \
     _ALIGN_TEXT;                                                                                                       \
     .globl x;                                                                                                          \
     .type x, _ASM_TYPE_FUNCTION;                                                                                       \
     x:
+#endif
 
 #define _C_LABEL(x) x
 #define _ASM_LABEL(x) x

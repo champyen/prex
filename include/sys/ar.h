@@ -59,6 +59,6 @@ struct ar_hdr
     char ar_size[10]; /* size in bytes */
 #define ARFMAG "`\n"
     char ar_fmag[2]; /* consistency check */
-};
+} __attribute__((packed));
 
 #endif /* !_SYS_AR_H */

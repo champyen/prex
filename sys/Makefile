@@ -58,12 +58,17 @@ HAL:=		$(SRCDIR)/bsp/hal/hal.o
 LIBSDIR+=	$(SRCDIR)/conf
 INCSDIR+=	$(CURDIR)/include $(SRCDIR)/bsp/hal/$(ARCH)/include
 ifndef LDSCRIPT
+LDSCRIPT_PLAT:=	$(SRCDIR)/bsp/hal/$(ARCH)/$(PLATFORM)/kern.ld
+ifneq ($(wildcard $(LDSCRIPT_PLAT)),)
+LDSCRIPT:=	$(LDSCRIPT_PLAT)
+else
 LDSCRIPT:=	$(SRCDIR)/bsp/hal/$(ARCH)/arch/kern.ld
+endif
 endif
 
 include $(SRCDIR)/mk/common.mk
 
-$(TARGET): $(OBJS) $(HAL) $(LDSCRIPT)
+$(TARGET): $(OBJS) $(HAL) $(LDSCRIPT) $(SRCDIR)/conf/config.ld
 	$(call echo-file,LD     ,$@)
 	$(LD) $(LDFLAGS) $(OUTPUT_OPTION) $(HAL) $(OBJS) $(PLATFORM_LIBS)
 	$(ASMGEN)

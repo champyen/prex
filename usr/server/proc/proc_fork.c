@@ -170,20 +170,7 @@ void cleanup(struct proc* p)
 static int vfork_start(struct proc* p)
 {
 #ifndef CONFIG_MMU
-    void* stack;
-
-    /*
-     * Save parent's stack
-     */
-    DPRINTF(("proc: vfork_start stack=%x\n", p->p_stackbase));
-
-    if (vm_allocate(p->p_task, &stack, DFLSTKSZ, 1) != 0) {
-        DPRINTF(("proc: failed to allocate save stack\n"));
-        return ENOMEM;
-    }
-
-    memcpy(stack, p->p_stackbase, DFLSTKSZ);
-    p->p_stacksaved = stack;
+    p->p_stacksaved = NULL;
 #endif
 
     p->p_vforked = 1;
@@ -195,11 +182,10 @@ void vfork_end(struct proc* p)
 
     DPRINTF(("proc: vfork_end org=%x saved=%x\n", p->p_stackbase, p->p_stacksaved));
 #ifndef CONFIG_MMU
-    /*
-     * Restore parent's stack
-     */
-    memcpy(p->p_stackbase, p->p_stacksaved, DFLSTKSZ);
-    vm_free(p->p_task, p->p_stacksaved);
+    if (p->p_stacksaved != NULL) {
+        memcpy(p->p_stackbase, p->p_stacksaved, DFLSTKSZ);
+        vm_free(p->p_task, p->p_stacksaved);
+    }
 #endif
 
     /*

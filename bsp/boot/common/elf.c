@@ -48,6 +48,15 @@ static int strshndx;        /* index of string section */
 
 #ifdef CONFIG_ARMV8M
 Elf32_Addr sram_got_base;
+char* current_img;
+struct module* current_module;
+Elf32_Sym* current_symtab;
+Elf32_Half elf_type;
+Elf32_Addr text_vma;
+Elf32_Addr data_vma;
+Elf32_Addr text_runtime;
+Elf32_Addr data_runtime;
+#define load_base sram_load_base
 
 static int strcmp(const char* s1, const char* s2)
 {
@@ -69,6 +78,10 @@ int load_elf(char* img, struct module* m)
     Elf32_Phdr* phdr;
 
     ELFDBG(("\nelf_load\n"));
+#ifdef CONFIG_ARMV8M
+    current_img = img;
+    current_module = m;
+#endif
 
     ehdr = (Elf32_Ehdr*)img;
 
@@ -147,8 +160,8 @@ static int load_executable(char* img, struct module* m)
 #ifdef CONFIG_ARMV8M
     Elf32_Shdr* shdr;
     char* shstrtab;
-    vaddr_t text_vma = 0;
-    vaddr_t data_vma = 0;
+    vaddr_t loc_text_vma = 0;
+    vaddr_t loc_data_vma = 0;
 #endif
 
     phys_base = load_base;
@@ -163,9 +176,9 @@ static int load_executable(char* img, struct module* m)
     for (i = 0; i < (int)ehdr->e_phnum; i++, phdr++) {
         if (phdr->p_type == PT_LOAD) {
             if (!(phdr->p_flags & PF_W)) {
-                text_vma = phdr->p_vaddr;
+                loc_text_vma = phdr->p_vaddr;
             } else {
-                data_vma = phdr->p_vaddr;
+                loc_data_vma = phdr->p_vaddr;
             }
         }
     }
@@ -194,18 +207,22 @@ static int load_executable(char* img, struct module* m)
             } else {
                 /* Data & BSS (Relocated to SRAM) */
                 if (m->data == 0) {
-                    m->data = (vaddr_t)ptokv(load_base); // SRAM location
+                    if (nr_img == 0) {
+                        m->data = (vaddr_t)ptokv(phdr->p_vaddr); // Kernel data at KERNEL_DATA
+                    } else {
+                        m->data = (vaddr_t)ptokv(load_base); // Boot tasks at sram_load_base
+                    }
                 }
-                m->datasz = (size_t)((phdr->p_vaddr + phdr->p_filesz) - m->data);
-                m->bsssz = (size_t)((phdr->p_vaddr + phdr->p_memsz) - m->data) - m->datasz;
+                m->datasz = (size_t)((phdr->p_vaddr + phdr->p_filesz) - loc_data_vma);
+                m->bsssz = (size_t)((phdr->p_vaddr + phdr->p_memsz) - loc_data_vma) - m->datasz;
 
                 if (phdr->p_filesz > 0) {
-                    memcpy((char*)load_base, img + phdr->p_offset, (size_t)phdr->p_filesz);
+                    memcpy((char*)m->data + (phdr->p_vaddr - loc_data_vma), img + phdr->p_offset, (size_t)phdr->p_filesz);
                 }
                 if (phdr->p_memsz > phdr->p_filesz) {
-                    memset((char*)load_base + phdr->p_filesz, 0, (size_t)(phdr->p_memsz - phdr->p_filesz));
+                    memset((char*)m->data + (phdr->p_vaddr - loc_data_vma) + phdr->p_filesz, 0, (size_t)(phdr->p_memsz - phdr->p_filesz));
                 }
-                load_base = round_page(load_base + phdr->p_memsz);
+                load_base = round_page(kvtop(m->data) + (phdr->p_vaddr - loc_data_vma) + phdr->p_memsz);
             }
 #else
             if (!(phdr->p_flags & PF_W)) {
@@ -259,7 +276,7 @@ static int load_executable(char* img, struct module* m)
     load_base = round_page(load_base);
     m->size = (size_t)(load_base - m->phys);
 #ifdef CONFIG_ARMV8M
-    m->entry = m->text + (ehdr->e_entry - text_vma);
+    m->entry = m->text + (ehdr->e_entry - loc_text_vma);
 #else
     m->entry = ehdr->e_entry;
 #endif
@@ -282,7 +299,7 @@ static int load_executable(char* img, struct module* m)
                 sect_addr[i] = img + shdr[i].sh_offset;
             } else {
                 /* Data/BSS in SRAM */
-                sect_addr[i] = (char*)ptokv(m->phys + (shdr[i].sh_addr - data_vma));
+                sect_addr[i] = (char*)(m->data + (shdr[i].sh_addr - loc_data_vma));
             }
         } else if (shdr[i].sh_type == SHT_SYMTAB || shdr[i].sh_type == SHT_STRTAB) {
             sect_addr[i] = img + shdr[i].sh_offset;
@@ -291,7 +308,12 @@ static int load_executable(char* img, struct module* m)
         }
     }
 
-    /* Set sram_got_base for relocation helper */
+    /* Set sram_got_base and relocation globals for helper */
+    elf_type = ehdr->e_type;
+    text_vma = loc_text_vma;
+    data_vma = loc_data_vma;
+    text_runtime = (Elf32_Addr)m->text;
+    data_runtime = (Elf32_Addr)m->data;
     sram_got_base = 0;
     shdr = (Elf32_Shdr*)((paddr_t)ehdr + ehdr->e_shoff);
     for (i = 0; i < (int)ehdr->e_shnum; i++) {
@@ -300,6 +322,7 @@ static int load_executable(char* img, struct module* m)
             break;
         }
     }
+    m->got_base = sram_got_base;
 
     /* Process relocations */
     shdr = (Elf32_Shdr*)((paddr_t)ehdr + ehdr->e_shoff);
@@ -326,11 +349,23 @@ static int relocate_section_rela(Elf32_Sym* sym_table, Elf32_Rela* rela, char* t
         ELFDBG(("%s\n", strtab + sym->st_name));
         if (sym->st_shndx != STN_UNDEF) {
             sym_val = sym->st_value;
+#ifdef CONFIG_ARMV8M
+            if (elf_type == ET_EXEC) {
+                if (sym_val < data_vma) {
+                    sym_val = text_runtime + (sym_val - text_vma);
+                } else {
+                    sym_val = data_runtime + (sym_val - data_vma);
+                }
+            } else {
+                sym_val += (Elf32_Addr)sect_addr[sym->st_shndx];
+            }
+#else
 #ifdef __riscv__
             if (sym->st_shndx != SHN_ABS)
                 sym_val += (Elf32_Addr)sect_addr[sym->st_shndx];
 #else
             sym_val += (Elf32_Addr)sect_addr[sym->st_shndx];
+#endif
 #endif
             if (relocate_rela(rela, sym_val, target_sect) != 0)
                 return -1;
@@ -361,11 +396,23 @@ static int relocate_section_rel(Elf32_Sym* sym_table, Elf32_Rel* rel, char* targ
         ELFDBG(("%s\n", strtab + sym->st_name));
         if (sym->st_shndx != STN_UNDEF) {
             sym_val = sym->st_value;
+#ifdef CONFIG_ARMV8M
+            if (elf_type == ET_EXEC) {
+                if (sym_val < data_vma) {
+                    sym_val = text_runtime + (sym_val - text_vma);
+                } else {
+                    sym_val = data_runtime + (sym_val - data_vma);
+                }
+            } else {
+                sym_val += (Elf32_Addr)sect_addr[sym->st_shndx];
+            }
+#else
 #ifdef __riscv__
             if (sym->st_shndx != SHN_ABS)
                 sym_val += (Elf32_Addr)sect_addr[sym->st_shndx];
 #else
             sym_val += (Elf32_Addr)sect_addr[sym->st_shndx];
+#endif
 #endif
             if (relocate_rel(rel, sym_val, target_sect) != 0)
                 return -1;
@@ -405,6 +452,9 @@ static int relocate_section(char* img, Elf32_Shdr* shdr)
     }
     if ((symtab = (Elf32_Sym*)sect_addr[shdr->sh_link]) == 0)
         return -1;
+#ifdef CONFIG_ARMV8M
+    current_symtab = symtab;
+#endif
     if ((strtab = sect_addr[strshndx]) == 0)
         return -1;
     ELFDBG(("strtab=%x\n", strtab));
@@ -617,6 +667,24 @@ static int load_relocatable(char* img, struct module* m)
     m->size = (size_t)(load_base - kvtop(m->text));
     m->entry = (vaddr_t)ptokv(ehdr->e_entry + m->phys);
     ELFDBG(("module size=%x entry=%lx\n", m->size, m->entry));
+
+#ifdef CONFIG_ARMV8M
+    /* Set sram_got_base and relocation globals for helper */
+    elf_type = ehdr->e_type;
+    text_vma = 0;
+    data_vma = 0;
+    text_runtime = (Elf32_Addr)m->text;
+    data_runtime = (Elf32_Addr)m->data;
+    sram_got_base = 0;
+    shdr = (Elf32_Shdr*)((paddr_t)ehdr + ehdr->e_shoff);
+    for (i = 0; i < (int)ehdr->e_shnum; i++) {
+        if (shdr[i].sh_type == SHT_PROGBITS && strcmp(shstrtab + shdr[i].sh_name, ".got") == 0) {
+            sram_got_base = (Elf32_Addr)sect_addr[i];
+            break;
+        }
+    }
+    m->got_base = sram_got_base;
+#endif
 
     /* Process relocation */
     shdr = (Elf32_Shdr*)((paddr_t)ehdr + ehdr->e_shoff);

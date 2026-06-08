@@ -109,6 +109,11 @@ int vsprintf(char* buf, const char* fmt, va_list args)
             while (width-- > 0)
                 *p++ = pad;
             continue;
+        case 'p':
+            *p++ = '0';
+            *p++ = 'x';
+            base = 16;
+            break;
         case 'X':
         case 'x':
             base = 16;

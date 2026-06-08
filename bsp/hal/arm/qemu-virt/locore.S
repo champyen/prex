@@ -35,6 +35,15 @@
 #include <conf/config.h>
 #include <machine/asm.h>
 
+#undef ENTRY
+#define ENTRY(x) \
+	.text; \
+	_ALIGN_TEXT; \
+	.globl x; \
+	.type x, _ASM_TYPE_FUNCTION; \
+	.arm; \
+	x:
+
 	.section ".text","ax"
 	.code 32
 

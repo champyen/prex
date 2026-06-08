@@ -48,7 +48,7 @@
 #define SYS_task_chkcap 11
 #define SYS_thread_create 12
 #define SYS_thread_terminate 13
-#define SYS_thread_load 14
+#define SYS_thread_setup 14
 #define SYS_thread_self 15
 #define SYS_thread_yield 16
 #define SYS_thread_suspend 17

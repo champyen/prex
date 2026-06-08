@@ -39,7 +39,7 @@
 #define LOGBUFSZ 2048 /* size of log buffer */
 #endif
 
-#define DBGMSGSZ 128 /* Size of one message */
+#define DBGMSGSZ 512 /* Size of one message */
 
 #ifdef DEBUG
 #define DPRINTF(a) printf a

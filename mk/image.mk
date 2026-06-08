@@ -29,7 +29,14 @@ define create-image
 	$(AR) rcS $(1).dir/tmp.a $(KERNEL) $(DRIVER) $(TASKS) $(1).dir/bootdisk.a
 	# Prex loader expects "bootdisk.a" member name. 
 	# Nested archive member names in AR usually don't include path.
-	$(CAT) $(LOADER) $(1).dir/tmp.a > $(1)
+	if [ "$(PLATFORM)" = "musca-b1" ]; then \
+		dd if=$(LOADER) of=$(1).dir/padded_loader ibs=131004 conv=sync status=none; \
+		$(CAT) $(1).dir/padded_loader $(1).dir/tmp.a > $(1); \
+		$(OBJCOPY) -I binary -O elf32-littlearm --change-section-address .data=0x10000000 $(1) $(1).dir/raw_elf; \
+		$(LD) -Ttext=0x10000000 -o $(1:.bin=.elf) $(1).dir/raw_elf; \
+	else \
+		$(CAT) $(LOADER) $(1).dir/tmp.a > $(1); \
+	fi
 	@rm -rf $(1).dir
 endef
 

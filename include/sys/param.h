@@ -117,7 +117,7 @@
 #include <machine/limits.h>
 #include <machine/memory.h>
 
-#define KSTACKSZ 768 /* kernel stack size */
+#define KSTACKSZ 1024 /* kernel stack size */
 
 #define USRSTACK (0 + PAGE_SIZE) /* base address of user stack */
 #ifdef CONFIG_USR_STACKSZ

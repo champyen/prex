@@ -43,6 +43,10 @@ static void setup_bootdisk(struct ar_hdr*);
 paddr_t load_base;  /* current load address */
 paddr_t load_start; /* start address for loading */
 int nr_img;         /* number of module images */
+#ifdef CONFIG_ARMV8M
+paddr_t sram_load_base;
+paddr_t sram_load_start;
+#endif
 
 /*
  * Load OS images - kernel, driver and boot tasks.
@@ -67,6 +71,13 @@ void load_os(void)
     load_base = 0;
     load_start = 0;
     nr_img = 0;
+#ifdef CONFIG_ARMV8M
+    {
+        extern char _bss_end[];
+        sram_load_start = round_page(kvtop(&_bss_end));
+        sram_load_base = sram_load_start;
+    }
+#endif
 
     /*
      *  Sanity check of archive image.
@@ -150,8 +161,13 @@ void load_os(void)
     bi->ram[i].base = trunc_page(load_start);
     bi->ram[i].size = (size_t)round_page(load_base - load_start);
 #else
+#ifdef CONFIG_ARMV8M
+    bi->ram[i].base = sram_load_start;
+    bi->ram[i].size = (size_t)(sram_load_base - sram_load_start);
+#else
     bi->ram[i].base = load_start;
     bi->ram[i].size = (size_t)(load_base - load_start);
+#endif
 #endif
     bi->ram[i].type = MT_RESERVED;
     bi->nr_rams++;

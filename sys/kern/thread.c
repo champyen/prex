@@ -104,9 +104,18 @@ int thread_create(task_t task, thread_t* tp)
         sched_unlock();
         return ENOMEM;
     }
+#ifdef CONFIG_ARMV8M
+    memset(t->kstack, 0, KSTACKSZ);
+    struct cpu_regs *parent_uregs = curthread->ctx.uregs;
+    struct cpu_regs *child_uregs = (struct cpu_regs*)((vaddr_t)t->kstack + KSTACKSZ - sizeof(struct cpu_regs));
+    memcpy(child_uregs, parent_uregs, sizeof(struct cpu_regs));
+#else
     memcpy(t->kstack, curthread->kstack, KSTACKSZ);
+#endif
     sp = (vaddr_t)t->kstack + KSTACKSZ;
     context_set(&t->ctx, CTX_KSTACK, (register_t)sp);
+#ifdef CONFIG_ARMV8M
+#endif
     context_set(&t->ctx, CTX_KENTRY, (register_t)&syscall_ret);
     sched_start(t, curthread->basepri, SCHED_RR);
     t->suscnt = task->suscnt + 1;
@@ -164,7 +173,7 @@ void thread_destroy(thread_t th)
  * If the entry or stack address is NULL, we keep the
  * old value for it.
  */
-int thread_load(thread_t t, void (*entry)(void), void* stack)
+int thread_setup(thread_t t, void (*entry)(void), void* stack, void* gp)
 {
     int s;
 
@@ -184,8 +193,12 @@ int thread_load(thread_t t, void (*entry)(void), void* stack)
         return EPERM;
     }
     s = splhigh();
-    if (entry != NULL)
+    if (entry != NULL) {
+#ifdef CONFIG_ARMV8M
+        t->task->got_base = (vaddr_t)gp;
+#endif
         context_set(&t->ctx, CTX_UENTRY, (register_t)entry);
+    }
     if (stack != NULL)
         context_set(&t->ctx, CTX_USTACK, (register_t)stack);
     splx(s);
@@ -248,8 +261,17 @@ int thread_suspend(thread_t t)
         sched_unlock();
         return EPERM;
     }
-    if (++t->suscnt == 1)
+    if (++t->suscnt == 1) {
         sched_suspend(t);
+#ifdef CONFIG_ARMV8M
+        if (t->ctx.uregs && !t->ctx.saved_uregs_valid) {
+            memcpy(&t->ctx.saved_uregs, t->ctx.uregs, sizeof(struct cpu_regs));
+            t->ctx.saved_uregs_ptr = t->ctx.uregs;
+            t->ctx.saved_uregs_valid = 1;
+            t->ctx.uregs = &t->ctx.saved_uregs;
+        }
+#endif
+    }
 
     sched_unlock();
     return 0;

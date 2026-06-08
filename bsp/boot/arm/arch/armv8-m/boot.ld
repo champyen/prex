@@ -18,17 +18,23 @@ SECTIONS {
 		*(.rodata.*)
 	}
 	. = ALIGN(4);
-	.data . : {
+	_data_flash_start = . ;
+
+	.data (CONFIG_SYSPAGE_BASE + 0x4000) : AT(_data_flash_start) {
+		_data_start = . ;
 		*(.data)
 		*(.data.*)
+		_data_end = . ;
 	}
 	. = ALIGN(4);
 	.bss . : {
+		_bss_start = . ;
 		*(.bss)
 		*(.bss.*)
 		*(COMMON)
+		_bss_end = . ;
 	}
-	. = CONFIG_LOADER_TEXT + 0x1fff;
+	. = _data_flash_start + SIZEOF(.data) ;
 	.tail : {
 		*(.tail)
 	}

@@ -249,14 +249,16 @@ void deadlock_proactive_check(void)
     /* Check for lost wakeups / orphaned resources (1 second timeout) */
     for (i = 0; i < MAX_WAITERS; i++) {
         if (wait_records[i].active) {
-            if (now - wait_records[i].start_tick > CONFIG_HZ) {
-                log_lock = 0;
-                printf("\n*** DEADLOCK DETECTED: Lost Wakeup / Resource Stall ***\n");
-                printf("Thread %p has been waiting on %s %p for %u ticks!\n", 
-                       wait_records[i].thread, wait_records[i].name, 
-                       wait_records[i].resource, now - wait_records[i].start_tick);
-                deadlock_dump();
-                panic("Sleep Deadlock");
+            if (wait_records[i].name != NULL && strncmp(wait_records[i].name, "mutex", 6) == 0) {
+                if (now - wait_records[i].start_tick > CONFIG_HZ) {
+                    log_lock = 0;
+                    printf("\n*** DEADLOCK DETECTED: Lost Wakeup / Resource Stall ***\n");
+                    printf("Thread %p has been waiting on %s %p for %u ticks!\n", 
+                           wait_records[i].thread, wait_records[i].name, 
+                           wait_records[i].resource, now - wait_records[i].start_tick);
+                    deadlock_dump();
+                    panic("Sleep Deadlock");
+                }
             }
         }
     }

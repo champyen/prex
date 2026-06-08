@@ -467,9 +467,11 @@ struct elf_args
 
 #define ELF_TARG_VER 1 /* The ver for which this code is intended */
 
+#ifndef KERNEL
 __BEGIN_DECLS
 int relocate_rel(Elf32_Rel*, Elf32_Addr, char*);
 int relocate_rela(Elf32_Rela*, Elf32_Addr, char*);
 __END_DECLS
+#endif
 
 #endif /* _SYS_ELF_H_ */

@@ -57,16 +57,16 @@
 #define GICC_IAR (*(volatile uint32_t*)(CONFIG_GIC_CPU_BASE + 0x00c))
 #define GICC_EOIR (*(volatile uint32_t*)(CONFIG_GIC_CPU_BASE + 0x010))
 
-/*
- * Interrupt mapping table
- */
 static int ipl_table[CONFIG_NIRQS];
+static int interrupt_initialized = 0;
 
 /*
  * Set mask for current ipl
  */
-static void update_mask(void)
+void update_mask(void)
 {
+    if (!interrupt_initialized)
+        return;
     /*
      * In SMP, we use GICC_PMR to mask interrupts per-CPU.
      * Prex IPL 0 (spl0) allows all interrupts.
@@ -228,4 +228,5 @@ void interrupt_init(void)
     GICD_CTLR = 1;
 
     interrupt_cpu_init();
+    interrupt_initialized = 1;
 }

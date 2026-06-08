@@ -438,27 +438,51 @@ int vm_reference(vm_map_t map)
 int vm_load(vm_map_t map, struct module* mod, void** stack)
 {
     struct seg* seg;
-    vaddr_t base, start, end;
+    vaddr_t start, end;
     size_t size;
 
     DPRINTF(("Loading task:\'%s\'\n", mod->name));
 
-    /*
-     * Reserve text & data area
-     */
-    base = mod->text;
-    size = mod->textsz + mod->datasz + mod->bsssz;
-    if (size == 0)
+    if (mod->textsz == 0)
         return EINVAL;
 
-    start = trunc_page(base);
-    end = round_page(start + size);
-    size = (size_t)(end - start);
+    if (mod->datasz + mod->bsssz > 0 && trunc_page(mod->data) >= round_page(mod->text + mod->textsz)) {
+        /*
+         * Separate text and data/bss segments
+         */
+        /* 1. Text segment */
+        start = trunc_page(mod->text);
+        end = round_page(mod->text + mod->textsz);
+        size = (size_t)(end - start);
+        if ((seg = seg_create(&map->head, start, size)) == NULL)
+            return ENOMEM;
+        seg->flags = SEG_READ | SEG_WRITE;
 
-    if ((seg = seg_create(&map->head, start, size)) == NULL)
-        return ENOMEM;
+        /* 2. Data/BSS segment */
+        start = trunc_page(mod->data);
+        end = round_page(mod->data + mod->datasz + mod->bsssz);
+        size = (size_t)(end - start);
+        if ((seg = seg_create(&map->head, start, size)) == NULL) {
+            /* Clean up text segment */
+            struct seg* tseg = seg_lookup(&map->head, trunc_page(mod->text), 1);
+            if (tseg)
+                seg_delete(&map->head, tseg);
+            return ENOMEM;
+        }
+        seg->flags = SEG_READ | SEG_WRITE;
+    } else {
+        /*
+         * Combined text and data/bss segment
+         */
+        start = trunc_page(mod->text);
+        size = mod->textsz + mod->datasz + mod->bsssz;
+        end = round_page(start + size);
+        size = (size_t)(end - start);
 
-    seg->flags = SEG_READ | SEG_WRITE;
+        if ((seg = seg_create(&map->head, start, size)) == NULL)
+            return ENOMEM;
+        seg->flags = SEG_READ | SEG_WRITE;
+    }
 
     if (mod->bsssz != 0)
         memset((void*)(mod->data + mod->datasz), 0, mod->bsssz);

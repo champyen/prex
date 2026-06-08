@@ -123,7 +123,7 @@ __BEGIN_DECLS
 int thread_create(task_t, thread_t*);
 int thread_terminate(thread_t);
 void thread_destroy(thread_t);
-int thread_load(thread_t, void (*)(void), void*);
+int thread_setup(thread_t, void (*)(void), void*, void*);
 thread_t thread_self(void);
 int thread_valid(thread_t);
 void thread_yield(void);

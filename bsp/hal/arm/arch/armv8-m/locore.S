@@ -51,8 +51,8 @@
  */
     .align 10
 ENTRY(kernel_start)
-    /* 
-     * Vector table for Cortex-M 
+    /*
+     * Vector table for Cortex-M
      * Note: This will be pointed to by VTOR.
      */
     .word   BOOTSTKTOP      /* 0: Initial SP */
@@ -82,10 +82,10 @@ bootinfo:       .word   BOOTINFO
 
 ENTRY(reset_entry)
     cpsid   i               /* Disable interrupts */
-    
+
     /* Set up stack pointer */
     ldr     sp, =BOOTSTKTOP
-    
+
     /* Enforce 8-byte stack alignment on exceptions (SCB->CCR) */
     ldr     r0, =0xE000ED14
     ldr     r1, [r0]
@@ -111,7 +111,14 @@ ENTRY(nmi_handler)
     b       nmi_handler
 
 ENTRY(hardfault_handler)
-    b       hardfault_handler
+    tst     lr, #4                  /* Check EXC_RETURN bit 2 (1 = PSP, 0 = MSP) */
+    ite     eq
+    mrseq   r0, msp                 /* If eq, stacked frame is on MSP */
+    mrsne   r0, psp                 /* If ne, stacked frame is on PSP */
+    mov     r1, lr                  /* Pass EXC_RETURN as 2nd argument */
+    bl      report_hardfault
+1:
+    b       1b
 
 ENTRY(memmanage_handler)
     b       memmanage_handler
@@ -129,88 +136,111 @@ ENTRY(debugmon_handler)
  * System call entry (SVCall)
  */
 ENTRY(syscall_entry)
-    /* Check if exception was taken from user space (PSP) */
-    tst     lr, #4                  /* EXC_RETURN bit 2 is 1 if PSP was active */
-    bne     syscall_from_user
+    /*
+     * In Cortex-M, hardware stacks r0-r3, r12, lr, pc, xPSR.
+     * We need to build the rest of struct cpu_regs.
+     */
+    push    {r4-r11}                /* Save r4-r11 */
+    push    {r12, lr}               /* Save padding and EXC_RETURN */
+    sub     sp, sp, #8              /* Allocate space for sp and svc_sp */
 
-    /* ----------------------------------------------------
-     * Case A: SVC called from Kernel Mode (MSP)
-     * ---------------------------------------------------- */
-    push    {r4-r11}
-    push    {lr}                    /* Save EXC_RETURN */
-    add     r1, sp, #4              /* r1 = regs (pointer to cpu_regs) */
-    ldr     r2, [r1, #32 + 24]      /* Stacked PC */
-    ldrb    r0, [r2, #-2]           /* Get SVC immediate number */
-    bl      syscall_handler         /* Call C dispatcher */
-    str     r0, [sp, #4 + 32]       /* Store return value in cpu_regs.r0 */
-    pop     {lr}                    /* Restore EXC_RETURN */
+    /* Populate regs->sp (offset 0) with original SP */
+    add     r0, sp, #80
+    str     r0, [sp, #0]
+
+    ldr     r1, [sp, #72]           /* Stacked PC */
+    bic     r1, r1, #1              /* Clear Thumb bit */
+    ldrb    r4, [r1, #-2]           /* r4 = SVC number (immediate) */
+
+    /* Call syscall_handler(regs, svc_num) */
+    mov     r0, sp                  /* r0 = regs */
+    mov     r1, r4                  /* r1 = SVC number */
+    bl      syscall_handler
+
+    /* Set return value to stacked r0 */
+    str     r0, [sp, #48]
+
+ENTRY(syscall_ret)
+    add     sp, sp, #8              /* Deallocate extra space */
+    pop     {r12, lr}
     pop     {r4-r11}
-    bx      lr                      /* Return to kernel */
+    bx      lr
 
-    /* ----------------------------------------------------
-     * Case B: SVC called from User Mode (PSP)
-     * ---------------------------------------------------- */
-syscall_from_user:
-    mrs     r12, psp                /* r12 = User PSP pointer */
+/*
+ * Safe entry point for first-time user thread execution.
+ * Handles both Thread Mode and Handler Mode entries.
+ */
+ENTRY(user_thread_entry)
+    bl      spl0
+    mov     r0, sp                  /* r0 = kernel stack pointer (struct cpu_regs) */
+    ldr     r1, [r0, #0]            /* r1 = user SP */
+    
+    /* Restore r4-r11 */
+    add     r3, r0, #16
+    ldmia   r3, {r4-r11}
+    
+    /* Check if we are in Handler Mode or Thread Mode */
+    mrs     r2, ipsr
+    cmp     r2, #0
+    bne     use_exc_ret             /* If non-zero, we are in Handler Mode, use EXC_RETURN */
 
-    /* Allocate space for struct cpu_regs on MSP (76 bytes) */
-    sub     sp, sp, #76
+    /* Thread Mode Path (e.g. initial boot task start) */
+    /* Copy r0-r3 and pc to user stack to allow popping them after SP switch */
+    sub     r1, r1, #20             /* 5 words */
+    ldr     r3, [r0, #48]
+    str     r3, [r1, #0]
+    ldr     r3, [r0, #52]
+    str     r3, [r1, #4]
+    ldr     r3, [r0, #56]
+    str     r3, [r1, #8]
+    ldr     r3, [r0, #60]
+    str     r3, [r1, #12]
+    ldr     r3, [r0, #72]           /* pc */
+    str     r3, [r1, #16]           /* store pc at the top */
+    
+    /* Switch to user stack and pop everything including PC to jump */
+    mov     sp, r1
+    
+    /* Restore r12 (ip) and lr */
+    ldr     ip, [r0, #64]
+    ldr     lr, [r0, #68]
+    
+    cpsie   i                       /* Enable interrupts */
+    pop     {r0-r3, pc}             /* Jump to user space in Thread Mode using MSP */
 
-    /* Save software-saved registers r4-r11 at MSP offset 0 */
-    stmia   sp, {r4-r11}
-
-    /* Copy hardware frame {r0-r3, r12, lr, pc, xPSR} from PSP to MSP offset 32 */
-    ldmia   r12!, {r4-r11}          /* Pop user registers into temp regs */
-    add     r0, sp, #32
-    stmia   r0, {r4-r11}            /* Store into MSP frame */
-
-    /* Restore clobbered r4-r11 from MSP offset 0 */
-    ldmia   sp, {r4-r11}
-
-    /* Save user SP (original PSP before exception = current r12) */
-    str     r12, [sp, #64]          /* cpu_regs.sp = original PSP */
-
-    /* Save EXC_RETURN to svc_lr */
-    str     lr, [sp, #72]           /* cpu_regs.svc_lr = EXC_RETURN */
-
-    /* Retrieve SVC number from copied stacked PC (offset 56 on MSP) */
-    ldr     r1, [sp, #56]           /* Stacked PC */
-    ldrb    r0, [r1, #-2]           /* SVC number (1st parameter) */
-
-    /* Update PSP to reflect hardware frame removal */
-    msr     psp, r12
-
-    mov     r1, sp                  /* regs (2nd parameter) */
-    bl      syscall_handler         /* Call C dispatcher */
-
-    /* Store the system call return value (in r0) into the stacked r0 */
-    str     r0, [sp, #32]           /* cpu_regs.r0 = return value */
-
-    .global syscall_ret
-syscall_ret:
-    /* Restore EXC_RETURN */
-    ldr     lr, [sp, #72]           /* Restore EXC_RETURN */
-
-    /* ----------------------------------------------------
-     * Return to User Mode (PSP)
-     * ---------------------------------------------------- */
-    /* Read current PSP and allocate space for hardware frame */
-    mrs     r0, psp
-    sub     r0, r0, #32
-    msr     psp, r0                 /* Update PSP first */
-
-    /* Copy hardware frame from MSP offset 32 to user stack */
-    add     r1, sp, #32
-    ldmia   r1, {r4-r11}            /* Load saved hardware registers from MSP */
-    stmia   r0, {r4-r11}            /* Store onto user stack (PSP) */
-
-    /* Restore user r4-r11 from MSP offset 0 */
-    ldmia   sp, {r4-r11}
-
-    /* Deallocate cpu_regs on MSP */
-    add     sp, sp, #76
-
-    bx      lr                      /* Return to user via EXC_RETURN */
+use_exc_ret:
+    /* Handler Mode Path (scheduled from exception/interrupt) */
+    /* Switch to user stack (MSP) */
+    mov     sp, r1
+    
+    /* Build hardware exception frame on MSP (sp) */
+    sub     sp, sp, #32             /* 8 words */
+    
+    /* Copy r0-r3 */
+    ldr     r2, [r0, #48]
+    str     r2, [sp, #0]
+    ldr     r2, [r0, #52]
+    str     r2, [sp, #4]
+    ldr     r2, [r0, #56]
+    str     r2, [sp, #8]
+    ldr     r2, [r0, #60]
+    str     r2, [sp, #12]
+    
+    /* Copy r12, lr, pc, xPSR */
+    ldr     r2, [r0, #64]
+    str     r2, [sp, #16]
+    ldr     r2, [r0, #68]
+    str     r2, [sp, #20]
+    ldr     r2, [r0, #72]
+    str     r2, [sp, #24]
+    ldr     r2, [r0, #76]
+    str     r2, [sp, #28]
+    
+    /* Prepare EXC_RETURN in lr: Thread Mode using MSP */
+    ldr     lr, =0xFFFFFFF9
+    
+    cpsie   i                       /* Enable interrupts */
+    bx      lr                      /* Exception return to user space using MSP */
 
 /*
  * PendSV entry (Context Switch)
@@ -224,12 +254,22 @@ ENTRY(pendsv_entry)
  */
 ENTRY(systick_entry)
 ENTRY(interrupt_entry)
-    /* 
+    /*
      * Prex+ expects interrupt_handler() to be called.
      * It will use IPSR to determine the vector.
      */
     push    {r4-r11}
+    push    {r12, lr}
+    sub     sp, sp, #8
+    
+    /* Populate regs->sp (offset 0) with original SP */
+    add     r0, sp, #80
+    str     r0, [sp, #0]
+    
     bl      interrupt_handler
+    
+    add     sp, sp, #8
+    pop     {r12, lr}
     pop     {r4-r11}
     bx      lr
 
@@ -266,8 +306,6 @@ ENTRY(cpu_switch)
 ENTRY(kernel_thread_entry)
     mov     r0, r5                  /* Set argument */
     bx      r4                      /* Jump to kernel thread */
-1:
-    b       1b
 
 ENTRY(vector_copy)
     /* Cortex-M uses VTOR, copying may be needed if in RAM */

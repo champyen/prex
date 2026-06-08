@@ -35,6 +35,10 @@
 extern paddr_t load_base;
 extern paddr_t load_start;
 extern int nr_img;
+#ifdef CONFIG_ARMV8M
+extern paddr_t sram_load_base;
+extern paddr_t sram_load_start;
+#endif
 
 __BEGIN_DECLS
 void load_os(void);

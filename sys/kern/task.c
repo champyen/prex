@@ -135,6 +135,9 @@ int task_create(task_t parent, int vm_option, task_t* childp)
     task->capability = parent->capability;
     task->parent = parent;
     task->flags = TF_DEFAULT;
+#ifdef CONFIG_ARMV8M
+    task->got_base = parent->got_base;
+#endif
     strlcpy(task->name, "*noname", MAXTASKNAME);
     list_init(&task->threads);
     list_init(&task->objects);
@@ -475,7 +478,7 @@ void task_bootstrap(void)
         if ((error = vm_load(task->map, mod, &stack)) != 0)
             break;
 #ifdef CONFIG_ARMV8M
-        task->got_base = mod->exidx_start;
+        task->got_base = mod->got_base;
 #endif
         task_setname(task, mod->name);
 
@@ -493,7 +496,11 @@ void task_bootstrap(void)
         if ((error = thread_create(task, &t)) != 0)
             break;
         sp = (char*)stack + DFLSTKSZ - (sizeof(int) * 3);
-        error = thread_load(t, (void (*)(void))mod->entry, sp);
+#ifdef CONFIG_ARMV8M
+        error = thread_setup(t, (void (*)(void))mod->entry, sp, (void*)mod->got_base);
+#else
+        error = thread_setup(t, (void (*)(void))mod->entry, sp, NULL);
+#endif
         if (error)
             break;
         t->priority = PRI_REALTIME;

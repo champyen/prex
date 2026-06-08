@@ -22,7 +22,7 @@ for TARGET in "${TARGETS[@]}"; do
     # Determine variants to test
     if [ -n "$2" ]; then
         VARIANTS=("$2")
-    elif [[ "$TARGET" == "arm-gba" || "$TARGET" == "x86-pc" || "$TARGET" == "arm-musca-b1" ]]; then
+    elif [[ "$TARGET" == "arm-gba" || "$TARGET" == "arm-musca-b1" ]]; then
         VARIANTS=("nommu")
     elif [[ "$TARGET" == "arm-qemu-virt" || "$TARGET" == "riscv-qemu-virt" ]]; then
         VARIANTS=("mmu" "nommu" "mmu-smp" "nommu-smp")
@@ -74,7 +74,7 @@ for TARGET in "${TARGETS[@]}"; do
             elif [[ "$TARGET" == "arm-integrator" ]]; then
                 QEMU="qemu-system-arm -M integratorcp -kernel prexos_full.bin -nographic"
             elif [[ "$TARGET" == "arm-musca-b1" ]]; then
-                QEMU="qemu-system-arm -M musca-b1 -kernel prexos.bin -nographic"
+                QEMU="qemu-system-arm -M musca-b1 -kernel prexos.elf -nographic"
             fi
         fi
 
@@ -95,8 +95,8 @@ for TARGET in "${TARGETS[@]}"; do
             continue
         fi
 
-        # 3. Boot Verification (except GBA and Musca-B1)
-        if [[ "$TARGET" != "arm-gba" && "$TARGET" != "arm-musca-b1" ]]; then
+        # 3. Boot Verification (except GBA)
+        if [[ "$TARGET" != "arm-gba" ]]; then
             # x86 needs floppy.img
             if [[ "$TARGET" == "x86-pc" ]]; then
                 echo "    Creating floppy.img..."

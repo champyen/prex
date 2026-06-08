@@ -37,6 +37,8 @@
 #include <stddef.h>
 #include <setjmp.h>
 #include <errno.h>
+#include <stdio.h>
+#include <string.h>
 
 static void __parent_entry(void);
 static void __child_entry(void);
@@ -44,6 +46,9 @@ static void __child_entry(void);
 static jmp_buf __fork_env;
 static pid_t __child_pid;
 static thread_t __parent_thread;
+static char __vfork_stack[1024];
+static size_t __vfork_stack_size;
+static void *__vfork_stack_sp;
 
 /*
  * vfork() - vfork for No-MMU system.
@@ -132,6 +137,28 @@ pid_t vfork(void)
         thread_load(t, __child_entry, NULL);
         thread_getpri(t, &pri);
         thread_setpri(t, pri + 1);
+
+        /* Save stack frame */
+        void *current_sp;
+#if defined(__arm__)
+        __asm__ volatile("mov %0, sp" : "=r"(current_sp));
+#elif defined(__riscv) || defined(__riscv__)
+        __asm__ volatile("mv %0, sp" : "=r"(current_sp));
+#elif defined(__i386__)
+        __asm__ volatile("movl %%esp, %0" : "=r"(current_sp));
+#elif defined(__ppc__) || defined(__powerpc__)
+        __asm__ volatile("mr %0, 1" : "=r"(current_sp));
+#else
+#error "Unsupported architecture for vfork stack backup"
+#endif
+        __vfork_stack_sp = current_sp;
+        __vfork_stack_size = 256;
+        if (__vfork_stack_size <= sizeof(__vfork_stack)) {
+            memcpy(__vfork_stack, current_sp, __vfork_stack_size);
+        } else {
+            sys_panic("vfork: stack backup buffer too small");
+        }
+
         thread_resume(t);
 
         /*
@@ -161,6 +188,8 @@ pid_t vfork(void)
 
 static void __parent_entry(void)
 {
+    /* Restore stack frame first! */
+    memcpy(__vfork_stack_sp, __vfork_stack, __vfork_stack_size);
 
     longjmp(__fork_env, 2);
     /* NOTREACHED */
@@ -168,7 +197,6 @@ static void __parent_entry(void)
 
 static void __child_entry(void)
 {
-
     longjmp(__fork_env, 1);
     /* NOTREACHED */
 }

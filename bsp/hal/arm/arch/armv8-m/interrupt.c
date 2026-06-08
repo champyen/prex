@@ -33,6 +33,7 @@
 
 #include <sys/ipl.h>
 #include <kernel.h>
+#include <sched.h>
 #include <hal.h>
 #include <irq.h>
 #include <cpufunc.h>
@@ -61,7 +62,7 @@ static int ipl_table[CONFIG_NIRQS];
 /*
  * Set mask for current ipl
  */
-static void update_mask(void)
+void update_mask(void)
 {
     /* 
      * Cortex-M uses BASEPRI for priority masking.
@@ -122,43 +123,35 @@ void interrupt_handler(void)
     int vector = (int)ipsr - 16;
     int old_ipl, new_ipl;
 
+    sched_lock();
+
     /* SysTick is vector -1 */
     if (vector == -1) {
         old_ipl = curspl;
         if (IPL_CLOCK > old_ipl)
             curspl = IPL_CLOCK;
         update_mask();
-        splon();
         timer_handler();
-        sploff();
         curspl = old_ipl;
         update_mask();
-        return;
+    } else if (vector >= 0) {
+        /* Adjust interrupt level */
+        old_ipl = curspl;
+        new_ipl = ipl_table[vector];
+        if (new_ipl > old_ipl)
+            curspl = new_ipl;
+
+        update_mask();
+
+        /* Dispatch interrupt */
+        irq_handler(vector);
+
+        /* Restore interrupt level */
+        curspl = old_ipl;
+        update_mask();
     }
 
-    if (vector < 0) { /* System handlers */
-        return;
-    }
-
-    /* Adjust interrupt level */
-    old_ipl = curspl;
-    new_ipl = ipl_table[vector];
-    if (new_ipl > old_ipl)
-        curspl = new_ipl;
-
-    update_mask();
-
-    /* Allow another interrupt that has higher priority */
-    splon();
-
-    /* Dispatch interrupt */
-    irq_handler(vector);
-
-    sploff();
-
-    /* Restore interrupt level */
-    curspl = old_ipl;
-    update_mask();
+    sched_unlock();
 }
 
 /*

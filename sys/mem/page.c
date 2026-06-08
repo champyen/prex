@@ -118,6 +118,23 @@ paddr_t page_alloc(psize_t psize)
     return kvtop(blk);
 }
 
+static int page_is_ram(paddr_t pa)
+{
+    struct bootinfo *bi;
+    struct physmem *ram;
+    int i;
+
+    machine_bootinfo(&bi);
+    for (i = 0; i < bi->nr_rams; i++) {
+        ram = &bi->ram[i];
+        if (ram->type == MT_USABLE) {
+            if (pa >= ram->base && pa < ram->base + ram->size)
+                return 1;
+        }
+    }
+    return 0;
+}
+
 /*
  * Free page block.
  *
@@ -133,6 +150,12 @@ void page_free(paddr_t paddr, psize_t psize)
     ASSERT(psize != 0);
 
     sched_lock();
+
+    if (!page_is_ram(paddr)) {
+        DPRINTF(("page_free: ignore non-RAM pa=0x%x\n", (unsigned int)paddr));
+        sched_unlock();
+        return;
+    }
 
     size = round_page(psize);
     blk = ptokv(paddr);
@@ -285,10 +308,25 @@ void page_init(void)
             total_size -= ram->size;
             /* FALLTHROUGH */
         case MT_RESERVED:
-            DPRINTF(("page_init: reserving base=%lx size=%lx type=%d\n", (long)ram->base, (long)ram->size, (int)ram->type));
-            if (page_reserve(ram->base, ram->size)) {
-                printf("page_init: failed to reserve base=%lx size=%lx\n", (long)ram->base, (long)ram->size);
-                panic("page_init");
+            {
+                int overlap = 0;
+                int j;
+                for (j = 0; j < bi->nr_rams; j++) {
+                    if (bi->ram[j].type == MT_USABLE) {
+                        if (!(ram->base >= bi->ram[j].base + bi->ram[j].size ||
+                              ram->base + ram->size <= bi->ram[j].base)) {
+                            overlap = 1;
+                            break;
+                        }
+                    }
+                }
+                DPRINTF(("page_init: reserving base=%lx size=%lx type=%d overlap=%d\n", (long)ram->base, (long)ram->size, (int)ram->type, overlap));
+                if (overlap) {
+                    if (page_reserve(ram->base, ram->size)) {
+                        printf("page_init: failed to reserve base=%lx size=%lx\n", (long)ram->base, (long)ram->size);
+                        panic("page_init");
+                    }
+                }
             }
             break;
         }

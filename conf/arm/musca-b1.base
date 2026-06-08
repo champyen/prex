@@ -5,7 +5,7 @@
 #
 # Make options
 #
-makeoptions	GCCFLAGS+= -mcpu=cortex-m33 -mthumb -mfloat-abi=soft -ffixed-r9
+makeoptions	GCCFLAGS+= -mcpu=cortex-m33 -mthumb -mfloat-abi=soft -ffixed-r9 -mno-unaligned-access
 makeoptions	ASFLAGS+= -mcpu=cortex-m33 -mthumb
 makeoptions	LDFLAGS+= -n -z max-page-size=4
 
@@ -20,8 +20,9 @@ mmu	        IOMEM_BASE      0x00000000	0x00000000  # Flat mapping
 #
 memory      RAM_SIZE        0x00080000  # 512KB SRAM
 memory      LOADER_TEXT     0x10000000  # Start of boot loader in Flash (QSPI Secure)
-memory      BOOTIMG_BASE    0x10020000  # Location of boot image (LOADER_TEXT + 128KB)
-memory      KERNEL_TEXT     0x10010000  # Start of kernel (runs XIP from QSPI Flash)
+memory      BOOTIMG_BASE    0x1001ffbc  # Location of boot image (LOADER_TEXT + 128KB - 68)
+memory      KERNEL_TEXT     0x10020000  # Start of kernel (runs XIP from QSPI Flash)
+memory      KERNEL_DATA     0x30004400  # Start of kernel data in SRAM
 
 #
 # Tunable parameters
@@ -79,10 +80,10 @@ device      pl011       # Serial (PL011)
 #
 # Hardware configuations
 #
-options		ARM_VECTORS=0x10010000  # Vector table at kernel_start (1KB aligned in Flash)
+options		ARM_VECTORS=0x10020400  # Vector table at kernel_start (1KB aligned in Flash)
 options		NIRQS=96
 options     PL011_BASE=0x50105000   # Musca-B1 UART0
-options		PL011_IRQ=0             # Placeholder
+options		PL011_IRQ=39
 options		PL011_CLK=40000000      # CMSDK System Clock (40MHz)
 
 #

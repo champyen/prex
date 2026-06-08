@@ -63,6 +63,9 @@ struct exec
     char* xarg2;   /* extra arguments */
     task_t task;   /* task id */
     vaddr_t entry; /* entry address */
+#if defined(__arm__)
+    void* gp;      /* global pointer */
+#endif
 };
 
 /*

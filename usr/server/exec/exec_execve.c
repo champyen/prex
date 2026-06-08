@@ -192,7 +192,11 @@ again:
     exec.task = new_task;
     if ((error = ldr->el_load(&exec)) != 0)
         goto err5;
+#if defined(__arm__)
+    if ((error = thread_setup(t, (void (*)(void))exec.entry, sp, (void*)exec.gp)) != 0)
+#else
     if ((error = thread_load(t, (void (*)(void))exec.entry, sp)) != 0)
+#endif
         goto err5;
 
     /*

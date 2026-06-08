@@ -95,6 +95,7 @@ int task_chkcap(task_t task, cap_t cap);
 int thread_create(task_t task, thread_t* tp);
 int thread_terminate(thread_t t);
 int thread_load(thread_t t, void (*entry)(void), void* stack);
+int thread_setup(thread_t t, void (*entry)(void), void* stack, void* gp);
 thread_t thread_self(void);
 void thread_yield(void);
 int thread_suspend(thread_t t);
