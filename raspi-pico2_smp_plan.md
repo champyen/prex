@@ -1,6 +1,6 @@
-# Prex+ ARMv8-M SMP Implementation Plan
+# Prex+ ARMv8-M SMP Implementation Plan (Raspberry Pi Pico 2 / RP2350)
 
-This document outlines the detailed design and implementation plan for Symmetric Multiprocessing (SMP) support on the ARMv8-M Mainline architecture, specifically targeting the dual-core Cortex-M33 ARM Musca-B1 platform in Prex+.
+This document outlines the detailed design and implementation plan for Symmetric Multiprocessing (SMP) support on the ARMv8-M Mainline architecture, specifically targeting the dual-core Cortex-M33 Raspberry Pi Pico 2 (RP2350) platform in Prex+.
 
 ---
 
@@ -8,7 +8,7 @@ This document outlines the detailed design and implementation plan for Symmetric
 
 Prex+ SMP extends the uniprocessor (UP) microkernel using the **Big Kernel Lock (BKL)** design. The kernel execution is serialized using a recursive global lock (`kernel_lock`) while allowing concurrent execution of user tasks on multiple cores.
 
-The ARM Musca-B1 platform features:
+The Raspberry Pi Pico 2 (RP2350) platform features:
 1. **Dual Cortex-M33 Cores:** Core 0 (Bootstrap Processor - BSP) and Core 1 (Application Processor - AP).
 2. **TrustZone-M:** Kernel executes in Secure Handler/Thread modes, and user tasks run in Non-Secure Thread mode.
 3. **No-MMU layout with Execute-in-Place (XIP):** Code resides in read-only QSPI Flash; `.data`, `.bss`, and GOT tables are relocated to SRAM.
@@ -37,8 +37,8 @@ Zero-latency access to the current CPU's control block is achieved using hardwar
 
 ### 2.2 Querying CPU ID at Runtime
 Cortex-M33 does not have a standard, architecturally-defined CPU Core ID register in the CPU register space. 
-On the SSE-200 subsystem (used in Musca-B1), core identification is done via the memory-mapped **`CPU_IDENTITY`** register block.
-- **Base Address (Secure):** `0x5001F000` (Secure privileged access only).
+On the RP2350, core identification is done via the **SIO (Single-cycle IO)** register block:
+- **Base Address:** `0xd0000000` (Secure/Non-secure mapped).
 - **CPUID Register (Offset `0x000`):** Reading this address returns the CPU ID:
   - Core 0: returns `0`
   - Core 1: returns `1`
@@ -46,7 +46,7 @@ On the SSE-200 subsystem (used in Musca-B1), core identification is done via the
   ```c
   uint32_t hal_cpu_id(void) {
   #ifdef CONFIG_SMP
-      return *(volatile uint32_t*)0x5001F000;
+      return *(volatile uint32_t*)0xd0000000;
   #else
       return 0;
   #endif
@@ -66,12 +66,11 @@ sequenceDiagram
     
     Note over BSP: Boots via head.S & main()
     Note over BSP: Initializes SAL & prepares AP idle thread
-    BSP->>AP: Configure INITSVTOR1 (0x50021114) to kernel_start
-    BSP->>AP: Clear bit 1 in CPUWAIT (0x50021118)
-    Note over AP: Wakes up from reset
-    Note over AP: Jumps to reset_entry -> ap_reset_entry (locore.S)
-    Note over AP: Loads AP-specific stack
-    AP->>AP: Jumps to C function smp_ap_boot()
+    BSP->>AP: Initiate SIO FIFO Launch Sequence (6 words)
+    Note over AP: Wakes up from bootrom holding pen
+    Note over AP: Echoes handshake back to BSP
+    Note over AP: Loads VTOR, SP, & jumps to ap_reset_entry (locore.S)
+    Note over AP: Jumps to C function smp_ap_boot()
     Note over AP: Set local VTOR & enable local SysTick
     Note over AP: Signal ready (increment ready_count)
     BSP->>BSP: Wait for ready_count == CONFIG_SMP_NCPUS
@@ -80,22 +79,71 @@ sequenceDiagram
 ```
 
 ### 3.1 Step 1: Bootstrap Processor (BSP) Early Boot
-1. CPU0 executes `reset_entry` in `bsp/hal/arm/arch/armv8-m/locore.S`. It reads `0x5001F000` to confirm it is Core 0, clears the BSS, and jumps to `main()`.
+1. CPU0 executes `reset_entry` in `bsp/hal/arm/arch/armv8-m/locore.S`. It reads `0xd0000000` to confirm it is Core 0, clears the BSS, and jumps to `main()`.
 2. BSP initializes the system, registers `cpu_table[0]`, and calls `smp_start_aps()` to wake up Core 1.
 
 ### 3.2 Step 2: Waking up the Application Processor (AP)
-The BSP wakes up CPU1 by programming the SSE-200 System Control Register block (base `0x50021000`):
-1. **`INITSVTOR1` (Offset `0x114`):** Holds the initial Secure vector table address for CPU1. The BSP sets this to `kernel_start`.
-2. **`CPUWAIT` (Offset `0x118`):** Holds wait bits for cores. The BSP clears bit 1 (`*cpuwait &= ~2`) to release CPU1 from reset.
+The BSP launches CPU1 using the **SIO FIFO handshake protocol**. 
+The SIO FIFO registers are located at `SIO_BASE` (`0xd0000000`):
+- `FIFO_ST` (Offset `0x050`): Status register (bit 0 = `VLD` (RX data valid), bit 2 = `RDY` (TX ready)).
+- `FIFO_WR` (Offset `0x054`): Write data to peer core.
+- `FIFO_RD` (Offset `0x058`): Read data from peer core.
+
+To launch Core 1:
+1. **Clear FIFO:** Drain any remaining data in `FIFO_RD` until `VLD` is 0.
+2. **Execute Handshake:** Core 0 pushes a sequence of 6 words, waiting for Core 1 to echo each back:
+   - Word 1: `0` (Launch command).
+   - Word 2: `0` (Handshake).
+   - Word 3: `1` (Handshake).
+   - Word 4: `vector_table` base address (`kernel_start`).
+   - Word 5: `sp` (`&ap_boot_stacks[1][KSTACKSZ]`).
+   - Word 6: `entry` (`&ap_reset_entry`).
+3. Core 1 wakes from the bootrom holding pen and starts executing at `ap_reset_entry`.
+
 - Implement this in `bsp/hal/arm/arch/armv8-m/cpufunc.c`:
   ```c
+  static void fifo_push(uint32_t val) {
+      volatile uint32_t *fifo_st = (volatile uint32_t *)0xd0000050;
+      volatile uint32_t *fifo_wr = (volatile uint32_t *)0xd0000054;
+      while (!(*fifo_st & (1 << 2))) ; /* Wait for TX ready */
+      *fifo_wr = val;
+      __asm__ volatile("sev");
+  }
+
+  static uint32_t fifo_pop(void) {
+      volatile uint32_t *fifo_st = (volatile uint32_t *)0xd0000050;
+      volatile uint32_t *fifo_rd = (volatile uint32_t *)0xd0000058;
+      while (!(*fifo_st & (1 << 0))) { /* Wait for RX valid */
+          __asm__ volatile("wfe");
+      }
+      return *fifo_rd;
+  }
+
   int hal_cpu_start(uint32_t cpuid, paddr_t entry) {
       if (cpuid == 1) {
-          volatile uint32_t *initsvtor1 = (volatile uint32_t *)0x50021114;
-          volatile uint32_t *cpuwait = (volatile uint32_t *)0x50021118;
-          *initsvtor1 = (uint32_t)entry;
-          *cpuwait &= ~2; /* Clear CPU1 wait bit */
-          __asm__ volatile("dsb\nisb" : : : "memory");
+          /* Drain FIFO */
+          volatile uint32_t *fifo_st = (volatile uint32_t *)0xd0000050;
+          volatile uint32_t *fifo_rd = (volatile uint32_t *)0xd0000058;
+          while (*fifo_st & (1 << 0)) {
+              (void)*fifo_rd;
+          }
+
+          /* 6-word handshake protocol */
+          uint32_t cmd[] = {
+              0, 
+              0, 
+              1, 
+              (uint32_t)&kernel_start, 
+              (uint32_t)&ap_boot_stacks[1][KSTACKSZ], 
+              (uint32_t)entry
+          };
+
+          for (int i = 0; i < 6; i++) {
+              fifo_push(cmd[i]);
+              if (fifo_pop() != cmd[i]) {
+                  return -1; /* Handshake mismatch */
+              }
+          }
           return 0;
       }
       return -1;
@@ -108,8 +156,8 @@ Update `reset_entry` in `bsp/hal/arm/arch/armv8-m/locore.S` to branch secondary 
 ENTRY(reset_entry)
     cpsid   i
     
-    /* Check CPU ID */
-    ldr     r0, =0x5001F000
+    /* Check CPU ID via SIO register */
+    ldr     r0, =0xd0000000
     ldr     r0, [r0]
     cmp     r0, #0
     bne     ap_reset_entry
@@ -120,8 +168,8 @@ ENTRY(reset_entry)
 Implement `ap_reset_entry` in `locore.S` to configure the AP-specific stack:
 ```assembly
 ENTRY(ap_reset_entry)
-    /* Read CPU ID */
-    ldr     r0, =0x5001F000
+    /* Read CPU ID from SIO */
+    ldr     r0, =0xd0000000
     ldr     r0, [r0]
     
     /* sp = &ap_boot_stacks[cpuid][KSTACKSZ] */
@@ -146,31 +194,31 @@ ENTRY(ap_reset_entry)
 
 ## 4. Cross-Core Signaling (IPI) & Rescheduling
 
-### 4.1 Message Handling Unit (MHU) for Hardware IPI
-On the ARM Musca-B1, inter-processor signaling uses two Message Handling Units (MHU):
-- **`MHU0` (CPU0 -> CPU1):** Base `0x52600000`. Writing to `MSG_INT_SET` (offset `0x004`) asserts IRQ 6 on CPU1's NVIC.
-- **`MHU1` (CPU1 -> CPU0):** Base `0x52700000`. Writing to `MSG_INT_SET` (offset `0x004`) asserts IRQ 6 on CPU0's NVIC.
-- **IPI Interrupt Vector:** We define `IPI_IRQ` as `6` in `bsp/hal/arm/include/cpu.h`.
+### 4.1 SIO Doorbell for Hardware IPI
+On the RP2350, inter-processor interrupts are triggered using the **SIO Doorbell** registers:
+- `DOORBELL0` (Offset `0x060`): Core 0 writes here to trigger an interrupt on Core 1.
+- `DOORBELL1` (Offset `0x064`): Core 1 writes here to trigger an interrupt on Core 0.
+- **IPI Interrupt Vector:** The SIO interrupts map to `SIO_IRQ_FIFO` (IRQ 15 / 16 on the cores). We define `IPI_IRQ` as `15` in `bsp/hal/arm/include/cpu.h`.
 
-When sending an IPI, `hal_cpu_send_ipi()` writes to the respective MHU's `MSG_INT_SET` register.
+When sending an IPI, `hal_cpu_send_ipi()` writes to the respective Doorbell register.
 
-### 4.2 Handling and Clearing the MHU Interrupt
-When the MHU interrupt (IRQ 6) fires, the target CPU enters `interrupt_handler()` in `bsp/hal/arm/arch/armv8-m/interrupt.c`. The interrupt must be cleared in the handler by writing to `MSG_INT_CLR` (offset `0x008`):
+### 4.2 Handling and Clearing the Doorbell Interrupt
+When the SIO interrupt fires, the target CPU enters `interrupt_handler()` in `bsp/hal/arm/arch/armv8-m/interrupt.c`. The interrupt must be cleared in the handler by writing to the doorbell clear register (offset `0x068` for Core 0 clear, `0x06c` for Core 1 clear):
 ```c
-if (vector == 6) {
+if (vector == 15) {
     uint32_t cpuid = hal_cpu_id();
     if (cpuid == 0) {
-        volatile uint32_t *mhu1_clr = (volatile uint32_t *)0x52700008;
-        *mhu1_clr = 0xffffffff; /* Clear MHU1 interrupt on CPU0 */
+        volatile uint32_t *db_clr = (volatile uint32_t *)0xd0000068;
+        *db_clr = 0xffffffff; /* Clear Core 0 doorbell interrupt */
     } else {
-        volatile uint32_t *mhu0_clr = (volatile uint32_t *)0x52600008;
-        *mhu0_clr = 0xffffffff; /* Clear MHU0 interrupt on CPU1 */
+        volatile uint32_t *db_clr = (volatile uint32_t *)0xd000006c;
+        *db_clr = 0xffffffff; /* Clear Core 1 doorbell interrupt */
     }
 }
 ```
 
 ### 4.3 QEMU Emulation Fallback (Timer-Based Polling)
-In QEMU, the board model `musca-b1` maps `mhu0` and `mhu1` as unimplemented stubs. Consequently, guest writes to these registers are ignored and do not trigger hardware interrupts on the peer CPU.
+In QEMU, depending on the model version used for the RP2350/Pico 2, the Doorbell registers might not trigger the target NVIC interrupt.
 
 To ensure scheduler correctness in the QEMU simulator, we implement a **software-polling check** inside the SysTick timer handler:
 1. Define a global array of pending IPIs:
@@ -192,7 +240,7 @@ To ensure scheduler correctness in the QEMU simulator, we implement a **software
        ...
    }
    ```
-This allows rescheduling to be deferred to the next SysTick tick (at most 10ms latency) in QEMU, while preserving hardware-accurate MHU code path execution.
+This allows rescheduling to be deferred to the next SysTick tick (at most 10ms latency) in QEMU, while preserving hardware-accurate SIO doorbell code path execution.
 
 ---
 
@@ -203,7 +251,7 @@ Since the NVIC and SysTick are core-local, they must be initialized on the secon
 1. **`interrupt_cpu_init()`** in `bsp/hal/arm/arch/armv8-m/interrupt.c`:
    - Set the AP's Vector Table Offset Register (VTOR) at `0xE000ED08` to `kernel_start`.
    - Set basepri to `0` (allow all interrupts).
-   - Unmask/enable SysTick and the MHU IPI interrupt (IRQ 6) in the AP's NVIC.
+   - Unmask/enable SysTick and the SIO Doorbell/FIFO interrupt (IRQ 15) in the AP's NVIC.
 2. **`clock_ap_init()`** in `bsp/hal/arm/arch/armv8-m/clock.c`:
    - Configures the local SysTick timer registers (`SYST_CSR`, `SYST_RVR`, `SYST_CVR`) and starts the timer.
 
@@ -212,20 +260,20 @@ Since the NVIC and SysTick are core-local, they must be initialized on the secon
 ## 6. Implementation Roadmap
 
 ### Phase 1: Configuration & Identity Setup
-- Modify `conf/arm/musca-b1.base` to uncomment/add `options SMP_NCPUS=2`.
-- Update `hal_cpu_id()` in `bsp/hal/arm/arch/armv8-m/cpufunc.c` to read the `CPU_IDENTITY` register block.
-- Define `IPI_IRQ` as 6 in `bsp/hal/arm/include/cpu.h`.
+- Create `conf/arm/pico2.base` with `options SMP_NCPUS=2`.
+- Update `hal_cpu_id()` in `bsp/hal/arm/arch/armv8-m/cpufunc.c` to read the SIO `CPUID` register.
+- Define `IPI_IRQ` as 15 in `bsp/hal/arm/include/cpu.h`.
 
 ### Phase 2: Multicore Boot & Assembly Setup
-- Update `bsp/hal/arm/arch/armv8-m/locore.S` to check the CPU ID in `reset_entry` and branch CPU1 to `ap_reset_entry`.
+- Update `bsp/hal/arm/arch/armv8-m/locore.S` to check the CPU ID via SIO in `reset_entry` and branch CPU1 to `ap_reset_entry`.
 - Implement `ap_reset_entry` to calculate the stack offset using `ap_boot_stacks` and jump to `smp_ap_boot()`.
-- Implement `hal_cpu_start()` in `bsp/hal/arm/arch/armv8-m/cpufunc.c` to write `INITSVTOR1` and clear the `CPUWAIT` bit.
+- Implement `hal_cpu_start()` in `bsp/hal/arm/arch/armv8-m/cpufunc.c` to perform the SIO FIFO 6-word handshake protocol.
 
 ### Phase 3: Interrupt & Timer Initialization
 - Implement `interrupt_cpu_init()` in `bsp/hal/arm/arch/armv8-m/interrupt.c` to load VTOR and configure local NVIC registers.
 - Ensure `clock_ap_init()` is compiled and runs SysTick for CPU1.
 
 ### Phase 4: IPI Integration & Simulation Verification
-- Implement `hal_cpu_send_ipi()` in `bsp/hal/arm/arch/armv8-m/cpufunc.c` (or a new `smp.c` in `bsp/hal/arm/arch/armv8-m/`) writing to the MHU set registers.
-- Update `interrupt_handler()` in `interrupt.c` to check for and clear MHU interrupts, and implement the `ipi_pending` QEMU timer-polling fallback.
-- Run `verify_all.sh` to compile and boot Prex+ with SMP enabled on the `musca-b1` target.
+- Implement `hal_cpu_send_ipi()` in `bsp/hal/arm/arch/armv8-m/cpufunc.c` (or a new `smp.c` in `bsp/hal/arm/arch/armv8-m/`) writing to the SIO Doorbell registers.
+- Update `interrupt_handler()` in `interrupt.c` to check for and clear SIO Doorbell interrupts, and implement the `ipi_pending` QEMU timer-polling fallback.
+- Run `verify_all.sh` to compile and boot Prex+ with SMP enabled on the `pico2` target.
