@@ -41,6 +41,7 @@ size_t strnlen(const char*, size_t);
 void* memcpy(void*, const void*, size_t);
 void* memset(void*, int, size_t);
 int vsprintf(char*, const char*, va_list);
+int vsnprintf(char*, size_t, const char*, va_list);
 __BEGIN_DECLS
 
 #endif /* !_LIBKERN_H */
