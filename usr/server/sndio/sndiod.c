@@ -34,6 +34,7 @@ struct client {
     struct audio_info info;
     struct sndio_buf_info bufs[MAX_BUFFERS_PER_CLIENT];
     int num_bufs;
+    int next_buf;
     void *shm_base;
 };
 
@@ -97,9 +98,11 @@ static void mixing_thread(void)
             if (!clients[i].active || !clients[i].playing)
                 continue;
 
-            for (b = 0; b < clients[i].num_bufs; b++) {
+            for (int count = 0; count < clients[i].num_bufs; count++) {
+                b = (clients[i].next_buf + count) % clients[i].num_bufs;
                 if (clients[i].bufs[b].state == SNDIO_BUF_QUEUED_STATE) {
                     clients[i].bufs[b].state = SNDIO_BUF_BUSY_STATE;
+                    clients[i].next_buf = (b + 1) % clients[i].num_bufs;
                     src = (int16_t *)clients[i].bufs[b].addr;
                     
                     /* Simple linear mixing (addition) */
@@ -196,6 +199,7 @@ static void control_thread(void)
                 clients[found].task = client_task;
                 clients[found].playing = 0;
                 clients[found].num_bufs = 0;
+                clients[found].next_buf = 0;
                 clients[found].shm_base = NULL;
                 
                 /* Look up client callback object */
@@ -257,6 +261,7 @@ static void control_thread(void)
                             clients[i].bufs[b].state = SNDIO_BUF_READY_STATE;
                         }
                         clients[i].num_bufs = count;
+                        clients[i].next_buf = 0;
                         m->count = count;
                     } else {
                         DPRINTF(("sndiod: vm_map failed with error %d\n", err));

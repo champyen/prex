@@ -7,7 +7,7 @@
 #include "helix_mp3.h"
 
 #define SNDIO_BUFFER_SIZE 16384
-#define MAX_BUFFERS 2
+#define MAX_BUFFERS 4
 
 static uint32_t rate_to_mask(uint32_t rate) {
     if (rate == 44100) return AUDIO_SAMP_RATE_44K;
