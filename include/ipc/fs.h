@@ -81,6 +81,9 @@
 #define FS_TRUNCATE 0x00000224
 #define FS_FTRUNCATE 0x00000225
 #define FS_FCHDIR 0x00000226
+#define FS_POLL_REGISTER 0x00000227
+#define FS_POLL_DEREGISTER 0x00000228
+#define FS_POLL_QUERY 0x00000229
 
 /*
  * Mount message
@@ -172,6 +175,27 @@ struct fcntl_msg
     int cmd;               /* command */
     int arg;               /* argument */
     struct flock lock;     /* file lock data */
+};
+
+/*
+ * Poll entry
+ */
+struct poll_entry
+{
+    int fd;        /* file descriptor */
+    short events;  /* requested events */
+    short revents; /* returned events */
+};
+
+/*
+ * Poll message
+ */
+struct fs_poll_msg
+{
+    struct msg_header hdr;     /* message header */
+    sem_t sem_id;              /* client notification semaphore */
+    int nfds;                  /* number of file descriptors */
+    struct poll_entry fds[32]; /* monitored descriptors */
 };
 
 /* Max size of fs message */
