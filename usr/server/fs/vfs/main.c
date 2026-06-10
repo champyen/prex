@@ -798,6 +798,28 @@ static int fs_ftruncate(struct task* t, struct msg* msg)
     return sys_ftruncate(fp, msg->data[1]);
 }
 
+static int fs_poll_register(struct task* t, struct fs_poll_msg* msg)
+{
+    return sys_poll_register(t, msg->sem_id, msg->nfds, msg->fds);
+}
+
+static int fs_poll_deregister(struct task* t, struct fs_poll_msg* msg)
+{
+    return sys_poll_deregister(t, msg->sem_id);
+}
+
+static int fs_poll_query(struct task* t, struct fs_poll_msg* msg)
+{
+    int ready;
+
+    ready = sys_poll_query(t, msg->nfds, msg->fds);
+    if (ready < 0)
+        return -ready;
+
+    msg->hdr.status = 0;
+    return 0;
+}
+
 /*
  * Prepare for boot
  */
@@ -961,6 +983,9 @@ static const struct msg_map fsmsg_map[] = {
     MSGMAP(FS_TRUNCATE, fs_truncate),
     MSGMAP(FS_FTRUNCATE, fs_ftruncate),
     MSGMAP(FS_FCHDIR, fs_fchdir),
+    MSGMAP(FS_POLL_REGISTER, fs_poll_register),
+    MSGMAP(FS_POLL_DEREGISTER, fs_poll_deregister),
+    MSGMAP(FS_POLL_QUERY, fs_poll_query),
     MSGMAP(STD_BOOT, fs_boot),
     MSGMAP(STD_SHUTDOWN, fs_shutdown),
 #ifdef DEBUG_VFS

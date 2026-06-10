@@ -77,6 +77,7 @@ struct vnode
     int v_blkno;           /* block number */
     char* v_path;          /* pointer to path in fs */
     void* v_data;          /* private data for fs */
+    struct list v_poll_list; /* list of poll listeners */
 };
 typedef struct vnode* vnode_t;
 

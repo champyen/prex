@@ -173,6 +173,7 @@ vnode_t vget(mount_t mp, char* path)
     vp->v_refcnt = 1;
     vp->v_op = mp->m_op->vfs_vnops;
     strlcpy(vp->v_path, path, len);
+    list_init(&vp->v_poll_list);
     mutex_init(&vp->v_lock);
     vp->v_nrlocks = 0;
 
@@ -300,6 +301,52 @@ int vcount(vnode_t vp)
     count = vp->v_refcnt;
     vn_unlock(vp);
     return count;
+}
+
+/*
+ * Register a poll listener to vnode.
+ */
+void vnode_poll_register(vnode_t vp, struct poll_listener* pl)
+{
+    ASSERT(vp);
+    ASSERT(pl);
+
+    VNODE_LOCK();
+    list_insert(&vp->v_poll_list, &pl->link);
+    VNODE_UNLOCK();
+}
+
+/*
+ * De-register a poll listener from vnode.
+ */
+void vnode_poll_deregister(vnode_t vp, struct poll_listener* pl)
+{
+    ASSERT(vp);
+    ASSERT(pl);
+
+    VNODE_LOCK();
+    list_remove(&pl->link);
+    VNODE_UNLOCK();
+}
+
+/*
+ * Signal all poll listeners for a specific event.
+ */
+void vnode_poll_signal(vnode_t vp, short events)
+{
+    list_t n;
+    struct poll_listener* pl;
+
+    ASSERT(vp);
+
+    VNODE_LOCK();
+    for (n = list_first(&vp->v_poll_list); n != &vp->v_poll_list; n = list_next(n)) {
+        pl = list_entry(n, struct poll_listener, link);
+        if (pl->events & events) {
+            sem_post(&pl->sem);
+        }
+    }
+    VNODE_UNLOCK();
 }
 
 /*

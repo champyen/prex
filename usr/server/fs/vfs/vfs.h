@@ -36,6 +36,7 @@
 #include <sys/file.h>
 #include <sys/mount.h>
 #include <sys/dirent.h>
+#include <ipc/fs.h>
 
 #include <assert.h>
 
@@ -101,6 +102,18 @@ struct task
     mutex_t t_lock;         /* lock for this task */
 };
 
+/*
+ * poll listener
+ */
+struct poll_listener
+{
+    struct list link; /* Link in the Vnode's listener list */
+    struct list g_link; /* Link in the global poll list */
+    vnode_t vp;       /* Target vnode */
+    sem_t sem;        /* Client notification semaphore */
+    short events;     /* Events of interest (POLLIN, POLLOUT) */
+};
+
 extern const struct vfssw vfssw[];
 
 __BEGIN_DECLS
@@ -121,6 +134,10 @@ int sys_rewinddir(file_t fp);
 int sys_seekdir(file_t fp, long loc);
 int sys_telldir(file_t fp, long* loc);
 int sys_fchdir(file_t fp, char* path);
+
+int sys_poll_register(struct task* t, sem_t sem, int nfds, struct poll_entry* fds);
+int sys_poll_deregister(struct task* t, sem_t sem);
+int sys_poll_query(struct task* t, int nfds, struct poll_entry* fds);
 
 int sys_mkdir(char* path, mode_t mode);
 int sys_rmdir(char* path);
@@ -155,6 +172,10 @@ int sec_vnode_permission(char* path);
 int namei(char* path, vnode_t* vpp);
 int lookup(char* path, vnode_t* vpp, char** name);
 void vnode_init(void);
+
+void vnode_poll_register(vnode_t vp, struct poll_listener* pl);
+void vnode_poll_deregister(vnode_t vp, struct poll_listener* pl);
+void vnode_poll_signal(vnode_t vp, short events);
 
 int vfs_findroot(char* path, mount_t* mp, char** root);
 void vfs_busy(mount_t mp);
