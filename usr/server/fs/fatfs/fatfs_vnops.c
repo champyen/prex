@@ -110,6 +110,7 @@ struct vnops fatfs_vnops = {
     fatfs_setattr,  /* setattr */
     fatfs_inactive, /* inactive */
     fatfs_truncate, /* truncate */
+    vop_poll_default, /* poll */
 };
 
 /*

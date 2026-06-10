@@ -148,6 +148,8 @@ void sched_lock(void);
 void sched_unlock(void);
 int sched_tsleep(struct event*, u_long);
 void sched_wakeup(struct event*);
+
+int ksem_post(unsigned long);
 void sched_dpc(struct dpc*, void (*)(void*), void*);
 #define sched_sleep(event) sched_tsleep((event), 0)
 

@@ -35,9 +35,15 @@
 #include <sys/prex.h>
 #include <sys/list.h>
 #include <sys/vnode.h>
+#include <sys/file.h>
 #include <sys/mount.h>
+#include <sys/poll.h>
+#include <sys/ioctl.h>
+
+
 
 #include <limits.h>
+
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
@@ -314,6 +320,11 @@ void vnode_poll_register(vnode_t vp, struct poll_listener* pl)
     VNODE_LOCK();
     list_insert(&vp->v_poll_list, &pl->link);
     VNODE_UNLOCK();
+
+    if (vp->v_type == VCHR || vp->v_type == VBLK) {
+        /* Let the driver know about the semaphore! */
+        VOP_IOCTL(vp, NULL, TIOCSETEVENT, &pl->sem);
+    }
 }
 
 /*
@@ -327,6 +338,11 @@ void vnode_poll_deregister(vnode_t vp, struct poll_listener* pl)
     VNODE_LOCK();
     list_remove(&pl->link);
     VNODE_UNLOCK();
+
+    if (vp->v_type == VCHR || vp->v_type == VBLK) {
+        sem_t null_sem = 0;
+        VOP_IOCTL(vp, NULL, TIOCSETEVENT, &null_sem);
+    }
 }
 
 /*
@@ -493,6 +509,19 @@ int vop_einval(void)
 {
 
     return EINVAL;
+}
+
+/*
+ * Default poll operation for vnodes.
+ * Regular files are always readable and writable.
+ */
+int vop_poll_default(vnode_t vp, file_t fp, int events)
+{
+    /* 
+     * For regular files and directories, we usually return the requested events.
+     * Specific file systems like devfs or fifofs will override this.
+     */
+    return events & (POLLIN | POLLOUT | POLLRDNORM | POLLWRNORM);
 }
 
 /*

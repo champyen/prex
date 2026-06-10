@@ -106,9 +106,10 @@ const struct vnops arfs_vnops = {
     arfs_mkdir,    /* mkdir */
     arfs_rmdir,    /* rmdir */
     arfs_getattr,  /* getattr */
-    arfs_setattr,  /* setattr */
-    arfs_inactive, /* inactive */
-    arfs_truncate, /* truncate */
+    (vnop_setattr_t)vop_einval,  /* setattr */
+    (vnop_inactive_t)vop_nullop, /* inactive */
+    (vnop_truncate_t)vop_nullop, /* truncate */
+    vop_poll_default, /* poll */
 };
 
 /*

@@ -126,6 +126,7 @@ struct vnops
     int (*vop_setattr)(vnode_t, struct vattr*);
     int (*vop_inactive)(vnode_t);
     int (*vop_truncate)(vnode_t, off_t);
+    int (*vop_poll)(vnode_t, file_t, int);
 };
 
 typedef int (*vnop_open_t)(vnode_t, int);
@@ -146,6 +147,7 @@ typedef int (*vnop_getattr_t)(vnode_t, struct vattr*);
 typedef int (*vnop_setattr_t)(vnode_t, struct vattr*);
 typedef int (*vnop_inactive_t)(vnode_t);
 typedef int (*vnop_truncate_t)(vnode_t, off_t);
+typedef int (*vnop_poll_t)(vnode_t, file_t, int);
 
 /*
  * vnode interface
@@ -168,10 +170,12 @@ typedef int (*vnop_truncate_t)(vnode_t, off_t);
 #define VOP_SETATTR(VP, VAP) ((VP)->v_op->vop_setattr)(VP, VAP)
 #define VOP_INACTIVE(VP) ((VP)->v_op->vop_inactive)(VP)
 #define VOP_TRUNCATE(VP, N) ((VP)->v_op->vop_truncate)(VP, N)
+#define VOP_POLL(VP, FP, EVENTS) ((VP)->v_op->vop_poll)(VP, FP, EVENTS)
 
 __BEGIN_DECLS
 int vop_nullop(void);
 int vop_einval(void);
+int vop_poll_default(vnode_t vp, file_t fp, int events);
 vnode_t vn_lookup(struct mount*, char*);
 void vn_lock(vnode_t);
 void vn_unlock(vnode_t);
@@ -184,6 +188,11 @@ void vref(vnode_t);
 void vrele(vnode_t);
 int vcount(vnode_t);
 void vflush(struct mount*);
+
+struct poll_listener;
+void vnode_poll_register(vnode_t vp, struct poll_listener* pl);
+void vnode_poll_deregister(vnode_t vp, struct poll_listener* pl);
+void vnode_poll_signal(vnode_t vp, short events);
 __END_DECLS
 
 #endif /* !_SYS_VNODE_H_ */

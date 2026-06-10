@@ -39,6 +39,7 @@
 #include <sys/syslog.h>
 #include <sys/dirent.h>
 #include <sys/list.h>
+#include <sys/poll.h>
 
 #include <ctype.h>
 #include <unistd.h>
@@ -90,6 +91,7 @@ static int fifo_remove(vnode_t, vnode_t, char*);
 #define fifo_setattr ((vnop_setattr_t)vop_nullop)
 #define fifo_inactive ((vnop_inactive_t)vop_nullop)
 #define fifo_truncate ((vnop_truncate_t)vop_nullop)
+static int fifo_poll(vnode_t vp, file_t fp, int events);
 
 static void cleanup_fifo(vnode_t);
 static void wait_reader(vnode_t);
@@ -125,6 +127,7 @@ struct vnops fifofs_vnops = {
     fifo_setattr,  /* setattr */
     fifo_inactive, /* inactive */
     fifo_truncate, /* truncate */
+    fifo_poll,     /* poll */
 };
 
 /*
@@ -255,6 +258,10 @@ static int fifo_read(vnode_t vp, file_t fp, void* buf, size_t size, size_t* resu
     np->fn_start = pos;
 
     wakeup_writer(vp);
+    
+    /* Notification for poll */
+    vnode_poll_signal(vp, POLLOUT);
+    
     return 0;
 }
 
@@ -295,6 +302,9 @@ again:
     }
 
     wakeup_reader(vp);
+    
+    /* Notification for poll */
+    vnode_poll_signal(vp, POLLIN);
 
     if (size > 0)
         goto again;
@@ -496,4 +506,39 @@ static void wakeup_reader(vnode_t vp)
 
     DPRINTF(("wakeup_reader: %x\n", np));
     cond_broadcast(&np->fn_wcond);
+}
+
+static int fifo_poll(vnode_t vp, file_t fp, int events)
+{
+    struct fifo_node* np = vp->v_data;
+    int revents = 0;
+
+    if (np == NULL)
+        return POLLERR;
+
+    mutex_lock(&fifo_lock);
+
+    /* Ready to read */
+    if (events & (POLLIN | POLLRDNORM)) {
+        if (np->fn_size > 0) {
+            revents |= events & (POLLIN | POLLRDNORM);
+        } else if (np->fn_writers == 0 && np->fn_readers > 0) {
+            /* EOF: No data and no writers */
+            revents |= POLLHUP;
+        }
+    }
+
+    /* Ready to write */
+    if (events & (POLLOUT | POLLWRNORM)) {
+        if (np->fn_readers == 0 && np->fn_writers > 0) {
+            /* No readers: broken pipe */
+            revents |= POLLERR;
+        } else if (np->fn_size < PIPE_BUF) {
+            revents |= events & (POLLOUT | POLLWRNORM);
+        }
+    }
+
+    mutex_unlock(&fifo_lock);
+
+    return revents;
 }

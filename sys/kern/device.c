@@ -53,6 +53,7 @@
 #include <device.h>
 #include <system.h>
 #include <hal.h>
+#include <sync.h>
 
 /* forward declarations */
 static device_t device_create(struct driver*, const char*, int);

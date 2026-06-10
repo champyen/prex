@@ -247,6 +247,28 @@ int sem_post(sem_t* sp)
 }
 
 /*
+ * Unlock a semaphore from kernel space (bypasses copyin).
+ */
+int ksem_post(sem_t s)
+{
+    sched_lock();
+    if (!sem_valid(s)) {
+        sched_unlock();
+        return EINVAL;
+    }
+    if (s->value >= MAXSEMVAL) {
+        sched_unlock();
+        return ERANGE;
+    }
+    s->value++;
+    if (s->value > 0)
+        sched_wakeone(&s->event);
+
+    sched_unlock();
+    return 0;
+}
+
+/*
  * Get the semaphore value.
  */
 int sem_getvalue(sem_t* sp, u_int* value)

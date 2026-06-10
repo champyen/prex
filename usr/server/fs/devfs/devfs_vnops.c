@@ -38,6 +38,8 @@
 #include <sys/file.h>
 #include <sys/mount.h>
 #include <sys/syslog.h>
+#include <sys/poll.h>
+#include <sys/ioctl.h>
 
 #include <ctype.h>
 #include <unistd.h>
@@ -74,6 +76,33 @@ static int devfs_lookup(vnode_t, char*, vnode_t);
 #define devfs_inactive ((vnop_inactive_t)vop_nullop)
 #define devfs_truncate ((vnop_truncate_t)vop_nullop)
 
+static int devfs_poll(vnode_t vp, file_t fp, int events)
+{
+    device_t dev = (device_t)vp->v_data;
+    int revents = 0;
+    int bytes = 0;
+
+    if (!strcmp(vp->v_path, "/"))
+        return vop_poll_default(vp, fp, events);
+
+    if (events & (POLLIN | POLLRDNORM)) {
+        if (device_ioctl(dev, FIONREAD, &bytes) == 0) {
+            if (bytes > 0)
+                revents |= events & (POLLIN | POLLRDNORM);
+        } else {
+            /* If FIONREAD is not supported, assume it's always readable */
+            revents |= events & (POLLIN | POLLRDNORM);
+        }
+    }
+
+    if (events & (POLLOUT | POLLWRNORM)) {
+        /* Assume devices are always writable for now */
+        revents |= events & (POLLOUT | POLLWRNORM);
+    }
+
+    return revents;
+}
+
 /*
  * vnode operations
  */
@@ -96,6 +125,7 @@ struct vnops devfs_vnops = {
     devfs_setattr,  /* setattr */
     devfs_inactive, /* inactive */
     devfs_truncate, /* truncate */
+    devfs_poll,     /* poll */
 };
 
 /*

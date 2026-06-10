@@ -115,26 +115,9 @@ int sys_poll_query(struct task* t, int nfds, struct poll_entry* fds)
         }
 
         vp = fp->f_vnode;
-        revents = 0;
 
-        /* 
-         * Check readiness via VOP_IOCTL or a new VOP_POLL.
-         * For now, we use a simplified check.
-         * VOP_IOCTL with FIONREAD could be used for POLLIN.
-         */
-        if (fds[i].events & POLLIN) {
-            /* 
-             * For now, we'll need to call into the actual FS driver.
-             * But since we don't have VOP_POLL yet, we might use VOP_IOCTL or similar.
-             * As a placeholder, we'll assume not ready if it's a device/pipe we know.
-             */
-            if (vp->v_type == VFIFO || vp->v_type == VCHR) {
-                /* Will be implemented in Stage 3/4 */
-                revents = 0; 
-            } else {
-                revents |= POLLIN; /* Regular files are usually always "ready" */
-            }
-        }
+        /* Call the actual filesystem/driver poll operation */
+        revents = VOP_POLL(vp, fp, fds[i].events);
         
         if (revents) {
             fds[i].revents = revents;

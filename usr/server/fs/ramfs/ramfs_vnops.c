@@ -92,6 +92,7 @@ struct vnops ramfs_vnops = {
     ramfs_setattr,  /* setattr */
     ramfs_inactive, /* inactive */
     ramfs_truncate, /* truncate */
+    vop_poll_default, /* poll */
 };
 
 struct ramfs_node* ramfs_allocate_node(char* name, int type)

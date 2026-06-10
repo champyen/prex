@@ -78,6 +78,7 @@ int sem_destroy(sem_t*);
 int sem_wait(sem_t*, u_long);
 int sem_trywait(sem_t*);
 int sem_post(sem_t*);
+int ksem_post(sem_t);
 int sem_getvalue(sem_t*, u_int*);
 void sem_cleanup(task_t);
 

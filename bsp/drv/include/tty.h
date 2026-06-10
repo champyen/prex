@@ -38,6 +38,7 @@
 #define _SYS_TTY_H_
 
 #include <sys/cdefs.h>
+#include <sys/types.h>
 #include <sys/termios.h>
 #include <sys/syslimits.h>
 
@@ -72,6 +73,7 @@ struct tty
     task_t t_sigtask;             /* task to dispatch the tty signal */
     int t_signo;                  /* pending signal# */
     struct dpc t_dpc;             /* dpc for tty */
+    unsigned long t_poll_sem;     /* semaphore to signal on input */
 };
 
 #define t_iflag t_termios.c_iflag

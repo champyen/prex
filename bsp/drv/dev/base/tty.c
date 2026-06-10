@@ -47,6 +47,8 @@
 #include <pm.h>
 #include <kd.h>
 
+extern int ksem_post(unsigned long);
+
 /* #define DEBUG_TTY 1 */
 
 #ifdef DEBUG_TTY
@@ -356,9 +358,14 @@ void tty_input(int c, struct tty* tp)
         if (c == '\n' || c == cc[VEOF] || c == cc[VEOL]) {
             tty_catq(&tp->t_rawq, &tp->t_canq);
             sched_wakeup(&tp->t_input);
+            if (tp->t_poll_sem)
+                ksem_post(tp->t_poll_sem);
         }
-    } else
+    } else {
         sched_wakeup(&tp->t_input);
+        if (tp->t_poll_sem)
+            ksem_post(tp->t_poll_sem);
+    }
 
     if (lflag & ECHO)
         tty_echo(c, tp);
@@ -511,10 +518,20 @@ int tty_write(struct tty* tp, char* buf, size_t* nbyte)
  */
 int tty_ioctl(struct tty* tp, u_long cmd, void* data)
 {
-    int flags;
+    int flags, tmp;
     struct tty_queue* qp;
 
     switch (cmd) {
+    case TIOCSETEVENT:
+        if (copyin(data, &tp->t_poll_sem, sizeof(unsigned long)))
+            return EFAULT;
+        break;
+    case FIONREAD:
+        qp = (tp->t_lflag & ICANON) ? &tp->t_canq : &tp->t_rawq;
+        tmp = qp->tq_count;
+        if (copyout(&tmp, data, sizeof(int)))
+            return EFAULT;
+        break;
     case TIOCGETA:
         if (copyout(&tp->t_termios, data, sizeof(struct termios)))
             return EFAULT;

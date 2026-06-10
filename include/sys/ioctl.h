@@ -66,6 +66,9 @@
 #define _IORN(g, n, t) _IOC((IOC_OVAL | IOC_OUT), (g), (n), sizeof(t))
 #define _IOWN(g, n, t) _IOC((IOC_IVAL | IOC_IN), (g), (n), sizeof(t))
 
+#define FIONREAD _IOR('f', 127, int) /* get # bytes to read */
+#define TIOCSETEVENT _IOW('t', 99, unsigned long) /* set event semaphore */
+
 /*
  * CPU frequency I/O control code
  */

@@ -76,8 +76,9 @@
     DO(35, printf, DKI_INT_PRINTF)                                                                                     \
     DO(36, dbgctl, DKI_INT_DBGCTL)                                                                                     \
     DO(37, uart_lock, hal_uart_lock)                                                                                   \
-    DO(38, uart_unlock, hal_uart_unlock)
+    DO(38, uart_unlock, hal_uart_unlock)                                                                               \
+    DO(39, ksem_post, ksem_post)
 
-#define MAX_DKI 39
+#define MAX_DKI 40
 
 #endif /* !_SYS_DKI_TABLE_H */
