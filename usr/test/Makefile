@@ -12,7 +12,7 @@ SUBDIR+=	errno malloc stderr environ assert
 
 # Test for servers
 SUBDIR+=	fileio fork forkbomb args signal fifo pipe dup creat conf \
-		mount umount shutdown truncate_bug
+		mount umount shutdown truncate_bug multiplex_demo
 
 # Test for audio
 SUBDIR+=	beep sndio_test hello

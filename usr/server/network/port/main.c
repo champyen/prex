@@ -35,6 +35,7 @@
 #include "lwip/netdb.h"
 
 #include <sys/prex.h>
+#include <sys/list.h>
 #include <ipc/ipc.h>
 #include <ipc/network.h>
 #include <errno.h>
@@ -46,6 +47,33 @@ extern err_t prex_netif_init(struct netif *netif);
 
 static struct netif prex_netif;
 static object_t net_obj;
+
+struct net_poll_listener {
+    struct list link;
+    sem_t sem;
+    int fd;
+    short events;
+};
+static struct list poll_listeners = LIST_INIT(poll_listeners);
+
+extern void (*prex_socket_event_hook)(int s, int has_recvevent, int has_sendevent, int has_errevent);
+
+static void my_socket_event_hook(int s, int has_recvevent, int has_sendevent, int has_errevent) {
+    list_t n;
+    struct net_poll_listener *pl;
+    for (n = list_first(&poll_listeners); n != &poll_listeners; n = list_next(n)) {
+        pl = list_entry(n, struct net_poll_listener, link);
+        if (pl->fd == s) {
+            int signal = 0;
+            if (has_recvevent && (pl->events & POLLIN)) signal = 1;
+            if (has_sendevent && (pl->events & POLLOUT)) signal = 1;
+            if (has_errevent && (pl->events & POLLERR)) signal = 1;
+            if (signal) {
+                sem_post(&pl->sem);
+            }
+        }
+    }
+}
 
 static void tcpip_init_done(void *arg) {
     sys_sem_t *sem = arg;
@@ -90,6 +118,8 @@ int main(int argc, char **argv) {
         fprintf(stderr, "network: failed to create object\n");
         return 1;
     }
+
+    prex_socket_event_hook = my_socket_event_hook;
 
     if (sys_sem_new(&init_sem, 0) != ERR_OK) return 1;
     tcpip_init(tcpip_init_done, &init_sem);
@@ -211,6 +241,60 @@ int main(int argc, char **argv) {
                     m.hdr.status = 0;
                 } else {
                     m.hdr.status = EHOSTUNREACH;
+                }
+            }
+            break;
+        case NET_POLL_REGISTER:
+            {
+                struct net_poll_msg *pm = (struct net_poll_msg *)&m;
+                for (int i = 0; i < pm->nfds; i++) {
+                    struct net_poll_listener *pl = malloc(sizeof(*pl));
+                    if (pl) {
+                        pl->sem = pm->sem_id;
+                        pl->fd = pm->fds[i].fd;
+                        pl->events = pm->fds[i].events;
+                        list_insert(&poll_listeners, &pl->link);
+                    }
+                }
+                pm->hdr.status = 0;
+            }
+            break;
+        case NET_POLL_DEREGISTER:
+            {
+                struct net_poll_msg *pm = (struct net_poll_msg *)&m;
+                list_t n, next;
+                for (n = list_first(&poll_listeners); n != &poll_listeners; n = next) {
+                    next = list_next(n);
+                    struct net_poll_listener *pl = list_entry(n, struct net_poll_listener, link);
+                    if (pl->sem == pm->sem_id) {
+                        list_remove(&pl->link);
+                        free(pl);
+                    }
+                }
+                pm->hdr.status = 0;
+            }
+            break;
+        case NET_POLL_QUERY:
+            {
+                struct net_poll_msg *pm = (struct net_poll_msg *)&m;
+                struct pollfd lwip_fds[32];
+                int nfds = pm->nfds > 32 ? 32 : pm->nfds;
+                
+                for (int i = 0; i < nfds; i++) {
+                    lwip_fds[i].fd = pm->fds[i].fd;
+                    lwip_fds[i].events = pm->fds[i].events;
+                    lwip_fds[i].revents = 0;
+                }
+                
+                int nready = lwip_poll(lwip_fds, nfds, 0);
+                if (nready < 0) {
+                    pm->hdr.status = errno;
+                } else {
+                    for (int i = 0; i < nfds; i++) {
+                        pm->fds[i].revents = lwip_fds[i].revents;
+                    }
+                    pm->nfds_ready = nready;
+                    pm->hdr.status = 0;
                 }
             }
             break;

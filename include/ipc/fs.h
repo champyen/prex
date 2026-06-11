@@ -195,6 +195,7 @@ struct fs_poll_msg
     struct msg_header hdr;     /* message header */
     sem_t sem_id;              /* client notification semaphore */
     int nfds;                  /* number of file descriptors */
+    int nfds_ready;            /* number of ready descriptors */
     struct poll_entry fds[32]; /* monitored descriptors */
 };
 

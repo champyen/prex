@@ -29,6 +29,7 @@
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/poll.h>
 #include <ipc/ipc.h>
 
 /*
@@ -53,6 +54,9 @@
 #define NET_GETIFINFO   0x60a
 #define NET_SETIFINFO   0x60b
 #define NET_RESOLVE     0x60e
+#define NET_POLL_REGISTER 0x60f
+#define NET_POLL_DEREGISTER 0x610
+#define NET_POLL_QUERY    0x611
 
 struct net_ifinfo {
     char name[16];
@@ -76,6 +80,17 @@ struct net_msg {
     struct sockaddr addr;
     socklen_t addrlen;
     char data[2048];
+};
+
+/*
+ * Network poll message
+ */
+struct net_poll_msg {
+    struct msg_header hdr;
+    sem_t sem_id;              /* client notification semaphore */
+    int nfds;                  /* number of sockets */
+    int nfds_ready;            /* number of ready sockets */
+    struct pollfd fds[32];     /* monitored sockets */
 };
 
 #endif /* !_IPC_NETWORK_H_ */

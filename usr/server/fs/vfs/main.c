@@ -816,6 +816,7 @@ static int fs_poll_query(struct task* t, struct fs_poll_msg* msg)
     if (ready < 0)
         return -ready;
 
+    msg->nfds_ready = ready;
     msg->hdr.status = 0;
     return 0;
 }
