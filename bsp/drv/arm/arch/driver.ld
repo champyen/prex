@@ -15,9 +15,9 @@ SECTIONS
 	. = SIZEOF_HEADERS ;
 
 	.text : {
-		*(.text)
-		*(.glue_7)
-		*(.glue_7t)
+	        *(.text*)
+	        *(.glue_7)
+	        *(.glue_7t)
 	} : text = 0xff
 
 	. = ALIGN(4);
@@ -40,7 +40,7 @@ SECTIONS
 
         . = ALIGN(4);
 	.data : {
-		*(.data)
+	        *(.data*)
 	} : data
 
         . = ALIGN(4);

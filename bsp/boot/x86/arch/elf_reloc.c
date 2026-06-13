@@ -45,8 +45,9 @@ int relocate_rel(Elf32_Rel* rel, Elf32_Addr sym_val, char* target_sect)
         ELFDBG(("R_386_32: %lx -> %lx\n", (long)where, (long)*where));
         break;
     case R_386_PC32:
+    case R_386_PLT32:
         *where += sym_val - (Elf32_Addr)where;
-        ELFDBG(("R_386_PC32: %lx -> %lx\n", (long)where, (long)*where));
+        ELFDBG(("R_386_PC32/PLT32: %lx -> %lx\n", (long)where, (long)*where));
         break;
     default:
         ELFDBG(("Unkown relocation type=%d\n", ELF32_R_TYPE(rel->r_info)));

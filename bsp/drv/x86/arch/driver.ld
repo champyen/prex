@@ -15,7 +15,7 @@ SECTIONS
 	. = SIZEOF_HEADERS ;
 
 	.text . : {
-		*(.text)
+		*(.text*)
 	} : text = 0x9090
 
 	. = ALIGN(32);

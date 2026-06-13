@@ -1,0 +1,209 @@
+const std = @import("std");
+
+/// Prex+ Driver-Kernel Interface (DKI) Wrapper for Zig
+pub const c = @cImport({
+    @cDefine("__builtin_va_list", "void *");
+    @cDefine("y", "1");
+    @cInclude("sys/param.h");
+    @cInclude("dki.h");
+    @cInclude("ddi.h");
+    @cInclude("sys/errno.h");
+    @cInclude("sys/device.h");
+});
+
+/// Map Zig errors to positive POSIX errno integers
+pub fn toCError(err: anyerror) c_int {
+    return switch (err) {
+        error.OutOfMemory => c.ENOMEM,
+        error.InvalidArgs => c.EINVAL,
+        error.IoError => c.EIO,
+        error.Fault => c.EFAULT,
+        error.NoDevice => c.ENODEV,
+        error.NoEntry => c.ENOENT,
+        error.Busy => c.EBUSY,
+        error.Timeout => c.ETIMEDOUT,
+        error.NotSupported => c.ENOSYS,
+        error.Readonly => c.EROFS,
+        else => c.EIO,
+    };
+}
+
+/// Device operations structure with type-safe, optional C-calling convention pointers
+pub const DevOps = extern struct {
+    open: ?*const fn (c.device_t, c_int) callconv(.c) c_int = null,
+    close: ?*const fn (c.device_t) callconv(.c) c_int = null,
+    read: ?*const fn (c.device_t, [*]c_char, *usize, c_int) callconv(.c) c_int = null,
+    write: ?*const fn (c.device_t, [*]const c_char, *usize, c_int) callconv(.c) c_int = null,
+    ioctl: ?*const fn (c.device_t, c_ulong, ?*anyopaque) callconv(.c) c_int = null,
+    devctl: ?*const fn (c.device_t, c_ulong, ?*anyopaque) callconv(.c) c_int = null,
+};
+
+/// Driver object structure
+pub const Driver = extern struct {
+    name: [*:0]const u8,
+    devops: *const DevOps,
+    devsz: usize,
+    flags: c_int,
+    probe: ?*const fn (?*Driver) callconv(.c) c_int = null,
+    init: ?*const fn (?*Driver) callconv(.c) c_int = null,
+    unload: ?*const fn (?*Driver) callconv(.c) c_int = null,
+};
+
+// --- Memory Management ---
+
+pub inline fn ptokv(pa: anytype) [*]u8 {
+    const offset = if (@hasDecl(c, "KERNOFFSET")) c.KERNOFFSET else 0;
+    return @ptrFromInt(@as(usize, @intCast(pa)) + offset);
+}
+
+/// Custom allocator that wraps Prex+ kmem_alloc and kmem_free
+pub const allocator = std.mem.Allocator{
+    .ptr = undefined,
+    .vtable = &.{
+        .alloc = alloc,
+        .resize = std.mem.Allocator.noResize,
+        .free = free,
+    },
+};
+
+fn alloc(_: *anyopaque, len: usize, _: u8, _: usize) ?[*]u8 {
+    if (c.kmem_alloc(len)) |ptr| {
+        return @ptrCast(ptr);
+    }
+    return null;
+}
+
+fn free(_: *anyopaque, buf: []u8, _: u8, _: usize) void {
+    c.kmem_free(buf.ptr);
+}
+
+// --- Type-safe DKI Wrappers ---
+
+pub const IST_NONE: ?*const fn (?*anyopaque) callconv(.c) void = @ptrFromInt(@as(usize, @bitCast(@as(isize, -1))));
+
+pub fn log(comptime fmt: []const u8, args: anytype) void {
+    if (args.len == 0) {
+        _ = c.printf(fmt.ptr);
+    } else {
+        var buf: [256]u8 = undefined;
+        if (std.fmt.bufPrint(&buf, fmt, args)) |msg| {
+            var term_buf: [257]u8 = undefined;
+            @memcpy(term_buf[0..msg.len], msg);
+            term_buf[msg.len] = 0;
+            _ = c.printf(@ptrCast(&term_buf));
+        } else |_| {
+            _ = c.printf("log formatting failed\n");
+        }
+    }
+}
+
+pub fn panic(msg: []const u8, error_return_trace: ?*std.builtin.StackTrace, ret_addr: ?usize) noreturn {
+    _ = error_return_trace;
+    _ = ret_addr;
+    _ = c.printf("ZIG PANIC: ");
+    _ = c.printf(@ptrCast(msg.ptr));
+    _ = c.printf("\n");
+    while (true) {}
+}
+
+pub inline fn device_create(drv: *const Driver, name: [*:0]const u8, flags: c_int) !c.device_t {
+    const dev = c.device_create(@ptrCast(@constCast(drv)), name, flags);
+    if (dev == 0) return error.Fault;
+    return dev;
+}
+
+pub inline fn device_private(dev: c.device_t) ?*anyopaque {
+    return c.device_private(dev);
+}
+
+pub inline fn kmem_map(ptr: ?*anyopaque, size: usize) !*anyopaque {
+    if (c.kmem_map(ptr, size)) |kptr| {
+        return kptr;
+    }
+    return error.Fault;
+}
+
+pub inline fn irq_attach(irqno: c_int, prio: c_int, shared: c_int, isr: ?*const fn (?*anyopaque) callconv(.c) c_int, ist: ?*const fn (?*anyopaque) callconv(.c) void, arg: ?*anyopaque) !c.irq_t {
+    const irq = c.irq_attach(irqno, prio, shared, isr, ist, arg);
+    if (irq == 0) return error.Fault;
+    return irq;
+}
+
+pub inline fn irq_detach(irq: c.irq_t) void {
+    c.irq_detach(irq);
+}
+
+pub inline fn sched_lock() void {
+    c.sched_lock();
+}
+
+pub inline fn sched_unlock() void {
+    c.sched_unlock();
+}
+
+// --- Bus I/O Wrappers ---
+
+pub inline fn bus_read_8(addr: usize) u8 {
+    return c.bus_read_8(addr);
+}
+
+pub inline fn bus_read_16(addr: usize) u16 {
+    return c.bus_read_16(addr);
+}
+
+pub inline fn bus_read_32(addr: usize) u32 {
+    return c.bus_read_32(addr);
+}
+
+pub inline fn bus_write_8(addr: usize, val: u8) void {
+    c.bus_write_8(addr, val);
+}
+
+pub inline fn bus_write_16(addr: usize, val: u16) void {
+    c.bus_write_16(addr, val);
+}
+
+pub inline fn bus_write_32(addr: usize, val: u32) void {
+    c.bus_write_32(addr, val);
+}
+
+// --- AEABI Memory Helpers ---
+const builtin = @import("builtin");
+
+comptime {
+    if (builtin.cpu.arch == .arm or builtin.cpu.arch == .thumb) {
+        @export(&__aeabi_memcpy, .{ .name = "__aeabi_memcpy", .linkage = .strong });
+        @export(&__aeabi_memcpy, .{ .name = "__aeabi_memcpy4", .linkage = .strong });
+        @export(&__aeabi_memcpy, .{ .name = "__aeabi_memcpy8", .linkage = .strong });
+        @export(&__aeabi_memset, .{ .name = "__aeabi_memset", .linkage = .strong });
+        @export(&__aeabi_memset, .{ .name = "__aeabi_memset4", .linkage = .strong });
+        @export(&__aeabi_memset, .{ .name = "__aeabi_memset8", .linkage = .strong });
+        @export(&__aeabi_memclr, .{ .name = "__aeabi_memclr", .linkage = .strong });
+        @export(&__aeabi_memclr, .{ .name = "__aeabi_memclr4", .linkage = .strong });
+        @export(&__aeabi_memclr, .{ .name = "__aeabi_memclr8", .linkage = .strong });
+    }
+}
+
+fn __aeabi_memcpy(dest: ?*anyopaque, src: ?*const anyopaque, n: usize) callconv(.c) void {
+    @setRuntimeSafety(false);
+    const d: [*]volatile u8 = @ptrCast(dest);
+    const s: [*]volatile const u8 = @ptrCast(src);
+    var i: usize = 0;
+    while (i < n) : (i += 1) {
+        d[i] = s[i];
+    }
+}
+
+fn __aeabi_memset(dest: ?*anyopaque, n: usize, val: c_int) callconv(.c) void {
+    @setRuntimeSafety(false);
+    const d: [*]volatile u8 = @ptrCast(dest);
+    const v: u8 = @intCast(val & 0xFF);
+    var i: usize = 0;
+    while (i < n) : (i += 1) {
+        d[i] = v;
+    }
+}
+
+fn __aeabi_memclr(dest: ?*anyopaque, n: usize) callconv(.c) void {
+    __aeabi_memset(dest, n, 0);
+}
