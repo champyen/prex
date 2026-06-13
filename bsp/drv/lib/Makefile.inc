@@ -1,6 +1,7 @@
 
 SRCS+=		lib/dkient.S \
 		lib/queue.c \
+		zig/aeabi.zig \
 		lib/assert.c \
 		lib/endian.c \
 		lib/string.c \

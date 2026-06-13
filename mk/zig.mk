@@ -42,7 +42,7 @@ else
 ZIG_OPT:=	-O ReleaseSafe
 endif
 
-ZIGFLAGS+=	-target $(ZIG_TARGET) $(ZIG_OPT) -fno-stack-check --cache-dir $(SRCDIR)/.zig-cache \
+ZIGFLAGS+=	-target $(ZIG_TARGET) $(ZIG_OPT) -fno-stack-check -fno-PIC -fno-PIE --cache-dir $(SRCDIR)/.zig-cache \
 		$(addprefix -I,$(INCSDIR)) $(DEFINES)
 
 # Add driver-specific import path if compiling a driver
