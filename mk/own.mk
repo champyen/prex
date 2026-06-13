@@ -50,17 +50,27 @@ endif
 endif
 
 RAWCC:=		$(CC)
+RAWZIG:=	zig
+ZIG:=		$(RAWZIG)
 ifeq ($(_SILENT_),1)
 CC:=		@$(CC)
 CPP:=		@$(CPP)
 AS:=		@$(AS)
 LD:=		@$(LD)
 AR:=		@$(AR)
+ZIG:=		@$(ZIG)
 STRIP:=		@$(STRIP)
 OBJCOPY:=	@$(OBJCOPY)
 OBJDUMP:=	@$(OBJDUMP)
 RM:=		@$(RM)
 CAT:=		@$(CAT)
+endif
+
+# Helper to automatically select the Zig version of a driver if available and enabled, otherwise fallback to C
+ifeq ($(CONFIG_ZIG_DRIVERS),y)
+  select_src = $(if $(wildcard $(SRCDIR)/bsp/drv/$(1).zig),$(info [DEBUG] Found Zig source for $(1))$(1).zig,$(1).c)
+else
+  select_src = $(1).c
 endif
 
 endif # !_OWN_MK_

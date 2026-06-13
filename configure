@@ -442,6 +442,10 @@ main()
 	parseargs "$@"
 	gettarget
 	checkpath
+
+	# Remove old generated files
+	rm -f $CONFIG_MK $CONFIG_H $CONFIG_LD $DRVTAB_H $CAPTAB_H
+
 	gethost
 	settools
 

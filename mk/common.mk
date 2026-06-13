@@ -37,6 +37,8 @@ include $(SRCDIR)/mk/gcc.mk
 endif
 endif
 
+include $(SRCDIR)/mk/zig.mk
+
 ifdef _PCC_
 include $(SRCDIR)/mk/pcc.mk
 endif
@@ -61,7 +63,7 @@ OBJS+=		$(addsuffix .o,$(basename $(SRCS)))
 endif
 
 .SUFFIXES:
-.SUFFIXES: .bin .a .o .S .c .cc .cpp .cxx .h
+.SUFFIXES: .bin .a .o .S .c .cc .cpp .cxx .h .zig
 
 ifeq ($(_SILENT_),1)
 echo-file=	@echo '  $(1) $(subst $(SRCDIR)/,,$(abspath $(2)))'
@@ -75,6 +77,10 @@ endif
 #
 # Inference rules
 #
+%.o: %.zig
+	$(call echo-file,ZIG    ,$<)
+	$(ZIG) build-obj $(ZIGFLAGS) $(ZIG_MODULES) -femit-bin=$@
+
 %.o: %.c
 	$(call echo-file,CC     ,$<)
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(OUTPUT_OPTION) $<
