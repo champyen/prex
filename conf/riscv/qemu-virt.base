@@ -55,6 +55,7 @@ options         POSIX           # POSIX support
 #options         SNDIO           # Audio server
 #options         NET             # Network support
 options         CMDBOX          # Core utilities
+options         ZIG_DRIVERS     # Zig driver support
 options         DEBUG           # Debugging options
 
 #

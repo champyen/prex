@@ -49,6 +49,7 @@ options     SIZE_OPT    # Optimize for size
 #
 options 	POSIX		# POSIX support
 options 	CMDBOX		# Core utilities
+options 	ZIG_DRIVERS	# Zig driver support
 options		THUMB		# Thumb mode support
 options		BOOT_THUMB	# Build bootloader in Thumb-2 mode
 options		USR_THUMB	# Thumb mode for user programs

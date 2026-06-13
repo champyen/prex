@@ -47,7 +47,8 @@ options 	BOOTDISK	# Disk for /boot directory
 #
 options 	POSIX		# POSIX support
 options 	CMDBOX		# Core utilities
-#options 	SIZE_OPT		# Optimize for size
+options 	ZIG_DRIVERS	# Zig driver support
+options 	SIZE_OPT	# Optimize for size
 
 #
 # Kernel hacking
