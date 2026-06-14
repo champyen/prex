@@ -10,6 +10,7 @@ pub const c = @cImport({
     @cInclude("sys/errno.h");
     @cInclude("sys/device.h");
     @cInclude("vio_mmio.h");
+    @cInclude("serial.h");
 });
 
 /// Map Zig errors to positive POSIX errno integers
@@ -39,23 +40,23 @@ pub const DevOps = extern struct {
     devctl: ?*const fn (c.device_t, c_ulong, ?*anyopaque) callconv(.c) c_int = null,
 };
 
-/// Metaprogramming helper to build a DevOps table from a static implementation struct.
+/// Metaprogramming helper to build a C-compatible jump table from a static implementation struct.
 /// This enforces the interface at compile time.
-pub fn wrap(comptime T: type) DevOps {
-    return .{
-        .open = if (@hasDecl(T, "open")) T.open else null,
-        .close = if (@hasDecl(T, "close")) T.close else null,
-        .read = if (@hasDecl(T, "read")) T.read else null,
-        .write = if (@hasDecl(T, "write")) T.write else null,
-        .ioctl = if (@hasDecl(T, "ioctl")) T.ioctl else null,
-        .devctl = if (@hasDecl(T, "devctl")) T.devctl else null,
-    };
+pub fn wrap(comptime Target: type, comptime Impl: type) Target {
+    var result: Target = undefined;
+    inline for (std.meta.fields(Target)) |field| {
+        @field(result, field.name) = if (@hasDecl(Impl, field.name))
+            @field(Impl, field.name)
+        else
+            null;
+    }
+    return result;
 }
 
 /// Driver object structure
 pub const Driver = extern struct {
     name: [*:0]const u8,
-    devops: *const DevOps,
+    devops: ?*const DevOps,
     devsz: usize,
     flags: c_int,
     probe: ?*const fn (?*Driver) callconv(.c) c_int = null,

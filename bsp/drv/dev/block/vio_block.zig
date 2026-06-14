@@ -277,7 +277,7 @@ export var vio_block_driver = dki.Driver{
 };
 
 export fn vio_block_init(_: ?*dki.Driver) callconv(.c) c_int {
-    vio_blk_devops = dki.wrap(Interface);
+    vio_blk_devops = dki.wrap(dki.DevOps, Interface);
     return 0;
 }
 
