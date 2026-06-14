@@ -4,6 +4,7 @@ const std = @import("std");
 pub const c = @cImport({
     @cDefine("__builtin_va_list", "void *");
     @cDefine("y", "1");
+    @cInclude("conf/config.h");
     @cInclude("sys/param.h");
     @cInclude("dki.h");
     @cInclude("ddi.h");

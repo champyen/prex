@@ -44,8 +44,9 @@ int relocate_rel(Elf32_Rel* rel, Elf32_Addr sym_val, char* target_sect)
         /* printf("R_386_32: %x -> %x\n", where, *where); */
         break;
     case R_386_PC32:
+    case R_386_PLT32:
         *where += sym_val - (Elf32_Addr)where;
-        /* printf("R_386_PC32: %x -> %x\n", where, *where); */
+        /* printf("R_386_PC32/PLT32: %x -> %x\n", where, *where); */
         break;
     default:
         return -1;

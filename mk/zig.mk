@@ -26,14 +26,18 @@ ifeq ($(ARCH),arm)
   ifneq ($(filter -mcpu=%,$(CFLAGS) $(GCCFLAGS)),)
     RAW_CPU := $(firstword $(patsubst -mcpu=%,%,$(filter -mcpu=%,$(CFLAGS) $(GCCFLAGS))))
     ZIG_CPU := $(subst -,_,$(RAW_CPU))
+    # Detect mno-unaligned-access
+    ifneq ($(filter -mno-unaligned-access,$(CFLAGS) $(GCCFLAGS)),)
+      ZIG_CPU := $(ZIG_CPU)+strict_align
+    endif
     ZIGFLAGS += -mcpu $(ZIG_CPU)
   endif
 else ifeq ($(ARCH),x86)
-ZIG_TARGET:=	x86-freestanding-none
-ZIGFLAGS+=	-mcpu i386-sse-sse2-sse3-ssse3-sse4_1-sse4_2-avx-avx2
+  ZIG_TARGET := x86-freestanding-none
+  ZIGFLAGS += -mcpu i386
 else ifeq ($(ARCH),riscv)
-ZIG_TARGET:=	riscv32-freestanding-none
-ZIGFLAGS+=	-mcpu generic_rv32+m+a
+  ZIG_TARGET := riscv32-freestanding-none
+  ZIGFLAGS += -mcpu generic_rv32+m+a
 endif
 
 ifeq ($(CONFIG_SIZE_OPT),y)
@@ -49,7 +53,7 @@ ifneq ($(filter -fpic -fPIC,$(CFLAGS) $(GCCFLAGS)),)
   ZIG_PIC_FLAGS := -fPIC
 endif
 
-ZIGFLAGS+=	-target $(ZIG_TARGET) $(ZIG_OPT) -fno-stack-check $(ZIG_PIC_FLAGS) --cache-dir $(SRCDIR)/.zig-cache \
+ZIGFLAGS+=	-target $(ZIG_TARGET) $(ZIG_OPT) -fno-stack-check -fno-unwind-tables $(ZIG_PIC_FLAGS) --cache-dir $(SRCDIR)/.zig-cache \
 		$(addprefix -I,$(INCSDIR)) $(DEFINES)
 
 # Add driver-specific or user-space modules

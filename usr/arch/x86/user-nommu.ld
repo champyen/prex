@@ -7,11 +7,12 @@ SECTIONS
 
 	.text : {
 		*(.text)
+		*(.text.*)
 	} = 0x9090
 
 	. = ALIGN(32);
 	.rodata : {
-		*(.rodata*)
+		*(.rodata)
 		*(.rodata.*)
 	}
 
@@ -26,6 +27,6 @@ SECTIONS
 	}
 
 	/DISCARD/ : {
-		*(.comment .note .eh_frame)
+		*(.comment .note .eh_frame .rel.text.unlikely.)
 	}
 }

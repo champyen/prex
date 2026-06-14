@@ -12,11 +12,12 @@ ifeq ($(CONFIG_MMU),y)
 LDSCRIPT:=	$(SRCDIR)/usr/arch/$(ARCH)/user.ld
 STRIPFLAG:=	-s
 else
-LDSCRIPT:=	$(SRCDIR)/usr/arch/$(ARCH)/user-nommu.ld
 STRIPFLAG:=	--strip-debug --strip-unneeded
 ifeq ($(CONFIG_ARMV8M),y)
+LDSCRIPT:=	$(SRCDIR)/usr/arch/$(ARCH)/user-nommu-v8m.ld
 _RELOC_OBJ_:=
 else
+LDSCRIPT:=	$(SRCDIR)/usr/arch/$(ARCH)/user-nommu.ld
 _RELOC_OBJ_:=	1
 endif
 endif

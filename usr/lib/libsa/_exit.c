@@ -37,3 +37,8 @@ void _exit(int status)
     for (;;)
         task_terminate(task_self());
 }
+
+void abort(void)
+{
+    _exit(1);
+}

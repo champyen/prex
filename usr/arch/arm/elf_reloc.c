@@ -89,6 +89,9 @@ int relocate_rel(Elf32_Rel* rel, Elf32_Addr sym_val, char* target_sect)
     case R_ARM_ABS32:
         *where += (Elf32_Addr)adj_sym_val;
         break;
+    case R_ARM_REL32:
+        /* Temporarily no-op to check for corruption */
+        break;
     case R_ARM_MOVW_ABS_NC:
         addend = *where;
         addend = ((addend & 0xf0000) >> 4) | (addend & 0xfff);

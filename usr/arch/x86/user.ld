@@ -7,10 +7,10 @@ SECTIONS
 
 	.text : {
 		*(.text)
+		*(.text.*)
 	} = 0x9090
 
 	. = ALIGN(32);
-
 	.rodata : {
 		*(.rodata)
 		*(.rodata.*)

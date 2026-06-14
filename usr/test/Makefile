@@ -15,6 +15,6 @@ SUBDIR+=	fileio fork forkbomb args signal fifo pipe dup creat conf \
 		mount umount shutdown truncate_bug multiplex_demo
 
 # Test for audio
-SUBDIR+=	beep sndio_test hello
+SUBDIR+=	beep sndio_test hello hello_rt hello_usr
 
 include $(SRCDIR)/mk/subdir.mk
