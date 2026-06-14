@@ -46,4 +46,34 @@ $(TARGET_SLIM): $(SUBDIR)
 
 $(TARGET_FULL): $(SUBDIR)
 	@$(call create-image,$@,$(FILES) $(sort $(BIN_FILES)))
+	@$(MAKE) size-report
+
+.PHONY: size-report
+size-report:
+	@echo ""
+	@echo "==============================================================================="
+	@echo "                         Prex+ Component Size Report"
+	@echo "==============================================================================="
+	@printf "%-18s | %8s | %8s | %8s | %8s | %8s\n" "Component" "Text" "Data" "BSS" "Total" "Bin Size"
+	@echo "-------------------|----------|----------|----------|----------|-----------"
+	@if [ -f $(LOADER).elf ]; then \
+		$(SIZE) $(LOADER).elf | tail -n 1 | awk '{printf "%-18s | %8d | %8d | %8d | %8d | %8s\n", "Bootloader", $$1, $$2, $$3, $$4, "-"}' ; \
+	elif [ -f $(LOADER) ]; then \
+		$(SIZE) $(LOADER) 2>/dev/null | tail -n 1 | awk '{if ($$1 ~ /^[0-9]+$$/) printf "%-18s | %8d | %8d | %8d | %8d | %8s\n", "Bootloader", $$1, $$2, $$3, $$4, "-"}' ; \
+	fi
+	@if [ -f $(KERNEL) ]; then \
+		$(SIZE) $(KERNEL) | tail -n 1 | awk '{printf "%-18s | %8d | %8d | %8d | %8d | %8s\n", "Kernel", $$1, $$2, $$3, $$4, "-"}' ; \
+	fi
+	@if [ -f $(DRIVER) ]; then \
+		$(SIZE) $(DRIVER) | tail -n 1 | awk '{printf "%-18s | %8d | %8d | %8d | %8d | %8s\n", "Driver (drv.ko)", $$1, $$2, $$3, $$4, "-"}' ; \
+	fi
+	@if [ -f $(TARGET_SLIM) ]; then \
+		size=$$(ls -l $(TARGET_SLIM) | awk '{print $$5}'); \
+		awk -v s=$$size 'BEGIN {printf "%-18s | %8s | %8s | %8s | %8s | %9.1fK\n", "PrexOS bin", "-", "-", "-", "-", s/1024}' ; \
+	fi
+	@if [ -f $(TARGET_FULL) ]; then \
+		size=$$(ls -l $(TARGET_FULL) | awk '{print $$5}'); \
+		awk -v s=$$size 'BEGIN {printf "%-18s | %8s | %8s | %8s | %8s | %9.1fK\n", "PrexOS full bin", "-", "-", "-", "-", s/1024}' ; \
+	fi
+	@echo "==============================================================================="
 	@echo 'Done.'

@@ -50,6 +50,7 @@ endif
 endif
 
 RAWCC:=		$(CC)
+SIZE:=		$(subst gcc,size,$(CC))
 RAWZIG:=	zig
 ZIG:=		$(RAWZIG)
 ifeq ($(_SILENT_),1)

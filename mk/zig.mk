@@ -42,7 +42,14 @@ else
 ZIG_OPT:=	-O ReleaseSafe
 endif
 
-ZIGFLAGS+=	-target $(ZIG_TARGET) $(ZIG_OPT) -fno-stack-check -fno-PIC -fno-PIE --cache-dir $(SRCDIR)/.zig-cache \
+# PIC/PIE Configuration: Default to no-PIC for better Prex loader compatibility,
+# but allow override for XIP targets like Musca-B1.
+ZIG_PIC_FLAGS := -fno-PIC -fno-PIE
+ifneq ($(filter -fpic -fPIC,$(CFLAGS) $(GCCFLAGS)),)
+  ZIG_PIC_FLAGS := -fPIC
+endif
+
+ZIGFLAGS+=	-target $(ZIG_TARGET) $(ZIG_OPT) -fno-stack-check $(ZIG_PIC_FLAGS) --cache-dir $(SRCDIR)/.zig-cache \
 		$(addprefix -I,$(INCSDIR)) $(DEFINES)
 
 # Add driver-specific import path if compiling a driver

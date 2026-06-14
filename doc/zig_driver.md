@@ -43,7 +43,8 @@ const Interface = struct {
 
 /// Mandatory init function
 export fn my_init(self: ?*dki.Driver) callconv(.c) c_int {
-    // Automatically generate DevOps table from the Interface struct
+    // ALWAYS initialize DevOps at runtime. 
+    // Static initialization causes relocation slot collisions on x86.
     my_devops = dki.wrap(Interface);
     
     _ = dki.device_create(self.?, "mydev0", c.D_CHR) catch |err| return dki.toCError(err);
@@ -78,11 +79,30 @@ export var my_driver = dki.Driver{
 
 ---
 
-## 4. Design Patterns & Best Practices
+## 4. Interrupt Handling
 
-### Static Interface Pattern
-Always prefer `dki.wrap(Interface)` over manual function pointer assignment. 
-*   **Benefits**: Compile-time validation of signatures, cleaner separation between interface and logic, and avoidance of tedious boilerplate.
+Zig drivers can handle hardware interrupts using a standard ISR/IST pattern.
+
+### Pattern for ISR/IST
+```zig
+export fn my_isr(arg: ?*anyopaque) callconv(.c) c_int {
+    const sc: *Softc = @ptrCast(@alignCast(arg.?));
+    // ... handle hardware ...
+    return c.INT_CONTINUE; // or INT_DONE
+}
+
+export fn my_ist(arg: ?*anyopaque) callconv(.c) void {
+    const sc: *Softc = @ptrCast(@alignCast(arg.?));
+    dki.sched_wakeup(&sc.event);
+}
+
+// In init:
+sc.irq = try dki.irq_attach(IRQ_NUM, c.IPL_BLOCK, 0, my_isr, my_ist, sc);
+```
+
+---
+
+## 5. Design Patterns & Best Practices
 
 ### Robust Cleanup with `defer`
 In driver code, state consistency is critical (e.g., flags like `busy`, or spinlocks). Use Zig's `defer` to ensure cleanup happens regardless of error paths or timeouts.
@@ -99,25 +119,21 @@ fn do_io(psc: *Softc) c_int {
 }
 ```
 
+### Subsystem Integration
+Some drivers (like Serial or Block) attach to a subsystem instead of creating a device directly. In these cases:
+1.  Set `.devops = null` in your `Driver` struct.
+2.  Define your ops struct using the subsystem's type (e.g., `c.struct_serial_ops`).
+3.  Call the subsystem's attach function (e.g., `c.serial_attach`).
+
+### Kernel-Safe Standard Library
+Since Prex drivers are **freestanding**, you cannot use `std` features that depend on an underlying OS.
+*   **SAFE**: `std.mem`, `std.fmt`, `std.meta`, `std.atomic`, `std.enums`.
+*   **UNSAFE**: `std.fs`, `std.os`, `std.io.getStdOut`, `std.net`.
+
 ### Pointer Strictness & Alignment
 Zig is extremely strict about alignment, especially on RISC-V. 
 *   Always use **`@alignCast()`** when converting from Prex internal pointers (like `device_private`) to your driver's softc.
 *   Use **`extern struct`** for softc structures that must have a stable, predictable memory layout.
-
-### Unaligned Data Access
-On noMMU hardware, word-sized loads (`LDR`) from unaligned addresses will cause a Data Abort.
-*   If parsing potentially unaligned data (like MBR partition tables), use a byte-by-byte reading helper with `asm volatile` barriers to prevent the compiler from "optimizing" the code back into an unaligned word load.
-
----
-
-## 5. Architecture Specifics
-
-### ARM (EABI / Thumb)
-*   **AEABI Helpers**: Memory functions (`__aeabi_memcpy`, etc.) are centralized in `bsp/drv/zig/aeabi.zig`. 
-
-### RISC-V (RV32IMA)
-*   **Floating Point**: Built as soft-float (`generic_rv32+m+a`).
-*   **Alignment**: Enforced strictly by hardware; `@alignCast` is mandatory.
 
 ---
 
