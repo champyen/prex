@@ -50,7 +50,8 @@ options 	BOOTDISK	# Disk for /boot directory
 #
 options 	POSIX		# POSIX support
 options 	CMDBOX		# Core utilities
-options 	ZIG_DRIVERS	# Zig driver support
+options 	ZIG_DRV		# Zig driver support
+options 	ZIG_USR		# Zig user-space support
 options 	SIZE_OPT	# Optimize for size
 
 #

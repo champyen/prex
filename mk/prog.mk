@@ -23,7 +23,7 @@ endif
 ifdef PROG
 TARGET?=	$(PROG)
 ifndef SRCS
-SRCS:=		$(basename $(PROG)).c
+SRCS:=		$(call select_usr_src,$(basename $(PROG)))
 endif
 endif
 

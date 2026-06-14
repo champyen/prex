@@ -52,11 +52,15 @@ endif
 ZIGFLAGS+=	-target $(ZIG_TARGET) $(ZIG_OPT) -fno-stack-check $(ZIG_PIC_FLAGS) --cache-dir $(SRCDIR)/.zig-cache \
 		$(addprefix -I,$(INCSDIR)) $(DEFINES)
 
-# Add driver-specific import path if compiling a driver
+# Add driver-specific or user-space modules
 ifeq ($(_DRV_),1)
   ZIG_MODULES = --dep dki -Mroot=$< $(ZIGFLAGS) -Mdki=$(SRCDIR)/bsp/drv/zig/dki.zig $(ZIGFLAGS)
 else
-  ZIG_MODULES = -Mroot=$< $(ZIGFLAGS)
+  ifeq ($(filter _STANDALONE,$(DEFS)),_STANDALONE)
+    ZIG_MODULES = --dep prex -Mroot=$< $(ZIGFLAGS) -Mprex=$(SRCDIR)/usr/zig/prex.zig $(ZIGFLAGS)
+  else
+    ZIG_MODULES = --dep posix -Mroot=$< $(ZIGFLAGS) -Mposix=$(SRCDIR)/usr/zig/posix.zig $(ZIGFLAGS)
+  endif
 endif
 
 endif # !_ZIG_MK_

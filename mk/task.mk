@@ -24,7 +24,7 @@ endif
 ifdef TASK
 TARGET?=	$(TASK)
 ifndef SRCS
-SRCS:=		$(basename $(TASK)).c
+SRCS:=		$(call select_usr_src,$(basename $(TASK)))
 endif
 endif
 

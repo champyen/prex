@@ -11,10 +11,10 @@ Prex+ supports writing device drivers in the Zig programming language. This guid
 *   **Target Architecture**: ARM (EABI/Thumb), x86, or RISC-V.
 
 ### Enabling Zig Support
-To enable Zig driver compilation, you must set `CONFIG_ZIG_DRIVERS=y` in your configuration.
+To enable Zig driver compilation, you must set `CONFIG_ZIG_DRV=y` in your configuration.
 1.  Run `./configure` as usual.
-2.  Add `CONFIG_ZIG_DRIVERS=y` to `conf/config.mk`.
-3.  Add `#define CONFIG_ZIG_DRIVERS y` to `conf/config.h`.
+2.  Add `CONFIG_ZIG_DRV=y` to `conf/config.mk`.
+3.  Add `#define CONFIG_ZIG_DRV y` to `conf/config.h`.
 
 ---
 

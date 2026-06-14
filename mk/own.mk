@@ -68,10 +68,17 @@ CAT:=		@$(CAT)
 endif
 
 # Helper to automatically select the Zig version of a driver if available and enabled, otherwise fallback to C
-ifeq ($(CONFIG_ZIG_DRIVERS),y)
+ifeq ($(CONFIG_ZIG_DRV),y)
   select_src = $(if $(wildcard $(SRCDIR)/bsp/drv/$(1).zig),$(info [DEBUG] Found Zig source for $(1))$(1).zig,$(1).c)
 else
   select_src = $(1).c
+endif
+
+# Automatically select the Zig version of a user task/program if available and Zig user-space is enabled
+ifeq ($(CONFIG_ZIG_USR),y)
+  select_usr_src = $(if $(wildcard $(1).zig),$(1).zig,$(1).c)
+else
+  select_usr_src = $(1).c
 endif
 
 endif # !_OWN_MK_
