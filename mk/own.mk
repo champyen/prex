@@ -81,4 +81,11 @@ else
   select_usr_src = $(1).c
 endif
 
+# Automatically select the Zig version of a kernel core source file if enabled
+ifeq ($(CONFIG_ZIG_KRNL),y)
+  select_kernel_src = $(if $(wildcard $(1).zig),$(1).zig,$(1).c)
+else
+  select_kernel_src = $(1).c
+endif
+
 endif # !_OWN_MK_

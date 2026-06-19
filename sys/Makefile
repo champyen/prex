@@ -4,7 +4,7 @@ include $(SRCDIR)/mk/own.mk
 
 TARGET:=        prex
 
-_CORE_KERNEL_:= 1
+_KRNL_:= 1
 
 #MAP:=		prex.map
 #DISASM:= 	prex.lst
@@ -13,27 +13,31 @@ _CORE_KERNEL_:= 1
 _KERNEL_:=	1
 DEFS+=		KERNEL
 
-SRCS+=		kern/main.c \
-		kern/sched.c \
-		kern/task.c \
-		kern/thread.c \
-		kern/timer.c \
-		kern/sysent.c \
-		kern/irq.c \
-		kern/device.c \
-		kern/exception.c \
-		kern/system.c \
-		mem/kmem.c \
-		mem/page.c \
-		ipc/msg.c \
-		ipc/object.c \
-		sync/cond.c \
-		sync/mutex.c \
-		sync/sem.c \
-		lib/queue.c \
-		lib/string.c \
+SRCS+=		$(call select_kernel_src,kern/main) \
+		$(call select_kernel_src,kern/sched) \
+		$(call select_kernel_src,kern/task) \
+		$(call select_kernel_src,kern/thread) \
+		$(call select_kernel_src,kern/timer) \
+		$(call select_kernel_src,kern/sysent) \
+		$(call select_kernel_src,kern/irq) \
+		$(call select_kernel_src,kern/device) \
+		$(call select_kernel_src,kern/exception) \
+		$(call select_kernel_src,kern/system) \
+		$(call select_kernel_src,mem/kmem) \
+		$(call select_kernel_src,mem/page) \
+		$(call select_kernel_src,ipc/msg) \
+		$(call select_kernel_src,ipc/object) \
+		$(call select_kernel_src,sync/cond) \
+		$(call select_kernel_src,sync/mutex) \
+		$(call select_kernel_src,sync/sem) \
+		$(call select_kernel_src,lib/queue) \
+		$(call select_kernel_src,lib/string) \
 		lib/vsprintf.c \
 		lib/backtrace.c
+
+ifeq ($(CONFIG_ZIG_KRNL),y)
+SRCS+=		lib/zig_runtime.zig
+endif
 
 ifeq ($(ARCH),riscv)
 SRCS+=		kern/smp.c
@@ -42,9 +46,9 @@ SRCS+=		kern/smp.c
 endif
 
 ifeq ($(CONFIG_MMU),y)
-SRCS+=		mem/vm.c
+SRCS+=		$(call select_kernel_src,mem/vm)
 else
-SRCS+=		mem/vm_nommu.c
+SRCS+=		$(call select_kernel_src,mem/vm_nommu)
 endif
 
 ifeq ($(DEBUG),1)

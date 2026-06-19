@@ -74,12 +74,30 @@ echo-files=	@(for d in $(2) _ ; do \
 		  done);
 endif
 
+# Determine if Zig compilation is enabled for the current component
+ENABLE_ZIG := n
+ifeq ($(_KRNL_),1)
+  ifeq ($(CONFIG_ZIG_KRNL),y)
+    ENABLE_ZIG := y
+  endif
+else ifeq ($(_DRV_),1)
+  ifeq ($(CONFIG_ZIG_DRV),y)
+    ENABLE_ZIG := y
+  endif
+else
+  ifeq ($(CONFIG_ZIG_USR),y)
+    ENABLE_ZIG := y
+  endif
+endif
+
 #
 # Inference rules
 #
+ifeq ($(ENABLE_ZIG),y)
 %.o: %.zig
 	$(call echo-file,ZIG    ,$<)
 	$(ZIG) build-obj $(ZIGFLAGS) $(ZIG_MODULES) -femit-bin=$@
+endif
 
 %.o: %.c
 	$(call echo-file,CC     ,$<)

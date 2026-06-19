@@ -14,6 +14,10 @@ ifeq ($(ARCH),arm)
       ifeq ($(CONFIG_DRV_THUMB),y)
         ZIG_TARGET := thumb-freestanding-eabi
       endif
+    else ifeq ($(_KRNL_),1)
+      ifeq ($(CONFIG_KERNEL_THUMB),y)
+        ZIG_TARGET := thumb-freestanding-eabi
+      endif
     else
       ifeq ($(CONFIG_USR_THUMB),y)
         # Future-proofing: Zig user-space applications
@@ -56,8 +60,10 @@ endif
 ZIGFLAGS+=	-target $(ZIG_TARGET) $(ZIG_OPT) -fno-stack-check -fno-unwind-tables $(ZIG_PIC_FLAGS) --cache-dir $(SRCDIR)/.zig-cache \
 		$(addprefix -I,$(INCSDIR)) $(DEFINES)
 
-# Add driver-specific or user-space modules
-ifeq ($(_DRV_),1)
+# Add driver-specific, kernel-specific, or user-space modules
+ifeq ($(_KRNL_),1)
+  ZIG_MODULES = -Mroot=$< $(ZIGFLAGS)
+else ifeq ($(_DRV_),1)
   ZIG_MODULES = --dep dki -Mroot=$< $(ZIGFLAGS) -Mdki=$(SRCDIR)/bsp/drv/zig/dki.zig $(ZIGFLAGS)
 else
   ifeq ($(filter _STANDALONE,$(DEFS)),_STANDALONE)
