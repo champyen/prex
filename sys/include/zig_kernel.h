@@ -71,4 +71,11 @@
 #undef spinlock_unlock_irq
 #undef event_init
 
+/*
+ * Memory barrier wrapper for Zig
+ */
+#include <atomic.h>
+
+void zig_memory_barrier(void);
+
 #endif /* !_ZIG_KERNEL_H */
