@@ -3,14 +3,6 @@
 
 #include <conf/config.h>
 
-struct event {
-    struct queue {
-        struct queue *next;
-        struct queue *prev;
-    } sleepq;
-    const char *name;
-};
-
 /*
  * Dummy inline functions to replace C void macros (e.g. ((void)0)).
  * This resolves Zig's @cImport translation failures where void macros
@@ -99,7 +91,7 @@ static inline void wrap_event_init(void *event_ptr, const char *evt_name) {
     struct event *evt = (struct event *)event_ptr;
     evt->sleepq.next = &evt->sleepq;
     evt->sleepq.prev = &evt->sleepq;
-    evt->name = evt_name;
+    evt->name = (char *)evt_name;
 }
 #define event_init wrap_event_init
 

@@ -36,7 +36,8 @@ SRCS+=		$(call select_kernel_src,kern/main) \
 		lib/backtrace.c
 
 ifeq ($(CONFIG_ZIG_KRNL),y)
-SRCS+=		lib/zig_runtime.zig
+SRCS+=		lib/zig_runtime.zig \
+		kern/system_helper.c
 endif
 
 ifeq ($(ARCH),riscv)
