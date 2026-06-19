@@ -504,7 +504,7 @@ pub fn device_init() callconv(.c) void {
     const mod: ?*c.struct_module = &bi.?.driver;
     if (mod == null) return;
 
-    const entry_fn: ?*const fn ([*]const ?*const anyopaque) callconv(.c) void = @ptrFromInt(mod.?.entry);
+    const entry_fn: ?*const fn ([*]const ?*const anyopaque) callconv(.c) void = @ptrCast(@alignCast(@as(?*anyopaque, @ptrFromInt(mod.?.entry))));
     if (entry_fn == null) return;
 
     entry_fn.?(@ptrCast(&dkient));

@@ -22,6 +22,7 @@
 #define spinlock_lock_irq __broken_spinlock_lock_irq
 #define spinlock_unlock_irq __broken_spinlock_unlock_irq
 #define event_init __broken_event_init
+#define event_waiting __broken_event_waiting
 
 /*
  * Include base types first
@@ -70,6 +71,7 @@
 #undef spinlock_lock_irq
 #undef spinlock_unlock_irq
 #undef event_init
+#undef event_waiting
 
 /*
  * Memory barrier wrapper for Zig
@@ -77,5 +79,7 @@
 #include <atomic.h>
 
 void zig_memory_barrier(void);
+
+#include <zig_helper.h>
 
 #endif /* !_ZIG_KERNEL_H */
