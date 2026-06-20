@@ -4,6 +4,7 @@ const c = @import("c").c;
 extern fn zig_memory_barrier() callconv(.c) void;
 
 const ffi = @import("ffi");
+const kutil = ffi.kutil;
 const lib = ffi.lib;
 const smp = ffi.smp;
 const kmem = ffi.kmem;
@@ -14,20 +15,7 @@ const thread = ffi.thread;
 
 var object_list: c.struct_list = undefined;
 
-fn get_curthread() ?*c.struct_thread {
-    if (comptime @hasDecl(c, "CONFIG_SMP")) {
-        return @ptrCast(smp.get_cpu_control().*.active_thread);
-    } else {
-        return @ptrCast(thread.curthread);
-    }
-}
 
-fn get_curtask() ?*c.struct_task {
-    if (get_curthread()) |curr| {
-        return @ptrCast(curr.task);
-    }
-    return null;
-}
 
 inline fn list_first(head: *c.struct_list) ?*c.struct_list {
     return @ptrCast(head.*.next);
@@ -104,7 +92,7 @@ pub fn create(name: ?[*:0]const u8, objp: ?*c.object_t) callconv(.c) c_int {
 
     sched.lock();
 
-    const cur = get_curtask().?;
+    const cur = kutil.get_curtask().?;
     if (cur.nobjects >= c.MAXOBJECTS) {
         sched.unlock();
         return c.EAGAIN;
@@ -189,7 +177,7 @@ pub fn destroy(obj: c.object_t) callconv(.c) c_int {
         return c.EINVAL;
     }
     const target_obj = @as(*c.struct_object, @ptrCast(obj));
-    if (@intFromPtr(target_obj.owner) != @intFromPtr(get_curtask())) {
+    if (@intFromPtr(target_obj.owner) != @intFromPtr(kutil.get_curtask())) {
         sched.unlock();
         return c.EACCES;
     }

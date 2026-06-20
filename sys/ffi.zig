@@ -226,3 +226,5 @@ pub const lib = struct {
     pub const printf = c.printf;
     pub const panic = c.panic;
 };
+
+pub const kutil = @import("lib/kutil.zig");

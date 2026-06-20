@@ -1,5 +1,6 @@
 const c = @import("c").c;
 const ffi = @import("ffi");
+const kutil = ffi.kutil;
 const smp = ffi.smp;
 const kmem = ffi.kmem;
 const sched = ffi.sched;
@@ -13,17 +14,7 @@ inline fn is_cond_initializer(m: c.cond_t) bool {
     return false;
 }
 
-inline fn get_curthread() *c.struct_thread {
-    if (comptime @hasDecl(c, "CONFIG_SMP")) {
-        return @ptrCast(ffi.smp.get_cpu_control().*.active_thread);
-    } else {
-        return @ptrCast(ffi.thread.curthread.?);
-    }
-}
 
-inline fn get_curtask() *c.struct_task {
-    return @ptrCast(get_curthread().*.task.?);
-}
 
 inline fn list_init(head: *c.struct_list) void {
     head.next = @ptrCast(head);
@@ -51,7 +42,7 @@ inline fn list_first(head: *c.struct_list) *c.struct_list {
 }
 
 fn valid(m: c.cond_t) c_int {
-    const head = &get_curtask().*.conds;
+    const head = &kutil.cur_task().*.conds;
     var n = head.*.next.?;
     while (n != @as(*c.struct_list, @ptrCast(head))) : (n = n.*.next.?) {
         const node: *c.struct_list = @ptrCast(n);
@@ -85,7 +76,7 @@ fn copyin(ucp: ?*c.cond_t, kcp: ?*c.cond_t) c_int {
 }
 
 pub fn init(cp: ?*c.cond_t) callconv(.c) c_int {
-    const self = get_curtask();
+    const self = kutil.cur_task();
     if (self.*.nsyncs >= c.MAXSYNCS) {
         return c.EAGAIN;
     }

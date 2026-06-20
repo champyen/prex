@@ -7,8 +7,7 @@ const NCPUS = if (@hasDecl(c, "CONFIG_SMP_NCPUS")) c.CONFIG_SMP_NCPUS else 1;
 
 const ipi_irq = if (@hasDecl(c, "IPI_IRQ")) c.IPI_IRQ else 0;
 
-const SYSPAGE_BASE = @as(usize, @intCast(c.CONFIG_SYSPAGE_BASE));
-const INTSTKTOP = SYSPAGE_BASE + 0x2000;
+const INTSTKTOP = @as(usize, @intCast(c.INTSTKTOP));
 
 var IST_NONE: ?*const fn (?*anyopaque) callconv(.c) void = undefined;
 

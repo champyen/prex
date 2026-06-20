@@ -6,22 +6,13 @@ const c = @import("c").c;
 var sem_list: ?*c.struct_sem = null;
 
 const ffi = @import("ffi");
+const kutil = ffi.kutil;
 const smp = ffi.smp;
 const kmem = ffi.kmem;
 const sched = ffi.sched;
 const thread = ffi.thread;
 
-inline fn get_curthread() *c.struct_thread {
-    if (comptime @hasDecl(c, "CONFIG_SMP")) {
-        return @ptrCast(smp.get_cpu_control().*.active_thread);
-    } else {
-        return @ptrCast(thread.curthread.?);
-    }
-}
 
-inline fn get_curtask() *c.struct_task {
-    return @ptrCast(get_curthread().*.task.?);
-}
 
 inline fn list_init(head: *c.struct_list) void {
     head.next = @ptrCast(head);
@@ -96,7 +87,7 @@ fn copyin(usp: ?*c.sem_t, ksp: ?*c.sem_t) c_int {
 }
 
 pub fn init(sp: ?*c.sem_t, value: c_uint) callconv(.c) c_int {
-    const self = get_curtask();
+    const self = kutil.cur_task();
     if (self.*.nsyncs >= c.MAXSYNCS) {
         return c.EAGAIN;
     }
@@ -149,7 +140,7 @@ pub fn destroy(sp: ?*c.sem_t) callconv(.c) c_int {
     var s: c.sem_t = undefined;
 
     sched.lock();
-    if (copyin(sp, &s) != 0 or s.*.owner != get_curtask()) {
+    if (copyin(sp, &s) != 0 or s.*.owner != kutil.cur_task()) {
         sched.unlock();
         return c.EINVAL;
     }

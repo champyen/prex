@@ -2,18 +2,13 @@ const std = @import("std");
 const c = @import("c").c;
 
 const ffi = @import("ffi");
+const kutil = ffi.kutil;
 const sched = ffi.sched;
 const page = ffi.page;
 const vm = ffi.vm;
 
 // Type-safe inline functions for macros
-pub inline fn ptokv(pa: c.paddr_t) ?*anyopaque {
-    return @ptrFromInt(@as(usize, pa) + c.KERNOFFSET);
-}
 
-pub inline fn kvtop(va: anytype) c.paddr_t {
-    return @intFromPtr(va) - c.KERNOFFSET;
-}
 
 pub inline fn alloc_size(n: usize) usize {
     return (n + ALIGN_MASK) & ~@as(usize, ALIGN_MASK);
@@ -133,7 +128,7 @@ pub fn alloc(size: usize) callconv(.c) ?*anyopaque {
             sched.unlock();
             return null;
         }
-        pg = @ptrCast(@alignCast(ptokv(pa).?));
+        pg = @ptrCast(@alignCast(kutil.ptokv(pa).?));
         pg.*.nallocs = 0;
         pg.*.magic = PAGE_MAGIC;
 
@@ -189,7 +184,7 @@ pub fn free(ptr: ?*anyopaque) callconv(.c) void {
                 tmp = t.*.pg_next;
             }
             pg.*.magic = 0;
-            page.free(kvtop(pg), @intCast(blk.*.size + PGHDR_SIZE));
+            page.free(kutil.kvtop(pg), @intCast(blk.*.size + PGHDR_SIZE));
         } else {
             @panic("kmem_free: large block split free not supported");
         }
@@ -203,7 +198,7 @@ pub fn free(ptr: ?*anyopaque) callconv(.c) void {
                 tmp = t.*.pg_next;
             }
             pg.*.magic = 0;
-            page.free(kvtop(pg), @intCast(c.PAGE_SIZE));
+            page.free(kutil.kvtop(pg), @intCast(c.PAGE_SIZE));
         }
     }
 
@@ -213,7 +208,7 @@ pub fn free(ptr: ?*anyopaque) callconv(.c) void {
 pub fn map(addr: ?*anyopaque, size: usize) callconv(.c) ?*anyopaque {
     const pa = vm.translate(@intFromPtr(addr), size);
     if (pa == 0) return null;
-    return ptokv(pa);
+    return kutil.ptokv(pa);
 }
 
 pub fn init() callconv(.c) void {

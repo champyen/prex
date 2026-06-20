@@ -4,17 +4,11 @@ const builtin = @import("builtin");
 const c = @import("c").c;
 
 const ffi = @import("ffi");
+const kutil = ffi.kutil;
 const hal = ffi.hal;
 const lib = ffi.lib;
 const smp = ffi.smp;
 
-inline fn get_curthread() ?*c.struct_thread {
-    if (@hasDecl(c, "CONFIG_SMP")) {
-        return @ptrCast(smp.get_cpu_control().*.active_thread);
-    } else {
-        return @ptrCast(ffi.thread.curthread);
-    }
-}
 
 const TM_ACTIVE: c_int = 0x54616321; // 'Tac!'
 const TM_STOP: c_int = 0x54737421; // 'Tst!'
@@ -207,7 +201,7 @@ pub fn delay(msec: c_ulong) callconv(.c) c_ulong {
 
     const rc = c.sched_tsleep(&delay_event, msec);
     if (rc != c.SLP_TIMEOUT) {
-        const cur_thread: ?*c.struct_thread = get_curthread();
+        const cur_thread: ?*c.struct_thread = kutil.get_curthread();
         const tmr: *c.struct_timer = @ptrCast(@alignCast(&cur_thread.?.timeout));
         remain = ffi.timer.hztoms(time_remain(tmr.expire));
     }
@@ -233,7 +227,7 @@ pub fn alarm(msec: c_ulong, remain: ?*c_ulong) callconv(.c) c_int {
     var left: c_ulong = 0;
 
     spinlock_lock_irq(&timer_lock, &s);
-    const cur_thread: ?*c.struct_thread = get_curthread();
+    const cur_thread: ?*c.struct_thread = kutil.get_curthread();
     const cur_task: ?*c.struct_task = cur_thread.?.task;
     const tmr: *c.struct_timer = @ptrCast(@alignCast(&cur_task.?.alarm));
 
@@ -244,7 +238,7 @@ pub fn alarm(msec: c_ulong, remain: ?*c_ulong) callconv(.c) c_int {
     if (msec == 0) {
         stop(tmr);
     } else {
-        const cur_thread2: ?*c.struct_thread = get_curthread();
+        const cur_thread2: ?*c.struct_thread = kutil.get_curthread();
         const cur_task2 = cur_thread2.?.task;
         callout(tmr, msec, &alarm_expire, cur_task2);
     }
@@ -269,7 +263,7 @@ pub fn periodic(t: c.thread_t, start: c_ulong, period: c_ulong) callconv(.c) c_i
         return c.ESRCH;
     }
     const thread_ptr: ?*c.struct_thread = t;
-    const cur_thread: ?*c.struct_thread = get_curthread();
+    const cur_thread: ?*c.struct_thread = kutil.get_curthread();
     if (thread_ptr.?.task != cur_thread.?.task) {
         ffi.sched.unlock();
         return c.EPERM;
@@ -307,7 +301,7 @@ pub fn periodic(t: c.thread_t, start: c_ulong, period: c_ulong) callconv(.c) c_i
 
 /// waitperiod – wait next period of the periodic timer.
 pub fn waitperiod() callconv(.c) c_int {
-    const cur_thread: ?*c.struct_thread = get_curthread();
+    const cur_thread: ?*c.struct_thread = kutil.get_curthread();
     const tmr: ?*c.struct_timer = cur_thread.?.periodic;
     if (tmr == null or tmr.?.state != TM_ACTIVE)
         return c.EINVAL;
@@ -339,7 +333,7 @@ pub fn handler() callconv(.c) void {
 
     if (c.smp_processor_id() == 0) {
         lbolt +%= 1;
-        const cur_thread: ?*c.struct_thread = get_curthread();
+        const cur_thread: ?*c.struct_thread = kutil.get_curthread();
         if (cur_thread.?.priority == c.PRI_IDLE)
             idle_ticks +%= 1;
 

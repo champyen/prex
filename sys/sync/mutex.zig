@@ -4,6 +4,7 @@ const builtin = @import("builtin");
 const c = @import("c").c;
 
 const ffi = @import("ffi");
+const kutil = ffi.kutil;
 const smp = ffi.smp;
 const kmem = ffi.kmem;
 const sched = ffi.sched;
@@ -16,17 +17,7 @@ inline fn is_mutex_initializer(m: c.mutex_t) bool {
     return false;
 }
 
-inline fn get_curthread() *c.struct_thread {
-    if (comptime @hasDecl(c, "CONFIG_SMP")) {
-        return @ptrCast(smp.get_cpu_control().*.active_thread);
-    } else {
-        return @ptrCast(thread.curthread.?);
-    }
-}
 
-inline fn get_curtask() *c.struct_task {
-    return @ptrCast(get_curthread().*.task.?);
-}
 
 inline fn list_init(head: *c.struct_list) void {
     head.next = @ptrCast(head);
@@ -58,7 +49,7 @@ inline fn list_next(node: *c.struct_list) *c.struct_list {
 }
 
 fn valid(m: c.mutex_t) c_int {
-    const head = &get_curtask().*.mutexes;
+    const head = &kutil.cur_task().*.mutexes;
     var n = head.*.next.?;
     while (n != @as(*c.struct_list, @ptrCast(head))) : (n = n.*.next.?) {
         const node: *c.struct_list = @ptrCast(n);
@@ -140,7 +131,7 @@ fn prio_uninherit(t: c.thread_t) void {
 }
 
 pub fn init(mp: ?*c.mutex_t) callconv(.c) c_int {
-    const self = get_curtask();
+    const self = kutil.cur_task();
     if (self.*.nsyncs >= c.MAXSYNCS) {
         return c.EAGAIN;
     }
@@ -209,34 +200,34 @@ pub fn lock(mp: ?*c.mutex_t) callconv(.c) c_int {
         return error_code;
     }
 
-    if (m.*.holder == get_curthread()) {
+    if (m.*.holder == kutil.cur_thread()) {
         m.*.locks += 1;
     } else {
         if (m.*.holder == null) {
-            m.*.priority = get_curthread().*.priority;
+            m.*.priority = kutil.cur_thread().*.priority;
             m.*.locks = 1;
-            m.*.holder = get_curthread();
-            list_insert(&get_curthread().*.mutexes, &m.*.link);
+            m.*.holder = kutil.cur_thread();
+            list_insert(&kutil.cur_thread().*.mutexes, &m.*.link);
             ffi.deadlock.record_lock(m, c.LOCK_TYPE_MUTEX);
         } else {
-            ffi.deadlock.mutex_wait(m, get_curthread());
-            get_curthread().*.mutex_waiting = m;
-            const inherit_err = prio_inherit(get_curthread());
+            ffi.deadlock.mutex_wait(m, kutil.cur_thread());
+            kutil.cur_thread().*.mutex_waiting = m;
+            const inherit_err = prio_inherit(kutil.cur_thread());
             if (inherit_err != 0) {
-                ffi.deadlock.mutex_stop_wait(get_curthread());
-                get_curthread().*.mutex_waiting = null;
+                ffi.deadlock.mutex_stop_wait(kutil.cur_thread());
+                kutil.cur_thread().*.mutex_waiting = null;
                 sched.unlock();
                 return inherit_err;
             }
             const rc = sched.tsleep(&m.*.event, 0);
-            ffi.deadlock.mutex_stop_wait(get_curthread());
-            get_curthread().*.mutex_waiting = null;
+            ffi.deadlock.mutex_stop_wait(kutil.cur_thread());
+            kutil.cur_thread().*.mutex_waiting = null;
             if (rc == c.SLP_INTR) {
                 sched.unlock();
                 return c.EINTR;
             }
             m.*.locks = 1;
-            list_insert(&get_curthread().*.mutexes, &m.*.link);
+            list_insert(&kutil.cur_thread().*.mutexes, &m.*.link);
             ffi.deadlock.record_lock(m, c.LOCK_TYPE_MUTEX);
         }
     }
@@ -255,15 +246,15 @@ pub fn tryLock(mp: ?*c.mutex_t) callconv(.c) c_int {
     }
 
     var err: c_int = 0;
-    if (m.*.holder == get_curthread()) {
+    if (m.*.holder == kutil.cur_thread()) {
         m.*.locks += 1;
     } else {
         if (m.*.holder != null) {
             err = c.EBUSY;
         } else {
             m.*.locks = 1;
-            m.*.holder = get_curthread();
-            list_insert(&get_curthread().*.mutexes, &m.*.link);
+            m.*.holder = kutil.cur_thread();
+            list_insert(&kutil.cur_thread().*.mutexes, &m.*.link);
             ffi.deadlock.record_lock(m, c.LOCK_TYPE_MUTEX);
         }
     }
@@ -281,7 +272,7 @@ pub fn unlock(mp: ?*c.mutex_t) callconv(.c) c_int {
         return error_code;
     }
 
-    if (m.*.holder != get_curthread() or m.*.locks <= 0) {
+    if (m.*.holder != kutil.cur_thread() or m.*.locks <= 0) {
         sched.unlock();
         return c.EPERM;
     }
@@ -290,7 +281,7 @@ pub fn unlock(mp: ?*c.mutex_t) callconv(.c) c_int {
     if (m.*.locks == 0) {
         ffi.deadlock.record_unlock(m);
         list_remove(&m.*.link);
-        prio_uninherit(get_curthread());
+        prio_uninherit(kutil.cur_thread());
 
         m.*.holder = sched.wakeone(&m.*.event);
         if (m.*.holder) |holder| {

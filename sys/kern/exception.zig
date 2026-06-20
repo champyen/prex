@@ -3,6 +3,7 @@ const std = @import("std");
 const c = @import("c").c;
 
 const ffi = @import("ffi");
+const kutil = ffi.kutil;
 const hal = ffi.hal;
 const sched = ffi.sched;
 const smp = ffi.smp;
@@ -12,30 +13,8 @@ var EXC_DFL: ?*const fn (c_int) callconv(.c) void = undefined;
 
 var exception_event: c.struct_event = undefined;
 
-inline fn toReg(val: anytype) c.register_t {
-    const T = @TypeOf(val);
-    const u: usize = switch (@typeInfo(T)) {
-        .pointer => @intFromPtr(val),
-        .optional => if (val) |p| @intFromPtr(p) else 0,
-        else => @intCast(val),
-    };
-    return @intCast(@as(isize, @bitCast(u)));
-}
 
-fn get_curthread() ?*c.struct_thread {
-    if (comptime @hasDecl(c, "CONFIG_SMP")) {
-        return @ptrCast(smp.get_cpu_control().*.active_thread);
-    } else {
-        return @ptrCast(thread.curthread);
-    }
-}
 
-fn get_curtask() ?*c.struct_task {
-    if (get_curthread()) |curr| {
-        return @ptrCast(curr.task);
-    }
-    return null;
-}
 
 inline fn list_first(head: *c.struct_list) ?*c.struct_list {
     return @ptrCast(head.next);
@@ -50,9 +29,9 @@ inline fn list_empty(head: *c.struct_list) bool {
 }
 
 pub fn setup(handler: ?*const fn (c_int) callconv(.c) void) callconv(.c) c_int {
-    const self = get_curtask() orelse return c.EINVAL;
+    const self = kutil.get_curtask() orelse return c.EINVAL;
 
-    if (handler != EXC_DFL and !user_area(handler)) {
+    if (handler != EXC_DFL and !kutil.user_area(handler)) {
         return c.EFAULT;
     }
     if (handler == null) {
@@ -87,7 +66,7 @@ pub fn raise(task: c.task_t, excno: c_int) callconv(.c) c_int {
         sched.unlock();
         return c.ESRCH;
     }
-    if (task != @as(?*c.struct_task, @ptrCast(get_curtask())) and c.task_capable(c.CAP_KILL) == 0) {
+    if (task != @as(?*c.struct_task, @ptrCast(kutil.get_curtask())) and c.task_capable(c.CAP_KILL) == 0) {
         sched.unlock();
         return c.EPERM;
     }
@@ -144,7 +123,7 @@ pub fn wait(excno: ?*c_int) callconv(.c) c_int {
     var rc: c_int = undefined;
     var s: c_int = undefined;
 
-    if (get_curtask().?.handler == EXC_DFL) {
+    if (kutil.get_curtask().?.handler == EXC_DFL) {
         return c.EINVAL;
     }
 
@@ -163,7 +142,7 @@ pub fn wait(excno: ?*c_int) callconv(.c) c_int {
     s = hal.splhigh();
     var j: c_int = 0;
     while (j < c.NEXC) : (j += 1) {
-        if (get_curthread().?.excbits & (@as(u32, 1) << @intCast(j)) != 0) {
+        if (kutil.get_curthread().?.excbits & (@as(u32, 1) << @intCast(j)) != 0) {
             break;
         }
     }
@@ -179,12 +158,12 @@ pub fn wait(excno: ?*c_int) callconv(.c) c_int {
 
 pub fn mark(excno: c_int) callconv(.c) void {
     const s = hal.splhigh();
-    get_curthread().?.excbits |= @as(u32, 1) << @intCast(excno);
+    kutil.get_curthread().?.excbits |= @as(u32, 1) << @intCast(excno);
     _ = hal.splx(s);
 }
 
 pub fn deliver() callconv(.c) void {
-    const self = get_curtask().?;
+    const self = kutil.get_curtask().?;
     var handler: ?*const fn (c_int) callconv(.c) void = undefined;
     var bitmap: u32 = undefined;
     var s: c_int = undefined;
@@ -193,7 +172,7 @@ pub fn deliver() callconv(.c) void {
     sched.lock();
 
     s = hal.splhigh();
-    bitmap = get_curthread().?.excbits;
+    bitmap = kutil.get_curthread().?.excbits;
     _ = hal.splx(s);
 
     if (bitmap != 0) {
@@ -209,10 +188,10 @@ pub fn deliver() callconv(.c) void {
         }
 
         s = hal.splhigh();
-        hal.context_save(&get_curthread().?.ctx);
-        hal.context_set(&get_curthread().?.ctx, c.CTX_UENTRY, toReg(handler));
-        hal.context_set(&get_curthread().?.ctx, c.CTX_UARG, toReg(excno));
-        get_curthread().?.excbits &= ~(@as(u32, 1) << @intCast(excno));
+        hal.context_save(&kutil.get_curthread().?.ctx);
+        hal.context_set(&kutil.get_curthread().?.ctx, c.CTX_UENTRY, kutil.toReg(handler));
+        hal.context_set(&kutil.get_curthread().?.ctx, c.CTX_UARG, kutil.toReg(excno));
+        kutil.get_curthread().?.excbits &= ~(@as(u32, 1) << @intCast(excno));
         _ = hal.splx(s);
     }
     sched.unlock();
@@ -220,7 +199,7 @@ pub fn deliver() callconv(.c) void {
 
 pub fn @"return"() callconv(.c) void {
     const s = hal.splhigh();
-    hal.context_restore(&get_curthread().?.ctx);
+    hal.context_restore(&kutil.get_curthread().?.ctx);
     _ = hal.splx(s);
 }
 
@@ -229,18 +208,6 @@ pub fn init() callconv(.c) void {
     c.event_init(@as(?*anyopaque, @ptrCast(&exception_event)), "exception");
 }
 
-fn user_area(a: anytype) bool {
-    const val = switch (@typeInfo(@TypeOf(a))) {
-        .pointer => @intFromPtr(a),
-        .optional => if (a) |p| @intFromPtr(p) else 0,
-        else => a,
-    };
-    if (comptime @hasDecl(c, "CONFIG_MMU")) {
-        return val < c.USERLIMIT;
-    } else {
-        return true;
-    }
-}
 
 comptime {
     if (@import("root") == @This()) {

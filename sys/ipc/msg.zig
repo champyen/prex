@@ -2,6 +2,7 @@ const std = @import("std");
 
 const c = @import("c").c;
 const ffi = @import("ffi");
+const kutil = ffi.kutil;
 const smp = ffi.smp;
 const kmem = ffi.kmem;
 const sched = ffi.sched;
@@ -10,43 +11,9 @@ const thread = ffi.thread;
 
 var ipc_event: c.struct_event = undefined;
 
-inline fn toReg(val: anytype) c.register_t {
-    const T = @TypeOf(val);
-    const u: usize = switch (@typeInfo(T)) {
-        .pointer => @intFromPtr(val),
-        .optional => if (val) |p| @intFromPtr(p) else 0,
-        else => @intCast(val),
-    };
-    return @intCast(@as(isize, @bitCast(u)));
-}
 
-fn get_curthread() ?*c.struct_thread {
-    if (comptime @hasDecl(c, "CONFIG_SMP")) {
-        return @ptrCast(smp.get_cpu_control().*.active_thread);
-    } else {
-        return @ptrCast(thread.curthread);
-    }
-}
 
-fn get_curtask() ?*c.struct_task {
-    if (get_curthread()) |curr| {
-        return @ptrCast(curr.task);
-    }
-    return null;
-}
 
-fn user_area(a: anytype) bool {
-    const val = switch (@typeInfo(@TypeOf(a))) {
-        .pointer => @intFromPtr(a),
-        .optional => if (a) |p| @intFromPtr(p) else 0,
-        else => a,
-    };
-    if (comptime @hasDecl(c, "CONFIG_MMU")) {
-        return val < c.USERLIMIT;
-    } else {
-        return true;
-    }
-}
 
 inline fn queue_empty(head: c.queue_t) bool {
     return head.?.*.next == head;
@@ -84,7 +51,7 @@ inline fn enqueue(head: c.queue_t, t: ?*c.struct_thread) void {
 }
 
 pub fn send(obj: c.object_t, msg: ?*anyopaque, size: usize) callconv(.c) c_int {
-    if (!user_area(msg)) {
+    if (!kutil.user_area(msg)) {
         return c.EFAULT;
     }
     if (size < @sizeOf(c.struct_msg_header)) {
@@ -98,7 +65,7 @@ pub fn send(obj: c.object_t, msg: ?*anyopaque, size: usize) callconv(.c) c_int {
         return c.EINVAL;
     }
 
-    if (obj == get_curthread().?.recvobj) {
+    if (obj == kutil.get_curthread().?.recvobj) {
         sched.unlock();
         return c.EDEADLK;
     }
@@ -108,24 +75,24 @@ pub fn send(obj: c.object_t, msg: ?*anyopaque, size: usize) callconv(.c) c_int {
         sched.unlock();
         return c.EFAULT;
     }
-    get_curthread().?.msgaddr = kmsg;
-    get_curthread().?.msgsize = size;
+    kutil.get_curthread().?.msgaddr = kmsg;
+    kutil.get_curthread().?.msgsize = size;
 
     const hdr: *c.struct_msg_header = @ptrCast(@alignCast(kmsg));
-    hdr.task = get_curtask();
+    hdr.task = kutil.get_curtask();
 
     if (!queue_empty(&obj.*.recvq)) {
         const t = dequeue(&obj.*.recvq);
         sched.unsleep(t, 0);
     }
 
-    get_curthread().?.sendobj = obj;
-    enqueue(&obj.*.sendq, get_curthread());
+    kutil.get_curthread().?.sendobj = obj;
+    enqueue(&obj.*.sendq, kutil.get_curthread());
     const rc = sched.tsleep(&ipc_event, 0);
     if (rc == c.SLP_INTR) {
-        ffi.queue.remove(&get_curthread().?.ipc_link);
+        ffi.queue.remove(&kutil.get_curthread().?.ipc_link);
     }
-    get_curthread().?.sendobj = null;
+    kutil.get_curthread().?.sendobj = null;
 
     sched.unlock();
 
@@ -148,7 +115,7 @@ pub fn receive(obj: c.object_t, msg: ?*anyopaque, size: usize) callconv(.c) c_in
     var rc: c_int = undefined;
     var err_code: c_int = 0;
 
-    if (!user_area(msg)) {
+    if (!kutil.user_area(msg)) {
         return c.EFAULT;
     }
 
@@ -158,19 +125,19 @@ pub fn receive(obj: c.object_t, msg: ?*anyopaque, size: usize) callconv(.c) c_in
         sched.unlock();
         return c.EINVAL;
     }
-    if (obj.*.owner != get_curtask()) {
+    if (obj.*.owner != kutil.get_curtask()) {
         sched.unlock();
         return c.EACCES;
     }
 
-    if (get_curthread().?.recvobj != null) {
+    if (kutil.get_curthread().?.recvobj != null) {
         sched.unlock();
         return c.EBUSY;
     }
-    get_curthread().?.recvobj = obj;
+    kutil.get_curthread().?.recvobj = obj;
 
     while (queue_empty(&obj.*.sendq)) {
-        enqueue(&obj.*.recvq, get_curthread());
+        enqueue(&obj.*.recvq, kutil.get_curthread());
         rc = sched.tsleep(&ipc_event, 0);
         if (rc != 0) {
             switch (rc) {
@@ -178,14 +145,14 @@ pub fn receive(obj: c.object_t, msg: ?*anyopaque, size: usize) callconv(.c) c_in
                     err_code = c.EINVAL;
                 },
                 c.SLP_INTR => {
-                    ffi.queue.remove(&get_curthread().?.ipc_link);
+                    ffi.queue.remove(&kutil.get_curthread().?.ipc_link);
                     err_code = c.EINTR;
                 },
                 else => {
                     @panic("receive");
                 },
             }
-            get_curthread().?.recvobj = null;
+            kutil.get_curthread().?.recvobj = null;
             sched.unlock();
             return err_code;
         }
@@ -197,38 +164,38 @@ pub fn receive(obj: c.object_t, msg: ?*anyopaque, size: usize) callconv(.c) c_in
     if (len > 0) {
         if (ffi.vm.copyout(t.?.msgaddr, msg, len) != 0) {
             enqueue(&obj.*.sendq, t);
-            get_curthread().?.recvobj = null;
+            kutil.get_curthread().?.recvobj = null;
             sched.unlock();
             return c.EFAULT;
         }
     }
 
-    get_curthread().?.sender = t;
-    t.?.receiver = get_curthread();
+    kutil.get_curthread().?.sender = t;
+    t.?.receiver = kutil.get_curthread();
 
     sched.unlock();
     return err_code;
 }
 
 pub fn reply(obj: c.object_t, msg: ?*anyopaque, size: usize) callconv(.c) c_int {
-    if (!user_area(msg)) {
+    if (!kutil.user_area(msg)) {
         return c.EFAULT;
     }
 
     sched.lock();
 
-    if (object.valid(obj) == 0 or @intFromPtr(obj) != @intFromPtr(get_curthread().?.recvobj)) {
+    if (object.valid(obj) == 0 or @intFromPtr(obj) != @intFromPtr(kutil.get_curthread().?.recvobj)) {
         sched.unlock();
         return c.EINVAL;
     }
 
-    if (get_curthread().?.sender == null) {
-        get_curthread().?.recvobj = null;
+    if (kutil.get_curthread().?.sender == null) {
+        kutil.get_curthread().?.recvobj = null;
         sched.unlock();
         return c.EINVAL;
     }
 
-    const t: ?*c.struct_thread = @ptrCast(get_curthread().?.sender);
+    const t: ?*c.struct_thread = @ptrCast(kutil.get_curthread().?.sender);
     const len: usize = if (size < t.?.msgsize) size else t.?.msgsize;
     if (len > 0) {
         if (ffi.vm.copyin(msg, t.?.msgaddr, len) != 0) {
@@ -240,8 +207,8 @@ pub fn reply(obj: c.object_t, msg: ?*anyopaque, size: usize) callconv(.c) c_int 
     sched.unsleep(t, 0);
     t.?.receiver = null;
 
-    get_curthread().?.sender = null;
-    get_curthread().?.recvobj = null;
+    kutil.get_curthread().?.sender = null;
+    kutil.get_curthread().?.recvobj = null;
 
     sched.unlock();
     return 0;

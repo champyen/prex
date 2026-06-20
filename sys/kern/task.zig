@@ -3,6 +3,7 @@ const builtin = @import("builtin");
 
 const c = @import("c").c;
 const ffi = @import("ffi");
+const kutil = ffi.kutil;
 const hal = ffi.hal;
 const lib = ffi.lib;
 const sched = ffi.sched;
@@ -16,17 +17,7 @@ var ntasks: c_int = 0;
 
 var kernel_task: c.struct_task = std.mem.zeroes(c.struct_task);
 
-inline fn get_curthread() *c.struct_thread {
-    if (comptime @hasDecl(c, "CONFIG_SMP")) {
-        return @ptrCast(smp.get_cpu_control().*.active_thread);
-    } else {
-        return @ptrCast(thread.curthread.?);
-    }
-}
 
-inline fn get_curtask() *c.struct_task {
-    return @ptrCast(get_curthread().*.task.?);
-}
 
 inline fn list_init_fn(head: *c.struct_list) void {
     head.next = @ptrCast(head);
@@ -72,7 +63,7 @@ fn access(task: c.task_t) callconv(.c) c_int {
     if ((task.?.*.flags & c.TF_SYSTEM) != 0) {
         return 0;
     } else {
-        if (task == get_curtask() or task.?.*.parent == get_curtask() or task == get_curtask().*.parent or capable(c.CAP_TASKCTRL) != 0) {
+        if (task == kutil.cur_task() or task.?.*.parent == kutil.cur_task() or task == kutil.cur_task().*.parent or capable(c.CAP_TASKCTRL) != 0) {
             return 1;
         }
     }
@@ -82,8 +73,8 @@ fn access(task: c.task_t) callconv(.c) c_int {
 fn capable(cap: c.cap_t) callconv(.c) c_int {
     var capable_val: c_int = 1;
 
-    if ((get_curtask().*.capability & cap) == 0) {
-        if ((get_curtask().*.flags & c.TF_AUDIT) != 0) {
+    if ((kutil.cur_task().*.capability & cap) == 0) {
+        if ((kutil.cur_task().*.flags & c.TF_AUDIT) != 0) {
             lib.panic("audit failed");
         }
         capable_val = 0;
@@ -115,7 +106,7 @@ pub fn create(parent: c.task_t, vm_option: c_int, childp: ?*c.task_t) callconv(.
         return c.ESRCH;
     }
 
-    if ((get_curtask().*.flags & c.TF_SYSTEM) == 0) {
+    if ((kutil.cur_task().*.flags & c.TF_SYSTEM) == 0) {
         if (access(parent) == 0) {
             sched.unlock();
             return c.EPERM;
@@ -170,7 +161,7 @@ pub fn create(parent: c.task_t, vm_option: c_int, childp: ?*c.task_t) callconv(.
     list_insert_fn(&task_list, &task.?.*.link);
     ntasks += 1;
 
-    if ((get_curtask().*.flags & c.TF_SYSTEM) != 0) {
+    if ((kutil.cur_task().*.flags & c.TF_SYSTEM) != 0) {
         childp.?.* = task;
     } else {
         _ = ffi.vm.copyout(@as(?*const anyopaque, @ptrCast(&task)), @as(?*anyopaque, @ptrCast(childp)), @sizeOf(c.task_t));
@@ -205,14 +196,14 @@ pub fn terminate(task: c.task_t) callconv(.c) c_int {
         while (n != @as(*c.struct_list, @ptrCast(&task.?.*.threads))) {
             const next_node = list_next_node(n);
             const t = @as(*c.struct_thread, @fieldParentPtr("task_link", n));
-            if (t != get_curthread()) {
+            if (t != kutil.cur_thread()) {
                 thread.destroy(t);
             }
             n = next_node;
         }
     }
-    if (task == get_curtask()) {
-        thread.destroy(get_curthread());
+    if (task == kutil.cur_task()) {
+        thread.destroy(kutil.cur_thread());
     }
 
     vm.terminate(task.?.*.map);
@@ -224,7 +215,7 @@ pub fn terminate(task: c.task_t) callconv(.c) c_int {
 }
 
 pub fn self() callconv(.c) c.task_t {
-    return get_curthread().*.task;
+    return kutil.cur_thread().*.task;
 }
 
 pub fn @"suspend"(task: c.task_t) callconv(.c) c_int {
@@ -251,7 +242,7 @@ pub fn @"suspend"(task: c.task_t) callconv(.c) c_int {
 }
 
 pub fn @"resume"(task: c.task_t) callconv(.c) c_int {
-    if (task == get_curtask()) return c.EINVAL;
+    if (task == kutil.cur_task()) return c.EINVAL;
 
     sched.lock();
     if (valid(task) == 0) {
@@ -292,7 +283,7 @@ pub fn setname(task: c.task_t, name: [*:0]const u8) callconv(.c) c_int {
         return c.EPERM;
     }
 
-    if ((get_curtask().*.flags & c.TF_SYSTEM) != 0) {
+    if ((kutil.cur_task().*.flags & c.TF_SYSTEM) != 0) {
         _ = lib.strlcpy(@ptrCast(&task.?.*.name), @ptrCast(name), c.MAXTASKNAME);
     } else {
         const err = ffi.vm.copyinstr(@as(?*const anyopaque, @ptrCast(name)), @as(?*anyopaque, @ptrCast(&str)), c.MAXTASKNAME);
@@ -332,7 +323,7 @@ pub fn chkcap(task: c.task_t, cap: c.cap_t) callconv(.c) c_int {
         return c.ESRCH;
     }
     if ((task.?.*.capability & cap) == 0) {
-        if ((get_curtask().*.flags & c.TF_AUDIT) != 0) {
+        if ((kutil.cur_task().*.flags & c.TF_AUDIT) != 0) {
             lib.panic("audit failed");
         }
         err = c.EPERM;
@@ -357,7 +348,7 @@ pub fn info(task_info_ptr: ?*c.struct_taskinfo) callconv(.c) c_int {
             task_info_ptr.?.*.capability = task.*.capability;
             task_info_ptr.?.*.vmsize = task.*.map.?.*.total;
             task_info_ptr.?.*.nthreads = task.*.nthreads;
-            task_info_ptr.?.*.active = if (task == get_curtask()) @as(c_int, 1) else @as(c_int, 0);
+            task_info_ptr.?.*.active = if (task == kutil.cur_task()) @as(c_int, 1) else @as(c_int, 0);
             _ = lib.strlcpy(@ptrCast(&task_info_ptr.?.*.taskname), @ptrCast(&task.*.name), c.MAXTASKNAME);
             sched.unlock();
             return 0;

@@ -4,6 +4,7 @@ const builtin = @import("builtin");
 const c = @import("c").c;
 
 const ffi = @import("ffi");
+const kutil = ffi.kutil;
 const hal = ffi.hal;
 const timer = ffi.timer;
 const thread = ffi.thread;
@@ -30,7 +31,7 @@ fn runq_enqueue(t: c.thread_t) void {
     ffi.queue.enqueue(&runq[@intCast(t.*.priority)], &t.*.sched_link);
     if (t.*.priority < maxpri) {
         maxpri = t.*.priority;
-        if (get_curthread()) |ct| {
+        if (kutil.get_curthread()) |ct| {
             ct.resched = 1;
         }
     }
@@ -60,13 +61,6 @@ fn runq_remove(t: c.thread_t) void {
     maxpri = runq_getbest();
 }
 
-fn get_curthread() ?*c.struct_thread {
-    if (comptime @hasDecl(c, "CONFIG_SMP")) {
-        return @ptrCast(smp.get_cpu_control().*.active_thread);
-    } else {
-        return @ptrCast(thread.curthread);
-    }
-}
 
 fn set_curthread(t: c.thread_t) void {
     if (comptime @hasDecl(c, "CONFIG_SMP")) {
@@ -77,7 +71,7 @@ fn set_curthread(t: c.thread_t) void {
 }
 
 fn curthread() *c.struct_thread {
-    return get_curthread().?;
+    return kutil.get_curthread().?;
 }
 
 fn wakeq_flush() callconv(.c) void {

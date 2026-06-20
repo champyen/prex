@@ -52,6 +52,7 @@
 #include <exception.h>
 #include <sys/dbgctl.h>
 #include <mmu.h>
+#include <machine/syspage.h>
 
 /*
  * Restore renamed symbols as extern functions for Zig to link against

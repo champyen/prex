@@ -1,6 +1,7 @@
 const std = @import("std");
 const c = @import("c").c;
 const ffi = @import("ffi");
+const kutil = ffi.kutil;
 
 const sched = ffi.sched;
 const task = ffi.task;
@@ -15,38 +16,14 @@ const assert = std.debug.assert;
 // Page size helpers
 // ---------------------------------------------------------------------------
 
-inline fn round_page(x: usize) usize {
-    const page_mask = @as(usize, @intCast(c.PAGE_SIZE - 1));
-    return (x + page_mask) & ~page_mask;
-}
 
-inline fn trunc_page(x: usize) usize {
-    const page_mask = @as(usize, @intCast(c.PAGE_SIZE - 1));
-    return x & ~page_mask;
-}
 
-inline fn user_area(addr: anytype) bool {
-    if (@hasDecl(c, "USERLIMIT")) {
-        return @intFromPtr(addr) < c.USERLIMIT;
-    }
-    return true;
-}
 
 // ---------------------------------------------------------------------------
 // Thread / task accessors
 // ---------------------------------------------------------------------------
 
-inline fn get_curthread() *c.struct_thread {
-    if (comptime @hasDecl(c, "CONFIG_SMP")) {
-        return @ptrCast(smp.get_cpu_control().*.active_thread);
-    } else {
-        return @ptrCast(thread.curthread.?);
-    }
-}
 
-inline fn get_curtask() *c.struct_task {
-    return @ptrCast(get_curthread().*.task.?);
-}
 
 extern fn copyin(src: ?*const anyopaque, dst: ?*anyopaque, n: usize) callconv(.c) c_int;
 extern fn copyout(src: ?*const anyopaque, dst: ?*anyopaque, n: usize) callconv(.c) c_int;
@@ -168,12 +145,12 @@ fn do_allocate(vm_map: *c.struct_vm_map, addr: *?*anyopaque, size: usize, anywhe
     var start: c.vaddr_t = undefined;
 
     if (anywhere != 0) {
-        const alloc_size = round_page(size);
+        const alloc_size = kutil.round_page(size);
         seg = seg_alloc(&vm_map.head, alloc_size) orelse return c.ENOMEM;
         start = seg.addr;
     } else {
-        start = trunc_page(@intFromPtr(addr.*));
-        const end = round_page(start + size);
+        start = kutil.trunc_page(@intFromPtr(addr.*));
+        const end = kutil.round_page(start + size);
         const alloc_size = end - start;
 
         seg = seg_reserve(&vm_map.head, start, alloc_size) orelse return c.ENOMEM;
@@ -191,7 +168,7 @@ fn do_allocate(vm_map: *c.struct_vm_map, addr: *?*anyopaque, size: usize, anywhe
 }
 
 fn do_free(vm_map: *c.struct_vm_map, addr: ?*anyopaque) c_int {
-    const va = trunc_page(@intFromPtr(addr));
+    const va = kutil.trunc_page(@intFromPtr(addr));
 
     const seg = seg_lookup(&vm_map.head, @intCast(va), 1) orelse return c.EINVAL;
     if (seg.addr != va or seg.flags & c.SEG_FREE != 0) return c.EINVAL;
@@ -207,7 +184,7 @@ fn do_free(vm_map: *c.struct_vm_map, addr: ?*anyopaque) c_int {
 }
 
 fn do_attribute(vm_map: *c.struct_vm_map, addr: ?*anyopaque, attr: c_int) c_int {
-    const va = trunc_page(@intFromPtr(addr));
+    const va = kutil.trunc_page(@intFromPtr(addr));
 
     const seg = seg_lookup(&vm_map.head, @intCast(va), 1) orelse return c.EINVAL;
     if (seg.addr != va or seg.flags & c.SEG_FREE != 0) return c.EINVAL;
@@ -236,8 +213,8 @@ fn do_map(vm_map: *c.struct_vm_map, addr: ?*anyopaque, size: usize, alloc: *?*an
     var tmp: ?*anyopaque = null;
     if (copyout(@ptrCast(&tmp), @ptrCast(alloc), @sizeOf(?*anyopaque)) != 0) return c.EFAULT;
 
-    const start = trunc_page(@intFromPtr(addr));
-    const end = round_page(@intFromPtr(addr) + size);
+    const start = kutil.trunc_page(@intFromPtr(addr));
+    const end = kutil.round_page(@intFromPtr(addr) + size);
     const alloc_size = end - start;
 
     // Find the segment that includes target address
@@ -245,7 +222,7 @@ fn do_map(vm_map: *c.struct_vm_map, addr: ?*anyopaque, size: usize, alloc: *?*an
     if (tgt.flags & c.SEG_FREE != 0) return c.EINVAL;
 
     // Create new segment to map
-    const map_ptr = get_curtask().map orelse return c.ENOMEM;
+    const map_ptr = kutil.cur_task().map orelse return c.ENOMEM;
     const curmap: *c.struct_vm_map = @ptrCast(@alignCast(map_ptr));
     const seg = seg_create(&curmap.head, @intCast(start), alloc_size) orelse return c.ENOMEM;
     seg.flags = tgt.flags | c.SEG_MAPPED;
@@ -270,7 +247,7 @@ pub fn allocate(tsk: ?*c.struct_task, addr: [*c]?*anyopaque, size: usize, anywhe
         sched.unlock();
         return c.ESRCH;
     }
-    if (tsk != get_curtask() and task.capable(c.CAP_EXTMEM) == 0) {
+    if (tsk != kutil.cur_task() and task.capable(c.CAP_EXTMEM) == 0) {
         sched.unlock();
         return c.EPERM;
     }
@@ -278,7 +255,7 @@ pub fn allocate(tsk: ?*c.struct_task, addr: [*c]?*anyopaque, size: usize, anywhe
         sched.unlock();
         return c.EFAULT;
     }
-    if (anywhere == 0 and !user_area(uaddr)) {
+    if (anywhere == 0 and !kutil.user_area(uaddr)) {
         sched.unlock();
         return c.EACCES;
     }
@@ -301,11 +278,11 @@ pub fn free(tsk: ?*c.struct_task, addr: ?*anyopaque) callconv(.c) c_int {
         sched.unlock();
         return c.ESRCH;
     }
-    if (tsk != get_curtask() and task.capable(c.CAP_EXTMEM) == 0) {
+    if (tsk != kutil.cur_task() and task.capable(c.CAP_EXTMEM) == 0) {
         sched.unlock();
         return c.EPERM;
     }
-    if (!user_area(addr)) {
+    if (!kutil.user_area(addr)) {
         sched.unlock();
         return c.EFAULT;
     }
@@ -328,11 +305,11 @@ pub fn attribute(tsk: ?*c.struct_task, addr: ?*anyopaque, attr: c_int) callconv(
         sched.unlock();
         return c.ESRCH;
     }
-    if (tsk != get_curtask() and task.capable(c.CAP_EXTMEM) == 0) {
+    if (tsk != kutil.cur_task() and task.capable(c.CAP_EXTMEM) == 0) {
         sched.unlock();
         return c.EPERM;
     }
-    if (!user_area(addr)) {
+    if (!kutil.user_area(addr)) {
         sched.unlock();
         return c.EFAULT;
     }
@@ -351,7 +328,7 @@ pub fn map(target: ?*c.struct_task, addr: ?*anyopaque, size: usize, alloc: [*c]?
         sched.unlock();
         return c.ESRCH;
     }
-    if (target == get_curtask()) {
+    if (target == kutil.cur_task()) {
         sched.unlock();
         return c.EINVAL;
     }
@@ -359,7 +336,7 @@ pub fn map(target: ?*c.struct_task, addr: ?*anyopaque, size: usize, alloc: [*c]?
         sched.unlock();
         return c.EPERM;
     }
-    if (!user_area(addr)) {
+    if (!kutil.user_area(addr)) {
         sched.unlock();
         return c.EFAULT;
     }
@@ -427,22 +404,22 @@ pub fn load(vm_map: ?*c.struct_vm_map, mod: *c.struct_module, stack: [*c]?*anyop
 
     if (mod.textsz == 0) return c.EINVAL;
 
-    if (mod.datasz + mod.bsssz > 0 and trunc_page(mod.data) >= round_page(mod.text + mod.textsz)) {
+    if (mod.datasz + mod.bsssz > 0 and kutil.trunc_page(mod.data) >= kutil.round_page(mod.text + mod.textsz)) {
         // Separate text and data/bss segments
         // 1. Text segment
-        var start = trunc_page(mod.text);
-        var end = round_page(mod.text + mod.textsz);
+        var start = kutil.trunc_page(mod.text);
+        var end = kutil.round_page(mod.text + mod.textsz);
         var size = end - start;
         var seg = seg_create(&m.head, @intCast(start), size) orelse return c.ENOMEM;
         seg.flags = c.SEG_READ | c.SEG_WRITE;
 
         // 2. Data/BSS segment
-        start = trunc_page(mod.data);
-        end = round_page(mod.data + mod.datasz + mod.bsssz);
+        start = kutil.trunc_page(mod.data);
+        end = kutil.round_page(mod.data + mod.datasz + mod.bsssz);
         size = end - start;
         seg = seg_create(&m.head, @intCast(start), size) orelse {
             // Clean up text segment
-            const tseg = seg_lookup(&m.head, trunc_page(mod.text), 1);
+            const tseg = seg_lookup(&m.head, kutil.trunc_page(mod.text), 1);
             if (tseg) |ts| {
                 seg_delete(&m.head, ts);
             }
@@ -451,9 +428,9 @@ pub fn load(vm_map: ?*c.struct_vm_map, mod: *c.struct_module, stack: [*c]?*anyop
         seg.flags = c.SEG_READ | c.SEG_WRITE;
     } else {
         // Combined text and data/bss segment
-        const start = trunc_page(mod.text);
+        const start = kutil.trunc_page(mod.text);
         const total_size = mod.textsz + mod.datasz + mod.bsssz;
-        const end = round_page(start + total_size);
+        const end = kutil.round_page(start + total_size);
         const size = end - start;
 
         const seg = seg_create(&m.head, @intCast(start), size) orelse return c.ENOMEM;

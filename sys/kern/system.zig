@@ -3,6 +3,7 @@ const builtin = @import("builtin");
 
 const c = @import("c").c;
 const ffi = @import("ffi");
+const kutil = ffi.kutil;
 const hal = ffi.hal;
 const lib = ffi.lib;
 
@@ -12,30 +13,9 @@ const vm = ffi.vm;
 const smp = ffi.smp;
 
 // Helper for curthread/curtask
-inline fn get_curthread() ?*c.struct_thread {
-    if (comptime @hasDecl(c, "CONFIG_SMP")) {
-        return @ptrCast(smp.get_cpu_control().*.active_thread);
-    } else {
-        return @ptrCast(thread.curthread);
-    }
-}
 
-inline fn get_curtask() ?*c.struct_task {
-    if (get_curthread()) |curr| {
-        return @ptrCast(curr.task);
-    }
-    return null;
-}
 
 // Helper to validate user-space address bounds
-inline fn user_area(a: ?*const anyopaque) bool {
-    if (a == null) return false;
-    if (@hasDecl(c, "CONFIG_MMU")) {
-        return @intFromPtr(a) < c.USERLIMIT;
-    } else {
-        return true;
-    }
-}
 
 // Declarations of extern C helpers for target macros
 extern fn wrap_get_hostname() callconv(.c) [*c]const u8;
@@ -106,7 +86,7 @@ pub fn sysInfo(sysinfo_type: c_int, buf: ?*anyopaque) callconv(.c) c_int {
     var error_val: c_int = 0;
     var bufsz: usize = 0;
 
-    if (buf == null or !user_area(buf))
+    if (buf == null or !kutil.user_area(buf))
         return c.EFAULT;
 
     sched.lock();
@@ -208,14 +188,14 @@ pub fn sysPanic(str: [*c]const u8) callconv(.c) c_int {
         sched.lock();
         _ = ffi.vm.copyinstr(str, &buf, c.DBGMSGSZ - 20);
         lib.printf("User panic: %s\n", &buf);
-        const cur_task = get_curtask();
-        const cur_thread = get_curthread();
+        const cur_task = kutil.get_curtask();
+        const cur_thread = kutil.get_curthread();
         const name_ptr: [*c]const u8 = if (cur_task) |t| @ptrCast(&t.name) else "unknown";
         lib.printf(" task=%s thread=%lx\n", name_ptr, @intFromPtr(cur_thread));
         hal.dump_backtrace();
         hal.machine_abort();
     } else {
-        if (get_curtask()) |t| {
+        if (kutil.get_curtask()) |t| {
             _ = ffi.task.terminate(t);
         }
     }

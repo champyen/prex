@@ -4,6 +4,7 @@ const builtin = @import("builtin");
 const c = @import("c").c;
 
 const ffi = @import("ffi");
+const kutil = ffi.kutil;
 const hal = ffi.hal;
 const lib = ffi.lib;
 const kmem = ffi.kmem;
@@ -19,30 +20,8 @@ pub var curthread: c.thread_t = &idle_thread;
 pub var irq_nesting: c_int = 0;
 pub var curspl: c_int = 15;
 
-inline fn toReg(val: anytype) c.register_t {
-    const T = @TypeOf(val);
-    const u: usize = switch (@typeInfo(T)) {
-        .pointer => @intFromPtr(val),
-        .optional => if (val) |p| @intFromPtr(p) else 0,
-        else => @intCast(val),
-    };
-    return @intCast(@as(isize, @bitCast(u)));
-}
 
-fn get_curthread() ?*c.struct_thread {
-    if (comptime @hasDecl(c, "CONFIG_SMP")) {
-        return @ptrCast(smp.get_cpu_control().*.active_thread);
-    } else {
-        return @ptrCast(curthread);
-    }
-}
 
-fn get_curtask() ?*c.struct_task {
-    if (get_curthread()) |curr| {
-        return @ptrCast(curr.task);
-    }
-    return null;
-}
 
 inline fn list_init(head: *c.struct_list) void {
     head.next = @ptrCast(head);
@@ -96,7 +75,7 @@ fn deallocate(t: c.thread_t) void {
         zombie = null;
     }
 
-    if (t == get_curthread()) {
+    if (t == kutil.get_curthread()) {
         zombie = t;
         return;
     }
@@ -120,7 +99,7 @@ pub fn create(tsk: c.task_t, tp: ?*c.thread_t) callconv(.c) c_int {
         return c.EAGAIN;
     }
 
-    if ((get_curtask().?.*.flags & c.TF_SYSTEM) == 0) {
+    if ((kutil.get_curtask().?.*.flags & c.TF_SYSTEM) == 0) {
         var tmp: c.thread_t = null;
         if (ffi.vm.copyout(@as(?*const anyopaque, @ptrCast(&tmp)), @as(?*anyopaque, @ptrCast(tp)), @sizeOf(c.thread_t)) != 0) {
             return c.EFAULT;
@@ -133,20 +112,20 @@ pub fn create(tsk: c.task_t, tp: ?*c.thread_t) callconv(.c) c_int {
 
     if (comptime @hasDecl(c, "CONFIG_ARMV8M")) {
         _ = lib.memset(t.*.kstack, 0, c.KSTACKSZ);
-        const parent_uregs = get_curthread().?.*.ctx.uregs;
+        const parent_uregs = kutil.get_curthread().?.*.ctx.uregs;
         const child_uregs: *c.struct_cpu_regs = @ptrCast(@alignCast(@as(*anyopaque, @ptrFromInt(@intFromPtr(t.*.kstack) + c.KSTACKSZ - @sizeOf(c.struct_cpu_regs)))));
         _ = lib.memcpy(child_uregs, parent_uregs, @sizeOf(c.struct_cpu_regs));
     } else {
-        _ = lib.memcpy(t.*.kstack, get_curthread().?.*.kstack, c.KSTACKSZ);
+        _ = lib.memcpy(t.*.kstack, kutil.get_curthread().?.*.kstack, c.KSTACKSZ);
     }
 
     const sp: usize = @intFromPtr(t.*.kstack) + c.KSTACKSZ;
-    hal.context_set(&t.*.ctx, c.CTX_KSTACK, toReg(sp));
-    hal.context_set(&t.*.ctx, c.CTX_KENTRY, toReg(&c.syscall_ret));
-    sched.start(t, get_curthread().?.*.basepri, c.SCHED_RR);
+    hal.context_set(&t.*.ctx, c.CTX_KSTACK, kutil.toReg(sp));
+    hal.context_set(&t.*.ctx, c.CTX_KENTRY, kutil.toReg(&c.syscall_ret));
+    sched.start(t, kutil.get_curthread().?.*.basepri, c.SCHED_RR);
     t.*.suscnt = tsk.*.suscnt + 1;
 
-    if (get_curtask().?.*.flags & c.TF_SYSTEM != 0) {
+    if (kutil.get_curtask().?.*.flags & c.TF_SYSTEM != 0) {
         if (tp) |tp_ptr| {
             tp_ptr.* = t;
         }
@@ -180,8 +159,8 @@ pub fn destroy(th: c.thread_t) callconv(.c) void {
 }
 
 pub fn setup(t: c.thread_t, entry: ?*anyopaque, stack: ?*anyopaque, gp: ?*anyopaque) callconv(.c) c_int {
-    if (entry != null and !user_area(entry)) return c.EINVAL;
-    if (stack != null and !user_area(stack)) return c.EINVAL;
+    if (entry != null and !kutil.user_area(entry)) return c.EINVAL;
+    if (stack != null and !kutil.user_area(stack)) return c.EINVAL;
 
     sched.lock();
     defer sched.unlock();
@@ -198,10 +177,10 @@ pub fn setup(t: c.thread_t, entry: ?*anyopaque, stack: ?*anyopaque, gp: ?*anyopa
         if (comptime @hasDecl(c, "CONFIG_ARMV8M")) {
             t.*.task.*.got_base = if (gp) |p| @intFromPtr(p) else 0;
         }
-        hal.context_set(&t.*.ctx, c.CTX_UENTRY, toReg(entry));
+        hal.context_set(&t.*.ctx, c.CTX_UENTRY, kutil.toReg(entry));
     }
     if (stack != null) {
-        hal.context_set(&t.*.ctx, c.CTX_USTACK, toReg(stack));
+        hal.context_set(&t.*.ctx, c.CTX_USTACK, kutil.toReg(stack));
     }
     _ = hal.splx(s);
 
@@ -209,7 +188,7 @@ pub fn setup(t: c.thread_t, entry: ?*anyopaque, stack: ?*anyopaque, gp: ?*anyopa
 }
 
 pub fn self() callconv(.c) c.thread_t {
-    return get_curthread();
+    return kutil.get_curthread();
 }
 
 pub fn valid(t: c.thread_t) callconv(.c) c_int {
@@ -288,7 +267,7 @@ pub fn schedparam(t: c.thread_t, op: c_int, param: ?*c_int) callconv(.c) c_int {
         return c.EINVAL;
     }
 
-    if (!(t.*.task == get_curtask() or t.*.task.*.parent == get_curtask()) and task.capable(c.CAP_NICE) == 0) {
+    if (!(t.*.task == kutil.get_curtask() or t.*.task.*.parent == kutil.get_curtask()) and task.capable(c.CAP_NICE) == 0) {
         return c.EPERM;
     }
 
@@ -365,7 +344,7 @@ pub fn info(tinfo: ?*c.struct_threadinfo) callconv(.c) c_int {
             tinfo.?.time = t.time;
             tinfo.?.suscnt = t.suscnt;
             tinfo.?.task = t.task;
-            tinfo.?.active = if (t == @as(?*c.struct_thread, @ptrCast(get_curthread().?))) 1 else 0;
+            tinfo.?.active = if (t == @as(?*c.struct_thread, @ptrCast(kutil.get_curthread().?))) 1 else 0;
             _ = lib.strlcpy(@ptrCast(&tinfo.?.taskname), @ptrCast(&t.task.*.name), c.MAXTASKNAME);
             _ = lib.strlcpy(@ptrCast(&tinfo.?.slpevt), if (t.slpevt) |evt| @as([*c]const u8, @ptrCast(evt.*.name)) else @as([*c]const u8, "-"), c.MAXEVTNAME);
             return 0;
@@ -382,9 +361,9 @@ pub fn createKernel(entry: ?*const fn (?*anyopaque) callconv(.c) void, arg: ?*an
 
     _ = lib.memset(t.*.kstack, 0, c.KSTACKSZ);
     const sp: usize = @intFromPtr(t.*.kstack) + c.KSTACKSZ;
-    hal.context_set(&t.*.ctx, c.CTX_KSTACK, toReg(sp));
-    hal.context_set(&t.*.ctx, c.CTX_KENTRY, toReg(entry));
-    hal.context_set(&t.*.ctx, c.CTX_KARG, toReg(arg));
+    hal.context_set(&t.*.ctx, c.CTX_KSTACK, kutil.toReg(sp));
+    hal.context_set(&t.*.ctx, c.CTX_KENTRY, kutil.toReg(entry));
+    hal.context_set(&t.*.ctx, c.CTX_KARG, kutil.toReg(arg));
     sched.start(t, pri, c.SCHED_FIFO);
     t.*.suscnt = 1;
     sched.@"resume"(t);
@@ -419,7 +398,7 @@ pub fn init() callconv(.c) void {
 
     _ = lib.memset(stack, 0, c.KSTACKSZ);
     const sp: usize = @intFromPtr(stack) + c.KSTACKSZ;
-    hal.context_set(&idle_thread.ctx, c.CTX_KSTACK, toReg(sp));
+    hal.context_set(&idle_thread.ctx, c.CTX_KSTACK, kutil.toReg(sp));
     sched.start(&idle_thread, c.PRI_IDLE, c.SCHED_FIFO);
     idle_thread.kstack = stack;
     idle_thread.task = &c.kernel_task;
@@ -431,14 +410,6 @@ pub fn init() callconv(.c) void {
     c.kernel_task.nthreads = 1;
 }
 
-inline fn user_area(a: ?*const anyopaque) bool {
-    if (a == null) return false;
-    if (comptime @hasDecl(c, "CONFIG_MMU")) {
-        return @intFromPtr(a) < c.USERLIMIT;
-    } else {
-        return true;
-    }
-}
 
 comptime {
     if (@import("root") == @This()) {

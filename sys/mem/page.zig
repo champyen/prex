@@ -7,6 +7,7 @@ pub fn panic(msg: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
 const c = @import("c").c;
 
 const ffi = @import("ffi");
+const kutil = ffi.kutil;
 const hal = ffi.hal;
 const lib = ffi.lib;
 const sched = ffi.sched;
@@ -26,23 +27,9 @@ var total_size: c.psize_t = 0;
 var used_size: c.psize_t = 0;
 var bootdisk_size: c.psize_t = 0;
 
-inline fn ptokv(pa: c.paddr_t) ?*anyopaque {
-    return @ptrFromInt(@as(usize, pa) + c.KERNOFFSET);
-}
 
-inline fn kvtop(va: anytype) c.paddr_t {
-    return @intFromPtr(va) - c.KERNOFFSET;
-}
 
-inline fn round_page(x: usize) usize {
-    const page_mask = @as(usize, @intCast(c.PAGE_SIZE - 1));
-    return (x + page_mask) & ~page_mask;
-}
 
-inline fn trunc_page(x: usize) usize {
-    const page_mask = @as(usize, @intCast(c.PAGE_SIZE - 1));
-    return x & ~page_mask;
-}
 
 fn page_is_ram(pa: c.paddr_t) bool {
     var bi: ?*c.struct_bootinfo = null;
@@ -65,7 +52,7 @@ pub fn alloc(psize: c.psize_t) callconv(.c) c.paddr_t {
     _ = lib.printf("page_alloc: psize=0x%x\n", psize);
     defer sched.unlock();
 
-    const size = round_page(@as(usize, @intCast(psize)));
+    const size = kutil.round_page(@as(usize, @intCast(psize)));
     var blk: ?*Page = page_head.next;
 
     while (blk != &page_head and blk != null) {
@@ -96,7 +83,7 @@ pub fn alloc(psize: c.psize_t) callconv(.c) c.paddr_t {
     }
 
     used_size += @as(c.psize_t, @intCast(size));
-    const ret_val = kvtop(block);
+    const ret_val = kutil.kvtop(block);
     _ = lib.printf("page_alloc: returning 0x%x\n", ret_val);
     return ret_val;
 }
@@ -110,8 +97,8 @@ pub fn free(paddr: c.paddr_t, psize: c.psize_t) callconv(.c) void {
         return;
     }
 
-    const size = round_page(@as(usize, @intCast(psize)));
-    const blk: *Page = @ptrCast(@alignCast(ptokv(paddr) orelse return));
+    const size = kutil.round_page(@as(usize, @intCast(psize)));
+    const blk: *Page = @ptrCast(@alignCast(kutil.ptokv(paddr) orelse return));
 
     var prev: *Page = &page_head;
     while (prev.*.next != null and prev.*.next.? != &page_head) {
@@ -163,8 +150,8 @@ pub fn reserve(paddr: c.paddr_t, psize: c.psize_t) callconv(.c) c_int {
         pa = page_size;
     }
 
-    const start = trunc_page(@as(usize, @intFromPtr(ptokv(pa) orelse return 0)));
-    const end = round_page(@as(usize, @intFromPtr(ptokv(pa + sz) orelse return 0)));
+    const start = kutil.trunc_page(@as(usize, @intFromPtr(kutil.ptokv(pa) orelse return 0)));
+    const end = kutil.round_page(@as(usize, @intFromPtr(kutil.ptokv(pa + sz) orelse return 0)));
     const size = end - start;
 
     var blk: ?*Page = page_head.next;

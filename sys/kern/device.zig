@@ -3,6 +3,7 @@ const std = @import("std");
 const c = @import("c").c;
 
 const ffi = @import("ffi");
+const kutil = ffi.kutil;
 const hal = ffi.hal;
 const lib = ffi.lib;
 const sched = ffi.sched;
@@ -16,14 +17,6 @@ var device_list: ?*c.struct_device = null;
 // ---------------------------------------------------------------------------
 // user_area – Stage 2 safety check for user-space pointer validation
 // ---------------------------------------------------------------------------
-inline fn user_area(a: ?*anyopaque) bool {
-    if (a == null) return false;
-    if (@hasDecl(c, "CONFIG_MMU")) {
-        return @intFromPtr(a) < c.USERLIMIT;
-    } else {
-        return true;
-    }
-}
 
 // ---------------------------------------------------------------------------
 // Helper functions – local implementations with C calling convention
@@ -262,7 +255,7 @@ pub fn close(dev: ?*c.struct_device) callconv(.c) c_int {
 
 /// read – read from a device.
 pub fn read(dev: ?*c.struct_device, buf: ?*anyopaque, nbyte: ?*usize, blkno: c_int) callconv(.c) c_int {
-    if (!user_area(buf)) return c.EFAULT;
+    if (!kutil.user_area(buf)) return c.EFAULT;
 
     const ref_err: c_int = reference(dev);
     if (ref_err != 0) return ref_err;
@@ -293,7 +286,7 @@ pub fn read(dev: ?*c.struct_device, buf: ?*anyopaque, nbyte: ?*usize, blkno: c_i
 
 /// write – write to a device.
 pub fn write(dev: ?*c.struct_device, buf: ?*anyopaque, nbyte: ?*usize, blkno: c_int) callconv(.c) c_int {
-    if (!user_area(buf)) return c.EFAULT;
+    if (!kutil.user_area(buf)) return c.EFAULT;
 
     const ref_err: c_int = reference(dev);
     if (ref_err != 0) return ref_err;
@@ -324,7 +317,7 @@ pub fn write(dev: ?*c.struct_device, buf: ?*anyopaque, nbyte: ?*usize, blkno: c_
 
 /// gatherRead – gather read from a device.
 pub fn gatherRead(dev: ?*c.struct_device, buf: ?*anyopaque, nbyte: ?*usize, io: ?*c.struct_dev_io) callconv(.c) c_int {
-    if (!user_area(buf)) return c.EFAULT;
+    if (!kutil.user_area(buf)) return c.EFAULT;
 
     const ref_err: c_int = reference(dev);
     if (ref_err != 0) return ref_err;
@@ -392,7 +385,7 @@ pub fn gatherRead(dev: ?*c.struct_device, buf: ?*anyopaque, nbyte: ?*usize, io: 
 
 /// scatterWrite – scatter write to a device.
 pub fn scatterWrite(dev: ?*c.struct_device, buf: ?*anyopaque, nbyte: ?*usize, io: ?*c.struct_dev_io) callconv(.c) c_int {
-    if (!user_area(buf)) return c.EFAULT;
+    if (!kutil.user_area(buf)) return c.EFAULT;
 
     const ref_err: c_int = reference(dev);
     if (ref_err != 0) return ref_err;

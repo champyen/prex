@@ -1,6 +1,7 @@
 const std = @import("std");
 const c = @import("c").c;
 const ffi = @import("ffi");
+const kutil = ffi.kutil;
 const sched = ffi.sched;
 const task = ffi.task;
 const page = ffi.page;
@@ -12,46 +13,16 @@ const thread = ffi.thread;
 // Page size helpers
 // ---------------------------------------------------------------------------
 
-inline fn round_page(x: usize) usize {
-    const page_mask = @as(usize, @intCast(c.PAGE_SIZE - 1));
-    return (x + page_mask) & ~page_mask;
-}
 
-inline fn trunc_page(x: usize) usize {
-    const page_mask = @as(usize, @intCast(c.PAGE_SIZE - 1));
-    return x & ~page_mask;
-}
 
-inline fn user_area(addr: anytype) bool {
-    if (@hasDecl(c, "USERLIMIT")) {
-        return @intFromPtr(addr) < c.USERLIMIT;
-    }
-    return true;
-}
 
-inline fn ptokv(pa: c.paddr_t) ?*anyopaque {
-    return @ptrFromInt(@as(usize, pa) + c.KERNOFFSET);
-}
 
-inline fn kvtop(va: anytype) c.paddr_t {
-    return @intFromPtr(va) - c.KERNOFFSET;
-}
 
 // ---------------------------------------------------------------------------
 // Thread / task accessors
 // ---------------------------------------------------------------------------
 
-inline fn get_curthread() *c.struct_thread {
-    if (comptime @hasDecl(c, "CONFIG_SMP")) {
-        return @ptrCast(smp.get_cpu_control().*.active_thread);
-    } else {
-        return @ptrCast(thread.curthread.?);
-    }
-}
 
-inline fn get_curtask() *c.struct_task {
-    return @ptrCast(get_curthread().*.task.?);
-}
 
 // ---------------------------------------------------------------------------
 // FFI Structures
@@ -227,11 +198,11 @@ fn do_allocate(vm_map: *c.struct_vm_map, addr: *?*anyopaque, size: usize, anywhe
     if (vm_map.total + size >= c.MAXMEM) return c.ENOMEM;
 
     if (anywhere != 0) {
-        const alloc_size = round_page(size);
+        const alloc_size = kutil.round_page(size);
         seg = seg_alloc(&vm_map.head, alloc_size) orelse return c.ENOMEM;
     } else {
-        const start = trunc_page(vaddr_val);
-        const end = round_page(start + size);
+        const start = kutil.trunc_page(vaddr_val);
+        const end = kutil.round_page(start + size);
         const total = end - start;
         seg = seg_reserve(&vm_map.head, @intCast(start), total) orelse return c.ENOMEM;
     }
@@ -251,14 +222,14 @@ fn do_allocate(vm_map: *c.struct_vm_map, addr: *?*anyopaque, size: usize, anywhe
     }
 
     seg.?.phys = pa;
-    @memset(@as([*]u8, @ptrCast(ptokv(pa).?))[0..seg.?.size], 0);
+    @memset(@as([*]u8, @ptrCast(kutil.ptokv(pa).?))[0..seg.?.size], 0);
     addr.* = @ptrFromInt(seg.?.addr);
     vm_map.total += seg.?.size;
     return 0;
 }
 
 fn do_free(vm_map: *c.struct_vm_map, addr: ?*anyopaque) c_int {
-    const va = trunc_page(@intFromPtr(addr));
+    const va = kutil.trunc_page(@intFromPtr(addr));
 
     const seg = seg_lookup(&vm_map.head, @intCast(va), 1) orelse return c.EINVAL;
     if (seg.addr != @as(c.vaddr_t, @intCast(va)) or seg.flags & c.SEG_FREE != 0) {
@@ -277,7 +248,7 @@ fn do_free(vm_map: *c.struct_vm_map, addr: ?*anyopaque) c_int {
 }
 
 fn do_attribute(vm_map: *c.struct_vm_map, addr: ?*anyopaque, attr: c_int) c_int {
-    const va = trunc_page(@intFromPtr(addr));
+    const va = kutil.trunc_page(@intFromPtr(addr));
 
     const seg = seg_lookup(&vm_map.head, @intCast(va), 1) orelse return c.EINVAL;
     if (seg.addr != @as(c.vaddr_t, @intCast(va)) or seg.flags & c.SEG_FREE != 0) return c.EINVAL;
@@ -302,7 +273,7 @@ fn do_attribute(vm_map: *c.struct_vm_map, addr: ?*anyopaque, attr: c_int) c_int 
         const new_pa = page.alloc(@intCast(seg.size));
         if (new_pa == 0) return c.ENOMEM;
 
-        @memcpy(@as([*]u8, @ptrCast(ptokv(new_pa).?))[0..seg.size], @as([*]const u8, @ptrCast(ptokv(old_pa).?))[0..seg.size]);
+        @memcpy(@as([*]u8, @ptrCast(kutil.ptokv(new_pa).?))[0..seg.size], @as([*]const u8, @ptrCast(kutil.ptokv(old_pa).?))[0..seg.size]);
 
         if (mmu_map(vm_map.pgd, new_pa, seg.addr, seg.size, map_type) != 0) {
             page.free(new_pa, @intCast(seg.size));
@@ -326,7 +297,7 @@ fn do_attribute(vm_map: *c.struct_vm_map, addr: ?*anyopaque, attr: c_int) c_int 
 }
 
 fn do_map(target_map: *c.struct_vm_map, addr: ?*anyopaque, size: usize, alloc: *?*anyopaque) c_int {
-    const curmap_raw = get_curtask().map;
+    const curmap_raw = kutil.cur_task().map;
     if (curmap_raw == null) return c.EINVAL;
     const curmap: *c.struct_vm_map = @ptrCast(curmap_raw);
 
@@ -336,8 +307,8 @@ fn do_map(target_map: *c.struct_vm_map, addr: ?*anyopaque, size: usize, alloc: *
     var tmp: ?*anyopaque = null;
     _ = copyout(@as(?*const anyopaque, @ptrCast(&tmp)), @as(?*anyopaque, @ptrCast(alloc)), @sizeOf(?*anyopaque));
 
-    const start = trunc_page(@intFromPtr(addr));
-    const end = round_page(@intFromPtr(addr) + size);
+    const start = kutil.trunc_page(@intFromPtr(addr));
+    const end = kutil.round_page(@intFromPtr(addr) + size);
     const total = end - start;
     const offset = @intFromPtr(addr) - start;
 
@@ -405,7 +376,7 @@ fn do_dup(org_map: *c.struct_vm_map) ?*c.struct_vm_map {
                 dest.phys = page.alloc(@intCast(src.size));
                 if (dest.phys == 0) return null;
 
-                @memcpy(@as([*]u8, @ptrCast(ptokv(dest.phys).?))[0..src.size], @as([*]const u8, @ptrCast(ptokv(src.phys).?))[0..src.size]);
+                @memcpy(@as([*]u8, @ptrCast(kutil.ptokv(dest.phys).?))[0..src.size], @as([*]const u8, @ptrCast(kutil.ptokv(src.phys).?))[0..src.size]);
             }
 
             const map_type: c_int = if (dest.flags & c.SEG_WRITE != 0) c.PG_WRITE else c.PG_READ;
@@ -468,12 +439,12 @@ pub fn allocate(tsk: c.task_t, addr: *?*anyopaque, size: usize, anywhere: c_int)
     defer sched.unlock();
 
     if (task.valid(tsk) == 0) return c.ESRCH;
-    if (task_opt != get_curtask() and task.capable(c.CAP_EXTMEM) == 0) return c.EPERM;
+    if (task_opt != kutil.cur_task() and task.capable(c.CAP_EXTMEM) == 0) return c.EPERM;
 
     var uaddr: ?*anyopaque = null;
     _ = copyin(@as(?*const anyopaque, @ptrCast(addr)), @as(?*anyopaque, @ptrCast(&uaddr)), @sizeOf(?*anyopaque));
 
-    if (anywhere == 0 and !user_area(addr.*)) return c.EACCES;
+    if (anywhere == 0 and !kutil.user_area(addr.*)) return c.EACCES;
 
     const err = do_allocate(task_opt.?.map.?, &uaddr, size, anywhere);
     if (err == 0) {
@@ -490,8 +461,8 @@ pub fn free(tsk: c.task_t, addr: ?*anyopaque) callconv(.c) c_int {
     defer sched.unlock();
 
     if (task.valid(tsk) == 0) return c.ESRCH;
-    if (task_opt != get_curtask() and task.capable(c.CAP_EXTMEM) == 0) return c.EPERM;
-    if (!user_area(addr)) return c.EFAULT;
+    if (task_opt != kutil.cur_task() and task.capable(c.CAP_EXTMEM) == 0) return c.EPERM;
+    if (!kutil.user_area(addr)) return c.EFAULT;
 
     return do_free(task_opt.?.map.?, addr);
 }
@@ -503,8 +474,8 @@ pub fn attribute(tsk: c.task_t, addr: ?*anyopaque, attr: c_int) callconv(.c) c_i
 
     if (attr == 0 or attr & ~(c.PROT_READ | c.PROT_WRITE) != 0) return c.EINVAL;
     if (task.valid(tsk) == 0) return c.ESRCH;
-    if (task_opt != get_curtask() and task.capable(c.CAP_EXTMEM) == 0) return c.EPERM;
-    if (!user_area(addr)) return c.EFAULT;
+    if (task_opt != kutil.cur_task() and task.capable(c.CAP_EXTMEM) == 0) return c.EPERM;
+    if (!kutil.user_area(addr)) return c.EFAULT;
 
     return do_attribute(task_opt.?.map.?, addr, attr);
 }
@@ -515,9 +486,9 @@ pub fn map(target: c.task_t, addr: ?*anyopaque, size: usize, alloc: *?*anyopaque
     defer sched.unlock();
 
     if (task.valid(target) == 0) return c.ESRCH;
-    if (target_opt == get_curtask()) return c.EINVAL;
+    if (target_opt == kutil.cur_task()) return c.EINVAL;
     if (task.capable(c.CAP_EXTMEM) == 0) return c.EPERM;
-    if (!user_area(addr)) return c.EFAULT;
+    if (!kutil.user_area(addr)) return c.EFAULT;
 
     return do_map(target_opt.?.map.?, addr, size, alloc);
 }
@@ -547,7 +518,7 @@ pub fn terminate(vm_map: c.vm_map_t) callconv(.c) void {
         if (seg == &map_opt.?.head) break;
     }
 
-    if (map_opt == get_curtask().map) {
+    if (map_opt == kutil.cur_task().map) {
         mmu_switch(kernel_map.pgd);
     }
 
@@ -577,7 +548,7 @@ pub fn reference(vm_map: c.vm_map_t) callconv(.c) c_int {
 
 pub fn load(vm_map: c.vm_map_t, mod: *c.struct_module, stack: *?*anyopaque) callconv(.c) c_int {
     const map_opt: ?*c.struct_vm_map = @ptrCast(vm_map);
-    const src_addr: usize = @intFromPtr(ptokv(mod.*.phys));
+    const src_addr: usize = @intFromPtr(kutil.ptokv(mod.*.phys));
     var text: ?*anyopaque = @as(?*anyopaque, @ptrFromInt(mod.*.text));
     var data: ?*anyopaque = @as(?*anyopaque, @ptrFromInt(mod.*.data));
 
@@ -607,7 +578,7 @@ pub fn load(vm_map: c.vm_map_t, mod: *c.struct_module, stack: *?*anyopaque) call
 }
 
 pub fn translate(addr: c.vaddr_t, size: usize) callconv(.c) c.paddr_t {
-    const map_ptr = get_curtask().map;
+    const map_ptr = kutil.cur_task().map;
     if (map_ptr == null) return 0;
     return mmu_extract(map_ptr.*.pgd, addr, size);
 }
