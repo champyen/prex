@@ -6,6 +6,8 @@ const c = @cImport({
     @cInclude("zig_kernel.h");
 });
 
+extern fn hal_get_cpu_control() callconv(.c) ?*c.struct_cpu_control;
+
 inline fn get_curthread() ?*c.struct_thread {
     if (@hasDecl(c, "CONFIG_SMP")) {
         return @ptrCast(hal_get_cpu_control().?.*.active_thread);
@@ -418,22 +420,8 @@ comptime {
     @export(&timer_init, .{ .name = "timer_init", .linkage = .strong });
 
     if (@hasDecl(c, "CONFIG_SMP")) {
-        @export(&hal_get_cpu_control, .{ .name = "hal_get_cpu_control", .linkage = .strong });
         @export(&__broken_spinlock_lock, .{ .name = "__broken_spinlock_lock", .linkage = .strong });
         @export(&__broken_spinlock_unlock, .{ .name = "__broken_spinlock_unlock", .linkage = .strong });
-    }
-}
-
-pub fn hal_get_cpu_control() callconv(.c) ?*c.struct_cpu_control {
-    if (comptime !@hasDecl(c, "CONFIG_SMP")) {
-        return null;
-    }
-    if (builtin.cpu.arch == .arm or builtin.cpu.arch == .thumb) {
-        return asm volatile ("mrc p15, 0, %[cpu], c13, c0, 4" : [cpu] "=r" (-> ?*c.struct_cpu_control));
-    } else if (builtin.cpu.arch == .riscv32 or builtin.cpu.arch == .riscv64) {
-        return asm volatile ("mv %[cpu], tp" : [cpu] "=r" (-> ?*c.struct_cpu_control));
-    } else {
-        @compileError("Unsupported architecture for SMP hal_get_cpu_control");
     }
 }
 

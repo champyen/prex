@@ -41,9 +41,17 @@ SRCS+=		lib/zig_runtime.zig \
 endif
 
 ifeq ($(ARCH),riscv)
+ifeq ($(CONFIG_ZIG_KRNL),y)
+SRCS+=		$(call select_kernel_src,kern/smp)
+else
 SRCS+=		kern/smp.c
+endif
 else ifeq ($(CONFIG_SMP),y)
+ifeq ($(CONFIG_ZIG_KRNL),y)
+SRCS+=		$(call select_kernel_src,kern/smp)
+else
 SRCS+=		kern/smp.c
+endif
 endif
 
 ifeq ($(CONFIG_MMU),y)
