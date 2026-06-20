@@ -1,10 +1,11 @@
 const std = @import("std");
 const builtin = @import("builtin");
+const c = @import("c").c;
 
-const c = @cImport({
-    @cDefine("KERNEL", "1");
-    @cInclude("zig_kernel.h");
-});
+const ffi = @import("ffi");
+const lib = ffi.lib;
+const smp = ffi.smp;
+const thread = ffi.thread;
 
 const TF_TRACE: c_int = 0x00000002;
 const NSYSCALL: comptime_int = 62;
@@ -154,12 +155,9 @@ const sysent: [NSYSCALL]SysEnt = .{
 
 fn get_curthread() ?*c.struct_thread {
     if (comptime @hasDecl(c, "CONFIG_SMP")) {
-        return @ptrCast(hal_get_cpu_control().?.active_thread);
+        return @ptrCast(smp.get_cpu_control().*.active_thread);
     } else {
-        const env = struct {
-            extern var curthread: c.thread_t;
-        };
-        return @ptrCast(env.curthread);
+        return @ptrCast(thread.curthread);
     }
 }
 
@@ -169,8 +167,6 @@ fn get_curtask() ?*c.struct_task {
     }
     return null;
 }
-
-extern fn hal_get_cpu_control() callconv(.c) ?*c.struct_cpu_control;
 
 extern fn sys_log(msg: [*c]const u8) callconv(.c) c_int;
 extern fn sys_panic(msg: [*c]const u8) callconv(.c) c_int;
@@ -228,17 +224,17 @@ fn strace_entry(a1: c.register_t, a2: c.register_t, a3: c.register_t, a4: c.regi
 
     if (cur_task.*.flags & TF_TRACE != 0) {
         if (id >= NSYSCALL) {
-            c.printf("%s: OUT OF RANGE (%d)\n", &cur_task.*.name, id);
+            lib.printf("%s: OUT OF RANGE (%d)\n", &cur_task.*.name, id);
             return;
         }
 
         const callp = &sysent[@intCast(id)];
         switch (callp.narg) {
-            0 => c.printf("%s: %s()\n", &cur_task.*.name, callp.name),
-            1 => c.printf("%s: %s(0x%08x)\n", &cur_task.*.name, callp.name, a1),
-            2 => c.printf("%s: %s(0x%08x, 0x%08x)\n", &cur_task.*.name, callp.name, a1, a2),
-            3 => c.printf("%s: %s(0x%08x, 0x%08x, 0x%08x)\n", &cur_task.*.name, callp.name, a1, a2, a3),
-            4 => c.printf("%s: %s(0x%08x, 0x%08x, 0x%08x, 0x%08x)\n", &cur_task.*.name, callp.name, a1, a2, a3, a4),
+            0 => lib.printf("%s: %s()\n", &cur_task.*.name, callp.name),
+            1 => lib.printf("%s: %s(0x%08x)\n", &cur_task.*.name, callp.name, a1),
+            2 => lib.printf("%s: %s(0x%08x, 0x%08x)\n", &cur_task.*.name, callp.name, a1, a2),
+            3 => lib.printf("%s: %s(0x%08x, 0x%08x, 0x%08x)\n", &cur_task.*.name, callp.name, a1, a2, a3),
+            4 => lib.printf("%s: %s(0x%08x, 0x%08x, 0x%08x, 0x%08x)\n", &cur_task.*.name, callp.name, a1, a2, a3, a4),
             else => {},
         }
     }
@@ -251,7 +247,7 @@ fn strace_return(retval: c.register_t, id: c.register_t) void {
         if (id >= NSYSCALL) return;
         const callp = &sysent[@intCast(id)];
         if (callp.narg != 0 and retval != 0) {
-            c.printf("%s: !!! %s() = 0x%08x\n", &cur_task.*.name, callp.name, retval);
+            lib.printf("%s: !!! %s() = 0x%08x\n", &cur_task.*.name, callp.name, retval);
         }
     }
 }

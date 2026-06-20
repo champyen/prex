@@ -1,23 +1,24 @@
 const std = @import("std");
-
-const c = @cImport({
-    @cDefine("KERNEL", "1");
-    @cInclude("zig_kernel.h");
-});
+const c = @import("c").c;
 
 extern fn zig_memory_barrier() callconv(.c) void;
-extern fn hal_get_cpu_control() callconv(.c) ?*c.struct_cpu_control;
+
+const ffi = @import("ffi");
+const lib = ffi.lib;
+const smp = ffi.smp;
+const kmem = ffi.kmem;
+const sched = ffi.sched;
+const task = ffi.task;
+const msg = ffi.msg;
+const thread = ffi.thread;
 
 var object_list: c.struct_list = undefined;
 
 fn get_curthread() ?*c.struct_thread {
     if (comptime @hasDecl(c, "CONFIG_SMP")) {
-        return @ptrCast(hal_get_cpu_control().?.active_thread);
+        return @ptrCast(smp.get_cpu_control().*.active_thread);
     } else {
-        const env = struct {
-            extern var curthread: c.thread_t;
-        };
-        return @ptrCast(env.curthread);
+        return @ptrCast(thread.curthread);
     }
 }
 
@@ -62,11 +63,11 @@ inline fn list_remove(node: *c.struct_list) void {
     node.next.?.*.prev = node.prev;
 }
 
-fn object_find(name: [*:0]const u8) ?*c.struct_object {
+fn find(name: [*:0]const u8) ?*c.struct_object {
     var n: ?*c.struct_list = list_first(&object_list);
     while (n != null and n.? != @as(?*c.struct_list, @ptrCast(&object_list))) {
         const obj: *c.struct_object = @fieldParentPtr("link", n.?);
-        if (c.strncmp(&obj.name, name, c.MAXOBJNAME) == 0) {
+        if (lib.strncmp(&obj.name, name, c.MAXOBJNAME) == 0) {
             return obj;
         }
         n = list_next(n.?);
@@ -74,16 +75,16 @@ fn object_find(name: [*:0]const u8) ?*c.struct_object {
     return null;
 }
 
-fn object_deallocate(obj: *c.struct_object) void {
-    _ = c.msg_abort(obj);
+fn deallocate(obj: *c.struct_object) void {
+    msg.abort(obj);
     const owner = @as(*c.struct_task, @ptrCast(obj.owner));
     owner.nobjects -|= 1;
     list_remove(&obj.task_link);
     list_remove(&obj.link);
-    c.kmem_free(obj);
+    kmem.free(obj);
 }
 
-pub fn object_create(name: ?[*:0]const u8, objp: ?*c.object_t) callconv(.c) c_int {
+pub fn create(name: ?[*:0]const u8, objp: ?*c.object_t) callconv(.c) c_int {
     var str: [c.MAXOBJNAME:0]u8 = undefined;
 
     if (name == null) {
@@ -96,39 +97,39 @@ pub fn object_create(name: ?[*:0]const u8, objp: ?*c.object_t) callconv(.c) c_in
         }
         str[i] = 0;
 
-        if (name_ptr[0] == '!' and c.task_capable(c.CAP_PROTSERV) == 0) {
+        if (name_ptr[0] == '!' and task.capable(c.CAP_PROTSERV) == 0) {
             return c.EPERM;
         }
     }
 
-    c.sched_lock();
+    sched.lock();
 
     const cur = get_curtask().?;
     if (cur.nobjects >= c.MAXOBJECTS) {
-        c.sched_unlock();
+        sched.unlock();
         return c.EAGAIN;
     }
 
     const null_obj: c.object_t = null;
-    if (c.copyout(@as(?*const anyopaque, @ptrCast(&null_obj)), @as(?*anyopaque, @ptrCast(objp)), @sizeOf(c.object_t)) != 0) {
-        c.sched_unlock();
+    if (ffi.vm.copyout(@as(?*const anyopaque, @ptrCast(&null_obj)), @as(?*anyopaque, @ptrCast(objp)), @sizeOf(c.object_t)) != 0) {
+        sched.unlock();
         return c.EFAULT;
     }
 
-    if (object_find(&str) != null) {
-        c.sched_unlock();
+    if (find(&str) != null) {
+        sched.unlock();
         return c.EEXIST;
     }
 
-    const mem = c.kmem_alloc(@sizeOf(c.struct_object));
+    const mem = kmem.alloc(@sizeOf(c.struct_object));
     const obj: ?*c.struct_object = @ptrCast(@alignCast(mem));
     if (obj == null) {
-        c.sched_unlock();
+        sched.unlock();
         return c.ENOMEM;
     }
 
     if (name != null) {
-        _ = c.strlcpy(&obj.?.name, &str, c.MAXOBJNAME);
+        _ = lib.strlcpy(&obj.?.name, &str, c.MAXOBJNAME);
     }
 
     obj.?.owner = cur;
@@ -140,13 +141,13 @@ pub fn object_create(name: ?[*:0]const u8, objp: ?*c.object_t) callconv(.c) c_in
 
     zig_memory_barrier();
 
-    _ = c.copyout(@as(?*const anyopaque, @ptrCast(&obj)), @as(?*anyopaque, @ptrCast(objp)), @sizeOf(c.object_t));
+    _ = ffi.vm.copyout(@as(?*const anyopaque, @ptrCast(&obj)), @as(?*anyopaque, @ptrCast(objp)), @sizeOf(c.object_t));
 
-    c.sched_unlock();
+    sched.unlock();
     return 0;
 }
 
-pub fn object_lookup(name: [*:0]const u8, objp: ?*c.object_t) callconv(.c) c_int {
+pub fn lookup(name: [*:0]const u8, objp: ?*c.object_t) callconv(.c) c_int {
     var str: [c.MAXOBJNAME:0]u8 = undefined;
 
     var i: usize = 0;
@@ -155,21 +156,21 @@ pub fn object_lookup(name: [*:0]const u8, objp: ?*c.object_t) callconv(.c) c_int
     }
     str[i] = 0;
 
-    c.sched_lock();
-    const obj = object_find(&str);
-    c.sched_unlock();
+    sched.lock();
+    const obj = find(&str);
+    sched.unlock();
 
     if (obj == null) {
         return c.ENOENT;
     }
 
-    if (c.copyout(@as(?*const anyopaque, @ptrCast(&obj)), @as(?*anyopaque, @ptrCast(objp)), @sizeOf(c.object_t)) != 0) {
+    if (ffi.vm.copyout(@as(?*const anyopaque, @ptrCast(&obj)), @as(?*anyopaque, @ptrCast(objp)), @sizeOf(c.object_t)) != 0) {
         return c.EFAULT;
     }
     return 0;
 }
 
-pub fn object_valid(obj: c.object_t) callconv(.c) c_int {
+pub fn valid(obj: c.object_t) callconv(.c) c_int {
     var n: ?*c.struct_list = list_first(&object_list);
     while (n != null and n.? != @as(?*c.struct_list, @ptrCast(&object_list))) {
         const tmp: *c.struct_object = @fieldParentPtr("link", n.?);
@@ -181,39 +182,41 @@ pub fn object_valid(obj: c.object_t) callconv(.c) c_int {
     return 0;
 }
 
-pub fn object_destroy(obj: c.object_t) callconv(.c) c_int {
-    c.sched_lock();
-    if (object_valid(obj) == 0) {
-        c.sched_unlock();
+pub fn destroy(obj: c.object_t) callconv(.c) c_int {
+    sched.lock();
+    if (valid(obj) == 0) {
+        sched.unlock();
         return c.EINVAL;
     }
     const target_obj = @as(*c.struct_object, @ptrCast(obj));
     if (@intFromPtr(target_obj.owner) != @intFromPtr(get_curtask())) {
-        c.sched_unlock();
+        sched.unlock();
         return c.EACCES;
     }
-    object_deallocate(target_obj);
-    c.sched_unlock();
+    deallocate(target_obj);
+    sched.unlock();
     return 0;
 }
 
-pub fn object_cleanup(task: c.task_t) callconv(.c) void {
-    const t = @as(*c.struct_task, @ptrCast(task));
+pub fn cleanup(tsk: c.task_t) callconv(.c) void {
+    const t = @as(*c.struct_task, @ptrCast(tsk));
     while (!list_empty(&t.objects)) {
         const obj: *c.struct_object = @fieldParentPtr("task_link", list_first(&t.objects).?);
-        object_deallocate(obj);
+        deallocate(obj);
     }
 }
 
-pub fn object_init() callconv(.c) void {
+pub fn init() callconv(.c) void {
     list_init(&object_list);
 }
 
 comptime {
-    @export(&object_create, .{ .name = "object_create", .linkage = .strong });
-    @export(&object_lookup, .{ .name = "object_lookup", .linkage = .strong });
-    @export(&object_valid, .{ .name = "object_valid", .linkage = .strong });
-    @export(&object_destroy, .{ .name = "object_destroy", .linkage = .strong });
-    @export(&object_cleanup, .{ .name = "object_cleanup", .linkage = .strong });
-    @export(&object_init, .{ .name = "object_init", .linkage = .strong });
+    if (@import("root") == @This()) {
+        @export(&create, .{ .name = "object_create", .linkage = .strong });
+        @export(&lookup, .{ .name = "object_lookup", .linkage = .strong });
+        @export(&valid, .{ .name = "object_valid", .linkage = .strong });
+        @export(&destroy, .{ .name = "object_destroy", .linkage = .strong });
+        @export(&cleanup, .{ .name = "object_cleanup", .linkage = .strong });
+        @export(&init, .{ .name = "object_init", .linkage = .strong });
+    }
 }

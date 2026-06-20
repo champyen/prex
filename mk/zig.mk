@@ -62,7 +62,7 @@ ZIGFLAGS+=	-target $(ZIG_TARGET) $(ZIG_OPT) -fno-stack-check -fno-unwind-tables 
 
 # Add driver-specific, kernel-specific, or user-space modules
 ifeq ($(_KRNL_),1)
-  ZIG_MODULES = -Mroot=$< $(ZIGFLAGS)
+  ZIG_MODULES = --dep c --dep ffi -Mroot=$< $(ZIGFLAGS) -Mc=$(SRCDIR)/sys/c.zig $(ZIGFLAGS) --dep c -Mffi=$(SRCDIR)/sys/ffi.zig $(ZIGFLAGS)
 else ifeq ($(_DRV_),1)
   ZIG_MODULES = --dep dki -Mroot=$< $(ZIGFLAGS) -Mdki=$(SRCDIR)/bsp/drv/zig/dki.zig $(ZIGFLAGS)
 else

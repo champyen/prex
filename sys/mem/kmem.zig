@@ -1,8 +1,10 @@
 const std = @import("std");
-const c = @cImport({
-    @cDefine("KERNEL", "1");
-    @cInclude("zig_kernel.h");
-});
+const c = @import("c").c;
+
+const ffi = @import("ffi");
+const sched = ffi.sched;
+const page = ffi.page;
+const vm = ffi.vm;
 
 // Type-safe inline functions for macros
 pub inline fn ptokv(pa: c.paddr_t) ?*anyopaque {
@@ -64,7 +66,7 @@ pub inline fn list_next_node(node: *c.struct_list) *c.struct_list {
 pub inline fn list_entry(node: *c.struct_list) *block_hdr {
     const offset = @offsetOf(block_hdr, "link");
     const ptr_val = @intFromPtr(node) - offset;
-    return @ptrFromInt(ptr_val);
+    return @ptrCast(@alignCast(@as(*block_hdr, @ptrFromInt(ptr_val))));
 }
 
 const block_hdr = extern struct {
@@ -107,8 +109,8 @@ fn block_find(size: usize) ?*block_hdr {
 }
 
 // Exported FFI functions
-pub export fn kmem_alloc(size: usize) callconv(.c) ?*anyopaque {
-    c.sched_lock();
+pub fn alloc(size: usize) callconv(.c) ?*anyopaque {
+    sched.lock();
 
     const total_size = alloc_size(size + BLKHDR_SIZE);
     if (total_size > MAX_ALLOC_SIZE) {
@@ -126,9 +128,9 @@ pub export fn kmem_alloc(size: usize) callconv(.c) ?*anyopaque {
         var pg_size = alloc_size(total_size + PGHDR_SIZE);
         if (pg_size < c.PAGE_SIZE) pg_size = c.PAGE_SIZE;
 
-        const pa = c.page_alloc(pg_size);
+        const pa = page.alloc(@intCast(pg_size));
         if (pa == 0) {
-            c.sched_unlock();
+            sched.unlock();
             return null;
         }
         pg = @ptrCast(@alignCast(ptokv(pa).?));
@@ -159,16 +161,16 @@ pub export fn kmem_alloc(size: usize) callconv(.c) ?*anyopaque {
     pg.*.nallocs += 1;
     const p: ?*anyopaque = @ptrFromInt(@intFromPtr(active_blk) + BLKHDR_SIZE);
 
-    c.sched_unlock();
+    sched.unlock();
     return p;
 }
 
-pub export fn kmem_free(ptr: ?*anyopaque) callconv(.c) void {
+pub fn free(ptr: ?*anyopaque) callconv(.c) void {
     if (ptr == null) {
         @panic("kmem_free: null pointer");
     }
 
-    c.sched_lock();
+    sched.lock();
 
     const blk: *block_hdr = @ptrCast(@alignCast(@as(*block_hdr, @ptrFromInt(@intFromPtr(ptr) - BLKHDR_SIZE))));
     if (blk.*.magic != BLOCK_MAGIC) {
@@ -187,7 +189,7 @@ pub export fn kmem_free(ptr: ?*anyopaque) callconv(.c) void {
                 tmp = t.*.pg_next;
             }
             pg.*.magic = 0;
-            c.page_free(kvtop(pg), alloc_size(blk.*.size + PGHDR_SIZE));
+            page.free(kvtop(pg), @intCast(blk.*.size + PGHDR_SIZE));
         } else {
             @panic("kmem_free: large block split free not supported");
         }
@@ -201,22 +203,31 @@ pub export fn kmem_free(ptr: ?*anyopaque) callconv(.c) void {
                 tmp = t.*.pg_next;
             }
             pg.*.magic = 0;
-            c.page_free(kvtop(pg), c.PAGE_SIZE);
+            page.free(kvtop(pg), @intCast(c.PAGE_SIZE));
         }
     }
 
-    c.sched_unlock();
+    sched.unlock();
 }
 
-pub export fn kmem_map(addr: ?*anyopaque, size: usize) callconv(.c) ?*anyopaque {
-    const pa = c.vm_translate(@intFromPtr(addr), size);
+pub fn map(addr: ?*anyopaque, size: usize) callconv(.c) ?*anyopaque {
+    const pa = vm.translate(@intFromPtr(addr), size);
     if (pa == 0) return null;
     return ptokv(pa);
 }
 
-pub export fn kmem_init() callconv(.c) void {
+pub fn init() callconv(.c) void {
     var i: usize = 0;
     while (i < NR_BLOCK_LIST) : (i += 1) {
         list_init_fn(&free_blocks[i]);
+    }
+}
+
+comptime {
+    if (@import("root") == @This()) {
+        @export(&alloc, .{ .name = "kmem_alloc", .linkage = .strong });
+        @export(&free, .{ .name = "kmem_free", .linkage = .strong });
+        @export(&map, .{ .name = "kmem_map", .linkage = .strong });
+        @export(&init, .{ .name = "kmem_init", .linkage = .strong });
     }
 }

@@ -1,12 +1,13 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const c = @cImport({
-    @cDefine("KERNEL", "1");
-    @cInclude("zig_kernel.h");
-});
+const c = @import("c").c;
 
-extern fn hal_get_cpu_control() callconv(.c) ?*c.struct_cpu_control;
+const ffi = @import("ffi");
+const smp = ffi.smp;
+const kmem = ffi.kmem;
+const sched = ffi.sched;
+const thread = ffi.thread;
 
 inline fn is_mutex_initializer(m: c.mutex_t) bool {
     if (m) |ptr| {
@@ -17,12 +18,9 @@ inline fn is_mutex_initializer(m: c.mutex_t) bool {
 
 inline fn get_curthread() *c.struct_thread {
     if (comptime @hasDecl(c, "CONFIG_SMP")) {
-        return @ptrCast(hal_get_cpu_control().?.*.active_thread.?);
+        return @ptrCast(smp.get_cpu_control().*.active_thread);
     } else {
-        const env = struct {
-            extern var curthread: c.thread_t;
-        };
-        return @ptrCast(env.curthread.?);
+        return @ptrCast(thread.curthread.?);
     }
 }
 
@@ -59,7 +57,7 @@ inline fn list_next(node: *c.struct_list) *c.struct_list {
     return @ptrCast(node.next.?);
 }
 
-fn mutex_valid(m: c.mutex_t) c_int {
+fn valid(m: c.mutex_t) c_int {
     const head = &get_curtask().*.mutexes;
     var n = head.*.next.?;
     while (n != @as(*c.struct_list, @ptrCast(head))) : (n = n.*.next.?) {
@@ -72,20 +70,20 @@ fn mutex_valid(m: c.mutex_t) c_int {
     return 0;
 }
 
-fn mutex_copyin(ump: ?*c.mutex_t, kmp: ?*c.mutex_t) c_int {
+fn copyin(ump: ?*c.mutex_t, kmp: ?*c.mutex_t) c_int {
     var m: c.mutex_t = undefined;
-    if (c.copyin(@as(?*const anyopaque, @ptrCast(ump)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.mutex_t)) != 0) {
+    if (ffi.vm.copyin(@as(?*const anyopaque, @ptrCast(ump)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.mutex_t)) != 0) {
         return c.EFAULT;
     }
 
     if (is_mutex_initializer(m)) {
-        const error_code = mutex_init(ump);
+        const error_code = init(ump);
         if (error_code != 0) {
             return error_code;
         }
-        _ = c.copyin(@as(?*const anyopaque, @ptrCast(ump)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.mutex_t));
+        _ = ffi.vm.copyin(@as(?*const anyopaque, @ptrCast(ump)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.mutex_t));
     } else {
-        if (mutex_valid(m) == 0) {
+        if (valid(m) == 0) {
             return c.EINVAL;
         }
     }
@@ -98,22 +96,22 @@ fn prio_inherit(waiter: c.thread_t) c_int {
     var holder: c.thread_t = undefined;
     var count: c_int = 0;
     var iters: u32 = 0;
-    
+
     while (m != null) {
         holder = m.*.holder;
-        c.deadlock_check_loop("prio_inherit", &iters);
-        
+        ffi.deadlock.check_loop("prio_inherit", &iters);
+
         if (holder == waiter) {
             return c.EDEADLK;
         }
-        
+
         if (holder.*.priority > waiter.*.priority) {
-            c.sched_setpri(holder, holder.*.basepri, waiter.*.priority);
+            sched.set_pri(holder, holder.*.basepri, waiter.*.priority);
             m.*.priority = waiter.*.priority;
         }
-        
+
         m = @ptrCast(holder.*.mutex_waiting);
-        
+
         count += 1;
         if (count >= c.MAXINHERIT) {
             break;
@@ -126,7 +124,7 @@ fn prio_uninherit(t: c.thread_t) void {
     if (t.*.priority == t.*.basepri) {
         return;
     }
-    
+
     var maxpri = t.*.basepri;
     const head = &t.*.mutexes;
     var n = head.*.next.?;
@@ -137,80 +135,80 @@ fn prio_uninherit(t: c.thread_t) void {
             maxpri = m.*.priority;
         }
     }
-    
-    c.sched_setpri(t, t.*.basepri, maxpri);
+
+    sched.set_pri(t, t.*.basepri, maxpri);
 }
 
-pub fn mutex_init(mp: ?*c.mutex_t) callconv(.c) c_int {
+pub fn init(mp: ?*c.mutex_t) callconv(.c) c_int {
     const self = get_curtask();
     if (self.*.nsyncs >= c.MAXSYNCS) {
         return c.EAGAIN;
     }
-    
-    const mem = c.kmem_alloc(@sizeOf(c.struct_mutex)) orelse return c.ENOMEM;
+
+    const mem = kmem.alloc(@sizeOf(c.struct_mutex)) orelse return c.ENOMEM;
     const m: c.mutex_t = @ptrCast(@alignCast(mem));
-    
+
     c.event_init(&m.*.event, "mutex");
     m.*.owner = self;
     m.*.holder = null;
     m.*.priority = c.MINPRI;
-    
-    if (c.copyout(@as(?*const anyopaque, @ptrCast(&m)), @as(?*anyopaque, @ptrCast(mp)), @sizeOf(c.mutex_t)) != 0) {
-        c.kmem_free(m);
+
+    if (ffi.vm.copyout(@as(?*const anyopaque, @ptrCast(&m)), @as(?*anyopaque, @ptrCast(mp)), @sizeOf(c.mutex_t)) != 0) {
+        kmem.free(m);
         return c.EFAULT;
     }
-    
-    c.sched_lock();
+
+    sched.lock();
     list_insert(&self.*.mutexes, &m.*.task_link);
     self.*.nsyncs += 1;
-    c.sched_unlock();
+    sched.unlock();
     return 0;
 }
 
-fn mutex_deallocate(m: c.mutex_t) void {
+fn deallocate(m: c.mutex_t) void {
     m.*.owner.*.nsyncs -= 1;
     list_remove(&m.*.task_link);
-    c.kmem_free(m);
+    kmem.free(m);
 }
 
-pub fn mutex_destroy(mp: ?*c.mutex_t) callconv(.c) c_int {
+pub fn destroy(mp: ?*c.mutex_t) callconv(.c) c_int {
     var m: c.mutex_t = undefined;
-    c.sched_lock();
-    if (c.copyin(@as(?*const anyopaque, @ptrCast(mp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.mutex_t)) != 0) {
-        c.sched_unlock();
+    sched.lock();
+    if (ffi.vm.copyin(@as(?*const anyopaque, @ptrCast(mp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.mutex_t)) != 0) {
+        sched.unlock();
         return c.EFAULT;
     }
-    if (mutex_valid(m) == 0) {
-        c.sched_unlock();
+    if (valid(m) == 0) {
+        sched.unlock();
         return c.EINVAL;
     }
-    if (m.*.holder != null or !c.queue_empty(&m.*.event.sleepq)) {
-        c.sched_unlock();
+    if (m.*.holder != null or !ffi.queue.empty(&m.*.event.sleepq)) {
+        sched.unlock();
         return c.EBUSY;
     }
-    mutex_deallocate(m);
-    c.sched_unlock();
+    deallocate(m);
+    sched.unlock();
     return 0;
 }
 
-pub fn mutex_cleanup(task: c.task_t) callconv(.c) void {
+pub fn cleanup(task: c.task_t) callconv(.c) void {
     while (!list_empty(&task.*.mutexes)) {
         const n = list_first(&task.*.mutexes);
         const m: *c.struct_mutex = @fieldParentPtr("task_link", n);
-        mutex_deallocate(m);
+        deallocate(m);
     }
 }
 
-pub fn mutex_lock(mp: ?*c.mutex_t) callconv(.c) c_int {
+pub fn lock(mp: ?*c.mutex_t) callconv(.c) c_int {
     var m: c.mutex_t = undefined;
-    
-    c.sched_lock();
-    const error_code = mutex_copyin(mp, &m);
+
+    sched.lock();
+    const error_code = copyin(mp, &m);
     if (error_code != 0) {
-        c.sched_unlock();
+        sched.unlock();
         return error_code;
     }
-    
+
     if (m.*.holder == get_curthread()) {
         m.*.locks += 1;
     } else {
@@ -219,43 +217,43 @@ pub fn mutex_lock(mp: ?*c.mutex_t) callconv(.c) c_int {
             m.*.locks = 1;
             m.*.holder = get_curthread();
             list_insert(&get_curthread().*.mutexes, &m.*.link);
-            c.deadlock_record_lock(m, c.LOCK_TYPE_MUTEX);
+            ffi.deadlock.record_lock(m, c.LOCK_TYPE_MUTEX);
         } else {
-            c.deadlock_mutex_wait(m, get_curthread());
+            ffi.deadlock.mutex_wait(m, get_curthread());
             get_curthread().*.mutex_waiting = m;
             const inherit_err = prio_inherit(get_curthread());
             if (inherit_err != 0) {
-                c.deadlock_mutex_stop_wait(get_curthread());
+                ffi.deadlock.mutex_stop_wait(get_curthread());
                 get_curthread().*.mutex_waiting = null;
-                c.sched_unlock();
+                sched.unlock();
                 return inherit_err;
             }
-            const rc = c.sched_sleep(&m.*.event);
-            c.deadlock_mutex_stop_wait(get_curthread());
+            const rc = sched.tsleep(&m.*.event, 0);
+            ffi.deadlock.mutex_stop_wait(get_curthread());
             get_curthread().*.mutex_waiting = null;
             if (rc == c.SLP_INTR) {
-                c.sched_unlock();
+                sched.unlock();
                 return c.EINTR;
             }
             m.*.locks = 1;
             list_insert(&get_curthread().*.mutexes, &m.*.link);
-            c.deadlock_record_lock(m, c.LOCK_TYPE_MUTEX);
+            ffi.deadlock.record_lock(m, c.LOCK_TYPE_MUTEX);
         }
     }
-    c.sched_unlock();
+    sched.unlock();
     return 0;
 }
 
-pub fn mutex_trylock(mp: ?*c.mutex_t) callconv(.c) c_int {
+pub fn tryLock(mp: ?*c.mutex_t) callconv(.c) c_int {
     var m: c.mutex_t = undefined;
-    
-    c.sched_lock();
-    const error_code = mutex_copyin(mp, &m);
+
+    sched.lock();
+    const error_code = copyin(mp, &m);
     if (error_code != 0) {
-        c.sched_unlock();
+        sched.unlock();
         return error_code;
     }
-    
+
     var err: c_int = 0;
     if (m.*.holder == get_curthread()) {
         m.*.locks += 1;
@@ -266,54 +264,54 @@ pub fn mutex_trylock(mp: ?*c.mutex_t) callconv(.c) c_int {
             m.*.locks = 1;
             m.*.holder = get_curthread();
             list_insert(&get_curthread().*.mutexes, &m.*.link);
-            c.deadlock_record_lock(m, c.LOCK_TYPE_MUTEX);
+            ffi.deadlock.record_lock(m, c.LOCK_TYPE_MUTEX);
         }
     }
-    c.sched_unlock();
+    sched.unlock();
     return err;
 }
 
-pub fn mutex_unlock(mp: ?*c.mutex_t) callconv(.c) c_int {
+pub fn unlock(mp: ?*c.mutex_t) callconv(.c) c_int {
     var m: c.mutex_t = undefined;
-    
-    c.sched_lock();
-    const error_code = mutex_copyin(mp, &m);
+
+    sched.lock();
+    const error_code = copyin(mp, &m);
     if (error_code != 0) {
-        c.sched_unlock();
+        sched.unlock();
         return error_code;
     }
-    
+
     if (m.*.holder != get_curthread() or m.*.locks <= 0) {
-        c.sched_unlock();
+        sched.unlock();
         return c.EPERM;
     }
-    
+
     m.*.locks -= 1;
     if (m.*.locks == 0) {
-        c.deadlock_record_unlock(m);
+        ffi.deadlock.record_unlock(m);
         list_remove(&m.*.link);
         prio_uninherit(get_curthread());
-        
-        m.*.holder = c.sched_wakeone(&m.*.event);
+
+        m.*.holder = sched.wakeone(&m.*.event);
         if (m.*.holder) |holder| {
             holder.*.mutex_waiting = null;
         }
-        
+
         m.*.priority = if (m.*.holder) |holder| holder.*.priority else c.MINPRI;
     }
-    c.sched_unlock();
+    sched.unlock();
     return 0;
 }
 
-pub fn mutex_cancel(t: c.thread_t) callconv(.c) void {
+pub fn cancel(t: c.thread_t) callconv(.c) void {
     const head = &t.*.mutexes;
     while (!list_empty(head)) {
         const n = list_first(head);
         const m: *c.struct_mutex = @fieldParentPtr("link", n);
         m.*.locks = 0;
         list_remove(&m.*.link);
-        
-        const holder = c.sched_wakeone(&m.*.event);
+
+        const holder = sched.wakeone(&m.*.event);
         if (holder) |h| {
             h.*.mutex_waiting = null;
             m.*.locks = 1;
@@ -323,19 +321,21 @@ pub fn mutex_cancel(t: c.thread_t) callconv(.c) void {
     }
 }
 
-pub fn mutex_setpri(t: c.thread_t, pri: c_int) callconv(.c) void {
+pub fn setpri(t: c.thread_t, pri: c_int) callconv(.c) void {
     if (t.*.mutex_waiting != null and pri < t.*.priority) {
         _ = prio_inherit(t);
     }
 }
 
 comptime {
-    @export(&mutex_init, .{ .name = "mutex_init", .linkage = .strong });
-    @export(&mutex_destroy, .{ .name = "mutex_destroy", .linkage = .strong });
-    @export(&mutex_cleanup, .{ .name = "mutex_cleanup", .linkage = .strong });
-    @export(&mutex_lock, .{ .name = "mutex_lock", .linkage = .strong });
-    @export(&mutex_trylock, .{ .name = "mutex_trylock", .linkage = .strong });
-    @export(&mutex_unlock, .{ .name = "mutex_unlock", .linkage = .strong });
-    @export(&mutex_cancel, .{ .name = "mutex_cancel", .linkage = .strong });
-    @export(&mutex_setpri, .{ .name = "mutex_setpri", .linkage = .strong });
+    if (@import("root") == @This()) {
+        @export(&init, .{ .name = "mutex_init", .linkage = .strong });
+        @export(&destroy, .{ .name = "mutex_destroy", .linkage = .strong });
+        @export(&cleanup, .{ .name = "mutex_cleanup", .linkage = .strong });
+        @export(&lock, .{ .name = "mutex_lock", .linkage = .strong });
+        @export(&tryLock, .{ .name = "mutex_trylock", .linkage = .strong });
+        @export(&unlock, .{ .name = "mutex_unlock", .linkage = .strong });
+        @export(&cancel, .{ .name = "mutex_cancel", .linkage = .strong });
+        @export(&setpri, .{ .name = "mutex_setpri", .linkage = .strong });
+    }
 }

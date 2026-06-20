@@ -1,56 +1,67 @@
 const std = @import("std");
 
-const c = @cImport({
-    @cDefine("KERNEL", "1");
-    @cInclude("zig_kernel.h");
-});
+const c = @import("c").c;
+const ffi = @import("ffi");
+const hal = ffi.hal;
+const lib = ffi.lib;
+const smp = ffi.smp;
+const sched = ffi.sched;
+const page = ffi.page;
+const kmem = ffi.kmem;
+const vm = ffi.vm;
+const deadlock = ffi.deadlock;
+const task = ffi.task;
+const thread = ffi.thread;
+const timer = ffi.timer;
+const object = ffi.object;
+const msg = ffi.msg;
+const irq = ffi.irq;
+const device = ffi.device;
+const exception = ffi.exception;
 
 extern fn wrap_get_version() callconv(.c) [*c]const u8;
 extern fn wrap_get_machine() callconv(.c) [*c]const u8;
 extern fn wrap_get_build_date() callconv(.c) [*c]const u8;
-extern fn smp_init_early() callconv(.c) void;
-extern fn smp_start_aps() callconv(.c) void;
-extern fn smp_activate() callconv(.c) void;
 
 fn main() callconv(.c) c_int {
     if (@hasDecl(c, "CONFIG_SMP")) {
-        smp_init_early();
+        smp.init_early();
     }
 
-    c.sched_lock();
-    c.diag_init();
-    _ = c.printf("Prex+ version %s for %s (%s)\n", wrap_get_version(), wrap_get_machine(), wrap_get_build_date());
-    _ = c.printf("Copyright (c) 2005-2009 Kohsuke Ohtani\n");
-    _ = c.printf("Copyright (c) 2021      Champ Yen (champ.yen@gmail.com)\n");
+    sched.lock();
+    hal.diag_init();
+    _ = lib.printf("Prex+ version %s for %s (%s)\n", wrap_get_version(), wrap_get_machine(), wrap_get_build_date());
+    _ = lib.printf("Copyright (c) 2005-2009 Kohsuke Ohtani\n");
+    _ = lib.printf("Copyright (c) 2021      Champ Yen (champ.yen@gmail.com)\n");
 
-    c.page_init();
-    c.kmem_init();
+    page.init();
+    kmem.init();
 
-    c.machine_startup();
+    hal.machine_startup();
 
-    c.vm_init();
-    c.deadlock_init();
-    c.task_init();
-    c.thread_init();
-    c.sched_init();
-    c.exception_init();
-    c.timer_init();
-    c.object_init();
-    c.msg_init();
+    vm.init();
+    deadlock.init();
+    task.init();
+    thread.init();
+    sched.init();
+    exception.init();
+    timer.init();
+    object.init();
+    msg.init();
 
-    c.irq_init();
-    c.clock_init();
-    c.device_init();
+    irq.init();
+    hal.clock_init();
+    device.init();
 
-    c.task_bootstrap();
+    task.bootstrap();
 
     if (@hasDecl(c, "CONFIG_SMP")) {
-        smp_start_aps();
-        smp_activate();
+        smp.start_aps();
+        smp.activate();
     }
 
-    c.sched_unlock();
-    c.thread_idle();
+    sched.unlock();
+    thread.idle();
 
     return 0;
 }

@@ -1,4 +1,6 @@
 const std = @import("std");
+const ffi = @import("ffi");
+const hal = ffi.hal;
 
 pub const c = @cImport({
     @cDefine("KERNEL", "1");
@@ -70,12 +72,12 @@ pub extern fn thread_destroy(th: c.thread_t) void;
 pub extern fn vm_load(map: c.vm_map_t, mod: [*c]c.struct_module, stack: [*c]?*anyopaque) c_int;
 
 // MMU HAL calls (using correct names from hal.h)
-pub inline fn mmu_init(table: [*c]c.struct_mmumap) void { c.mmu_init(table); }
-pub inline fn mmu_newmap() c.pgd_t { return c.mmu_newmap(); }
-pub inline fn mmu_terminate(pgd: c.pgd_t) void { c.mmu_terminate(pgd); }
-pub inline fn mmu_map(pgd: c.pgd_t, pa: c.paddr_t, va: c.vaddr_t, sz: usize, t: c_int) c_int { return c.mmu_map(pgd, pa, va, sz, t); }
-pub inline fn mmu_switch(pgd: c.pgd_t) void { c.mmu_switch(pgd); }
-pub inline fn mmu_extract(pgd: c.pgd_t, va: c.vaddr_t, sz: usize) c.paddr_t { return c.mmu_extract(pgd, va, sz); }
+pub inline fn mmu_init(table: [*c]c.struct_mmumap) void { hal.mmu_init(table); }
+pub inline fn mmu_newmap() c.pgd_t { return hal.mmu_newmap(); }
+pub inline fn mmu_terminate(pgd: c.pgd_t) void { hal.mmu_terminate(pgd); }
+pub inline fn mmu_map(pgd: c.pgd_t, pa: c.paddr_t, va: c.vaddr_t, sz: usize, t: c_int) c_int { return hal.mmu_map(pgd, pa, va, sz, t); }
+pub inline fn mmu_switch(pgd: c.pgd_t) void { hal.mmu_switch(pgd); }
+pub inline fn mmu_extract(pgd: c.pgd_t, va: c.vaddr_t, sz: usize) c.paddr_t { return hal.mmu_extract(pgd, va, sz); }
 
 pub inline fn user_area(a: ?*const anyopaque) bool {
     if (a == null) return false;

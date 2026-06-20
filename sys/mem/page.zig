@@ -1,13 +1,15 @@
 const std = @import("std");
 pub fn panic(msg: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
     _ = msg;
-    c.panic("Zig panic");
+    lib.panic("Zig panic");
     while (true) {}
 }
-const c = @cImport({
-    @cDefine("KERNEL", "1");
-    @cInclude("zig_kernel.h");
-});
+const c = @import("c").c;
+
+const ffi = @import("ffi");
+const hal = ffi.hal;
+const lib = ffi.lib;
+const sched = ffi.sched;
 
 const Page = extern struct {
     next: ?*Page,
@@ -44,11 +46,11 @@ inline fn trunc_page(x: usize) usize {
 
 fn page_is_ram(pa: c.paddr_t) bool {
     var bi: ?*c.struct_bootinfo = null;
-    c.machine_bootinfo(&bi);
-    const info = bi orelse return false;
+    hal.machine_bootinfo(&bi);
+    const binfo = bi orelse return false;
     var i: usize = 0;
-    while (i < info.*.nr_rams) : (i += 1) {
-        const ram = &info.*.ram[i];
+    while (i < binfo.*.nr_rams) : (i += 1) {
+        const ram = &binfo.*.ram[i];
         if (ram.*.type == c.MT_USABLE) {
             if (pa >= ram.*.base and pa < ram.*.base + ram.*.size) {
                 return true;
@@ -58,10 +60,10 @@ fn page_is_ram(pa: c.paddr_t) bool {
     return false;
 }
 
-pub export fn page_alloc(psize: c.psize_t) callconv(.c) c.paddr_t {
-    c.sched_lock();
-    _ = c.printf("page_alloc: psize=0x%x\n", psize);
-    defer c.sched_unlock();
+pub fn alloc(psize: c.psize_t) callconv(.c) c.paddr_t {
+    sched.lock();
+    _ = lib.printf("page_alloc: psize=0x%x\n", psize);
+    defer sched.unlock();
 
     const size = round_page(@as(usize, @intCast(psize)));
     var blk: ?*Page = page_head.next;
@@ -95,14 +97,14 @@ pub export fn page_alloc(psize: c.psize_t) callconv(.c) c.paddr_t {
 
     used_size += @as(c.psize_t, @intCast(size));
     const ret_val = kvtop(block);
-    _ = c.printf("page_alloc: returning 0x%x\n", ret_val);
+    _ = lib.printf("page_alloc: returning 0x%x\n", ret_val);
     return ret_val;
 }
 
-pub export fn page_free(paddr: c.paddr_t, psize: c.psize_t) callconv(.c) void {
-    c.sched_lock();
-    _ = c.printf("page_free: paddr=0x%x, size=0x%x\n", paddr, psize);
-    defer c.sched_unlock();
+pub fn free(paddr: c.paddr_t, psize: c.psize_t) callconv(.c) void {
+    sched.lock();
+    _ = lib.printf("page_free: paddr=0x%x, size=0x%x\n", paddr, psize);
+    defer sched.unlock();
 
     if (!page_is_ram(paddr)) {
         return;
@@ -146,10 +148,10 @@ pub export fn page_free(paddr: c.paddr_t, psize: c.psize_t) callconv(.c) void {
     }
 
     used_size = used_size -% @as(c.psize_t, @intCast(size));
-    _ = c.printf("page_free: done, page_head.next=0x%x\n", @intFromPtr(page_head.next));
+    _ = lib.printf("page_free: done, page_head.next=0x%x\n", @intFromPtr(page_head.next));
 }
 
-pub export fn page_reserve(paddr: c.paddr_t, psize: c.psize_t) callconv(.c) c_int {
+pub fn reserve(paddr: c.paddr_t, psize: c.psize_t) callconv(.c) c_int {
     if (psize == 0) return 0;
 
     var pa = paddr;
@@ -212,25 +214,25 @@ pub export fn page_reserve(paddr: c.paddr_t, psize: c.psize_t) callconv(.c) c_in
     return 0;
 }
 
-pub export fn page_info(info: *c.struct_meminfo) callconv(.c) void {
-    info.*.total = total_size;
-    info.*.free = total_size - used_size;
-    info.*.bootdisk = bootdisk_size;
+pub fn info(mem_info: *c.struct_meminfo) callconv(.c) void {
+    mem_info.*.total = total_size;
+    mem_info.*.free = total_size - used_size;
+    mem_info.*.bootdisk = bootdisk_size;
     if (!@hasDecl(c, "CONFIG_ROMBOOT")) {
-        info.*.free -= bootdisk_size;
+        mem_info.*.free -= bootdisk_size;
     }
 }
 
-pub export fn page_init() callconv(.c) void {
+pub fn init() callconv(.c) void {
     var bi: ?*c.struct_bootinfo = null;
-    c.machine_bootinfo(&bi);
-    const info = bi orelse return;
+    hal.machine_bootinfo(&bi);
+    const binfo = bi orelse return;
 
-    _ = c.printf("page_init: nr_rams=%d\n", info.*.nr_rams);
+    _ = lib.printf("page_init: nr_rams=%d\n", binfo.*.nr_rams);
     var k: usize = 0;
-    while (k < info.*.nr_rams) : (k += 1) {
-        const ram = &info.*.ram[k];
-        _ = c.printf("  ram[%d]: base=0x%x, size=0x%x, type=%d\n", @as(c_int, @intCast(k)), ram.*.base, ram.*.size, ram.*.type);
+    while (k < binfo.*.nr_rams) : (k += 1) {
+        const ram = &binfo.*.ram[k];
+        _ = lib.printf("  ram[%d]: base=0x%x, size=0x%x, type=%d\n", @as(c_int, @intCast(k)), ram.*.base, ram.*.size, ram.*.type);
     }
 
     total_size = 0;
@@ -239,8 +241,8 @@ pub export fn page_init() callconv(.c) void {
     page_head.prev = &page_head;
 
     var i: usize = 0;
-    while (i < info.*.nr_rams) : (i += 1) {
-        const ram = &info.*.ram[i];
+    while (i < binfo.*.nr_rams) : (i += 1) {
+        const ram = &binfo.*.ram[i];
         if (ram.*.type == c.MT_USABLE) {
             var base = ram.*.base;
             var size = ram.*.size;
@@ -248,14 +250,14 @@ pub export fn page_init() callconv(.c) void {
                 base += c.PAGE_SIZE;
                 size -= c.PAGE_SIZE;
             }
-            page_free(base, size);
+            free(base, size);
             total_size += size;
         }
     }
 
     i = 0;
-    while (i < info.*.nr_rams) : (i += 1) {
-        const ram = &info.*.ram[i];
+    while (i < binfo.*.nr_rams) : (i += 1) {
+        const ram = &binfo.*.ram[i];
         const is_bootdisk = ram.*.type == c.MT_BOOTDISK;
         const is_memhole = ram.*.type == c.MT_MEMHOLE;
         const is_reserved = ram.*.type == c.MT_RESERVED;
@@ -270,10 +272,10 @@ pub export fn page_init() callconv(.c) void {
 
             var overlap: bool = false;
             var j: usize = 0;
-            while (j < info.*.nr_rams) : (j += 1) {
-                if (info.*.ram[j].type == c.MT_USABLE) {
-                    if (!(ram.*.base >= info.*.ram[j].base + info.*.ram[j].size or
-                        ram.*.base + ram.*.size <= info.*.ram[j].base))
+            while (j < binfo.*.nr_rams) : (j += 1) {
+                if (binfo.*.ram[j].type == c.MT_USABLE) {
+                    if (!(ram.*.base >= binfo.*.ram[j].base + binfo.*.ram[j].size or
+                        ram.*.base + ram.*.size <= binfo.*.ram[j].base))
                     {
                         overlap = true;
                         break;
@@ -281,9 +283,18 @@ pub export fn page_init() callconv(.c) void {
                 }
             }
             if (overlap) {
-                _ = page_reserve(ram.*.base, ram.*.size);
+                _ = reserve(ram.*.base, ram.*.size);
             }
         }
     }
     used_size = 0;
+}
+comptime {
+    if (@import("root") == @This()) {
+        @export(&alloc, .{ .name = "page_alloc", .linkage = .strong });
+        @export(&free, .{ .name = "page_free", .linkage = .strong });
+        @export(&reserve, .{ .name = "page_reserve", .linkage = .strong });
+        @export(&info, .{ .name = "page_info", .linkage = .strong });
+        @export(&init, .{ .name = "page_init", .linkage = .strong });
+    }
 }

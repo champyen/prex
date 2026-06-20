@@ -1,10 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const c = @cImport({
-    @cDefine("KERNEL", "1");
-    @cInclude("zig_kernel.h");
-});
+const c = @import("c").c;
 
 const NCPUS = if (@hasDecl(c, "CONFIG_SMP_NCPUS")) c.CONFIG_SMP_NCPUS else 1;
 
@@ -15,9 +12,9 @@ const INTSTKTOP = SYSPAGE_BASE + 0x2000;
 
 var IST_NONE: ?*const fn (?*anyopaque) callconv(.c) void = undefined;
 
-export var cpu_table: [NCPUS]c.struct_cpu_control = std.mem.zeroes([NCPUS]c.struct_cpu_control);
+pub var cpu_table: [NCPUS]c.struct_cpu_control = std.mem.zeroes([NCPUS]c.struct_cpu_control);
 
-export var ap_boot_stacks: [NCPUS][c.KSTACKSZ]u8 align(16) = std.mem.zeroes([NCPUS][c.KSTACKSZ]u8);
+pub var ap_boot_stacks: [NCPUS][c.KSTACKSZ]u8 align(16) = std.mem.zeroes([NCPUS][c.KSTACKSZ]u8);
 
 var ready_count: c_int = 0;
 var smp_active: c_int = 0;
@@ -33,24 +30,26 @@ pub fn kvtop(va: anytype) c.paddr_t {
     return @intFromPtr(va) - c.KERNOFFSET;
 }
 
-extern var idle_thread: c.struct_thread;
+const ffi = @import("ffi");
+const hal = ffi.hal;
+const thread = ffi.thread;
 
-pub fn smp_init_early() callconv(.c) void {
+pub fn initEarly() callconv(.c) void {
     const cpu: *c.struct_cpu_control = &cpu_table[0];
 
-    cpu.active_thread = &idle_thread;
-    cpu.idle_thread = &idle_thread;
+    cpu.active_thread = &thread.idle_thread;
+    cpu.idle_thread = &thread.idle_thread;
     cpu.nest_count = 0;
     cpu.spl_level = 15;
     cpu.int_stack = @ptrFromInt(INTSTKTOP - 0x100);
     cpu.cpu_id = 0;
 
-    c.hal_set_cpu_control(cpu);
+    hal_set_cpu_control(cpu);
 
     @as(*usize, @ptrCast(&IST_NONE)).* = @as(usize, @bitCast(@as(isize, -1)));
 }
 
-pub fn smp_start_aps() callconv(.c) void {
+pub fn startAps() callconv(.c) void {
     _ = c.irq_attach(ipi_irq, c.IPL_HIGH, 0, ipi_isr, IST_NONE, null);
 
     _ = @atomicRmw(c_int, &ready_count, .Add, 1, .seq_cst);
@@ -59,7 +58,7 @@ pub fn smp_start_aps() callconv(.c) void {
 
     var i: c_int = 1;
     while (i < NCPUS) : (i += 1) {
-        const t = c.thread_create_idle();
+        const t = thread.create_idle();
 
         cpu_table[@intCast(i)].active_thread = t;
         cpu_table[@intCast(i)].idle_thread = t;
@@ -70,7 +69,7 @@ pub fn smp_start_aps() callconv(.c) void {
 
         zig_memory_barrier();
 
-        const ret = c.hal_cpu_start(@intCast(i), kvtop(&ap_reset_entry));
+        const ret = hal.hal_cpu_start(@intCast(i), kvtop(&ap_reset_entry));
         if (ret == 0) {
             started_count += 1;
         }
@@ -82,22 +81,22 @@ pub fn smp_start_aps() callconv(.c) void {
     zig_memory_barrier();
 }
 
-pub fn smp_activate() callconv(.c) void {
+pub fn activate() callconv(.c) void {
     zig_memory_barrier();
     @atomicStore(c_int, &smp_active, 1, .seq_cst);
     zig_memory_barrier();
 }
 
-pub fn smp_ap_boot() callconv(.c) void {
+pub fn apBoot() callconv(.c) void {
     zig_memory_barrier();
-    const cpuid = c.hal_cpu_id();
+    const cpuid = hal.hal_cpu_id();
     const cpu: *c.struct_cpu_control = &cpu_table[@intCast(cpuid)];
 
-    c.hal_set_cpu_control(cpu);
+    hal_set_cpu_control(cpu);
 
-    c.interrupt_cpu_init();
+    hal.interrupt_cpu_init();
 
-    c.clock_ap_init();
+    hal.clock_ap_init();
 
     _ = @atomicRmw(c_int, &ready_count, .Add, 1, .seq_cst);
 
@@ -157,12 +156,16 @@ pub fn hal_get_cpu_control() callconv(.c) ?*c.struct_cpu_control {
 }
 
 comptime {
-    @export(&smp_init_early, .{ .name = "smp_init_early", .linkage = .strong });
-    @export(&hal_set_cpu_control, .{ .name = "hal_set_cpu_control", .linkage = .strong });
-    @export(&hal_get_cpu_control, .{ .name = "hal_get_cpu_control", .linkage = .strong });
-    if (@hasDecl(c, "CONFIG_SMP")) {
-        @export(&smp_start_aps, .{ .name = "smp_start_aps", .linkage = .strong });
-        @export(&smp_activate, .{ .name = "smp_activate", .linkage = .strong });
-        @export(&smp_ap_boot, .{ .name = "smp_ap_boot", .linkage = .strong });
+    if (@import("root") == @This()) {
+        @export(&cpu_table, .{ .name = "cpu_table", .linkage = .strong });
+        @export(&ap_boot_stacks, .{ .name = "ap_boot_stacks", .linkage = .strong });
+        @export(&initEarly, .{ .name = "smp_init_early", .linkage = .strong });
+        @export(&hal_set_cpu_control, .{ .name = "hal_set_cpu_control", .linkage = .strong });
+        @export(&hal_get_cpu_control, .{ .name = "hal_get_cpu_control", .linkage = .strong });
+        if (@hasDecl(c, "CONFIG_SMP")) {
+            @export(&startAps, .{ .name = "smp_start_aps", .linkage = .strong });
+            @export(&activate, .{ .name = "smp_activate", .linkage = .strong });
+            @export(&apBoot, .{ .name = "smp_ap_boot", .linkage = .strong });
+        }
     }
 }

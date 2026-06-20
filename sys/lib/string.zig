@@ -1,22 +1,24 @@
 const std = @import("std");
 
 comptime {
-    @export(&strlen, .{ .name = "strlen", .linkage = .strong });
-    @export(&strlcpy, .{ .name = "strlcpy", .linkage = .strong });
-    @export(&strncmp, .{ .name = "strncmp", .linkage = .strong });
-    @export(&strnlen, .{ .name = "strnlen", .linkage = .strong });
-    @export(&memcpy, .{ .name = "memcpy", .linkage = .strong });
-    @export(&memset, .{ .name = "memset", .linkage = .strong });
-    @export(&memmove, .{ .name = "memmove", .linkage = .strong });
+    if (@import("root") == @This()) {
+        @export(&strlen, .{ .name = "strlen", .linkage = .strong });
+        @export(&strlcpy, .{ .name = "strlcpy", .linkage = .strong });
+        @export(&strncmp, .{ .name = "strncmp", .linkage = .strong });
+        @export(&strnlen, .{ .name = "strnlen", .linkage = .strong });
+        @export(&memcpy, .{ .name = "memcpy", .linkage = .strong });
+        @export(&memset, .{ .name = "memset", .linkage = .strong });
+        @export(&memmove, .{ .name = "memmove", .linkage = .strong });
+    }
 }
 
-fn strlen(str: [*c]const u8) callconv(.c) usize {
+pub fn strlen(str: [*c]const u8) callconv(.c) usize {
     var i: usize = 0;
     while (str[i] != 0) : (i += 1) {}
     return i;
 }
 
-fn strlcpy(dest: [*c]u8, src: [*c]const u8, count: usize) callconv(.c) usize {
+pub fn strlcpy(dest: [*c]u8, src: [*c]const u8, count: usize) callconv(.c) usize {
     var src_len: usize = 0;
     while (src[src_len] != 0) : (src_len += 1) {}
 
@@ -31,7 +33,7 @@ fn strlcpy(dest: [*c]u8, src: [*c]const u8, count: usize) callconv(.c) usize {
     return src_len;
 }
 
-fn strncmp(src: [*c]const u8, tgt: [*c]const u8, count: usize) callconv(.c) c_int {
+pub fn strncmp(src: [*c]const u8, tgt: [*c]const u8, count: usize) callconv(.c) c_int {
     var s = src;
     var t = tgt;
     var n = count;
@@ -48,7 +50,7 @@ fn strncmp(src: [*c]const u8, tgt: [*c]const u8, count: usize) callconv(.c) c_in
     return 0;
 }
 
-fn strnlen(str: [*c]const u8, count: usize) callconv(.c) usize {
+pub fn strnlen(str: [*c]const u8, count: usize) callconv(.c) usize {
     var s = str;
     var n = count;
     while (n != 0 and s[0] != 0) : (n -= 1) {
@@ -57,7 +59,7 @@ fn strnlen(str: [*c]const u8, count: usize) callconv(.c) usize {
     return @intFromPtr(s) - @intFromPtr(str);
 }
 
-fn memcpy(dest: ?*anyopaque, src: ?*const anyopaque, count: usize) callconv(.c) ?*anyopaque {
+pub fn memcpy(dest: ?*anyopaque, src: ?*const anyopaque, count: usize) callconv(.c) ?*anyopaque {
     if (count == 0) return dest;
     const d: [*]volatile u8 = @ptrCast(dest.?);
     const s: [*]volatile const u8 = @ptrCast(src.?);
@@ -68,7 +70,7 @@ fn memcpy(dest: ?*anyopaque, src: ?*const anyopaque, count: usize) callconv(.c) 
     return dest;
 }
 
-fn memset(dest: ?*anyopaque, ch: c_int, count: usize) callconv(.c) ?*anyopaque {
+pub fn memset(dest: ?*anyopaque, ch: c_int, count: usize) callconv(.c) ?*anyopaque {
     if (count == 0) return dest;
     const d: [*]volatile u8 = @ptrCast(dest.?);
     const byte: u8 = @truncate(@as(c_uint, @bitCast(ch)));
@@ -79,7 +81,7 @@ fn memset(dest: ?*anyopaque, ch: c_int, count: usize) callconv(.c) ?*anyopaque {
     return dest;
 }
 
-fn memmove(dest: ?*anyopaque, src: ?*const anyopaque, count: usize) callconv(.c) ?*anyopaque {
+pub fn memmove(dest: ?*anyopaque, src: ?*const anyopaque, count: usize) callconv(.c) ?*anyopaque {
     if (count == 0 or dest == null or src == null) return dest;
     const d: [*]volatile u8 = @ptrCast(dest.?);
     const s: [*]volatile const u8 = @ptrCast(src.?);

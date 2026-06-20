@@ -1,9 +1,12 @@
 const std = @import("std");
 
-const c = @cImport({
-    @cDefine("KERNEL", "1");
-    @cInclude("zig_kernel.h");
-});
+const c = @import("c").c;
+
+const ffi = @import("ffi");
+const hal = ffi.hal;
+const lib = ffi.lib;
+const sched = ffi.sched;
+const kmem = ffi.kmem;
 
 // ---------------------------------------------------------------------------
 // device_list: head of the linked list of all device objects
@@ -27,43 +30,43 @@ inline fn user_area(a: ?*anyopaque) bool {
 // These are referenced by the dkient table via pointer mapping.
 // ---------------------------------------------------------------------------
 
-/// device_create – create a new device object.
+/// create – create a new device object.
 /// Returns device pointer on success, null on failure.
-fn device_create(drv: ?*c.struct_driver, name: [*c]const u8, flags: c_int) callconv(.c) ?*c.struct_device {
+fn create(drv: ?*c.struct_driver, name: [*c]const u8, flags: c_int) callconv(.c) ?*c.struct_device {
     var len: usize = 0;
     var priv: ?*anyopaque = null;
 
-    c.sched_lock();
+    sched.lock();
 
     // Check the length of the name.
-    len = c.strnlen(name, c.MAXDEVNAME);
+    len = lib.strnlen(name, c.MAXDEVNAME);
     if (len == 0 or len >= c.MAXDEVNAME) {
-        c.sched_unlock();
+        sched.unlock();
         return null;
     }
 
     // Check if the specified name is already used.
-    if (device_lookup(name) != null) {
-        c.panic("duplicate device");
+    if (lookup(name) != null) {
+        lib.panic("duplicate device");
     }
 
     // Allocate a device structure.
-    const dev: ?*c.struct_device = @ptrCast(@alignCast(c.kmem_alloc(@sizeOf(c.struct_device))));
+    const dev: ?*c.struct_device = @ptrCast(@alignCast(kmem.alloc(@sizeOf(c.struct_device))));
     if (dev == null) {
-        c.panic("device_create");
+        lib.panic("create");
     }
     const dev_ptr = dev.?;
 
     // Allocate driver private data if needed.
     if (drv != null and drv.?.devsz != 0) {
-        priv = c.kmem_alloc(drv.?.devsz);
+        priv = kmem.alloc(drv.?.devsz);
         if (priv == null) {
-            c.panic("devsz");
+            lib.panic("devsz");
         }
-        _ = c.memset(priv, 0, drv.?.devsz);
+        _ = lib.memset(priv, 0, drv.?.devsz);
     }
 
-    _ = c.strlcpy(@ptrCast(&dev_ptr.name), name, len + 1);
+    _ = lib.strlcpy(@ptrCast(&dev_ptr.name), name, len + 1);
     dev_ptr.driver = drv;
     dev_ptr.flags = flags;
     dev_ptr.active = 1;
@@ -72,38 +75,38 @@ fn device_create(drv: ?*c.struct_driver, name: [*c]const u8, flags: c_int) callc
     dev_ptr.next = device_list;
     device_list = dev_ptr;
 
-    c.sched_unlock();
+    sched.unlock();
     return dev_ptr;
 }
 
-/// device_destroy – destroy a device object.
+/// destroy – destroy a device object.
 /// Returns 0 on success, ENODEV on failure.
-fn device_destroy(dev: ?*c.struct_device) callconv(.c) c_int {
-    c.sched_lock();
-    if (device_valid(dev) == 0) {
-        c.sched_unlock();
+fn destroy(dev: ?*c.struct_device) callconv(.c) c_int {
+    sched.lock();
+    if (valid(dev) == 0) {
+        sched.unlock();
         return c.ENODEV;
     }
     dev.?.active = 0;
-    device_release(dev);
-    c.sched_unlock();
+    release(dev);
+    sched.unlock();
     return 0;
 }
 
-/// device_lookup – look up a device object by name.
+/// lookup – look up a device object by name.
 /// Returns device pointer if found, null otherwise.
-fn device_lookup(name: [*c]const u8) callconv(.c) ?*c.struct_device {
+fn lookup(name: [*c]const u8) callconv(.c) ?*c.struct_device {
     var dev = device_list;
     while (dev) |d| : (dev = @ptrCast(d.next)) {
-        if (c.strncmp(&d.name, name, c.MAXDEVNAME) == 0) {
+        if (lib.strncmp(&d.name, name, c.MAXDEVNAME) == 0) {
             return d;
         }
     }
     return null;
 }
 
-/// device_valid – return true (1) if specified device is valid.
-fn device_valid(dev: ?*c.struct_device) callconv(.c) c_int {
+/// valid – return true (1) if specified device is valid.
+fn valid(dev: ?*c.struct_device) callconv(.c) c_int {
     var tmp = device_list;
     while (tmp) |t| : (tmp = @ptrCast(t.next)) {
         if (t == dev) {
@@ -116,30 +119,30 @@ fn device_valid(dev: ?*c.struct_device) callconv(.c) c_int {
     return 0;
 }
 
-/// device_reference – increment the reference count on an active device.
+/// reference – increment the reference count on an active device.
 /// Returns 0 on success, ENODEV or EPERM on failure.
-fn device_reference(dev: ?*c.struct_device) callconv(.c) c_int {
-    c.sched_lock();
-    if (device_valid(dev) == 0) {
-        c.sched_unlock();
+fn reference(dev: ?*c.struct_device) callconv(.c) c_int {
+    sched.lock();
+    if (valid(dev) == 0) {
+        sched.unlock();
         return c.ENODEV;
     }
     if (c.task_capable(c.CAP_RAWIO) == 0) {
-        c.sched_unlock();
+        sched.unlock();
         return c.EPERM;
     }
     dev.?.refcnt += 1;
-    c.sched_unlock();
+    sched.unlock();
     return 0;
 }
 
-/// device_release – decrement the reference count; free when it reaches zero.
-fn device_release(dev: ?*c.struct_device) callconv(.c) void {
-    c.sched_lock();
+/// release – decrement the reference count; free when it reaches zero.
+fn release(dev: ?*c.struct_device) callconv(.c) void {
+    sched.lock();
     const dev_ptr = dev.?;
     dev_ptr.refcnt -= 1;
     if (dev_ptr.refcnt > 0) {
-        c.sched_unlock();
+        sched.unlock();
         return;
     }
 
@@ -152,35 +155,35 @@ fn device_release(dev: ?*c.struct_device) callconv(.c) void {
         }
         tmp = @ptrCast(&curr.next);
     }
-    c.kmem_free(dev_ptr);
-    c.sched_unlock();
+    kmem.free(dev_ptr);
+    sched.unlock();
 }
 
-/// device_private – return device's private data.
-fn device_private(dev: ?*c.struct_device) callconv(.c) ?*anyopaque {
+/// privateFn – return device's private data.
+fn privateFn(dev: ?*c.struct_device) callconv(.c) ?*anyopaque {
     if (dev == null) return null;
     return dev.?.@"private";
 }
 
-/// device_control – devctl from another device driver (internal).
-fn device_control(dev: ?*c.struct_device, cmd: c_ulong, arg: ?*anyopaque) callconv(.c) c_int {
-    c.sched_lock();
+/// control – devctl from another device driver (internal).
+fn control(dev: ?*c.struct_device, cmd: c_ulong, arg: ?*anyopaque) callconv(.c) c_int {
+    sched.lock();
     const drv: ?*c.struct_driver = if (dev) |d| d.driver else null;
     const ops: ?*c.struct_devops = if (drv) |dr| dr.devops else null;
     if (ops == null or ops.?.devctl == null) {
-        c.sched_unlock();
+        sched.unlock();
         return c.EINVAL;
     }
     const err: c_int = ops.?.devctl.?(dev, cmd, arg);
-    c.sched_unlock();
+    sched.unlock();
     return err;
 }
 
-/// device_broadcast – broadcast devctl command to all device objects.
-fn device_broadcast(cmd: c_ulong, arg: ?*anyopaque, force: c_int) callconv(.c) c_int {
+/// broadcast – broadcast devctl command to all device objects.
+fn broadcast(cmd: c_ulong, arg: ?*anyopaque, force: c_int) callconv(.c) c_int {
     var retval: c_int = 0;
 
-    c.sched_lock();
+    sched.lock();
 
     var dev = device_list;
     while (dev) |d| : (dev = @ptrCast(d.next)) {
@@ -199,7 +202,7 @@ fn device_broadcast(cmd: c_ulong, arg: ?*anyopaque, force: c_int) callconv(.c) c
             }
         }
     }
-    c.sched_unlock();
+    sched.unlock();
     return retval;
 }
 
@@ -207,24 +210,24 @@ fn device_broadcast(cmd: c_ulong, arg: ?*anyopaque, force: c_int) callconv(.c) c
 // Public functions – exported with strong C linkage
 // ---------------------------------------------------------------------------
 
-/// device_open – open the specified device.
-pub fn device_open(name: [*c]const u8, mode: c_int, devp: ?*?*c.struct_device) callconv(.c) c_int {
+/// open – open the specified device.
+pub fn open(name: [*c]const u8, mode: c_int, devp: ?*?*c.struct_device) callconv(.c) c_int {
     var str: [c.MAXDEVNAME]u8 = undefined;
-    const copy_err: c_int = c.copyinstr(@ptrCast(name), @ptrCast(&str), c.MAXDEVNAME);
+    const copy_err: c_int = ffi.vm.copyinstr(@ptrCast(name), @ptrCast(&str), c.MAXDEVNAME);
     if (copy_err != 0) return copy_err;
 
-    c.sched_lock();
-    const dev: ?*c.struct_device = device_lookup(@ptrCast(&str));
+    sched.lock();
+    const dev: ?*c.struct_device = lookup(@ptrCast(&str));
     if (dev == null) {
-        c.sched_unlock();
+        sched.unlock();
         return c.ENXIO;
     }
-    const ref_err: c_int = device_reference(dev);
+    const ref_err: c_int = reference(dev);
     if (ref_err != 0) {
-        c.sched_unlock();
+        sched.unlock();
         return ref_err;
     }
-    c.sched_unlock();
+    sched.unlock();
 
     const drv: ?*c.struct_driver = dev.?.driver;
     const ops: ?*c.struct_devops = if (drv) |d| d.devops else null;
@@ -233,17 +236,17 @@ pub fn device_open(name: [*c]const u8, mode: c_int, devp: ?*?*c.struct_device) c
         err = ops.?.open.?(dev, mode);
     }
     if (err == 0) {
-        const cp_err: c_int = c.copyout(@ptrCast(&dev), @ptrCast(devp), @sizeOf(?*c.struct_device));
+        const cp_err: c_int = ffi.vm.copyout(@ptrCast(&dev), @ptrCast(devp), @sizeOf(?*c.struct_device));
         if (cp_err != 0) err = cp_err;
     }
 
-    device_release(dev);
+    release(dev);
     return err;
 }
 
-/// device_close – close a device.
-pub fn device_close(dev: ?*c.struct_device) callconv(.c) c_int {
-    const ref_err: c_int = device_reference(dev);
+/// close – close a device.
+pub fn close(dev: ?*c.struct_device) callconv(.c) c_int {
+    const ref_err: c_int = reference(dev);
     if (ref_err != 0) return ref_err;
 
     const drv: ?*c.struct_driver = dev.?.driver;
@@ -253,22 +256,22 @@ pub fn device_close(dev: ?*c.struct_device) callconv(.c) c_int {
         err = ops.?.close.?(dev);
     }
 
-    device_release(dev);
+    release(dev);
     return err;
 }
 
-/// device_read – read from a device.
-pub fn device_read(dev: ?*c.struct_device, buf: ?*anyopaque, nbyte: ?*usize, blkno: c_int) callconv(.c) c_int {
+/// read – read from a device.
+pub fn read(dev: ?*c.struct_device, buf: ?*anyopaque, nbyte: ?*usize, blkno: c_int) callconv(.c) c_int {
     if (!user_area(buf)) return c.EFAULT;
 
-    const ref_err: c_int = device_reference(dev);
+    const ref_err: c_int = reference(dev);
     if (ref_err != 0) return ref_err;
 
     var count: usize = 0;
     if (nbyte != null) {
-        const ci_err: c_int = c.copyin(@ptrCast(nbyte), @ptrCast(&count), @sizeOf(usize));
+        const ci_err: c_int = ffi.vm.copyin(@ptrCast(nbyte), @ptrCast(&count), @sizeOf(usize));
         if (ci_err != 0) {
-            device_release(dev);
+            release(dev);
             return c.EFAULT;
         }
     }
@@ -280,26 +283,26 @@ pub fn device_read(dev: ?*c.struct_device, buf: ?*anyopaque, nbyte: ?*usize, blk
         err = ops.?.read.?(dev, @ptrCast(buf), &count, blkno);
     }
     if (err == 0 and nbyte != null) {
-        const co_err: c_int = c.copyout(@ptrCast(&count), @ptrCast(nbyte), @sizeOf(usize));
+        const co_err: c_int = ffi.vm.copyout(@ptrCast(&count), @ptrCast(nbyte), @sizeOf(usize));
         if (co_err != 0) err = co_err;
     }
 
-    device_release(dev);
+    release(dev);
     return err;
 }
 
-/// device_write – write to a device.
-pub fn device_write(dev: ?*c.struct_device, buf: ?*anyopaque, nbyte: ?*usize, blkno: c_int) callconv(.c) c_int {
+/// write – write to a device.
+pub fn write(dev: ?*c.struct_device, buf: ?*anyopaque, nbyte: ?*usize, blkno: c_int) callconv(.c) c_int {
     if (!user_area(buf)) return c.EFAULT;
 
-    const ref_err: c_int = device_reference(dev);
+    const ref_err: c_int = reference(dev);
     if (ref_err != 0) return ref_err;
 
     var count: usize = 0;
     if (nbyte != null) {
-        const ci_err: c_int = c.copyin(@ptrCast(nbyte), @ptrCast(&count), @sizeOf(usize));
+        const ci_err: c_int = ffi.vm.copyin(@ptrCast(nbyte), @ptrCast(&count), @sizeOf(usize));
         if (ci_err != 0) {
-            device_release(dev);
+            release(dev);
             return c.EFAULT;
         }
     }
@@ -311,41 +314,41 @@ pub fn device_write(dev: ?*c.struct_device, buf: ?*anyopaque, nbyte: ?*usize, bl
         err = ops.?.write.?(dev, @ptrCast(buf), &count, blkno);
     }
     if (err == 0 and nbyte != null) {
-        const co_err: c_int = c.copyout(@ptrCast(&count), @ptrCast(nbyte), @sizeOf(usize));
+        const co_err: c_int = ffi.vm.copyout(@ptrCast(&count), @ptrCast(nbyte), @sizeOf(usize));
         if (co_err != 0) err = co_err;
     }
 
-    device_release(dev);
+    release(dev);
     return err;
 }
 
-/// device_gather_read – gather read from a device.
-pub fn device_gather_read(dev: ?*c.struct_device, buf: ?*anyopaque, nbyte: ?*usize, io: ?*c.struct_dev_io) callconv(.c) c_int {
+/// gatherRead – gather read from a device.
+pub fn gatherRead(dev: ?*c.struct_device, buf: ?*anyopaque, nbyte: ?*usize, io: ?*c.struct_dev_io) callconv(.c) c_int {
     if (!user_area(buf)) return c.EFAULT;
 
-    const ref_err: c_int = device_reference(dev);
+    const ref_err: c_int = reference(dev);
     if (ref_err != 0) return ref_err;
 
     var count: usize = 0;
     if (nbyte != null) {
-        const ci_err: c_int = c.copyin(@ptrCast(nbyte), @ptrCast(&count), @sizeOf(usize));
+        const ci_err: c_int = ffi.vm.copyin(@ptrCast(nbyte), @ptrCast(&count), @sizeOf(usize));
         if (ci_err != 0) {
-            device_release(dev);
+            release(dev);
             return c.EFAULT;
         }
     }
 
     var kio: c.struct_dev_io = undefined;
     if (io != null) {
-        const ci_err: c_int = c.copyin(@ptrCast(io), @ptrCast(&kio), @sizeOf(c.struct_dev_io));
+        const ci_err: c_int = ffi.vm.copyin(@ptrCast(io), @ptrCast(&kio), @sizeOf(c.struct_dev_io));
         if (ci_err != 0) {
-            device_release(dev);
+            release(dev);
             return c.EFAULT;
         }
     }
 
     if (kio.blksz == 0) {
-        device_release(dev);
+        release(dev);
         return c.EINVAL;
     }
 
@@ -360,7 +363,7 @@ pub fn device_gather_read(dev: ?*c.struct_device, buf: ?*anyopaque, nbyte: ?*usi
         offset += kio.blksz;
     }) {
         var b: c_int = 0;
-        const ci_err: c_int = c.copyin(@ptrCast(@as([*]c_int, @ptrCast(kio.blkno)) + offset / kio.blksz), @ptrCast(&b), @sizeOf(c_int));
+        const ci_err: c_int = ffi.vm.copyin(@ptrCast(@as([*]c_int, @ptrCast(kio.blkno)) + offset / kio.blksz), @ptrCast(&b), @sizeOf(c_int));
         if (ci_err != 0) {
             err = c.EFAULT;
             break;
@@ -379,41 +382,41 @@ pub fn device_gather_read(dev: ?*c.struct_device, buf: ?*anyopaque, nbyte: ?*usi
     }
 
     if (err == 0 or total > 0) {
-        const co_err: c_int = c.copyout(@ptrCast(&total), @ptrCast(nbyte), @sizeOf(usize));
+        const co_err: c_int = ffi.vm.copyout(@ptrCast(&total), @ptrCast(nbyte), @sizeOf(usize));
         if (err == 0) err = co_err;
     }
 
-    device_release(dev);
+    release(dev);
     return err;
 }
 
-/// device_scatter_write – scatter write to a device.
-pub fn device_scatter_write(dev: ?*c.struct_device, buf: ?*anyopaque, nbyte: ?*usize, io: ?*c.struct_dev_io) callconv(.c) c_int {
+/// scatterWrite – scatter write to a device.
+pub fn scatterWrite(dev: ?*c.struct_device, buf: ?*anyopaque, nbyte: ?*usize, io: ?*c.struct_dev_io) callconv(.c) c_int {
     if (!user_area(buf)) return c.EFAULT;
 
-    const ref_err: c_int = device_reference(dev);
+    const ref_err: c_int = reference(dev);
     if (ref_err != 0) return ref_err;
 
     var count: usize = 0;
     if (nbyte != null) {
-        const ci_err: c_int = c.copyin(@ptrCast(nbyte), @ptrCast(&count), @sizeOf(usize));
+        const ci_err: c_int = ffi.vm.copyin(@ptrCast(nbyte), @ptrCast(&count), @sizeOf(usize));
         if (ci_err != 0) {
-            device_release(dev);
+            release(dev);
             return c.EFAULT;
         }
     }
 
     var kio: c.struct_dev_io = undefined;
     if (io != null) {
-        const ci_err: c_int = c.copyin(@ptrCast(io), @ptrCast(&kio), @sizeOf(c.struct_dev_io));
+        const ci_err: c_int = ffi.vm.copyin(@ptrCast(io), @ptrCast(&kio), @sizeOf(c.struct_dev_io));
         if (ci_err != 0) {
-            device_release(dev);
+            release(dev);
             return c.EFAULT;
         }
     }
 
     if (kio.blksz == 0) {
-        device_release(dev);
+        release(dev);
         return c.EINVAL;
     }
 
@@ -428,7 +431,7 @@ pub fn device_scatter_write(dev: ?*c.struct_device, buf: ?*anyopaque, nbyte: ?*u
         offset += kio.blksz;
     }) {
         var b: c_int = 0;
-        const ci_err: c_int = c.copyin(@ptrCast(@as([*]c_int, @ptrCast(kio.blkno)) + offset / kio.blksz), @ptrCast(&b), @sizeOf(c_int));
+        const ci_err: c_int = ffi.vm.copyin(@ptrCast(@as([*]c_int, @ptrCast(kio.blkno)) + offset / kio.blksz), @ptrCast(&b), @sizeOf(c_int));
         if (ci_err != 0) {
             err = c.EFAULT;
             break;
@@ -447,17 +450,17 @@ pub fn device_scatter_write(dev: ?*c.struct_device, buf: ?*anyopaque, nbyte: ?*u
     }
 
     if (err == 0 or total > 0) {
-        const co_err: c_int = c.copyout(@ptrCast(&total), @ptrCast(nbyte), @sizeOf(usize));
+        const co_err: c_int = ffi.vm.copyout(@ptrCast(&total), @ptrCast(nbyte), @sizeOf(usize));
         if (err == 0) err = co_err;
     }
 
-    device_release(dev);
+    release(dev);
     return err;
 }
 
-/// device_ioctl – I/O control request.
-pub fn device_ioctl(dev: ?*c.struct_device, cmd: c_ulong, arg: ?*anyopaque) callconv(.c) c_int {
-    const ref_err: c_int = device_reference(dev);
+/// ioctl – I/O control request.
+pub fn ioctl(dev: ?*c.struct_device, cmd: c_ulong, arg: ?*anyopaque) callconv(.c) c_int {
+    const ref_err: c_int = reference(dev);
     if (ref_err != 0) return ref_err;
 
     const drv: ?*c.struct_driver = dev.?.driver;
@@ -467,38 +470,38 @@ pub fn device_ioctl(dev: ?*c.struct_device, cmd: c_ulong, arg: ?*anyopaque) call
         err = ops.?.ioctl.?(dev, cmd, arg);
     }
 
-    device_release(dev);
+    release(dev);
     return err;
 }
 
-/// device_info – return device information.
-pub fn device_info(info: ?*c.struct_devinfo) callconv(.c) c_int {
-    if (info == null) return c.EINVAL;
-    const target = info.?.cookie;
+/// info – return device information.
+pub fn info(dev_info: ?*c.struct_devinfo) callconv(.c) c_int {
+    if (dev_info == null) return c.EINVAL;
+    const target = dev_info.?.cookie;
     var i: c_ulong = 0;
     var err: c_int = c.ESRCH;
 
-    c.sched_lock();
+    sched.lock();
     var dev = device_list;
     while (dev) |d| : (dev = @ptrCast(d.next)) {
         if (i == target) {
-            info.?.cookie = i + 1;
-            info.?.id = d;
-            info.?.flags = d.flags;
-            _ = c.strlcpy(@ptrCast(&info.?.name), @ptrCast(&d.name), c.MAXDEVNAME);
+            dev_info.?.cookie = i + 1;
+            dev_info.?.id = d;
+            dev_info.?.flags = d.flags;
+            _ = lib.strlcpy(@ptrCast(&dev_info.?.name), @ptrCast(&d.name), c.MAXDEVNAME);
             err = 0;
             break;
         }
         i += 1;
     }
-    c.sched_unlock();
+    sched.unlock();
     return err;
 }
 
-/// device_init – initialize device driver module.
-pub fn device_init() callconv(.c) void {
+/// init – initialize device driver module.
+pub fn init() callconv(.c) void {
     var bi: ?*c.struct_bootinfo = null;
-    c.machine_bootinfo(@ptrCast(&bi));
+    hal.machine_bootinfo(@ptrCast(&bi));
     if (bi == null) return;
 
     const mod: ?*c.struct_module = &bi.?.driver;
@@ -518,11 +521,11 @@ const dkifn_t = ?*const anyopaque;
 
 const dkient = [40]dkifn_t{
     //  0: copyin
-    @ptrCast(&c.copyin),
+    @ptrCast(&ffi.vm.copyin),
     //  1: copyout
-    @ptrCast(&c.copyout),
+    @ptrCast(&ffi.vm.copyout),
     //  2: copyinstr
-    @ptrCast(&c.copyinstr),
+    @ptrCast(&ffi.vm.copyinstr),
     //  3: kmem_alloc
     @ptrCast(&c.kmem_alloc),
     //  4: kmem_free
@@ -540,11 +543,11 @@ const dkient = [40]dkifn_t{
     // 10: irq_detach
     @ptrCast(&c.irq_detach),
     // 11: spl0
-    @ptrCast(&c.spl0),
+    @ptrCast(&hal.spl0),
     // 12: splhigh
-    @ptrCast(&c.splhigh),
+    @ptrCast(&hal.splhigh),
     // 13: splx
-    @ptrCast(&c.splx),
+    @ptrCast(&hal.splx),
     // 14: timer_callout
     @ptrCast(&c.timer_callout),
     // 15: timer_stop
@@ -552,11 +555,11 @@ const dkient = [40]dkifn_t{
     // 16: timer_delay
     @ptrCast(&c.timer_delay),
     // 17: timer_ticks
-    @ptrCast(&c.timer_ticks),
+    @ptrCast(&ffi.timer.ticks),
     // 18: sched_lock
-    @ptrCast(&c.sched_lock),
+    @ptrCast(&ffi.sched.lock),
     // 19: sched_unlock
-    @ptrCast(&c.sched_unlock),
+    @ptrCast(&ffi.sched.unlock),
     // 20: sched_tsleep
     @ptrCast(&c.sched_tsleep),
     // 21: sched_wakeup
@@ -566,31 +569,31 @@ const dkient = [40]dkifn_t{
     // 23: task_capable
     @ptrCast(&c.task_capable),
     // 24: exception_post
-    @ptrCast(&c.exception_post),
-    // 25: device_create (local)
-    @ptrCast(&device_create),
-    // 26: device_destroy (local)
-    @ptrCast(&device_destroy),
-    // 27: device_lookup (local)
-    @ptrCast(&device_lookup),
-    // 28: device_control (local)
-    @ptrCast(&device_control),
-    // 29: device_broadcast (local)
-    @ptrCast(&device_broadcast),
-    // 30: device_private (local)
-    @ptrCast(&device_private),
+    @ptrCast(&ffi.exception.post),
+    // 25: create (local)
+    @ptrCast(&create),
+    // 26: destroy (local)
+    @ptrCast(&destroy),
+    // 27: lookup (local)
+    @ptrCast(&lookup),
+    // 28: control (local)
+    @ptrCast(&control),
+    // 29: broadcast (local)
+    @ptrCast(&broadcast),
+    // 30: privateFn (local)
+    @ptrCast(&privateFn),
     // 31: machine_bootinfo
-    @ptrCast(&c.machine_bootinfo),
+    @ptrCast(&hal.machine_bootinfo),
     // 32: machine_powerdown
-    @ptrCast(&c.machine_powerdown),
+    @ptrCast(&hal.machine_powerdown),
     // 33: sysinfo
     @ptrCast(&c.sysinfo),
     // 34: DEBUG-dependent: panic or machine_abort
-    @ptrCast(if (c.DEBUG != 0) @as(*const anyopaque, @ptrCast(&c.panic)) else @as(*const anyopaque, @ptrCast(&c.machine_abort))),
+    @ptrCast(if (c.DEBUG != 0) @as(*const anyopaque, @ptrCast(&lib.panic)) else @as(*const anyopaque, @ptrCast(&hal.machine_abort))),
     // 35: DEBUG-dependent: printf or sys_nosys
-    @ptrCast(if (c.DEBUG != 0) @as(*const anyopaque, @ptrCast(&c.printf)) else @as(*const anyopaque, @ptrCast(&c.sys_nosys))),
+    @ptrCast(if (c.DEBUG != 0) @as(*const anyopaque, @ptrCast(&lib.printf)) else @as(*const anyopaque, @ptrCast(&c.sys_nosys))),
     // 36: DEBUG-dependent: dbgctl or sys_nosys
-    @ptrCast(if (c.DEBUG != 0) @as(*const anyopaque, @ptrCast(&c.dbgctl)) else @as(*const anyopaque, @ptrCast(&c.sys_nosys))),
+    @ptrCast(if (c.DEBUG != 0) @as(*const anyopaque, @ptrCast(&hal.dbgctl)) else @as(*const anyopaque, @ptrCast(&c.sys_nosys))),
     // 37: hal_uart_lock
     @ptrCast(&c.hal_uart_lock),
     // 38: hal_uart_unlock
@@ -603,13 +606,15 @@ const dkient = [40]dkifn_t{
 // Comptime exports – public API functions with strong C linkage
 // ---------------------------------------------------------------------------
 comptime {
-    @export(&device_open, .{ .name = "device_open", .linkage = .strong });
-    @export(&device_close, .{ .name = "device_close", .linkage = .strong });
-    @export(&device_read, .{ .name = "device_read", .linkage = .strong });
-    @export(&device_write, .{ .name = "device_write", .linkage = .strong });
-    @export(&device_gather_read, .{ .name = "device_gather_read", .linkage = .strong });
-    @export(&device_scatter_write, .{ .name = "device_scatter_write", .linkage = .strong });
-    @export(&device_ioctl, .{ .name = "device_ioctl", .linkage = .strong });
-    @export(&device_info, .{ .name = "device_info", .linkage = .strong });
-    @export(&device_init, .{ .name = "device_init", .linkage = .strong });
+    if (@import("root") == @This()) {
+        @export(&open, .{ .name = "device_open", .linkage = .strong });
+        @export(&close, .{ .name = "device_close", .linkage = .strong });
+        @export(&read, .{ .name = "device_read", .linkage = .strong });
+        @export(&write, .{ .name = "device_write", .linkage = .strong });
+        @export(&gatherRead, .{ .name = "device_gather_read", .linkage = .strong });
+        @export(&scatterWrite, .{ .name = "device_scatter_write", .linkage = .strong });
+        @export(&ioctl, .{ .name = "device_ioctl", .linkage = .strong });
+        @export(&info, .{ .name = "device_info", .linkage = .strong });
+        @export(&init, .{ .name = "device_init", .linkage = .strong });
+    }
 }

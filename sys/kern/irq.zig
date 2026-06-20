@@ -1,9 +1,13 @@
 const std = @import("std");
+const ffi = @import("ffi");
+const hal = ffi.hal;
+const lib = ffi.lib;
 
-const c = @cImport({
-    @cDefine("KERNEL", "1");
-    @cInclude("zig_kernel.h");
-});
+const c = @import("c").c;
+
+const sched = ffi.sched;
+const kmem = ffi.kmem;
+const thread = ffi.thread;
 
 var IST_NONE: ?*const fn (?*anyopaque) callconv(.c) void = undefined;
 
@@ -18,32 +22,32 @@ fn irq_thread(arg: ?*anyopaque) callconv(.c) void {
     const fn_ptr = irq.ist;
     const data = irq.data;
 
-    _ = c.splhigh();
+    _ = hal.splhigh();
 
     while (true) {
         if (irq.istreq <= 0) {
-            _ = c.sched_sleep(@as(?*c.struct_event, @ptrCast(&irq.istevt)));
+            _ = sched.tsleep(@as(?*c.struct_event, @ptrCast(&irq.istevt)), 0);
         }
         irq.istreq -= 1;
         std.debug.assert(irq.istreq >= 0);
 
-        _ = c.spl0();
+        _ = hal.spl0();
         fn_ptr.?(data);
-        _ = c.splhigh();
+        _ = hal.splhigh();
     }
 }
 
-pub fn irq_attach(vector: c_int, pri: c_int, shared: c_int, isr: ?*const fn (?*anyopaque) callconv(.c) c_int, ist: ?*const fn (?*anyopaque) callconv(.c) void, data: ?*anyopaque) callconv(.c) ?*c.struct_irq {
+pub fn attach(vector: c_int, pri: c_int, shared: c_int, isr: ?*const fn (?*anyopaque) callconv(.c) c_int, ist: ?*const fn (?*anyopaque) callconv(.c) void, data: ?*anyopaque) callconv(.c) ?*c.struct_irq {
     std.debug.assert(isr != null);
 
-    c.sched_lock();
-    const irq_mem = c.kmem_alloc(@sizeOf(c.struct_irq));
+    sched.lock();
+    const irq_mem = kmem.alloc(@sizeOf(c.struct_irq));
     if (irq_mem == null) {
         @panic("irq_attach");
     }
     const irq: *c.struct_irq = @ptrCast(@alignCast(irq_mem));
 
-    _ = c.memset(irq, 0, @sizeOf(c.struct_irq));
+    _ = lib.memset(irq, 0, @sizeOf(c.struct_irq));
     irq.vector = vector;
     irq.priority = pri;
     irq.isr = isr;
@@ -51,7 +55,7 @@ pub fn irq_attach(vector: c_int, pri: c_int, shared: c_int, isr: ?*const fn (?*a
     irq.data = data;
 
     if (ist != IST_NONE) {
-        irq.thread = c.kthread_create(irq_thread, irq, ISTPRI(pri));
+        irq.thread = thread.kcreate(irq_thread, irq, ISTPRI(pri));
         if (irq.thread == null) {
             @panic("irq_attach");
         }
@@ -59,27 +63,27 @@ pub fn irq_attach(vector: c_int, pri: c_int, shared: c_int, isr: ?*const fn (?*a
     }
     irq_table[@intCast(vector)] = irq;
     const mode: c_int = if (shared != 0) c.IMODE_LEVEL else c.IMODE_EDGE;
-    c.interrupt_setup(vector, mode);
-    c.interrupt_unmask(vector, pri);
+    hal.interrupt_setup(vector, mode);
+    hal.interrupt_unmask(vector, pri);
 
-    c.sched_unlock();
+    sched.unlock();
     return irq;
 }
 
-pub fn irq_detach(irq: ?*c.struct_irq) callconv(.c) void {
+pub fn detach(irq: ?*c.struct_irq) callconv(.c) void {
     std.debug.assert(irq != null);
     std.debug.assert(irq.?.vector < c.MAXIRQS);
 
-    c.interrupt_mask(irq.?.vector);
+    hal.interrupt_mask(irq.?.vector);
     irq_table[@intCast(irq.?.vector)] = null;
     if (irq.?.thread != null) {
-        c.kthread_terminate(irq.?.thread);
+        _ = thread.kterminate(irq.?.thread);
     }
 
-    c.kmem_free(irq);
+    kmem.free(irq);
 }
 
-pub fn irq_handler(vector: c_int) callconv(.c) void {
+pub fn handler(vector: c_int) callconv(.c) void {
     const irq = irq_table[@intCast(vector)] orelse {
         return;
     };
@@ -92,13 +96,13 @@ pub fn irq_handler(vector: c_int) callconv(.c) void {
     if (rc == c.INT_CONTINUE) {
         std.debug.assert(irq.ist != IST_NONE);
         irq.istreq += 1;
-        c.sched_wakeup(@as(?*c.struct_event, @ptrCast(&irq.istevt)));
+        sched.wakeup(@as(?*c.struct_event, @ptrCast(&irq.istevt)));
         std.debug.assert(irq.istreq != 0);
     }
 }
 
-pub fn irq_info(info: ?*c.struct_irqinfo) callconv(.c) c_int {
-    var vec = info.?.cookie;
+pub fn info(irq_info_ptr: ?*c.struct_irqinfo) callconv(.c) c_int {
+    var vec = irq_info_ptr.?.cookie;
 
     while (vec < c.MAXIRQS) {
         if (irq_table[@intCast(vec)] != null) {
@@ -111,25 +115,27 @@ pub fn irq_info(info: ?*c.struct_irqinfo) callconv(.c) c_int {
     }
 
     const irq = irq_table[@intCast(vec)].?;
-    info.?.vector = irq.vector;
-    info.?.count = irq.count;
-    info.?.priority = irq.priority;
-    info.?.istreq = irq.istreq;
-    info.?.thread = irq.thread;
-    info.?.cookie = vec + 1;
+    irq_info_ptr.?.vector = irq.vector;
+    irq_info_ptr.?.count = irq.count;
+    irq_info_ptr.?.priority = irq.priority;
+    irq_info_ptr.?.istreq = irq.istreq;
+    irq_info_ptr.?.thread = irq.thread;
+    irq_info_ptr.?.cookie = vec + 1;
     return 0;
 }
 
-pub fn irq_init() callconv(.c) void {
+pub fn init() callconv(.c) void {
     @as(*usize, @ptrCast(&IST_NONE)).* = @as(usize, @bitCast(@as(isize, -1)));
-    c.interrupt_init();
-    _ = c.spl0();
+    hal.interrupt_init();
+    _ = hal.spl0();
 }
 
 comptime {
-    @export(&irq_attach, .{ .name = "irq_attach", .linkage = .strong });
-    @export(&irq_detach, .{ .name = "irq_detach", .linkage = .strong });
-    @export(&irq_handler, .{ .name = "irq_handler", .linkage = .strong });
-    @export(&irq_info, .{ .name = "irq_info", .linkage = .strong });
-    @export(&irq_init, .{ .name = "irq_init", .linkage = .strong });
+    if (@import("root") == @This()) {
+        @export(&attach, .{ .name = "irq_attach", .linkage = .strong });
+        @export(&detach, .{ .name = "irq_detach", .linkage = .strong });
+        @export(&handler, .{ .name = "irq_handler", .linkage = .strong });
+        @export(&info, .{ .name = "irq_info", .linkage = .strong });
+        @export(&init, .{ .name = "irq_init", .linkage = .strong });
+    }
 }

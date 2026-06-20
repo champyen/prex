@@ -1,8 +1,12 @@
 const std = @import("std");
-const c = @cImport({
-    @cDefine("KERNEL", "1");
-    @cInclude("zig_kernel.h");
-});
+const c = @import("c").c;
+const ffi = @import("ffi");
+const sched = ffi.sched;
+const task = ffi.task;
+const page = ffi.page;
+const kmem = ffi.kmem;
+const smp = ffi.smp;
+const thread = ffi.thread;
 
 // ---------------------------------------------------------------------------
 // Page size helpers
@@ -37,16 +41,11 @@ inline fn kvtop(va: anytype) c.paddr_t {
 // Thread / task accessors
 // ---------------------------------------------------------------------------
 
-extern fn hal_get_cpu_control() callconv(.c) ?*c.struct_cpu_control;
-
 inline fn get_curthread() *c.struct_thread {
     if (comptime @hasDecl(c, "CONFIG_SMP")) {
-        return @ptrCast(hal_get_cpu_control().?.*.active_thread.?);
+        return @ptrCast(smp.get_cpu_control().*.active_thread);
     } else {
-        const env = struct {
-            extern var curthread: c.thread_t;
-        };
-        return @ptrCast(env.curthread.?);
+        return @ptrCast(thread.curthread.?);
     }
 }
 
@@ -55,34 +54,23 @@ inline fn get_curtask() *c.struct_task {
 }
 
 // ---------------------------------------------------------------------------
-// Scheduler lock stubs
+// FFI Structures
 // ---------------------------------------------------------------------------
 
-extern fn sched_lock() callconv(.c) void;
-extern fn sched_unlock() callconv(.c) void;
-extern fn task_valid(t: c.task_t) callconv(.c) c_int;
-extern fn task_capable(cap: c_int) callconv(.c) c_int;
+
+
 extern fn copyin(src: ?*const anyopaque, dst: ?*anyopaque, n: usize) callconv(.c) c_int;
 extern fn copyout(src: ?*const anyopaque, dst: ?*anyopaque, n: usize) callconv(.c) c_int;
 
 // ---------------------------------------------------------------------------
-// Page / MMU stubs
+// MMU stubs
 // ---------------------------------------------------------------------------
 
-extern fn page_alloc(size: c.psize_t) callconv(.c) c.paddr_t;
-extern fn page_free(pa: c.paddr_t, size: c.psize_t) callconv(.c) void;
 extern fn mmu_newmap() callconv(.c) c.pgd_t;
 extern fn mmu_switch(pgd: c.pgd_t) callconv(.c) void;
 extern fn mmu_map(pgd: c.pgd_t, pa: c.paddr_t, va: c.vaddr_t, size: usize, flags: c_int) callconv(.c) c_int;
 extern fn mmu_terminate(pgd: c.pgd_t) callconv(.c) void;
 extern fn mmu_extract(pgd: c.pgd_t, addr: c.vaddr_t, size: usize) callconv(.c) c.paddr_t;
-
-// ---------------------------------------------------------------------------
-// Memory allocator stubs
-// ---------------------------------------------------------------------------
-
-extern fn kmem_alloc(n: usize) callconv(.c) ?*anyopaque;
-extern fn kmem_free(p: ?*anyopaque) callconv(.c) void;
 
 // ---------------------------------------------------------------------------
 // C memcpy/memset stubs (for page copy/zero-fill)
@@ -113,7 +101,7 @@ fn seg_init(seg: *c.struct_seg) void {
 }
 
 fn seg_create(prev: *c.struct_seg, addr: c.vaddr_t, size: usize) ?*c.struct_seg {
-    const seg_ptr = kmem_alloc(@sizeOf(c.struct_seg)) orelse return null;
+    const seg_ptr = kmem.alloc(@sizeOf(c.struct_seg)) orelse return null;
     const seg: *c.struct_seg = @ptrCast(@alignCast(seg_ptr));
 
     seg.addr = addr;
@@ -140,7 +128,7 @@ fn seg_delete(head: *c.struct_seg, seg: *c.struct_seg) void {
         }
     }
     if (head != seg) {
-        kmem_free(@ptrCast(@alignCast(seg)));
+        kmem.free(@ptrCast(@alignCast(seg)));
     }
 }
 
@@ -190,7 +178,7 @@ fn seg_free(head: *c.struct_seg, seg: *c.struct_seg) void {
         seg.next = next.*.next;
         next.*.next.*.prev = seg;
         seg.size += next.*.size;
-        kmem_free(@ptrCast(@alignCast(next)));
+        kmem.free(@ptrCast(@alignCast(next)));
     }
 
     const prev = seg.prev;
@@ -198,7 +186,7 @@ fn seg_free(head: *c.struct_seg, seg: *c.struct_seg) void {
         prev.*.next = seg.next;
         seg.next.*.prev = prev;
         prev.*.size += seg.size;
-        kmem_free(@ptrCast(@alignCast(seg)));
+        kmem.free(@ptrCast(@alignCast(seg)));
     }
 }
 
@@ -231,67 +219,67 @@ fn seg_reserve(head: *c.struct_seg, addr: c.vaddr_t, size: usize) ?*c.struct_seg
 // Internal do_* helpers
 // ---------------------------------------------------------------------------
 
-fn do_allocate(map: *c.struct_vm_map, addr: *?*anyopaque, size: usize, anywhere: c_int) c_int {
+fn do_allocate(vm_map: *c.struct_vm_map, addr: *?*anyopaque, size: usize, anywhere: c_int) c_int {
     var seg: ?*c.struct_seg = null;
     const vaddr_val = @intFromPtr(addr.*);
 
     if (size == 0) return c.EINVAL;
-    if (map.total + size >= c.MAXMEM) return c.ENOMEM;
+    if (vm_map.total + size >= c.MAXMEM) return c.ENOMEM;
 
     if (anywhere != 0) {
         const alloc_size = round_page(size);
-        seg = seg_alloc(&map.head, alloc_size) orelse return c.ENOMEM;
+        seg = seg_alloc(&vm_map.head, alloc_size) orelse return c.ENOMEM;
     } else {
         const start = trunc_page(vaddr_val);
         const end = round_page(start + size);
         const total = end - start;
-        seg = seg_reserve(&map.head, @intCast(start), total) orelse return c.ENOMEM;
+        seg = seg_reserve(&vm_map.head, @intCast(start), total) orelse return c.ENOMEM;
     }
 
     seg.?.flags = c.SEG_READ | c.SEG_WRITE;
 
-    const pa = page_alloc(@intCast(seg.?.size));
+    const pa = page.alloc(@intCast(seg.?.size));
     if (pa == 0) {
-        seg_free(&map.head, seg.?);
+        seg_free(&vm_map.head, seg.?);
         return c.ENOMEM;
     }
 
-    if (mmu_map(map.pgd, pa, seg.?.addr, seg.?.size, c.PG_WRITE) != 0) {
-        page_free(pa, @intCast(seg.?.size));
-        seg_free(&map.head, seg.?);
+    if (mmu_map(vm_map.pgd, pa, seg.?.addr, seg.?.size, c.PG_WRITE) != 0) {
+        page.free(pa, @intCast(seg.?.size));
+        seg_free(&vm_map.head, seg.?);
         return c.ENOMEM;
     }
 
     seg.?.phys = pa;
     @memset(@as([*]u8, @ptrCast(ptokv(pa).?))[0..seg.?.size], 0);
     addr.* = @ptrFromInt(seg.?.addr);
-    map.total += seg.?.size;
+    vm_map.total += seg.?.size;
     return 0;
 }
 
-fn do_free(map: *c.struct_vm_map, addr: ?*anyopaque) c_int {
+fn do_free(vm_map: *c.struct_vm_map, addr: ?*anyopaque) c_int {
     const va = trunc_page(@intFromPtr(addr));
 
-    const seg = seg_lookup(&map.head, @intCast(va), 1) orelse return c.EINVAL;
+    const seg = seg_lookup(&vm_map.head, @intCast(va), 1) orelse return c.EINVAL;
     if (seg.addr != @as(c.vaddr_t, @intCast(va)) or seg.flags & c.SEG_FREE != 0) {
         return c.EINVAL;
     }
 
-    _ = mmu_map(map.pgd, seg.phys, seg.addr, seg.size, c.PG_UNMAP);
+    _ = mmu_map(vm_map.pgd, seg.phys, seg.addr, seg.size, c.PG_UNMAP);
 
     if (seg.flags & c.SEG_SHARED == 0 and seg.flags & c.SEG_MAPPED == 0) {
-        page_free(seg.phys, @intCast(seg.size));
+        page.free(seg.phys, @intCast(seg.size));
     }
 
-    map.total -= seg.size;
-    seg_free(&map.head, seg);
+    vm_map.total -= seg.size;
+    seg_free(&vm_map.head, seg);
     return 0;
 }
 
-fn do_attribute(map: *c.struct_vm_map, addr: ?*anyopaque, attr: c_int) c_int {
+fn do_attribute(vm_map: *c.struct_vm_map, addr: ?*anyopaque, attr: c_int) c_int {
     const va = trunc_page(@intFromPtr(addr));
 
-    const seg = seg_lookup(&map.head, @intCast(va), 1) orelse return c.EINVAL;
+    const seg = seg_lookup(&vm_map.head, @intCast(va), 1) orelse return c.EINVAL;
     if (seg.addr != @as(c.vaddr_t, @intCast(va)) or seg.flags & c.SEG_FREE != 0) return c.EINVAL;
     if (seg.flags & c.SEG_MAPPED != 0) return c.EINVAL;
 
@@ -311,13 +299,13 @@ fn do_attribute(map: *c.struct_vm_map, addr: ?*anyopaque, attr: c_int) c_int {
 
     if (seg.flags & c.SEG_SHARED != 0) {
         const old_pa = seg.phys;
-        const new_pa = page_alloc(@intCast(seg.size));
+        const new_pa = page.alloc(@intCast(seg.size));
         if (new_pa == 0) return c.ENOMEM;
 
         @memcpy(@as([*]u8, @ptrCast(ptokv(new_pa).?))[0..seg.size], @as([*]const u8, @ptrCast(ptokv(old_pa).?))[0..seg.size]);
 
-        if (mmu_map(map.pgd, new_pa, seg.addr, seg.size, map_type) != 0) {
-            page_free(new_pa, @intCast(seg.size));
+        if (mmu_map(vm_map.pgd, new_pa, seg.addr, seg.size, map_type) != 0) {
+            page.free(new_pa, @intCast(seg.size));
             return c.ENOMEM;
         }
         seg.phys = new_pa;
@@ -330,7 +318,7 @@ fn do_attribute(map: *c.struct_vm_map, addr: ?*anyopaque, attr: c_int) c_int {
         seg.sh_next = seg;
         seg.sh_prev = seg;
     } else {
-        if (mmu_map(map.pgd, seg.phys, seg.addr, seg.size, map_type) != 0) return c.ENOMEM;
+        if (mmu_map(vm_map.pgd, seg.phys, seg.addr, seg.size, map_type) != 0) return c.ENOMEM;
     }
 
     seg.flags = new_flags;
@@ -396,7 +384,7 @@ fn do_dup(org_map: *c.struct_vm_map) ?*c.struct_vm_map {
         if (src == &org_map.head) {
             dest = tmp;
         } else {
-            const dest_ptr = kmem_alloc(@sizeOf(c.struct_seg)) orelse return null;
+            const dest_ptr = kmem.alloc(@sizeOf(c.struct_seg)) orelse return null;
             dest = @ptrCast(@alignCast(dest_ptr));
             dest.* = src.*;
             dest.prev = tmp;
@@ -414,7 +402,7 @@ fn do_dup(org_map: *c.struct_vm_map) ?*c.struct_vm_map {
             }
 
             if (dest.flags & c.SEG_SHARED == 0) {
-                dest.phys = page_alloc(@intCast(src.size));
+                dest.phys = page.alloc(@intCast(src.size));
                 if (dest.phys == 0) return null;
 
                 @memcpy(@as([*]u8, @ptrCast(ptokv(dest.phys).?))[0..src.size], @as([*]const u8, @ptrCast(ptokv(src.phys).?))[0..src.size]);
@@ -451,36 +439,36 @@ fn do_dup(org_map: *c.struct_vm_map) ?*c.struct_vm_map {
 // ---------------------------------------------------------------------------
 
 fn vm_create_internal() ?*c.struct_vm_map {
-    const map_ptr = kmem_alloc(@sizeOf(c.struct_vm_map)) orelse return null;
-    const map: *c.struct_vm_map = @ptrCast(@alignCast(map_ptr));
+    const map_ptr = kmem.alloc(@sizeOf(c.struct_vm_map)) orelse return null;
+    const vm_map: *c.struct_vm_map = @ptrCast(@alignCast(map_ptr));
 
-    map.refcnt = 1;
-    map.total = 0;
+    vm_map.refcnt = 1;
+    vm_map.total = 0;
 
-    map.pgd = mmu_newmap();
-    if (map.pgd == c.NO_PGD) {
-        kmem_free(map_ptr);
+    vm_map.pgd = mmu_newmap();
+    if (vm_map.pgd == c.NO_PGD) {
+        kmem.free(map_ptr);
         return null;
     }
 
-    seg_init(&map.head);
-    return map;
+    seg_init(&vm_map.head);
+    return vm_map;
 }
 
-pub export fn vm_create() callconv(.c) c.vm_map_t {
-    sched_lock();
-    defer sched_unlock();
+pub fn create() callconv(.c) c.vm_map_t {
+    sched.lock();
+    defer sched.unlock();
     const m = vm_create_internal();
     return @ptrCast(m);
 }
 
-pub export fn vm_allocate(task: c.task_t, addr: *?*anyopaque, size: usize, anywhere: c_int) callconv(.c) c_int {
-    const task_opt: ?*c.struct_task = @ptrCast(task);
-    sched_lock();
-    defer sched_unlock();
+pub fn allocate(tsk: c.task_t, addr: *?*anyopaque, size: usize, anywhere: c_int) callconv(.c) c_int {
+    const task_opt: ?*c.struct_task = @ptrCast(tsk);
+    sched.lock();
+    defer sched.unlock();
 
-    if (task_valid(task) == 0) return c.ESRCH;
-    if (task_opt != get_curtask() and task_capable(c.CAP_EXTMEM) == 0) return c.EPERM;
+    if (task.valid(tsk) == 0) return c.ESRCH;
+    if (task_opt != get_curtask() and task.capable(c.CAP_EXTMEM) == 0) return c.EPERM;
 
     var uaddr: ?*anyopaque = null;
     _ = copyin(@as(?*const anyopaque, @ptrCast(addr)), @as(?*anyopaque, @ptrCast(&uaddr)), @sizeOf(?*anyopaque));
@@ -496,53 +484,53 @@ pub export fn vm_allocate(task: c.task_t, addr: *?*anyopaque, size: usize, anywh
     return err;
 }
 
-pub export fn vm_free(task: c.task_t, addr: ?*anyopaque) callconv(.c) c_int {
-    const task_opt: ?*c.struct_task = @ptrCast(task);
-    sched_lock();
-    defer sched_unlock();
+pub fn free(tsk: c.task_t, addr: ?*anyopaque) callconv(.c) c_int {
+    const task_opt: ?*c.struct_task = @ptrCast(tsk);
+    sched.lock();
+    defer sched.unlock();
 
-    if (task_valid(task) == 0) return c.ESRCH;
-    if (task_opt != get_curtask() and task_capable(c.CAP_EXTMEM) == 0) return c.EPERM;
+    if (task.valid(tsk) == 0) return c.ESRCH;
+    if (task_opt != get_curtask() and task.capable(c.CAP_EXTMEM) == 0) return c.EPERM;
     if (!user_area(addr)) return c.EFAULT;
 
     return do_free(task_opt.?.map.?, addr);
 }
 
-pub export fn vm_attribute(task: c.task_t, addr: ?*anyopaque, attr: c_int) callconv(.c) c_int {
-    const task_opt: ?*c.struct_task = @ptrCast(task);
-    sched_lock();
-    defer sched_unlock();
+pub fn attribute(tsk: c.task_t, addr: ?*anyopaque, attr: c_int) callconv(.c) c_int {
+    const task_opt: ?*c.struct_task = @ptrCast(tsk);
+    sched.lock();
+    defer sched.unlock();
 
     if (attr == 0 or attr & ~(c.PROT_READ | c.PROT_WRITE) != 0) return c.EINVAL;
-    if (task_valid(task) == 0) return c.ESRCH;
-    if (task_opt != get_curtask() and task_capable(c.CAP_EXTMEM) == 0) return c.EPERM;
+    if (task.valid(tsk) == 0) return c.ESRCH;
+    if (task_opt != get_curtask() and task.capable(c.CAP_EXTMEM) == 0) return c.EPERM;
     if (!user_area(addr)) return c.EFAULT;
 
     return do_attribute(task_opt.?.map.?, addr, attr);
 }
 
-pub export fn vm_map(target: c.task_t, addr: ?*anyopaque, size: usize, alloc: *?*anyopaque) callconv(.c) c_int {
+pub fn map(target: c.task_t, addr: ?*anyopaque, size: usize, alloc: *?*anyopaque) callconv(.c) c_int {
     const target_opt: ?*c.struct_task = @ptrCast(target);
-    sched_lock();
-    defer sched_unlock();
+    sched.lock();
+    defer sched.unlock();
 
-    if (task_valid(target) == 0) return c.ESRCH;
+    if (task.valid(target) == 0) return c.ESRCH;
     if (target_opt == get_curtask()) return c.EINVAL;
-    if (task_capable(c.CAP_EXTMEM) == 0) return c.EPERM;
+    if (task.capable(c.CAP_EXTMEM) == 0) return c.EPERM;
     if (!user_area(addr)) return c.EFAULT;
 
     return do_map(target_opt.?.map.?, addr, size, alloc);
 }
 
-pub export fn vm_terminate(map: c.vm_map_t) callconv(.c) void {
-    const map_opt: ?*c.struct_vm_map = @ptrCast(map);
+pub fn terminate(vm_map: c.vm_map_t) callconv(.c) void {
+    const map_opt: ?*c.struct_vm_map = @ptrCast(vm_map);
     if (map_opt.?.refcnt > 0) {
         map_opt.?.refcnt -= 1;
         if (map_opt.?.refcnt > 0) return;
     }
 
-    sched_lock();
-    defer sched_unlock();
+    sched.lock();
+    defer sched.unlock();
 
     var seg: *c.struct_seg = &map_opt.?.head;
     while (true) {
@@ -550,7 +538,7 @@ pub export fn vm_terminate(map: c.vm_map_t) callconv(.c) void {
             _ = mmu_map(map_opt.?.pgd, seg.phys, seg.addr, seg.size, c.PG_UNMAP);
 
             if (seg.flags & c.SEG_SHARED == 0 and seg.flags & c.SEG_MAPPED == 0) {
-                page_free(seg.phys, @intCast(seg.size));
+                page.free(seg.phys, @intCast(seg.size));
             }
         }
         const tmp = seg;
@@ -564,36 +552,36 @@ pub export fn vm_terminate(map: c.vm_map_t) callconv(.c) void {
     }
 
     mmu_terminate(map_opt.?.pgd);
-    kmem_free(@ptrCast(@alignCast(map_opt)));
+    kmem.free(@ptrCast(@alignCast(map_opt)));
 }
 
-pub export fn vm_dup(org_map: c.vm_map_t) callconv(.c) c.vm_map_t {
+pub fn dup(org_map: c.vm_map_t) callconv(.c) c.vm_map_t {
     const org_map_opt: ?*c.struct_vm_map = @ptrCast(org_map);
-    sched_lock();
-    defer sched_unlock();
+    sched.lock();
+    defer sched.unlock();
     return @ptrCast(do_dup(org_map_opt.?));
 }
 
-pub export fn vm_switch(map: c.vm_map_t) callconv(.c) void {
-    const map_opt: ?*c.struct_vm_map = @ptrCast(map);
+pub fn @"switch"(vm_map: c.vm_map_t) callconv(.c) void {
+    const map_opt: ?*c.struct_vm_map = @ptrCast(vm_map);
     if (map_opt != &kernel_map) {
         mmu_switch(map_opt.?.pgd);
     }
 }
 
-pub export fn vm_reference(map: c.vm_map_t) callconv(.c) c_int {
-    const map_opt: ?*c.struct_vm_map = @ptrCast(map);
+pub fn reference(vm_map: c.vm_map_t) callconv(.c) c_int {
+    const map_opt: ?*c.struct_vm_map = @ptrCast(vm_map);
     map_opt.?.refcnt += 1;
     return 0;
 }
 
-pub export fn vm_load(map: c.vm_map_t, mod: *c.struct_module, stack: *?*anyopaque) callconv(.c) c_int {
-    const map_opt: ?*c.struct_vm_map = @ptrCast(map);
+pub fn load(vm_map: c.vm_map_t, mod: *c.struct_module, stack: *?*anyopaque) callconv(.c) c_int {
+    const map_opt: ?*c.struct_vm_map = @ptrCast(vm_map);
     const src_addr: usize = @intFromPtr(ptokv(mod.*.phys));
     var text: ?*anyopaque = @as(?*anyopaque, @ptrFromInt(mod.*.text));
     var data: ?*anyopaque = @as(?*anyopaque, @ptrFromInt(mod.*.data));
 
-    vm_switch(map);
+    @"switch"(vm_map);
 
     var err = do_allocate(@ptrCast(@alignCast(map_opt.?)), &text, mod.textsz, 0);
     if (err != 0) return err;
@@ -614,46 +602,46 @@ pub export fn vm_load(map: c.vm_map_t, mod: *c.struct_module, stack: *?*anyopaqu
     err = do_allocate(@ptrCast(@alignCast(map_opt.?)), stack, c.DFLSTKSZ, 0);
     if (err != 0) return err;
 
-    page_free(mod.*.phys, @intCast(mod.*.size));
+    page.free(mod.*.phys, @intCast(mod.*.size));
     return 0;
 }
 
-pub export fn vm_translate(addr: c.vaddr_t, size: usize) callconv(.c) c.paddr_t {
+pub fn translate(addr: c.vaddr_t, size: usize) callconv(.c) c.paddr_t {
     const map_ptr = get_curtask().map;
     if (map_ptr == null) return 0;
     return mmu_extract(map_ptr.*.pgd, addr, size);
 }
 
-pub export fn vm_info(info: *c.struct_vminfo) callconv(.c) c_int {
-    const target = info.cookie;
-    const task = info.task;
-    const task_opt: ?*c.struct_task = @ptrCast(task);
+pub fn info(vminfo: *c.struct_vminfo) callconv(.c) c_int {
+    const target = vminfo.cookie;
+    const tsk = vminfo.task;
+    const task_opt: ?*c.struct_task = @ptrCast(tsk);
 
-    sched_lock();
-    defer sched_unlock();
+    sched.lock();
+    defer sched.unlock();
 
-    if (task_valid(task) == 0) return c.ESRCH;
+    if (task.valid(tsk) == 0) return c.ESRCH;
 
-    const map: *c.struct_vm_map = @ptrCast(@alignCast(task_opt.?.map.?));
-    var seg: *c.struct_seg = &map.head;
+    const vm_map: *c.struct_vm_map = @ptrCast(@alignCast(task_opt.?.map.?));
+    var seg: *c.struct_seg = &vm_map.head;
     var i: c_ulong = 0;
     while (true) {
         if (i == target) {
-            info.cookie = i + 1;
-            info.virt = seg.addr;
-            info.size = seg.size;
-            info.flags = seg.flags;
-            info.phys = seg.phys;
+            vminfo.cookie = i + 1;
+            vminfo.virt = seg.addr;
+            vminfo.size = seg.size;
+            vminfo.flags = seg.flags;
+            vminfo.phys = seg.phys;
             return 0;
         }
         i += 1;
         seg = seg.next;
-        if (seg == &map.head) break;
+        if (seg == &vm_map.head) break;
     }
     return c.ESRCH;
 }
 
-pub export fn vm_init() callconv(.c) void {
+pub fn init() callconv(.c) void {
     const pgd = mmu_newmap();
     if (pgd == c.NO_PGD) {
         while (true) {}
@@ -663,4 +651,22 @@ pub export fn vm_init() callconv(.c) void {
 
     seg_init(&kernel_map.head);
     c.kernel_task.map = &kernel_map;
+}
+
+comptime {
+    if (@import("root") == @This()) {
+        @export(&create, .{ .name = "vm_create", .linkage = .strong });
+        @export(&allocate, .{ .name = "vm_allocate", .linkage = .strong });
+        @export(&free, .{ .name = "vm_free", .linkage = .strong });
+        @export(&attribute, .{ .name = "vm_attribute", .linkage = .strong });
+        @export(&map, .{ .name = "vm_map", .linkage = .strong });
+        @export(&terminate, .{ .name = "vm_terminate", .linkage = .strong });
+        @export(&dup, .{ .name = "vm_dup", .linkage = .strong });
+        @export(&@"switch", .{ .name = "vm_switch", .linkage = .strong });
+        @export(&reference, .{ .name = "vm_reference", .linkage = .strong });
+        @export(&load, .{ .name = "vm_load", .linkage = .strong });
+        @export(&translate, .{ .name = "vm_translate", .linkage = .strong });
+        @export(&info, .{ .name = "vm_info", .linkage = .strong });
+        @export(&init, .{ .name = "vm_init", .linkage = .strong });
+    }
 }
