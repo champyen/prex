@@ -7,6 +7,7 @@ comptime {
     @export(&strnlen, .{ .name = "strnlen", .linkage = .strong });
     @export(&memcpy, .{ .name = "memcpy", .linkage = .strong });
     @export(&memset, .{ .name = "memset", .linkage = .strong });
+    @export(&memmove, .{ .name = "memmove", .linkage = .strong });
 }
 
 fn strlen(str: [*c]const u8) callconv(.c) usize {
@@ -74,6 +75,25 @@ fn memset(dest: ?*anyopaque, ch: c_int, count: usize) callconv(.c) ?*anyopaque {
     var i: usize = 0;
     while (i < count) : (i += 1) {
         d[i] = byte;
+    }
+    return dest;
+}
+
+fn memmove(dest: ?*anyopaque, src: ?*const anyopaque, count: usize) callconv(.c) ?*anyopaque {
+    if (count == 0 or dest == null or src == null) return dest;
+    const d: [*]volatile u8 = @ptrCast(dest.?);
+    const s: [*]volatile const u8 = @ptrCast(src.?);
+    if (@intFromPtr(d) < @intFromPtr(s)) {
+        var i: usize = 0;
+        while (i < count) : (i += 1) {
+            d[i] = s[i];
+        }
+    } else {
+        var i: usize = count;
+        while (i > 0) {
+            i -= 1;
+            d[i] = s[i];
+        }
     }
     return dest;
 }

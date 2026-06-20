@@ -26,6 +26,9 @@ comptime {
         @export(&__aeabi_memclr, .{ .name = "__aeabi_memclr", .linkage = .strong });
         @export(&__aeabi_memclr, .{ .name = "__aeabi_memclr4", .linkage = .strong });
         @export(&__aeabi_memclr, .{ .name = "__aeabi_memclr8", .linkage = .strong });
+        @export(&__aeabi_memmove, .{ .name = "__aeabi_memmove", .linkage = .strong });
+        @export(&__aeabi_memmove, .{ .name = "__aeabi_memmove4", .linkage = .strong });
+        @export(&__aeabi_memmove, .{ .name = "__aeabi_memmove8", .linkage = .strong });
     }
 }
 
@@ -51,4 +54,22 @@ fn __aeabi_memset(dest: ?*anyopaque, n: usize, val: c_int) callconv(.c) void {
 
 fn __aeabi_memclr(dest: ?*anyopaque, n: usize) callconv(.c) void {
     __aeabi_memset(dest, n, 0);
+}
+
+fn __aeabi_memmove(dest: ?*anyopaque, src: ?*const anyopaque, n: usize) callconv(.c) void {
+    @setRuntimeSafety(false);
+    const d: [*]volatile u8 = @ptrCast(dest);
+    const s: [*]volatile const u8 = @ptrCast(src);
+    if (@intFromPtr(d) < @intFromPtr(s)) {
+        var i: usize = 0;
+        while (i < n) : (i += 1) {
+            d[i] = s[i];
+        }
+    } else {
+        var i: usize = n;
+        while (i > 0) {
+            i -= 1;
+            d[i] = s[i];
+        }
+    }
 }
