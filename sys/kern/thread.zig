@@ -12,7 +12,7 @@ const sched = ffi.sched;
 const task = ffi.task;
 const smp = ffi.smp;
 
-var idle_thread: c.struct_thread = std.mem.zeroes(c.struct_thread);
+pub var idle_thread: c.struct_thread = std.mem.zeroes(c.struct_thread);
 var zombie: c.thread_t = null;
 var thread_list: c.struct_list = undefined;
 
@@ -101,7 +101,7 @@ pub fn create(tsk: c.task_t, tp: ?*c.thread_t) callconv(.c) c_int {
 
     if ((kutil.get_curtask().?.*.flags & c.TF_SYSTEM) == 0) {
         var tmp: c.thread_t = null;
-        if (ffi.vm.copyout(@as(?*const anyopaque, @ptrCast(&tmp)), @as(?*anyopaque, @ptrCast(tp)), @sizeOf(c.thread_t)) != 0) {
+        if (ffi.hal.copyout(@as(?*const anyopaque, @ptrCast(&tmp)), @as(?*anyopaque, @ptrCast(tp)), @sizeOf(c.thread_t)) != 0) {
             return c.EFAULT;
         }
     }
@@ -130,7 +130,7 @@ pub fn create(tsk: c.task_t, tp: ?*c.thread_t) callconv(.c) c_int {
             tp_ptr.* = t;
         }
     } else {
-        _ = ffi.vm.copyout(@as(?*const anyopaque, @ptrCast(&t)), @as(?*anyopaque, @ptrCast(tp)), @sizeOf(c.thread_t));
+        _ = ffi.hal.copyout(@as(?*const anyopaque, @ptrCast(&t)), @as(?*anyopaque, @ptrCast(tp)), @sizeOf(c.thread_t));
     }
 
     return 0;
@@ -274,12 +274,12 @@ pub fn schedparam(t: c.thread_t, op: c_int, param: ?*c_int) callconv(.c) c_int {
     switch (op) {
         c.SOP_GETPRI => {
             pri = sched.get_pri(t);
-            if (ffi.vm.copyout(&pri, param, @sizeOf(c_int)) != 0) {
+            if (ffi.hal.copyout(&pri, param, @sizeOf(c_int)) != 0) {
                 err = c.EINVAL;
             }
         },
         c.SOP_SETPRI => {
-            if (ffi.vm.copyin(param, &pri, @sizeOf(c_int)) != 0) {
+            if (ffi.hal.copyin(param, &pri, @sizeOf(c_int)) != 0) {
                 err = c.EINVAL;
             } else {
                 if (pri < 0) pri = 0;
@@ -299,12 +299,12 @@ pub fn schedparam(t: c.thread_t, op: c_int, param: ?*c_int) callconv(.c) c_int {
         },
         c.SOP_GETPOLICY => {
             policy = sched.get_policy(t);
-            if (ffi.vm.copyout(&policy, param, @sizeOf(c_int)) != 0) {
+            if (ffi.hal.copyout(&policy, param, @sizeOf(c_int)) != 0) {
                 err = c.EINVAL;
             }
         },
         c.SOP_SETPOLICY => {
-            if (ffi.vm.copyin(param, &policy, @sizeOf(c_int)) != 0) {
+            if (ffi.hal.copyin(param, &policy, @sizeOf(c_int)) != 0) {
                 err = c.EINVAL;
             } else {
                 err = sched.set_policy(t, policy);

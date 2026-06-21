@@ -79,7 +79,7 @@ fn release(s: c.sem_t) void {
 
 fn copyin(usp: ?*c.sem_t, ksp: ?*c.sem_t) c_int {
     var s: c.sem_t = undefined;
-    if (ffi.vm.copyin(@as(?*const anyopaque, @ptrCast(usp)), @as(?*anyopaque, @ptrCast(&s)), @sizeOf(c.sem_t)) != 0 or !valid(s)) {
+    if (ffi.hal.copyin(@as(?*const anyopaque, @ptrCast(usp)), @as(?*anyopaque, @ptrCast(&s)), @sizeOf(c.sem_t)) != 0 or !valid(s)) {
         return c.EINVAL;
     }
     ksp.?.* = s;
@@ -96,7 +96,7 @@ pub fn init(sp: ?*c.sem_t, value: c_uint) callconv(.c) c_int {
     }
 
     var s: c.sem_t = undefined;
-    if (ffi.vm.copyin(@as(?*const anyopaque, @ptrCast(sp)), @as(?*anyopaque, @ptrCast(&s)), @sizeOf(c.sem_t)) != 0) {
+    if (ffi.hal.copyin(@as(?*const anyopaque, @ptrCast(sp)), @as(?*anyopaque, @ptrCast(&s)), @sizeOf(c.sem_t)) != 0) {
         return c.EFAULT;
     }
 
@@ -117,7 +117,7 @@ pub fn init(sp: ?*c.sem_t, value: c_uint) callconv(.c) c_int {
             return c.ENOSPC;
         };
         s = @ptrCast(@alignCast(mem));
-        if (ffi.vm.copyout(@as(?*const anyopaque, @ptrCast(&s)), @as(?*anyopaque, @ptrCast(sp)), @sizeOf(c.sem_t)) != 0) {
+        if (ffi.hal.copyout(@as(?*const anyopaque, @ptrCast(&s)), @as(?*anyopaque, @ptrCast(sp)), @sizeOf(c.sem_t)) != 0) {
             kmem.free(s);
             sched.unlock();
             return c.EFAULT;
@@ -251,7 +251,7 @@ pub fn getValue(sp: ?*c.sem_t, value: ?*c_uint) callconv(.c) c_int {
         sched.unlock();
         return c.EINVAL;
     }
-    if (ffi.vm.copyout(@as(?*const anyopaque, @ptrCast(&s.*.value)), @as(?*anyopaque, @ptrCast(value)), @sizeOf(@TypeOf(s.*.value))) != 0) {
+    if (ffi.hal.copyout(@as(?*const anyopaque, @ptrCast(&s.*.value)), @as(?*anyopaque, @ptrCast(value)), @sizeOf(@TypeOf(s.*.value))) != 0) {
         sched.unlock();
         return c.EFAULT;
     }

@@ -1,6 +1,7 @@
 const std = @import("std");
 const c = @import("c").c;
 const ffi = @import("ffi");
+const hal = ffi.hal;
 const kutil = ffi.kutil;
 
 const sched = ffi.sched;
@@ -25,8 +26,6 @@ const assert = std.debug.assert;
 
 
 
-extern fn copyin(src: ?*const anyopaque, dst: ?*anyopaque, n: usize) callconv(.c) c_int;
-extern fn copyout(src: ?*const anyopaque, dst: ?*anyopaque, n: usize) callconv(.c) c_int;
 
 // ---------------------------------------------------------------------------
 // Kernel map (module-level)
@@ -211,7 +210,7 @@ fn do_map(vm_map: *c.struct_vm_map, addr: ?*anyopaque, size: usize, alloc: *?*an
 
     // check fault
     var tmp: ?*anyopaque = null;
-    if (copyout(@ptrCast(&tmp), @ptrCast(alloc), @sizeOf(?*anyopaque)) != 0) return c.EFAULT;
+    if (hal.copyout(@ptrCast(&tmp), @ptrCast(alloc), @sizeOf(?*anyopaque)) != 0) return c.EFAULT;
 
     const start = kutil.trunc_page(@intFromPtr(addr));
     const end = kutil.round_page(@intFromPtr(addr) + size);
@@ -227,7 +226,7 @@ fn do_map(vm_map: *c.struct_vm_map, addr: ?*anyopaque, size: usize, alloc: *?*an
     const seg = seg_create(&curmap.head, @intCast(start), alloc_size) orelse return c.ENOMEM;
     seg.flags = tgt.flags | c.SEG_MAPPED;
 
-    _ = copyout(@ptrCast(&addr), @ptrCast(alloc), @sizeOf(?*anyopaque));
+    _ = hal.copyout(@ptrCast(&addr), @ptrCast(alloc), @sizeOf(?*anyopaque));
 
     curmap.total += alloc_size;
     return 0;
@@ -251,7 +250,7 @@ pub fn allocate(tsk: ?*c.struct_task, addr: [*c]?*anyopaque, size: usize, anywhe
         sched.unlock();
         return c.EPERM;
     }
-    if (copyin(@ptrCast(addr), @ptrCast(&uaddr), @sizeOf(?*anyopaque)) != 0) {
+    if (hal.copyin(@ptrCast(addr), @ptrCast(&uaddr), @sizeOf(?*anyopaque)) != 0) {
         sched.unlock();
         return c.EFAULT;
     }
@@ -262,7 +261,7 @@ pub fn allocate(tsk: ?*c.struct_task, addr: [*c]?*anyopaque, size: usize, anywhe
 
     error_val = do_allocate(tsk.?.map.?, &uaddr, size, anywhere);
     if (error_val == 0) {
-        if (copyout(@ptrCast(&uaddr), @ptrCast(addr), @sizeOf(?*anyopaque)) != 0) {
+        if (hal.copyout(@ptrCast(&uaddr), @ptrCast(addr), @sizeOf(?*anyopaque)) != 0) {
             error_val = c.EFAULT;
         }
     }

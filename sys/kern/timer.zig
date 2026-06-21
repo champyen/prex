@@ -213,7 +213,7 @@ pub fn sleep(msec: c_ulong, remain: ?*c_ulong) callconv(.c) c_int {
     const left = delay(msec);
 
     if (remain != null) {
-        if (ffi.vm.copyout(@ptrCast(&left), @ptrCast(remain), @sizeOf(c_ulong)) != 0)
+        if (ffi.hal.copyout(@ptrCast(&left), @ptrCast(remain), @sizeOf(c_ulong)) != 0)
             return c.EFAULT;
     }
     if (left > 0)
@@ -244,7 +244,7 @@ pub fn alarm(msec: c_ulong, remain: ?*c_ulong) callconv(.c) c_int {
     }
 
     if (remain != null) {
-        if (ffi.vm.copyout(@ptrCast(&left), @ptrCast(remain), @sizeOf(c_ulong)) != 0)
+        if (ffi.hal.copyout(@ptrCast(&left), @ptrCast(remain), @sizeOf(c_ulong)) != 0)
             return c.EFAULT;
     }
     return 0;

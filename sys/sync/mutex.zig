@@ -63,7 +63,7 @@ fn valid(m: c.mutex_t) c_int {
 
 fn copyin(ump: ?*c.mutex_t, kmp: ?*c.mutex_t) c_int {
     var m: c.mutex_t = undefined;
-    if (ffi.vm.copyin(@as(?*const anyopaque, @ptrCast(ump)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.mutex_t)) != 0) {
+    if (ffi.hal.copyin(@as(?*const anyopaque, @ptrCast(ump)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.mutex_t)) != 0) {
         return c.EFAULT;
     }
 
@@ -72,7 +72,7 @@ fn copyin(ump: ?*c.mutex_t, kmp: ?*c.mutex_t) c_int {
         if (error_code != 0) {
             return error_code;
         }
-        _ = ffi.vm.copyin(@as(?*const anyopaque, @ptrCast(ump)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.mutex_t));
+        _ = ffi.hal.copyin(@as(?*const anyopaque, @ptrCast(ump)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.mutex_t));
     } else {
         if (valid(m) == 0) {
             return c.EINVAL;
@@ -144,7 +144,7 @@ pub fn init(mp: ?*c.mutex_t) callconv(.c) c_int {
     m.*.holder = null;
     m.*.priority = c.MINPRI;
 
-    if (ffi.vm.copyout(@as(?*const anyopaque, @ptrCast(&m)), @as(?*anyopaque, @ptrCast(mp)), @sizeOf(c.mutex_t)) != 0) {
+    if (ffi.hal.copyout(@as(?*const anyopaque, @ptrCast(&m)), @as(?*anyopaque, @ptrCast(mp)), @sizeOf(c.mutex_t)) != 0) {
         kmem.free(m);
         return c.EFAULT;
     }
@@ -165,7 +165,7 @@ fn deallocate(m: c.mutex_t) void {
 pub fn destroy(mp: ?*c.mutex_t) callconv(.c) c_int {
     var m: c.mutex_t = undefined;
     sched.lock();
-    if (ffi.vm.copyin(@as(?*const anyopaque, @ptrCast(mp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.mutex_t)) != 0) {
+    if (ffi.hal.copyin(@as(?*const anyopaque, @ptrCast(mp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.mutex_t)) != 0) {
         sched.unlock();
         return c.EFAULT;
     }

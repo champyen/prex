@@ -8,8 +8,8 @@
  */
 
 #define curthread __broken_curthread
-#define list_init __broken_list_init
-#define queue_init __broken_queue_init
+/* #define list_init __broken_list_init */
+/* #define queue_init __broken_queue_init */
 #define EXC_DFL __broken_EXC_DFL
 #define deadlock_record_lock __broken_deadlock_record_lock
 #define deadlock_record_unlock __broken_deadlock_record_unlock
@@ -58,8 +58,8 @@
  * Restore renamed symbols as extern functions for Zig to link against
  */
 #undef curthread
-#undef list_init
-#undef queue_init
+/* #undef list_init */
+/* #undef queue_init */
 #undef EXC_DFL
 #undef deadlock_record_lock
 #undef deadlock_record_unlock

@@ -113,7 +113,7 @@ pub fn create(parent: c.task_t, vm_option: c_int, childp: ?*c.task_t) callconv(.
         }
 
         task = null;
-        if (ffi.vm.copyout(@as(?*const anyopaque, @ptrCast(&task)), @as(?*anyopaque, @ptrCast(childp)), @sizeOf(c.task_t)) != 0) {
+        if (ffi.hal.copyout(@as(?*const anyopaque, @ptrCast(&task)), @as(?*anyopaque, @ptrCast(childp)), @sizeOf(c.task_t)) != 0) {
             sched.unlock();
             return c.EFAULT;
         }
@@ -164,7 +164,7 @@ pub fn create(parent: c.task_t, vm_option: c_int, childp: ?*c.task_t) callconv(.
     if ((kutil.cur_task().*.flags & c.TF_SYSTEM) != 0) {
         childp.?.* = task;
     } else {
-        _ = ffi.vm.copyout(@as(?*const anyopaque, @ptrCast(&task)), @as(?*anyopaque, @ptrCast(childp)), @sizeOf(c.task_t));
+        _ = ffi.hal.copyout(@as(?*const anyopaque, @ptrCast(&task)), @as(?*anyopaque, @ptrCast(childp)), @sizeOf(c.task_t));
     }
 
     sched.unlock();
@@ -286,7 +286,7 @@ pub fn setname(task: c.task_t, name: [*:0]const u8) callconv(.c) c_int {
     if ((kutil.cur_task().*.flags & c.TF_SYSTEM) != 0) {
         _ = lib.strlcpy(@ptrCast(&task.?.*.name), @ptrCast(name), c.MAXTASKNAME);
     } else {
-        const err = ffi.vm.copyinstr(@as(?*const anyopaque, @ptrCast(name)), @as(?*anyopaque, @ptrCast(&str)), c.MAXTASKNAME);
+        const err = ffi.hal.copyinstr(@as(?*const anyopaque, @ptrCast(name)), @as(?*anyopaque, @ptrCast(&str)), c.MAXTASKNAME);
         if (err != 0) {
             sched.unlock();
             return err;

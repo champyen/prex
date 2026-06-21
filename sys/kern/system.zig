@@ -122,11 +122,11 @@ pub fn sysInfo(sysinfo_type: c_int, buf: ?*anyopaque) callconv(.c) c_int {
         },
     }
 
-    error_val = ffi.vm.copyin(buf, &infobuf, bufsz);
+    error_val = ffi.hal.copyin(buf, &infobuf, bufsz);
     if (error_val == 0) {
         error_val = sysinfo(sysinfo_type, &infobuf);
         if (error_val == 0) {
-            error_val = ffi.vm.copyout(&infobuf, buf, bufsz);
+            error_val = ffi.hal.copyout(&infobuf, buf, bufsz);
         }
     }
 
@@ -140,7 +140,7 @@ pub fn sysLog(str: [*c]const u8) callconv(.c) c_int {
         return c.ENOSYS;
     } else {
         var buf: [c.DBGMSGSZ]u8 = undefined;
-        if (ffi.vm.copyinstr(str, &buf, c.DBGMSGSZ) != 0) {
+        if (ffi.hal.copyinstr(str, &buf, c.DBGMSGSZ) != 0) {
             return c.EINVAL;
         }
         lib.printf("%s", &buf);
@@ -186,7 +186,7 @@ pub fn sysPanic(str: [*c]const u8) callconv(.c) c_int {
     if (comptime is_debug) {
         var buf: [c.DBGMSGSZ]u8 = undefined;
         sched.lock();
-        _ = ffi.vm.copyinstr(str, &buf, c.DBGMSGSZ - 20);
+        _ = ffi.hal.copyinstr(str, &buf, c.DBGMSGSZ - 20);
         lib.printf("User panic: %s\n", &buf);
         const cur_task = kutil.get_curtask();
         const cur_thread = kutil.get_curthread();
@@ -205,7 +205,7 @@ pub fn sysPanic(str: [*c]const u8) callconv(.c) c_int {
 /// Get system time - return ticks since OS boot.
 pub fn sysTime(ticks: ?*c_ulong) callconv(.c) c_int {
     const t = ffi.timer.ticks();
-    return ffi.vm.copyout(&t, ticks, @sizeOf(c_ulong));
+    return ffi.hal.copyout(&t, ticks, @sizeOf(c_ulong));
 }
 
 /// nonexistent system call.

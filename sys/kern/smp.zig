@@ -1,6 +1,8 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
+const ffi = @import("ffi");
+const hal = ffi.hal;
 const c = @import("c").c;
 
 const NCPUS = if (@hasDecl(c, "CONFIG_SMP_NCPUS")) c.CONFIG_SMP_NCPUS else 1;
@@ -29,8 +31,6 @@ pub fn kvtop(va: anytype) c.paddr_t {
     return @intFromPtr(va) - c.KERNOFFSET;
 }
 
-const ffi = @import("ffi");
-const hal = ffi.hal;
 const thread = ffi.thread;
 
 pub fn initEarly() callconv(.c) void {

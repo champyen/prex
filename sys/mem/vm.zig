@@ -1,6 +1,7 @@
 const std = @import("std");
 const c = @import("c").c;
 const ffi = @import("ffi");
+const hal = ffi.hal;
 const kutil = ffi.kutil;
 const sched = ffi.sched;
 const task = ffi.task;
@@ -30,25 +31,16 @@ const thread = ffi.thread;
 
 
 
-extern fn copyin(src: ?*const anyopaque, dst: ?*anyopaque, n: usize) callconv(.c) c_int;
-extern fn copyout(src: ?*const anyopaque, dst: ?*anyopaque, n: usize) callconv(.c) c_int;
 
 // ---------------------------------------------------------------------------
 // MMU stubs
 // ---------------------------------------------------------------------------
 
-extern fn mmu_newmap() callconv(.c) c.pgd_t;
-extern fn mmu_switch(pgd: c.pgd_t) callconv(.c) void;
-extern fn mmu_map(pgd: c.pgd_t, pa: c.paddr_t, va: c.vaddr_t, size: usize, flags: c_int) callconv(.c) c_int;
-extern fn mmu_terminate(pgd: c.pgd_t) callconv(.c) void;
-extern fn mmu_extract(pgd: c.pgd_t, addr: c.vaddr_t, size: usize) callconv(.c) c.paddr_t;
 
 // ---------------------------------------------------------------------------
 // C memcpy/memset stubs (for page copy/zero-fill)
 // ---------------------------------------------------------------------------
 
-extern fn @"memcpy"(dst: ?*anyopaque, src: ?*const anyopaque, n: usize) callconv(.c) ?*anyopaque;
-extern fn @"memset"(dst: ?*anyopaque, val: c_int, n: usize) callconv(.c) ?*anyopaque;
 
 // ---------------------------------------------------------------------------
 // Kernel map (module-level)
@@ -215,7 +207,7 @@ fn do_allocate(vm_map: *c.struct_vm_map, addr: *?*anyopaque, size: usize, anywhe
         return c.ENOMEM;
     }
 
-    if (mmu_map(vm_map.pgd, pa, seg.?.addr, seg.?.size, c.PG_WRITE) != 0) {
+    if (hal.mmu_map(vm_map.pgd, pa, seg.?.addr, seg.?.size, c.PG_WRITE) != 0) {
         page.free(pa, @intCast(seg.?.size));
         seg_free(&vm_map.head, seg.?);
         return c.ENOMEM;
@@ -236,7 +228,7 @@ fn do_free(vm_map: *c.struct_vm_map, addr: ?*anyopaque) c_int {
         return c.EINVAL;
     }
 
-    _ = mmu_map(vm_map.pgd, seg.phys, seg.addr, seg.size, c.PG_UNMAP);
+    _ = hal.mmu_map(vm_map.pgd, seg.phys, seg.addr, seg.size, c.PG_UNMAP);
 
     if (seg.flags & c.SEG_SHARED == 0 and seg.flags & c.SEG_MAPPED == 0) {
         page.free(seg.phys, @intCast(seg.size));
@@ -275,7 +267,7 @@ fn do_attribute(vm_map: *c.struct_vm_map, addr: ?*anyopaque, attr: c_int) c_int 
 
         @memcpy(@as([*]u8, @ptrCast(kutil.ptokv(new_pa).?))[0..seg.size], @as([*]const u8, @ptrCast(kutil.ptokv(old_pa).?))[0..seg.size]);
 
-        if (mmu_map(vm_map.pgd, new_pa, seg.addr, seg.size, map_type) != 0) {
+        if (hal.mmu_map(vm_map.pgd, new_pa, seg.addr, seg.size, map_type) != 0) {
             page.free(new_pa, @intCast(seg.size));
             return c.ENOMEM;
         }
@@ -289,7 +281,7 @@ fn do_attribute(vm_map: *c.struct_vm_map, addr: ?*anyopaque, attr: c_int) c_int 
         seg.sh_next = seg;
         seg.sh_prev = seg;
     } else {
-        if (mmu_map(vm_map.pgd, seg.phys, seg.addr, seg.size, map_type) != 0) return c.ENOMEM;
+        if (hal.mmu_map(vm_map.pgd, seg.phys, seg.addr, seg.size, map_type) != 0) return c.ENOMEM;
     }
 
     seg.flags = new_flags;
@@ -305,7 +297,7 @@ fn do_map(target_map: *c.struct_vm_map, addr: ?*anyopaque, size: usize, alloc: *
     if (target_map.total + size >= c.MAXMEM) return c.ENOMEM;
 
     var tmp: ?*anyopaque = null;
-    _ = copyout(@as(?*const anyopaque, @ptrCast(&tmp)), @as(?*anyopaque, @ptrCast(alloc)), @sizeOf(?*anyopaque));
+    _ = hal.copyout(@as(?*const anyopaque, @ptrCast(&tmp)), @as(?*anyopaque, @ptrCast(alloc)), @sizeOf(?*anyopaque));
 
     const start = kutil.trunc_page(@intFromPtr(addr));
     const end = kutil.round_page(@intFromPtr(addr) + size);
@@ -320,7 +312,7 @@ fn do_map(target_map: *c.struct_vm_map, addr: ?*anyopaque, size: usize, alloc: *
     const map_type: c_int = if (tgt.flags & c.SEG_WRITE != 0) c.PG_WRITE else c.PG_READ;
 
     const pa = tgt.phys + (start - tgt.addr);
-    if (mmu_map(curmap.pgd, pa, cur_seg.addr, total, map_type) != 0) {
+    if (hal.mmu_map(curmap.pgd, pa, cur_seg.addr, total, map_type) != 0) {
         seg_free(&curmap.head, cur_seg);
         return c.ENOMEM;
     }
@@ -329,7 +321,7 @@ fn do_map(target_map: *c.struct_vm_map, addr: ?*anyopaque, size: usize, alloc: *
     cur_seg.phys = pa;
 
     const result: ?*anyopaque = @ptrFromInt(cur_seg.addr + offset);
-    _ = copyout(@as(?*const anyopaque, @ptrCast(&result)), @as(?*anyopaque, @ptrCast(alloc)), @sizeOf(?*anyopaque));
+    _ = hal.copyout(@as(?*const anyopaque, @ptrCast(&result)), @as(?*anyopaque, @ptrCast(alloc)), @sizeOf(?*anyopaque));
 
     curmap.total += total;
     return 0;
@@ -380,7 +372,7 @@ fn do_dup(org_map: *c.struct_vm_map) ?*c.struct_vm_map {
             }
 
             const map_type: c_int = if (dest.flags & c.SEG_WRITE != 0) c.PG_WRITE else c.PG_READ;
-            if (mmu_map(new_map_ptr.pgd, dest.phys, dest.addr, dest.size, map_type) != 0) return null;
+            if (hal.mmu_map(new_map_ptr.pgd, dest.phys, dest.addr, dest.size, map_type) != 0) return null;
         }
 
         src = src.next;
@@ -416,7 +408,7 @@ fn vm_create_internal() ?*c.struct_vm_map {
     vm_map.refcnt = 1;
     vm_map.total = 0;
 
-    vm_map.pgd = mmu_newmap();
+    vm_map.pgd = hal.mmu_newmap();
     if (vm_map.pgd == c.NO_PGD) {
         kmem.free(map_ptr);
         return null;
@@ -442,13 +434,13 @@ pub fn allocate(tsk: c.task_t, addr: *?*anyopaque, size: usize, anywhere: c_int)
     if (task_opt != kutil.cur_task() and task.capable(c.CAP_EXTMEM) == 0) return c.EPERM;
 
     var uaddr: ?*anyopaque = null;
-    _ = copyin(@as(?*const anyopaque, @ptrCast(addr)), @as(?*anyopaque, @ptrCast(&uaddr)), @sizeOf(?*anyopaque));
+    _ = hal.copyin(@as(?*const anyopaque, @ptrCast(addr)), @as(?*anyopaque, @ptrCast(&uaddr)), @sizeOf(?*anyopaque));
 
     if (anywhere == 0 and !kutil.user_area(addr.*)) return c.EACCES;
 
     const err = do_allocate(task_opt.?.map.?, &uaddr, size, anywhere);
     if (err == 0) {
-        if (copyout(@as(?*const anyopaque, @ptrCast(&uaddr)), @as(?*anyopaque, @ptrCast(addr)), @sizeOf(?*anyopaque)) != 0) {
+        if (hal.copyout(@as(?*const anyopaque, @ptrCast(&uaddr)), @as(?*anyopaque, @ptrCast(addr)), @sizeOf(?*anyopaque)) != 0) {
             return c.EFAULT;
         }
     }
@@ -506,7 +498,7 @@ pub fn terminate(vm_map: c.vm_map_t) callconv(.c) void {
     var seg: *c.struct_seg = &map_opt.?.head;
     while (true) {
         if (seg.flags != c.SEG_FREE) {
-            _ = mmu_map(map_opt.?.pgd, seg.phys, seg.addr, seg.size, c.PG_UNMAP);
+            _ = hal.mmu_map(map_opt.?.pgd, seg.phys, seg.addr, seg.size, c.PG_UNMAP);
 
             if (seg.flags & c.SEG_SHARED == 0 and seg.flags & c.SEG_MAPPED == 0) {
                 page.free(seg.phys, @intCast(seg.size));
@@ -519,10 +511,10 @@ pub fn terminate(vm_map: c.vm_map_t) callconv(.c) void {
     }
 
     if (map_opt == kutil.cur_task().map) {
-        mmu_switch(kernel_map.pgd);
+        hal.mmu_switch(kernel_map.pgd);
     }
 
-    mmu_terminate(map_opt.?.pgd);
+    hal.mmu_terminate(map_opt.?.pgd);
     kmem.free(@ptrCast(@alignCast(map_opt)));
 }
 
@@ -536,7 +528,7 @@ pub fn dup(org_map: c.vm_map_t) callconv(.c) c.vm_map_t {
 pub fn @"switch"(vm_map: c.vm_map_t) callconv(.c) void {
     const map_opt: ?*c.struct_vm_map = @ptrCast(vm_map);
     if (map_opt != &kernel_map) {
-        mmu_switch(map_opt.?.pgd);
+        hal.mmu_switch(map_opt.?.pgd);
     }
 }
 
@@ -580,7 +572,7 @@ pub fn load(vm_map: c.vm_map_t, mod: *c.struct_module, stack: *?*anyopaque) call
 pub fn translate(addr: c.vaddr_t, size: usize) callconv(.c) c.paddr_t {
     const map_ptr = kutil.cur_task().map;
     if (map_ptr == null) return 0;
-    return mmu_extract(map_ptr.*.pgd, addr, size);
+    return hal.mmu_extract(map_ptr.*.pgd, addr, size);
 }
 
 pub fn info(vminfo: *c.struct_vminfo) callconv(.c) c_int {
@@ -613,12 +605,12 @@ pub fn info(vminfo: *c.struct_vminfo) callconv(.c) c_int {
 }
 
 pub fn init() callconv(.c) void {
-    const pgd = mmu_newmap();
+    const pgd = hal.mmu_newmap();
     if (pgd == c.NO_PGD) {
         while (true) {}
     }
     kernel_map.pgd = pgd;
-    mmu_switch(pgd);
+    hal.mmu_switch(pgd);
 
     seg_init(&kernel_map.head);
     c.kernel_task.map = &kernel_map;

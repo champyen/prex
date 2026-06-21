@@ -128,7 +128,7 @@ pub fn wait(excno: ?*c_int) callconv(.c) c_int {
     }
 
     i = 0;
-    if (ffi.vm.copyout(@as(?*const anyopaque, @ptrCast(&i)), @as(?*anyopaque, @ptrCast(excno)), @sizeOf(c_int)) != 0) {
+    if (ffi.hal.copyout(@as(?*const anyopaque, @ptrCast(&i)), @as(?*anyopaque, @ptrCast(excno)), @sizeOf(c_int)) != 0) {
         return c.EFAULT;
     }
 
@@ -150,7 +150,7 @@ pub fn wait(excno: ?*c_int) callconv(.c) c_int {
     sched.unlock();
 
     i = j;
-    if (ffi.vm.copyout(@as(?*const anyopaque, @ptrCast(&i)), @as(?*anyopaque, @ptrCast(excno)), @sizeOf(c_int)) != 0) {
+    if (ffi.hal.copyout(@as(?*const anyopaque, @ptrCast(&i)), @as(?*anyopaque, @ptrCast(excno)), @sizeOf(c_int)) != 0) {
         return c.EFAULT;
     }
     return c.EINTR;

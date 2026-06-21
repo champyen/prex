@@ -99,7 +99,7 @@ pub fn create(name: ?[*:0]const u8, objp: ?*c.object_t) callconv(.c) c_int {
     }
 
     const null_obj: c.object_t = null;
-    if (ffi.vm.copyout(@as(?*const anyopaque, @ptrCast(&null_obj)), @as(?*anyopaque, @ptrCast(objp)), @sizeOf(c.object_t)) != 0) {
+    if (ffi.hal.copyout(@as(?*const anyopaque, @ptrCast(&null_obj)), @as(?*anyopaque, @ptrCast(objp)), @sizeOf(c.object_t)) != 0) {
         sched.unlock();
         return c.EFAULT;
     }
@@ -129,7 +129,7 @@ pub fn create(name: ?[*:0]const u8, objp: ?*c.object_t) callconv(.c) c_int {
 
     zig_memory_barrier();
 
-    _ = ffi.vm.copyout(@as(?*const anyopaque, @ptrCast(&obj)), @as(?*anyopaque, @ptrCast(objp)), @sizeOf(c.object_t));
+    _ = ffi.hal.copyout(@as(?*const anyopaque, @ptrCast(&obj)), @as(?*anyopaque, @ptrCast(objp)), @sizeOf(c.object_t));
 
     sched.unlock();
     return 0;
@@ -152,7 +152,7 @@ pub fn lookup(name: [*:0]const u8, objp: ?*c.object_t) callconv(.c) c_int {
         return c.ENOENT;
     }
 
-    if (ffi.vm.copyout(@as(?*const anyopaque, @ptrCast(&obj)), @as(?*anyopaque, @ptrCast(objp)), @sizeOf(c.object_t)) != 0) {
+    if (ffi.hal.copyout(@as(?*const anyopaque, @ptrCast(&obj)), @as(?*anyopaque, @ptrCast(objp)), @sizeOf(c.object_t)) != 0) {
         return c.EFAULT;
     }
     return 0;

@@ -87,9 +87,6 @@ pub const vm = struct {
     pub const load = c.vm_load;
     pub const init = c.vm_init;
     pub const info = c.vm_info;
-    pub const copyin = c.copyin;
-    pub const copyout = c.copyout;
-    pub const copyinstr = c.copyinstr;
     pub const switch_map = c.vm_switch;
 };
 
@@ -213,6 +210,10 @@ pub const hal = struct {
     pub const dbgctl = c.dbgctl;
     pub const dump_backtrace = c.dump_backtrace;
     pub const zig_memory_barrier = c.zig_memory_barrier;
+
+    pub const copyin = c.copyin;
+    pub const copyout = c.copyout;
+    pub const copyinstr = c.copyinstr;
 };
 
 pub const lib = struct {

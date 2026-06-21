@@ -206,7 +206,7 @@ fn broadcast(cmd: c_ulong, arg: ?*anyopaque, force: c_int) callconv(.c) c_int {
 /// open – open the specified device.
 pub fn open(name: [*c]const u8, mode: c_int, devp: ?*?*c.struct_device) callconv(.c) c_int {
     var str: [c.MAXDEVNAME]u8 = undefined;
-    const copy_err: c_int = ffi.vm.copyinstr(@ptrCast(name), @ptrCast(&str), c.MAXDEVNAME);
+    const copy_err: c_int = ffi.hal.copyinstr(@ptrCast(name), @ptrCast(&str), c.MAXDEVNAME);
     if (copy_err != 0) return copy_err;
 
     sched.lock();
@@ -229,7 +229,7 @@ pub fn open(name: [*c]const u8, mode: c_int, devp: ?*?*c.struct_device) callconv
         err = ops.?.open.?(dev, mode);
     }
     if (err == 0) {
-        const cp_err: c_int = ffi.vm.copyout(@ptrCast(&dev), @ptrCast(devp), @sizeOf(?*c.struct_device));
+        const cp_err: c_int = ffi.hal.copyout(@ptrCast(&dev), @ptrCast(devp), @sizeOf(?*c.struct_device));
         if (cp_err != 0) err = cp_err;
     }
 
@@ -262,7 +262,7 @@ pub fn read(dev: ?*c.struct_device, buf: ?*anyopaque, nbyte: ?*usize, blkno: c_i
 
     var count: usize = 0;
     if (nbyte != null) {
-        const ci_err: c_int = ffi.vm.copyin(@ptrCast(nbyte), @ptrCast(&count), @sizeOf(usize));
+        const ci_err: c_int = ffi.hal.copyin(@ptrCast(nbyte), @ptrCast(&count), @sizeOf(usize));
         if (ci_err != 0) {
             release(dev);
             return c.EFAULT;
@@ -276,7 +276,7 @@ pub fn read(dev: ?*c.struct_device, buf: ?*anyopaque, nbyte: ?*usize, blkno: c_i
         err = ops.?.read.?(dev, @ptrCast(buf), &count, blkno);
     }
     if (err == 0 and nbyte != null) {
-        const co_err: c_int = ffi.vm.copyout(@ptrCast(&count), @ptrCast(nbyte), @sizeOf(usize));
+        const co_err: c_int = ffi.hal.copyout(@ptrCast(&count), @ptrCast(nbyte), @sizeOf(usize));
         if (co_err != 0) err = co_err;
     }
 
@@ -293,7 +293,7 @@ pub fn write(dev: ?*c.struct_device, buf: ?*anyopaque, nbyte: ?*usize, blkno: c_
 
     var count: usize = 0;
     if (nbyte != null) {
-        const ci_err: c_int = ffi.vm.copyin(@ptrCast(nbyte), @ptrCast(&count), @sizeOf(usize));
+        const ci_err: c_int = ffi.hal.copyin(@ptrCast(nbyte), @ptrCast(&count), @sizeOf(usize));
         if (ci_err != 0) {
             release(dev);
             return c.EFAULT;
@@ -307,7 +307,7 @@ pub fn write(dev: ?*c.struct_device, buf: ?*anyopaque, nbyte: ?*usize, blkno: c_
         err = ops.?.write.?(dev, @ptrCast(buf), &count, blkno);
     }
     if (err == 0 and nbyte != null) {
-        const co_err: c_int = ffi.vm.copyout(@ptrCast(&count), @ptrCast(nbyte), @sizeOf(usize));
+        const co_err: c_int = ffi.hal.copyout(@ptrCast(&count), @ptrCast(nbyte), @sizeOf(usize));
         if (co_err != 0) err = co_err;
     }
 
@@ -324,7 +324,7 @@ pub fn gatherRead(dev: ?*c.struct_device, buf: ?*anyopaque, nbyte: ?*usize, io: 
 
     var count: usize = 0;
     if (nbyte != null) {
-        const ci_err: c_int = ffi.vm.copyin(@ptrCast(nbyte), @ptrCast(&count), @sizeOf(usize));
+        const ci_err: c_int = ffi.hal.copyin(@ptrCast(nbyte), @ptrCast(&count), @sizeOf(usize));
         if (ci_err != 0) {
             release(dev);
             return c.EFAULT;
@@ -333,7 +333,7 @@ pub fn gatherRead(dev: ?*c.struct_device, buf: ?*anyopaque, nbyte: ?*usize, io: 
 
     var kio: c.struct_dev_io = undefined;
     if (io != null) {
-        const ci_err: c_int = ffi.vm.copyin(@ptrCast(io), @ptrCast(&kio), @sizeOf(c.struct_dev_io));
+        const ci_err: c_int = ffi.hal.copyin(@ptrCast(io), @ptrCast(&kio), @sizeOf(c.struct_dev_io));
         if (ci_err != 0) {
             release(dev);
             return c.EFAULT;
@@ -356,7 +356,7 @@ pub fn gatherRead(dev: ?*c.struct_device, buf: ?*anyopaque, nbyte: ?*usize, io: 
         offset += kio.blksz;
     }) {
         var b: c_int = 0;
-        const ci_err: c_int = ffi.vm.copyin(@ptrCast(@as([*]c_int, @ptrCast(kio.blkno)) + offset / kio.blksz), @ptrCast(&b), @sizeOf(c_int));
+        const ci_err: c_int = ffi.hal.copyin(@ptrCast(@as([*]c_int, @ptrCast(kio.blkno)) + offset / kio.blksz), @ptrCast(&b), @sizeOf(c_int));
         if (ci_err != 0) {
             err = c.EFAULT;
             break;
@@ -375,7 +375,7 @@ pub fn gatherRead(dev: ?*c.struct_device, buf: ?*anyopaque, nbyte: ?*usize, io: 
     }
 
     if (err == 0 or total > 0) {
-        const co_err: c_int = ffi.vm.copyout(@ptrCast(&total), @ptrCast(nbyte), @sizeOf(usize));
+        const co_err: c_int = ffi.hal.copyout(@ptrCast(&total), @ptrCast(nbyte), @sizeOf(usize));
         if (err == 0) err = co_err;
     }
 
@@ -392,7 +392,7 @@ pub fn scatterWrite(dev: ?*c.struct_device, buf: ?*anyopaque, nbyte: ?*usize, io
 
     var count: usize = 0;
     if (nbyte != null) {
-        const ci_err: c_int = ffi.vm.copyin(@ptrCast(nbyte), @ptrCast(&count), @sizeOf(usize));
+        const ci_err: c_int = ffi.hal.copyin(@ptrCast(nbyte), @ptrCast(&count), @sizeOf(usize));
         if (ci_err != 0) {
             release(dev);
             return c.EFAULT;
@@ -401,7 +401,7 @@ pub fn scatterWrite(dev: ?*c.struct_device, buf: ?*anyopaque, nbyte: ?*usize, io
 
     var kio: c.struct_dev_io = undefined;
     if (io != null) {
-        const ci_err: c_int = ffi.vm.copyin(@ptrCast(io), @ptrCast(&kio), @sizeOf(c.struct_dev_io));
+        const ci_err: c_int = ffi.hal.copyin(@ptrCast(io), @ptrCast(&kio), @sizeOf(c.struct_dev_io));
         if (ci_err != 0) {
             release(dev);
             return c.EFAULT;
@@ -424,7 +424,7 @@ pub fn scatterWrite(dev: ?*c.struct_device, buf: ?*anyopaque, nbyte: ?*usize, io
         offset += kio.blksz;
     }) {
         var b: c_int = 0;
-        const ci_err: c_int = ffi.vm.copyin(@ptrCast(@as([*]c_int, @ptrCast(kio.blkno)) + offset / kio.blksz), @ptrCast(&b), @sizeOf(c_int));
+        const ci_err: c_int = ffi.hal.copyin(@ptrCast(@as([*]c_int, @ptrCast(kio.blkno)) + offset / kio.blksz), @ptrCast(&b), @sizeOf(c_int));
         if (ci_err != 0) {
             err = c.EFAULT;
             break;
@@ -443,7 +443,7 @@ pub fn scatterWrite(dev: ?*c.struct_device, buf: ?*anyopaque, nbyte: ?*usize, io
     }
 
     if (err == 0 or total > 0) {
-        const co_err: c_int = ffi.vm.copyout(@ptrCast(&total), @ptrCast(nbyte), @sizeOf(usize));
+        const co_err: c_int = ffi.hal.copyout(@ptrCast(&total), @ptrCast(nbyte), @sizeOf(usize));
         if (err == 0) err = co_err;
     }
 
@@ -514,11 +514,11 @@ const dkifn_t = ?*const anyopaque;
 
 const dkient = [40]dkifn_t{
     //  0: copyin
-    @ptrCast(&ffi.vm.copyin),
+    @ptrCast(&ffi.hal.copyin),
     //  1: copyout
-    @ptrCast(&ffi.vm.copyout),
+    @ptrCast(&ffi.hal.copyout),
     //  2: copyinstr
-    @ptrCast(&ffi.vm.copyinstr),
+    @ptrCast(&ffi.hal.copyinstr),
     //  3: kmem_alloc
     @ptrCast(&c.kmem_alloc),
     //  4: kmem_free

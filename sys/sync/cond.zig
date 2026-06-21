@@ -56,7 +56,7 @@ fn valid(m: c.cond_t) c_int {
 
 fn copyin(ucp: ?*c.cond_t, kcp: ?*c.cond_t) c_int {
     var m: c.cond_t = undefined;
-    if (ffi.vm.copyin(@as(?*const anyopaque, @ptrCast(ucp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t)) != 0) {
+    if (ffi.hal.copyin(@as(?*const anyopaque, @ptrCast(ucp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t)) != 0) {
         return c.EFAULT;
     }
 
@@ -65,7 +65,7 @@ fn copyin(ucp: ?*c.cond_t, kcp: ?*c.cond_t) c_int {
         if (error_code != 0) {
             return error_code;
         }
-        _ = ffi.vm.copyin(@as(?*const anyopaque, @ptrCast(ucp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t));
+        _ = ffi.hal.copyin(@as(?*const anyopaque, @ptrCast(ucp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t));
     } else {
         if (valid(m) == 0) {
             return c.EINVAL;
@@ -87,7 +87,7 @@ pub fn init(cp: ?*c.cond_t) callconv(.c) c_int {
     c.event_init(&m.*.event, "condvar");
     m.*.owner = self;
 
-    if (ffi.vm.copyout(@as(?*const anyopaque, @ptrCast(&m)), @as(?*anyopaque, @ptrCast(cp)), @sizeOf(c.cond_t)) != 0) {
+    if (ffi.hal.copyout(@as(?*const anyopaque, @ptrCast(&m)), @as(?*anyopaque, @ptrCast(cp)), @sizeOf(c.cond_t)) != 0) {
         kmem.free(m);
         return c.EFAULT;
     }
@@ -108,7 +108,7 @@ fn deallocate(m: c.cond_t) void {
 pub fn destroy(cp: ?*c.cond_t) callconv(.c) c_int {
     var m: c.cond_t = undefined;
     sched.lock();
-    if (ffi.vm.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t)) != 0) {
+    if (ffi.hal.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t)) != 0) {
         sched.unlock();
         return c.EFAULT;
     }
@@ -136,7 +136,7 @@ pub fn cleanup(task: c.task_t) callconv(.c) void {
 pub fn wait(cp: ?*c.cond_t, mp: ?*c.mutex_t) callconv(.c) c_int {
     var m: c.cond_t = undefined;
 
-    if (ffi.vm.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t)) != 0) {
+    if (ffi.hal.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t)) != 0) {
         return c.EINVAL;
     }
 
@@ -147,7 +147,7 @@ pub fn wait(cp: ?*c.cond_t, mp: ?*c.mutex_t) callconv(.c) c_int {
             sched.unlock();
             return error_code;
         }
-        _ = ffi.vm.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t));
+        _ = ffi.hal.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t));
     } else {
         if (valid(m) == 0) {
             sched.unlock();
@@ -182,7 +182,7 @@ pub fn signal(cp: ?*c.cond_t) callconv(.c) c_int {
     var m: c.cond_t = undefined;
 
     sched.lock();
-    if (ffi.vm.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t)) != 0) {
+    if (ffi.hal.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t)) != 0) {
         sched.unlock();
         return c.EINVAL;
     }
@@ -195,7 +195,7 @@ pub fn broadcast(cp: ?*c.cond_t) callconv(.c) c_int {
     var m: c.cond_t = undefined;
 
     sched.lock();
-    if (ffi.vm.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t)) != 0) {
+    if (ffi.hal.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t)) != 0) {
         sched.unlock();
         return c.EINVAL;
     }

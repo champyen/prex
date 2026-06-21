@@ -162,7 +162,7 @@ pub fn receive(obj: c.object_t, msg: ?*anyopaque, size: usize) callconv(.c) c_in
 
     const len: usize = if (size < t.?.msgsize) size else t.?.msgsize;
     if (len > 0) {
-        if (ffi.vm.copyout(t.?.msgaddr, msg, len) != 0) {
+        if (ffi.hal.copyout(t.?.msgaddr, msg, len) != 0) {
             enqueue(&obj.*.sendq, t);
             kutil.get_curthread().?.recvobj = null;
             sched.unlock();
@@ -198,7 +198,7 @@ pub fn reply(obj: c.object_t, msg: ?*anyopaque, size: usize) callconv(.c) c_int 
     const t: ?*c.struct_thread = @ptrCast(kutil.get_curthread().?.sender);
     const len: usize = if (size < t.?.msgsize) size else t.?.msgsize;
     if (len > 0) {
-        if (ffi.vm.copyin(msg, t.?.msgaddr, len) != 0) {
+        if (ffi.hal.copyin(msg, t.?.msgaddr, len) != 0) {
             sched.unlock();
             return c.EFAULT;
         }
