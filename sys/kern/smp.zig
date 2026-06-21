@@ -27,7 +27,7 @@ fn ipi_isr(arg: ?*anyopaque) callconv(.c) c_int {
     return c.INT_DONE;
 }
 
-pub fn kvtop(va: anytype) c.paddr_t {
+pub fn kvtop(va: anytype) ffi.hal.Paddr {
     return @intFromPtr(va) - c.KERNOFFSET;
 }
 
@@ -49,7 +49,7 @@ pub fn initEarly() callconv(.c) void {
 }
 
 pub fn startAps() callconv(.c) void {
-    _ = c.irq_attach(ipi_irq, c.IPL_HIGH, 0, ipi_isr, IST_NONE, null);
+    _ = ffi.irq.attach(ipi_irq, c.IPL_HIGH, 0, ipi_isr, IST_NONE, null);
 
     _ = @atomicRmw(c_int, &ready_count, .Add, 1, .seq_cst);
 
@@ -102,7 +102,7 @@ pub fn apBoot() callconv(.c) void {
     while (@atomicLoad(c_int, &smp_active, .seq_cst) == 0) {}
     zig_memory_barrier();
 
-    c.thread_idle();
+    ffi.thread.idle();
 }
 
 extern fn ap_reset_entry() callconv(.c) void;

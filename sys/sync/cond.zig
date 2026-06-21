@@ -99,7 +99,7 @@ pub fn destroy(cp: ?*c.cond_t) callconv(.c) c_int {
     return 0;
 }
 
-pub fn cleanup(task: c.task_t) callconv(.c) void {
+pub fn cleanup(task: ffi.kern.TaskRef) callconv(.c) void {
     while (!@as(*ffi.List, @ptrCast(&task.*.conds)).isEmpty()) {
         const n = @as(*ffi.List, @ptrCast(&task.*.conds)).first();
         const m = n.entry(ffi.sync.Cond, "task_link");

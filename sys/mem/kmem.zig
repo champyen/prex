@@ -28,46 +28,10 @@ pub inline fn max(a: usize, b: usize) usize {
     return if (a > b) a else b;
 }
 
-// List helpers matching task.zig's style
-pub inline fn list_init_fn(head: *c.struct_list) void {
-    head.*.next = head;
-    head.*.prev = head;
-}
-
-pub inline fn list_insert_fn(prev: *c.struct_list, node: *c.struct_list) void {
-    node.*.next = prev.*.next;
-    node.*.prev = prev;
-    prev.*.next.*.prev = node;
-    prev.*.next = node;
-}
-
-pub inline fn list_remove_fn(node: *c.struct_list) void {
-    node.*.prev.*.next = node.*.next;
-    node.*.next.*.prev = node.*.prev;
-}
-
-pub inline fn list_empty(head: *c.struct_list) bool {
-    return head.*.next == head;
-}
-
-pub inline fn list_first(head: *c.struct_list) *c.struct_list {
-    return head.*.next;
-}
-
-pub inline fn list_next_node(node: *c.struct_list) *c.struct_list {
-    return node.*.next;
-}
-
-pub inline fn list_entry(node: *c.struct_list) *block_hdr {
-    const offset = @offsetOf(block_hdr, "link");
-    const ptr_val = @intFromPtr(node) - offset;
-    return @ptrCast(@alignCast(@as(*block_hdr, @ptrFromInt(ptr_val))));
-}
-
 const block_hdr = extern struct {
     magic: u16,
     size: u16,
-    link: c.struct_list,
+    link: ffi.List,
     pg_next: ?*block_hdr,
 };
 
@@ -89,15 +53,15 @@ const MAX_ALLOC_SIZE = if (@hasDecl(c, "CONFIG_MAX_ALLOC_SIZE")) c.CONFIG_MAX_AL
 const MIN_BLOCK_SIZE = BLKHDR_SIZE + 16;
 
 // Global free_blocks array
-var free_blocks: [NR_BLOCK_LIST]c.struct_list = undefined;
+var free_blocks: [NR_BLOCK_LIST]ffi.List = undefined;
 
 // Find the free block for the specified size
 fn block_find(size: usize) ?*block_hdr {
     var i: usize = size >> 4;
     while (i < NR_BLOCK_LIST) : (i += 1) {
-        if (!list_empty(&free_blocks[i])) {
-            const n = list_first(&free_blocks[i]);
-            return list_entry(n);
+        if (!free_blocks[i].isEmpty()) {
+            const n = free_blocks[i].first();
+            return @fieldParentPtr("link", n);
         }
     }
     return null;
@@ -117,7 +81,7 @@ pub fn alloc(size: usize) callconv(.c) ?*anyopaque {
 
     if (block_find(total_size)) |found_blk| {
         active_blk = found_blk;
-        list_remove_fn(&active_blk.*.link);
+        active_blk.link.remove();
         pg = pagetop(active_blk);
     } else {
         var pg_size = alloc_size(total_size + PGHDR_SIZE);
@@ -146,7 +110,7 @@ pub fn alloc(size: usize) callconv(.c) ?*anyopaque {
         const newblk: *block_hdr = @ptrFromInt(@intFromPtr(active_blk) + total_size);
         newblk.*.magic = BLOCK_MAGIC;
         newblk.*.size = @intCast(active_blk.*.size - total_size);
-        list_insert_fn(&free_blocks[blkndx(newblk)], &newblk.*.link);
+        free_blocks[blkndx(newblk)].insertAfter(&newblk.*.link);
 
         newblk.*.pg_next = active_blk.*.pg_next;
         active_blk.*.pg_next = newblk;
@@ -179,7 +143,7 @@ pub fn free(ptr: ?*anyopaque) callconv(.c) void {
             var tmp: ?*block_hdr = &pg.*.first_blk;
             while (tmp) |t| {
                 if (t != blk) {
-                    list_remove_fn(&t.*.link);
+                    t.link.remove();
                 }
                 tmp = t.*.pg_next;
             }
@@ -189,12 +153,12 @@ pub fn free(ptr: ?*anyopaque) callconv(.c) void {
             @panic("kmem_free: large block split free not supported");
         }
     } else {
-        list_insert_fn(&free_blocks[blkndx(blk)], &blk.*.link);
+        free_blocks[blkndx(blk)].insertAfter(&blk.*.link);
         pg.*.nallocs -= 1;
         if (pg.*.nallocs == 0) {
             var tmp: ?*block_hdr = &pg.*.first_blk;
             while (tmp) |t| {
-                list_remove_fn(&t.*.link);
+                t.link.remove();
                 tmp = t.*.pg_next;
             }
             pg.*.magic = 0;
@@ -212,9 +176,8 @@ pub fn map(addr: ?*anyopaque, size: usize) callconv(.c) ?*anyopaque {
 }
 
 pub fn init() callconv(.c) void {
-    var i: usize = 0;
-    while (i < NR_BLOCK_LIST) : (i += 1) {
-        list_init_fn(&free_blocks[i]);
+    for (&free_blocks) |*list| {
+        list.init();
     }
 }
 

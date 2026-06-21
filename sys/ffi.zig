@@ -75,6 +75,10 @@ pub const task = struct {
     pub const bootstrap = c.task_bootstrap;
     pub const info = c.task_info;
     pub const terminate = c.task_terminate;
+    pub const create = c.task_create;
+    pub const self = c.task_self;
+    pub const @"suspend" = c.task_suspend;
+    pub const @"resume" = c.task_resume;
 };
 
 pub const page = struct {
@@ -215,6 +219,28 @@ pub const hal = struct {
     pub const copyin = c.copyin;
     pub const copyout = c.copyout;
     pub const copyinstr = c.copyinstr;
+    pub const Vaddr = c.vaddr_t;
+    pub const Paddr = c.paddr_t;
+    pub const Vsize = c.vsize_t;
+    pub const Psize = c.psize_t;
+    pub const TaskRef = c.task_t;
+    pub const ThreadRef = c.thread_t;
+    pub const DeviceRef = c.device_t;
+    pub const List = c.struct_list;
+    pub const Queue = c.struct_queue;
+    pub const Event = c.struct_event;
+    pub const Timer = c.struct_timer;
+    pub const BootInfo = c.struct_bootinfo;
+    pub const MemInfo = c.struct_meminfo;
+    pub const Module = c.struct_module;
+    pub const Context = c.struct_context;
+    pub const CpuRegs = c.struct_cpu_regs;
+    pub const ThreadInfo = c.struct_threadinfo;
+    pub const TaskInfo = c.struct_taskinfo;
+    pub const VmInfo = c.struct_vminfo;
+    pub const DeviceInfo = c.struct_devinfo;
+    pub const IrqInfo = c.struct_irqinfo;
+    pub const TimerInfo = c.struct_timerinfo;
 };
 
 pub const lib = struct {
@@ -306,8 +332,8 @@ pub const ipc = struct {
 
 pub const kern = struct {
     pub const Device = extern struct {
-        next: *Device,
-        driver: *c.struct_driver,
+        next: ?*Device,
+        driver: ?*Driver,
         name: [c.MAXDEVNAME]u8,
         flags: c_int,
         active: c_int,
@@ -323,7 +349,7 @@ pub const kern = struct {
         priority: c_int,
         count: c.u_int,
         istreq: c_int,
-        thread: c.thread_t,
+        thread: ThreadRef,
         istevt: sync.Event,
     };
 
@@ -344,60 +370,10 @@ pub const kern = struct {
         arg: ?*anyopaque,
     };
 
-    pub const Thread = extern struct {
-        link: List,
-        task_link: List,
-        sched_link: Queue,
-        task: c.task_t,
-        state: c_int,
-        policy: c_int,
-        priority: c_int,
-        basepri: c_int,
-        timeleft: c_int,
-        time: c.u_int,
-        resched: c_int,
-        locks: c_int,
-        suscnt: c_int,
-        slpevt: *sync.Event,
-        slpret: c_int,
-        timeout: kern.Timer,
-        periodic: *kern.Timer,
-        excbits: u32,
-        mutexes: List,
-        mutex_waiting: c.mutex_t,
-        ipc_link: Queue,
-        wait_start_tick: if (@hasDecl(c, "CONFIG_KD")) u32 else void,
-        msgaddr: ?*anyopaque,
-        msgsize: usize,
-        sender: c.thread_t,
-        receiver: c.thread_t,
-        sendobj: c.object_t,
-        recvobj: c.object_t,
-        kstack: ?*anyopaque,
-        ctx: c.struct_context,
-    };
-
-    pub const Task = extern struct {
-        link: List,
-        name: [c.MAXTASKNAME]u8,
-        parent: c.task_t,
-        map: c.vm_map_t,
-        suscnt: c_int,
-        flags: c_int,
-        capability: c.cap_t,
-        alarm: kern.Timer,
-        handler: *const fn (c_int) callconv(.c) void,
-        threads: List,
-        objects: List,
-        mutexes: List,
-        conds: List,
-        sems: List,
-        nthreads: c_int,
-        nobjects: c_int,
-        nsyncs: c_int,
-        backtrace: if (@hasDecl(c, "CONFIG_USR_BACKTRACE")) [16]extern struct { pc: u32, func: u32 } else void,
-        got_base: if (@hasDecl(c, "CONFIG_ARMV8M")) c.vaddr_t else void,
-    };
+    pub const TaskRef = c.task_t;
+    pub const ThreadRef = c.thread_t;
+    pub const Thread = c.struct_thread;
+    pub const Task = c.struct_task;
 
     pub const CpuControl = extern struct {
         active_thread: *Thread,
@@ -418,6 +394,10 @@ pub const kern = struct {
         std.debug.assert(@sizeOf(Task) == @sizeOf(c.struct_task));
         std.debug.assert(@sizeOf(CpuControl) == @sizeOf(c.struct_cpu_control));
     }
+
+    pub const Driver = c.struct_driver;
+    pub const DevOps = c.struct_devops;
+    pub const DevIO = c.struct_dev_io;
 };
 
 pub const mem = struct {
@@ -426,10 +406,10 @@ pub const mem = struct {
         next: *Segment,
         sh_prev: *Segment,
         sh_next: *Segment,
-        addr: c.vaddr_t,
+        addr: hal.Vaddr,
         size: usize,
         flags: c_int,
-        phys: c.paddr_t,
+        phys: hal.Paddr,
     };
 
     pub const VmMap = extern struct {

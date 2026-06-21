@@ -96,25 +96,25 @@ pub fn sysInfo(sysinfo_type: c_int, buf: ?*anyopaque) callconv(.c) c_int {
             bufsz = @sizeOf(c.struct_kerninfo);
         },
         c.INFO_MEMORY => {
-            bufsz = @sizeOf(c.struct_meminfo);
+            bufsz = @sizeOf(ffi.hal.MemInfo);
         },
         c.INFO_TIMER => {
-            bufsz = @sizeOf(c.struct_timerinfo);
+            bufsz = @sizeOf(ffi.hal.TimerInfo);
         },
         c.INFO_THREAD => {
-            bufsz = @sizeOf(c.struct_threadinfo);
+            bufsz = @sizeOf(ffi.hal.ThreadInfo);
         },
         c.INFO_DEVICE => {
-            bufsz = @sizeOf(c.struct_devinfo);
+            bufsz = @sizeOf(ffi.hal.DeviceInfo);
         },
         c.INFO_TASK => {
-            bufsz = @sizeOf(c.struct_taskinfo);
+            bufsz = @sizeOf(ffi.hal.TaskInfo);
         },
         c.INFO_VM => {
-            bufsz = @sizeOf(c.struct_vminfo);
+            bufsz = @sizeOf(ffi.hal.VmInfo);
         },
         c.INFO_IRQ => {
-            bufsz = @sizeOf(c.struct_irqinfo);
+            bufsz = @sizeOf(ffi.hal.IrqInfo);
         },
         else => {
             sched.unlock();
@@ -154,7 +154,7 @@ pub fn sysDebug(cmd: c_int, data: ?*anyopaque) callconv(.c) c_int {
         return c.ENOSYS;
     } else {
         var error_val: c_int = c.EINVAL;
-        var task: c.task_t = null;
+        var task: ffi.kern.TaskRef = null;
 
         switch (cmd) {
             c.DBGC_LOGSIZE, c.DBGC_GETLOG, c.DBGC_SAVEBT => {
@@ -162,7 +162,7 @@ pub fn sysDebug(cmd: c_int, data: ?*anyopaque) callconv(.c) c_int {
             },
             c.DBGC_TRACE => {
                 task = @ptrCast(@alignCast(data));
-                if (c.task_valid(task) == 0) {
+                if (ffi.task.valid(task) == 0) {
                     error_val = c.ESRCH;
                 } else {
                     _ = hal.dbgctl(cmd, task);

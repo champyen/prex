@@ -12,37 +12,37 @@ const sched = ffi.sched;
 const task = ffi.task;
 const smp = ffi.smp;
 
-pub var idle_thread: c.struct_thread = std.mem.zeroes(c.struct_thread);
-var zombie: c.thread_t = null;
-var thread_list: c.struct_list = undefined;
+pub var idle_thread: ffi.kern.Thread = std.mem.zeroes(ffi.kern.Thread);
+var zombie: ffi.kern.ThreadRef = null;
+var thread_list: ffi.hal.List = undefined;
 
-pub var curthread: c.thread_t = &idle_thread;
+pub var curthread: ffi.kern.ThreadRef = &idle_thread;
 pub var irq_nesting: c_int = 0;
 pub var curspl: c_int = 15;
 
 
 
 
-inline fn list_init(head: *c.struct_list) void {
+inline fn list_init(head: *ffi.hal.List) void {
     head.next = @ptrCast(head);
     head.prev = @ptrCast(head);
 }
 
-inline fn list_insert(prev: *c.struct_list, node: *c.struct_list) void {
+inline fn list_insert(prev: *ffi.hal.List, node: *ffi.hal.List) void {
     node.prev = @ptrCast(prev);
     node.next = prev.next;
     prev.next.?.*.prev = @ptrCast(node);
     prev.next = @ptrCast(node);
 }
 
-inline fn list_remove(node: *c.struct_list) void {
+inline fn list_remove(node: *ffi.hal.List) void {
     node.prev.?.*.next = node.next;
     node.next.?.*.prev = node.prev;
 }
 
-fn allocate(tsk: c.task_t) c.thread_t {
-    const mem = kmem.alloc(@sizeOf(c.struct_thread));
-    const t: c.thread_t = @ptrCast(@alignCast(mem));
+fn allocate(tsk: ffi.kern.TaskRef) ffi.kern.ThreadRef {
+    const mem = kmem.alloc(@sizeOf(ffi.kern.Thread));
+    const t: ffi.kern.ThreadRef = @ptrCast(@alignCast(mem));
     if (t == null) return null;
 
     const stack = kmem.alloc(c.KSTACKSZ);
@@ -51,7 +51,7 @@ fn allocate(tsk: c.task_t) c.thread_t {
         return null;
     }
 
-    _ = lib.memset(t, 0, @sizeOf(c.struct_thread));
+    _ = lib.memset(t, 0, @sizeOf(ffi.kern.Thread));
     t.*.kstack = stack;
     t.*.task = tsk;
     list_init(&t.*.mutexes);
@@ -62,7 +62,7 @@ fn allocate(tsk: c.task_t) c.thread_t {
     return t;
 }
 
-fn deallocate(t: c.thread_t) void {
+fn deallocate(t: ffi.kern.ThreadRef) void {
     list_remove(&t.*.task_link);
     list_remove(&t.*.link);
     t.*.excbits = 0;
@@ -85,7 +85,7 @@ fn deallocate(t: c.thread_t) void {
     kmem.free(t);
 }
 
-pub fn create(tsk: c.task_t, tp: ?*c.thread_t) callconv(.c) c_int {
+pub fn create(tsk: ffi.kern.TaskRef, tp: ?*ffi.kern.ThreadRef) callconv(.c) c_int {
     sched.lock();
     defer sched.unlock();
 
@@ -100,8 +100,8 @@ pub fn create(tsk: c.task_t, tp: ?*c.thread_t) callconv(.c) c_int {
     }
 
     if ((kutil.get_curtask().?.*.flags & c.TF_SYSTEM) == 0) {
-        var tmp: c.thread_t = null;
-        if (ffi.hal.copyout(@as(?*const anyopaque, @ptrCast(&tmp)), @as(?*anyopaque, @ptrCast(tp)), @sizeOf(c.thread_t)) != 0) {
+        var tmp: ffi.kern.ThreadRef = null;
+        if (ffi.hal.copyout(@as(?*const anyopaque, @ptrCast(&tmp)), @as(?*anyopaque, @ptrCast(tp)), @sizeOf(ffi.kern.ThreadRef)) != 0) {
             return c.EFAULT;
         }
     }
@@ -113,8 +113,8 @@ pub fn create(tsk: c.task_t, tp: ?*c.thread_t) callconv(.c) c_int {
     if (comptime @hasDecl(c, "CONFIG_ARMV8M")) {
         _ = lib.memset(t.*.kstack, 0, c.KSTACKSZ);
         const parent_uregs = kutil.get_curthread().?.*.ctx.uregs;
-        const child_uregs: *c.struct_cpu_regs = @ptrCast(@alignCast(@as(*anyopaque, @ptrFromInt(@intFromPtr(t.*.kstack) + c.KSTACKSZ - @sizeOf(c.struct_cpu_regs)))));
-        _ = lib.memcpy(child_uregs, parent_uregs, @sizeOf(c.struct_cpu_regs));
+        const child_uregs: *ffi.hal.CpuRegs = @ptrCast(@alignCast(@as(*anyopaque, @ptrFromInt(@intFromPtr(t.*.kstack) + c.KSTACKSZ - @sizeOf(ffi.hal.CpuRegs)))));
+        _ = lib.memcpy(child_uregs, parent_uregs, @sizeOf(ffi.hal.CpuRegs));
     } else {
         _ = lib.memcpy(t.*.kstack, kutil.get_curthread().?.*.kstack, c.KSTACKSZ);
     }
@@ -130,13 +130,13 @@ pub fn create(tsk: c.task_t, tp: ?*c.thread_t) callconv(.c) c_int {
             tp_ptr.* = t;
         }
     } else {
-        _ = ffi.hal.copyout(@as(?*const anyopaque, @ptrCast(&t)), @as(?*anyopaque, @ptrCast(tp)), @sizeOf(c.thread_t));
+        _ = ffi.hal.copyout(@as(?*const anyopaque, @ptrCast(&t)), @as(?*anyopaque, @ptrCast(tp)), @sizeOf(ffi.kern.ThreadRef));
     }
 
     return 0;
 }
 
-pub fn terminate(t: c.thread_t) callconv(.c) c_int {
+pub fn terminate(t: ffi.kern.ThreadRef) callconv(.c) c_int {
     sched.lock();
     defer sched.unlock();
 
@@ -150,7 +150,7 @@ pub fn terminate(t: c.thread_t) callconv(.c) c_int {
     return 0;
 }
 
-pub fn destroy(th: c.thread_t) callconv(.c) void {
+pub fn destroy(th: ffi.kern.ThreadRef) callconv(.c) void {
     ffi.msg.cancel(th);
     ffi.mutex.cancel(th);
     ffi.timer.cancel(th);
@@ -158,7 +158,7 @@ pub fn destroy(th: c.thread_t) callconv(.c) void {
     deallocate(th);
 }
 
-pub fn setup(t: c.thread_t, entry: ?*anyopaque, stack: ?*anyopaque, gp: ?*anyopaque) callconv(.c) c_int {
+pub fn setup(t: ffi.kern.ThreadRef, entry: ?*anyopaque, stack: ?*anyopaque, gp: ?*anyopaque) callconv(.c) c_int {
     if (entry != null and !kutil.user_area(entry)) return c.EINVAL;
     if (stack != null and !kutil.user_area(stack)) return c.EINVAL;
 
@@ -187,15 +187,15 @@ pub fn setup(t: c.thread_t, entry: ?*anyopaque, stack: ?*anyopaque, gp: ?*anyopa
     return 0;
 }
 
-pub fn self() callconv(.c) c.thread_t {
+pub fn self() callconv(.c) ffi.kern.ThreadRef {
     return kutil.get_curthread();
 }
 
-pub fn valid(t: c.thread_t) callconv(.c) c_int {
+pub fn valid(t: ffi.kern.ThreadRef) callconv(.c) c_int {
     const head = &thread_list;
-    var n: *c.struct_list = @ptrCast(head.next);
+    var n: *ffi.hal.List = @ptrCast(head.next);
     while (n != head) : (n = @ptrCast(n.next)) {
-        const tmp: *c.struct_thread = @fieldParentPtr("link", n);
+        const tmp: *ffi.kern.Thread = @fieldParentPtr("link", n);
         if (tmp == t) return 1;
     }
     return 0;
@@ -205,7 +205,7 @@ pub fn yield() callconv(.c) void {
     sched.yield();
 }
 
-pub fn @"suspend"(t: c.thread_t) callconv(.c) c_int {
+pub fn @"suspend"(t: ffi.kern.ThreadRef) callconv(.c) c_int {
     sched.lock();
     defer sched.unlock();
 
@@ -220,7 +220,7 @@ pub fn @"suspend"(t: c.thread_t) callconv(.c) c_int {
         sched.@"suspend"(t);
         if (comptime @hasDecl(c, "CONFIG_ARMV8M")) {
             if (t.*.ctx.uregs != null and t.*.ctx.saved_uregs_valid == 0) {
-                _ = lib.memcpy(&t.*.ctx.saved_uregs, t.*.ctx.uregs, @sizeOf(c.struct_cpu_regs));
+                _ = lib.memcpy(&t.*.ctx.saved_uregs, t.*.ctx.uregs, @sizeOf(ffi.hal.CpuRegs));
                 t.*.ctx.saved_uregs_ptr = t.*.ctx.uregs;
                 t.*.ctx.saved_uregs_valid = 1;
                 t.*.ctx.uregs = &t.*.ctx.saved_uregs;
@@ -231,7 +231,7 @@ pub fn @"suspend"(t: c.thread_t) callconv(.c) c_int {
     return 0;
 }
 
-pub fn @"resume"(t: c.thread_t) callconv(.c) c_int {
+pub fn @"resume"(t: ffi.kern.ThreadRef) callconv(.c) c_int {
     sched.lock();
     defer sched.unlock();
 
@@ -252,7 +252,7 @@ pub fn @"resume"(t: c.thread_t) callconv(.c) c_int {
     return 0;
 }
 
-pub fn schedparam(t: c.thread_t, op: c_int, param: ?*c_int) callconv(.c) c_int {
+pub fn schedparam(t: ffi.kern.ThreadRef, op: c_int, param: ?*c_int) callconv(.c) c_int {
     var pri: c_int = undefined;
     var policy: c_int = undefined;
     var err: c_int = 0;
@@ -324,17 +324,17 @@ pub fn idle() callconv(.c) void {
     }
 }
 
-pub fn info(tinfo: ?*c.struct_threadinfo) callconv(.c) c_int {
+pub fn info(tinfo: ?*ffi.hal.ThreadInfo) callconv(.c) c_int {
     const target = tinfo.?.cookie;
     var i: c_ulong = 0;
 
     sched.lock();
     defer sched.unlock();
 
-    var n: *c.struct_list = @ptrCast(thread_list.prev);
+    var n: *ffi.hal.List = @ptrCast(thread_list.prev);
     while (n != &thread_list) {
         if (i == target) {
-            const t: *c.struct_thread = @fieldParentPtr("link", n);
+            const t: *ffi.kern.Thread = @fieldParentPtr("link", n);
             tinfo.?.cookie = i;
             tinfo.?.id = t;
             tinfo.?.state = t.state;
@@ -344,7 +344,7 @@ pub fn info(tinfo: ?*c.struct_threadinfo) callconv(.c) c_int {
             tinfo.?.time = t.time;
             tinfo.?.suscnt = t.suscnt;
             tinfo.?.task = t.task;
-            tinfo.?.active = if (t == @as(?*c.struct_thread, @ptrCast(kutil.get_curthread().?))) 1 else 0;
+            tinfo.?.active = if (t == @as(?*ffi.kern.Thread, @ptrCast(kutil.get_curthread().?))) 1 else 0;
             _ = lib.strlcpy(@ptrCast(&tinfo.?.taskname), @ptrCast(&t.task.*.name), c.MAXTASKNAME);
             _ = lib.strlcpy(@ptrCast(&tinfo.?.slpevt), if (t.slpevt) |evt| @as([*c]const u8, @ptrCast(evt.*.name)) else @as([*c]const u8, "-"), c.MAXEVTNAME);
             return 0;
@@ -356,7 +356,7 @@ pub fn info(tinfo: ?*c.struct_threadinfo) callconv(.c) c_int {
     return c.ESRCH;
 }
 
-pub fn createKernel(entry: ?*const fn (?*anyopaque) callconv(.c) void, arg: ?*anyopaque, pri: c_int) callconv(.c) c.thread_t {
+pub fn createKernel(entry: ?*const fn (?*anyopaque) callconv(.c) void, arg: ?*anyopaque, pri: c_int) callconv(.c) ffi.kern.ThreadRef {
     const t = allocate(&c.kernel_task) orelse return null;
 
     _ = lib.memset(t.*.kstack, 0, c.KSTACKSZ);
@@ -371,7 +371,7 @@ pub fn createKernel(entry: ?*const fn (?*anyopaque) callconv(.c) void, arg: ?*an
     return t;
 }
 
-pub fn terminateKernel(t: c.thread_t) callconv(.c) void {
+pub fn terminateKernel(t: ffi.kern.ThreadRef) callconv(.c) void {
     sched.lock();
     defer sched.unlock();
 
@@ -381,7 +381,7 @@ pub fn terminateKernel(t: c.thread_t) callconv(.c) void {
     deallocate(t);
 }
 
-pub fn createIdle() callconv(.c) c.thread_t {
+pub fn createIdle() callconv(.c) ffi.kern.ThreadRef {
     const t = allocate(&c.kernel_task) orelse @panic("thread_create_idle");
 
     _ = lib.memset(t.*.kstack, 0, c.KSTACKSZ);

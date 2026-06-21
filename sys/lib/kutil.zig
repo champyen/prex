@@ -25,7 +25,7 @@ pub inline fn user_area(a: anytype) bool {
     }
 }
 
-pub inline fn kvtop(va: anytype) c.paddr_t {
+pub inline fn kvtop(va: anytype) ffi.hal.Paddr {
     const u: usize = switch (@typeInfo(@TypeOf(va))) {
         .pointer => @intFromPtr(va),
         .optional => if (va) |p| @intFromPtr(p) else 0,
@@ -34,11 +34,11 @@ pub inline fn kvtop(va: anytype) c.paddr_t {
     return u - c.KERNOFFSET;
 }
 
-pub inline fn ptokv(pa: c.paddr_t) ?*anyopaque {
+pub inline fn ptokv(pa: ffi.hal.Paddr) ?*anyopaque {
     return @ptrFromInt(pa + c.KERNOFFSET);
 }
 
-pub inline fn get_curthread() ?*c.struct_thread {
+pub inline fn get_curthread() ?*ffi.kern.Thread {
     if (comptime @hasDecl(c, "CONFIG_SMP")) {
         return @ptrCast(smp.get_cpu_control().*.active_thread);
     } else {
@@ -46,18 +46,18 @@ pub inline fn get_curthread() ?*c.struct_thread {
     }
 }
 
-pub inline fn get_curtask() ?*c.struct_task {
+pub inline fn get_curtask() ?*ffi.kern.Task {
     if (get_curthread()) |curr| {
         return @ptrCast(curr.task);
     }
     return null;
 }
 
-pub inline fn cur_thread() *c.struct_thread {
+pub inline fn cur_thread() *ffi.kern.Thread {
     return get_curthread().?;
 }
 
-pub inline fn cur_task() *c.struct_task {
+pub inline fn cur_task() *ffi.kern.Task {
     return get_curtask().?;
 }
 
@@ -69,3 +69,6 @@ pub inline fn toReg(val: anytype) c.register_t {
     };
     return @intCast(@as(isize, @bitCast(u)));
 }
+
+pub const list = @import("list.zig");
+

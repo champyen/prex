@@ -12,10 +12,18 @@ const hal = ffi.hal;
 const lib = ffi.lib;
 const sched = ffi.sched;
 
+const debug_page = false;
+
+inline fn dprintf(comptime fmt: [*:0]const u8, args: anytype) void {
+    if (debug_page) {
+        lib.printf(fmt, args);
+    }
+}
+
 const Page = extern struct {
     next: ?*Page,
     prev: ?*Page,
-    size: c.vsize_t,
+    size: ffi.hal.Vsize,
 };
 
 var page_head = Page{
@@ -23,16 +31,16 @@ var page_head = Page{
     .prev = null,
     .size = 0,
 };
-var total_size: c.psize_t = 0;
-var used_size: c.psize_t = 0;
-var bootdisk_size: c.psize_t = 0;
+var total_size: ffi.hal.Psize = 0;
+var used_size: ffi.hal.Psize = 0;
+var bootdisk_size: ffi.hal.Psize = 0;
 
 
 
 
 
-fn page_is_ram(pa: c.paddr_t) bool {
-    var bi: ?*c.struct_bootinfo = null;
+fn page_is_ram(pa: ffi.hal.Paddr) bool {
+    var bi: ?*ffi.hal.BootInfo = null;
     hal.machine_bootinfo(&bi);
     const binfo = bi orelse return false;
     var i: usize = 0;
@@ -47,9 +55,9 @@ fn page_is_ram(pa: c.paddr_t) bool {
     return false;
 }
 
-pub fn alloc(psize: c.psize_t) callconv(.c) c.paddr_t {
+pub fn alloc(psize: ffi.hal.Psize) callconv(.c) ffi.hal.Paddr {
     sched.lock();
-    _ = lib.printf("page_alloc: psize=0x%x\n", psize);
+    dprintf("page_alloc: psize=0x%x\n", .{psize});
     defer sched.unlock();
 
     const size = kutil.round_page(@as(usize, @intCast(psize)));
@@ -82,15 +90,14 @@ pub fn alloc(psize: c.psize_t) callconv(.c) c.paddr_t {
         next.*.prev = tmp;
     }
 
-    used_size += @as(c.psize_t, @intCast(size));
+    used_size += @as(ffi.hal.Psize, @intCast(size));
     const ret_val = kutil.kvtop(block);
-    _ = lib.printf("page_alloc: returning 0x%x\n", ret_val);
+    dprintf("page_alloc: returning 0x%x\n", .{ret_val});
     return ret_val;
 }
 
-pub fn free(paddr: c.paddr_t, psize: c.psize_t) callconv(.c) void {
+pub fn free(paddr: ffi.hal.Paddr, psize: ffi.hal.Psize) callconv(.c) void {
     sched.lock();
-    _ = lib.printf("page_free: paddr=0x%x, size=0x%x\n", paddr, psize);
     defer sched.unlock();
 
     if (!page_is_ram(paddr)) {
@@ -98,6 +105,7 @@ pub fn free(paddr: c.paddr_t, psize: c.psize_t) callconv(.c) void {
     }
 
     const size = kutil.round_page(@as(usize, @intCast(psize)));
+    dprintf("page_free: paddr=0x%x, size=0x%x\n", .{ paddr, size });
     const blk: *Page = @ptrCast(@alignCast(kutil.ptokv(paddr) orelse return));
 
     var prev: *Page = &page_head;
@@ -134,16 +142,16 @@ pub fn free(paddr: c.paddr_t, psize: c.psize_t) callconv(.c) void {
         }
     }
 
-    used_size = used_size -% @as(c.psize_t, @intCast(size));
-    _ = lib.printf("page_free: done, page_head.next=0x%x\n", @intFromPtr(page_head.next));
+    used_size = used_size -% @as(ffi.hal.Psize, @intCast(size));
+    dprintf("page_free: done, page_head.next=0x%x\n", .{@intFromPtr(page_head.next)});
 }
 
-pub fn reserve(paddr: c.paddr_t, psize: c.psize_t) callconv(.c) c_int {
+pub fn reserve(paddr: ffi.hal.Paddr, psize: ffi.hal.Psize) callconv(.c) c_int {
     if (psize == 0) return 0;
 
     var pa = paddr;
     var sz = psize;
-    const page_size = @as(c.paddr_t, @intCast(c.PAGE_SIZE));
+    const page_size = @as(ffi.hal.Paddr, @intCast(c.PAGE_SIZE));
     if (pa < page_size) {
         if (pa + sz <= page_size) return 0;
         sz -= (page_size - pa);
@@ -197,11 +205,11 @@ pub fn reserve(paddr: c.paddr_t, psize: c.psize_t) callconv(.c) c_int {
         }
     }
 
-    used_size += @as(c.psize_t, @intCast(size));
+    used_size += @as(ffi.hal.Psize, @intCast(size));
     return 0;
 }
 
-pub fn info(mem_info: *c.struct_meminfo) callconv(.c) void {
+pub fn info(mem_info: *ffi.hal.MemInfo) callconv(.c) void {
     mem_info.*.total = total_size;
     mem_info.*.free = total_size - used_size;
     mem_info.*.bootdisk = bootdisk_size;
@@ -211,15 +219,15 @@ pub fn info(mem_info: *c.struct_meminfo) callconv(.c) void {
 }
 
 pub fn init() callconv(.c) void {
-    var bi: ?*c.struct_bootinfo = null;
+    var bi: ?*ffi.hal.BootInfo = null;
     hal.machine_bootinfo(&bi);
     const binfo = bi orelse return;
 
-    _ = lib.printf("page_init: nr_rams=%d\n", binfo.*.nr_rams);
+    dprintf("page_init: nr_rams=%d\n", .{binfo.*.nr_rams});
     var k: usize = 0;
     while (k < binfo.*.nr_rams) : (k += 1) {
         const ram = &binfo.*.ram[k];
-        _ = lib.printf("  ram[%d]: base=0x%x, size=0x%x, type=%d\n", @as(c_int, @intCast(k)), ram.*.base, ram.*.size, ram.*.type);
+        dprintf("  ram[%d]: base=0x%x, size=0x%x, type=%d\n", .{ @as(c_int, @intCast(k)), ram.*.base, ram.*.size, ram.*.type });
     }
 
     total_size = 0;

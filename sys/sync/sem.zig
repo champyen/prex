@@ -236,7 +236,7 @@ pub fn getValue(sp: ?*c.sem_t, value: ?*c_uint) callconv(.c) c_int {
     return 0;
 }
 
-pub fn cleanup(task: c.task_t) callconv(.c) void {
+pub fn cleanup(task: ffi.kern.TaskRef) callconv(.c) void {
     const head = @as(*ffi.List, @ptrCast(&task.*.sems));
     var n = head.first();
     while (n != head) {

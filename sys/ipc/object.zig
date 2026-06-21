@@ -29,7 +29,7 @@ fn find(name: [*:0]const u8) ?*c.struct_object {
 
 fn deallocate(obj: *c.struct_object) void {
     msg.abort(obj);
-    const owner = @as(*c.struct_task, @ptrCast(obj.owner));
+    const owner = @as(*ffi.kern.Task, @ptrCast(obj.owner));
     owner.nobjects -|= 1;
     @as(*ffi.List, @ptrCast(&obj.task_link)).remove();
     @as(*ffi.List, @ptrCast(&obj.link)).remove();
@@ -150,8 +150,8 @@ pub fn destroy(obj: c.object_t) callconv(.c) c_int {
     return 0;
 }
 
-pub fn cleanup(tsk: c.task_t) callconv(.c) void {
-    const t = @as(*c.struct_task, @ptrCast(tsk));
+pub fn cleanup(tsk: ffi.kern.TaskRef) callconv(.c) void {
+    const t = @as(*ffi.kern.Task, @ptrCast(tsk));
     while (!@as(*ffi.List, @ptrCast(&t.objects)).isEmpty()) {
         const obj = @as(*ffi.List, @ptrCast(&t.objects)).first().entry(c.struct_object, "task_link");
         deallocate(obj);

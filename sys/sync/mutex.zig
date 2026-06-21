@@ -51,9 +51,9 @@ fn copyin(ump: ?*c.mutex_t, kmp: ?*c.mutex_t) c_int {
     return 0;
 }
 
-fn prio_inherit(waiter: c.thread_t) c_int {
+fn prio_inherit(waiter: ffi.kern.ThreadRef) c_int {
     var m: c.mutex_t = waiter.*.mutex_waiting;
-    var holder: c.thread_t = undefined;
+    var holder: ffi.kern.ThreadRef = undefined;
     var count: c_int = 0;
     var iters: u32 = 0;
 
@@ -80,7 +80,7 @@ fn prio_inherit(waiter: c.thread_t) c_int {
     return 0;
 }
 
-fn prio_uninherit(t: c.thread_t) void {
+fn prio_uninherit(t: ffi.kern.ThreadRef) void {
     if (t.*.priority == t.*.basepri) {
         return;
     }
@@ -150,7 +150,7 @@ pub fn destroy(mp: ?*c.mutex_t) callconv(.c) c_int {
     return 0;
 }
 
-pub fn cleanup(task: c.task_t) callconv(.c) void {
+pub fn cleanup(task: ffi.kern.TaskRef) callconv(.c) void {
     while (!@as(*ffi.List, @ptrCast(&task.*.mutexes)).isEmpty()) {
         const n = @as(*ffi.List, @ptrCast(&task.*.mutexes)).first();
         const m = n.entry(ffi.sync.Mutex, "task_link");
@@ -265,7 +265,7 @@ pub fn unlock(mp: ?*c.mutex_t) callconv(.c) c_int {
     return 0;
 }
 
-pub fn cancel(t: c.thread_t) callconv(.c) void {
+pub fn cancel(t: ffi.kern.ThreadRef) callconv(.c) void {
     const head = @as(*ffi.List, @ptrCast(&t.*.mutexes));
     while (!head.isEmpty()) {
         const n = head.first();
@@ -283,7 +283,7 @@ pub fn cancel(t: c.thread_t) callconv(.c) void {
     }
 }
 
-pub fn setpri(t: c.thread_t, pri: c_int) callconv(.c) void {
+pub fn setpri(t: ffi.kern.ThreadRef, pri: c_int) callconv(.c) void {
     if (t.*.mutex_waiting != null and pri < t.*.priority) {
         _ = prio_inherit(t);
     }

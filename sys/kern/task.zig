@@ -12,46 +12,46 @@ const vm = ffi.vm;
 const thread = ffi.thread;
 const smp = ffi.smp;
 
-var task_list: c.struct_list = undefined;
+var task_list: ffi.hal.List = undefined;
 var ntasks: c_int = 0;
 
-var kernel_task: c.struct_task = std.mem.zeroes(c.struct_task);
+var kernel_task: ffi.kern.Task = std.mem.zeroes(ffi.kern.Task);
 
 
 
-inline fn list_init_fn(head: *c.struct_list) void {
+inline fn list_init_fn(head: *ffi.hal.List) void {
     head.next = @ptrCast(head);
     head.prev = @ptrCast(head);
 }
 
-inline fn list_insert_fn(prev: *c.struct_list, node: *c.struct_list) void {
+inline fn list_insert_fn(prev: *ffi.hal.List, node: *ffi.hal.List) void {
     node.prev = @ptrCast(prev);
     node.next = prev.next;
     prev.next.?.*.prev = @ptrCast(node);
     prev.next = @ptrCast(node);
 }
 
-inline fn list_remove_fn(node: *c.struct_list) void {
+inline fn list_remove_fn(node: *ffi.hal.List) void {
     node.prev.?.*.next = node.next;
     node.next.?.*.prev = node.prev;
 }
 
-inline fn list_empty(head: *c.struct_list) bool {
-    return head.next == @as(?*c.struct_list, @ptrCast(head));
+inline fn list_empty(head: *ffi.hal.List) bool {
+    return head.next == @as(?*ffi.hal.List, @ptrCast(head));
 }
 
-inline fn list_first(head: *c.struct_list) *c.struct_list {
+inline fn list_first(head: *ffi.hal.List) *ffi.hal.List {
     return @ptrCast(head.next.?);
 }
 
-inline fn list_next_node(node: *c.struct_list) *c.struct_list {
+inline fn list_next_node(node: *ffi.hal.List) *ffi.hal.List {
     return @ptrCast(node.next.?);
 }
 
-fn valid(task: c.task_t) callconv(.c) c_int {
+fn valid(task: ffi.hal.TaskRef) callconv(.c) c_int {
     var n = list_first(&task_list);
-    while (n != @as(*c.struct_list, @ptrCast(&task_list))) : (n = list_next_node(n)) {
-        const tmp = @as(*c.struct_task, @fieldParentPtr("link", n));
+    while (n != @as(*ffi.hal.List, @ptrCast(&task_list))) : (n = list_next_node(n)) {
+        const tmp = @as(*ffi.kern.Task, @fieldParentPtr("link", n));
         if (tmp == task) {
             return 1;
         }
@@ -59,7 +59,7 @@ fn valid(task: c.task_t) callconv(.c) c_int {
     return 0;
 }
 
-fn access(task: c.task_t) callconv(.c) c_int {
+fn access(task: ffi.hal.TaskRef) callconv(.c) c_int {
     if ((task.?.*.flags & c.TF_SYSTEM) != 0) {
         return 0;
     } else {
@@ -82,8 +82,8 @@ fn capable(cap: c.cap_t) callconv(.c) c_int {
     return capable_val;
 }
 
-pub fn create(parent: c.task_t, vm_option: c_int, childp: ?*c.task_t) callconv(.c) c_int {
-    var task: c.task_t = null;
+pub fn create(parent: ffi.hal.TaskRef, vm_option: c_int, childp: ?*ffi.hal.TaskRef) callconv(.c) c_int {
+    var task: ffi.hal.TaskRef = null;
     var map: c.vm_map_t = null;
 
     if (parent == null) return c.EINVAL;
@@ -113,19 +113,19 @@ pub fn create(parent: c.task_t, vm_option: c_int, childp: ?*c.task_t) callconv(.
         }
 
         task = null;
-        if (ffi.hal.copyout(@as(?*const anyopaque, @ptrCast(&task)), @as(?*anyopaque, @ptrCast(childp)), @sizeOf(c.task_t)) != 0) {
+        if (ffi.hal.copyout(@as(?*const anyopaque, @ptrCast(&task)), @as(?*anyopaque, @ptrCast(childp)), @sizeOf(ffi.hal.TaskRef)) != 0) {
             sched.unlock();
             return c.EFAULT;
         }
     }
 
-    const mem = kmem.alloc(@sizeOf(c.struct_task));
+    const mem = kmem.alloc(@sizeOf(ffi.kern.Task));
     if (mem == null) {
         sched.unlock();
         return c.ENOMEM;
     }
     task = @ptrCast(@alignCast(mem));
-    @memset(@as([*]u8, @ptrCast(task))[0..@sizeOf(c.struct_task)], 0);
+    @memset(@as([*]u8, @ptrCast(task))[0..@sizeOf(ffi.kern.Task)], 0);
 
     switch (vm_option) {
         c.VM_NEW => {
@@ -164,14 +164,14 @@ pub fn create(parent: c.task_t, vm_option: c_int, childp: ?*c.task_t) callconv(.
     if ((kutil.cur_task().*.flags & c.TF_SYSTEM) != 0) {
         childp.?.* = task;
     } else {
-        _ = ffi.hal.copyout(@as(?*const anyopaque, @ptrCast(&task)), @as(?*anyopaque, @ptrCast(childp)), @sizeOf(c.task_t));
+        _ = ffi.hal.copyout(@as(?*const anyopaque, @ptrCast(&task)), @as(?*anyopaque, @ptrCast(childp)), @sizeOf(ffi.hal.TaskRef));
     }
 
     sched.unlock();
     return 0;
 }
 
-pub fn terminate(task: c.task_t) callconv(.c) c_int {
+pub fn terminate(task: ffi.hal.TaskRef) callconv(.c) c_int {
     sched.lock();
     if (valid(task) == 0) {
         sched.unlock();
@@ -185,7 +185,7 @@ pub fn terminate(task: c.task_t) callconv(.c) c_int {
     list_remove_fn(&task.?.*.link);
     @as(*usize, @ptrCast(&task.?.*.handler)).* = @as(usize, @bitCast(@as(isize, -1)));
 
-    c.timer_stop(&task.?.*.alarm);
+    ffi.timer.stop(&task.?.*.alarm);
     ffi.object.cleanup(task);
     ffi.mutex.cleanup(task);
     ffi.cond.cleanup(task);
@@ -193,9 +193,9 @@ pub fn terminate(task: c.task_t) callconv(.c) c_int {
 
     {
         var n = list_first(&task.?.*.threads);
-        while (n != @as(*c.struct_list, @ptrCast(&task.?.*.threads))) {
+        while (n != @as(*ffi.hal.List, @ptrCast(&task.?.*.threads))) {
             const next_node = list_next_node(n);
-            const t = @as(*c.struct_thread, @fieldParentPtr("task_link", n));
+            const t = @as(*ffi.kern.Thread, @fieldParentPtr("task_link", n));
             if (t != kutil.cur_thread()) {
                 thread.destroy(t);
             }
@@ -214,11 +214,11 @@ pub fn terminate(task: c.task_t) callconv(.c) c_int {
     return 0;
 }
 
-pub fn self() callconv(.c) c.task_t {
+pub fn self() callconv(.c) ffi.hal.TaskRef {
     return kutil.cur_thread().*.task;
 }
 
-pub fn @"suspend"(task: c.task_t) callconv(.c) c_int {
+pub fn @"suspend"(task: ffi.hal.TaskRef) callconv(.c) c_int {
     sched.lock();
     if (valid(task) == 0) {
         sched.unlock();
@@ -232,8 +232,8 @@ pub fn @"suspend"(task: c.task_t) callconv(.c) c_int {
     task.?.*.suscnt += 1;
     if (task.?.*.suscnt == 1) {
         var n = list_first(&task.?.*.threads);
-        while (n != @as(*c.struct_list, @ptrCast(&task.?.*.threads))) : (n = list_next_node(n)) {
-            const t = @as(*c.struct_thread, @fieldParentPtr("task_link", n));
+        while (n != @as(*ffi.hal.List, @ptrCast(&task.?.*.threads))) : (n = list_next_node(n)) {
+            const t = @as(*ffi.kern.Thread, @fieldParentPtr("task_link", n));
             _ = thread.@"suspend"(t);
         }
     }
@@ -241,7 +241,7 @@ pub fn @"suspend"(task: c.task_t) callconv(.c) c_int {
     return 0;
 }
 
-pub fn @"resume"(task: c.task_t) callconv(.c) c_int {
+pub fn @"resume"(task: ffi.hal.TaskRef) callconv(.c) c_int {
     if (task == kutil.cur_task()) return c.EINVAL;
 
     sched.lock();
@@ -261,8 +261,8 @@ pub fn @"resume"(task: c.task_t) callconv(.c) c_int {
     task.?.*.suscnt -= 1;
     if (task.?.*.suscnt == 0) {
         var n = list_first(&task.?.*.threads);
-        while (n != @as(*c.struct_list, @ptrCast(&task.?.*.threads))) : (n = list_next_node(n)) {
-            const t = @as(*c.struct_thread, @fieldParentPtr("task_link", n));
+        while (n != @as(*ffi.hal.List, @ptrCast(&task.?.*.threads))) : (n = list_next_node(n)) {
+            const t = @as(*ffi.kern.Thread, @fieldParentPtr("task_link", n));
             _ = thread.@"resume"(t);
         }
     }
@@ -270,7 +270,7 @@ pub fn @"resume"(task: c.task_t) callconv(.c) c_int {
     return 0;
 }
 
-pub fn setname(task: c.task_t, name: [*:0]const u8) callconv(.c) c_int {
+pub fn setname(task: ffi.hal.TaskRef, name: [*:0]const u8) callconv(.c) c_int {
     var str: [c.MAXTASKNAME]u8 = undefined;
 
     sched.lock();
@@ -297,7 +297,7 @@ pub fn setname(task: c.task_t, name: [*:0]const u8) callconv(.c) c_int {
     return 0;
 }
 
-pub fn setcap(task: c.task_t, cap: c.cap_t) callconv(.c) c_int {
+pub fn setcap(task: ffi.hal.TaskRef, cap: c.cap_t) callconv(.c) c_int {
     if (capable(c.CAP_SETPCAP) == 0) return c.EPERM;
 
     sched.lock();
@@ -314,7 +314,7 @@ pub fn setcap(task: c.task_t, cap: c.cap_t) callconv(.c) c_int {
     return 0;
 }
 
-pub fn chkcap(task: c.task_t, cap: c.cap_t) callconv(.c) c_int {
+pub fn chkcap(task: ffi.hal.TaskRef, cap: c.cap_t) callconv(.c) c_int {
     var err: c_int = 0;
 
     sched.lock();
@@ -332,7 +332,7 @@ pub fn chkcap(task: c.task_t, cap: c.cap_t) callconv(.c) c_int {
     return err;
 }
 
-pub fn info(task_info_ptr: ?*c.struct_taskinfo) callconv(.c) c_int {
+pub fn info(task_info_ptr: ?*ffi.hal.TaskInfo) callconv(.c) c_int {
     const target: c.u_long = task_info_ptr.?.*.cookie;
     var i: c.u_long = 0;
 
@@ -340,7 +340,7 @@ pub fn info(task_info_ptr: ?*c.struct_taskinfo) callconv(.c) c_int {
     var n = list_first(&task_list);
     while (true) : (n = list_next_node(n)) {
         if (i == target) {
-            const task = @as(*c.struct_task, @fieldParentPtr("link", n));
+            const task = @as(*ffi.kern.Task, @fieldParentPtr("link", n));
             task_info_ptr.?.*.cookie = i + 1;
             task_info_ptr.?.*.id = task;
             task_info_ptr.?.*.flags = task.*.flags;
@@ -354,22 +354,22 @@ pub fn info(task_info_ptr: ?*c.struct_taskinfo) callconv(.c) c_int {
             return 0;
         }
         i += 1;
-        if (n == @as(*c.struct_list, @ptrCast(&task_list))) break;
+        if (n == @as(*ffi.hal.List, @ptrCast(&task_list))) break;
     }
     sched.unlock();
     return c.ESRCH;
 }
 
 pub fn bootstrap() callconv(.c) void {
-    var bi: ?*c.struct_bootinfo = null;
+    var bi: ?*ffi.hal.BootInfo = null;
     hal.machine_bootinfo(&bi);
 
     var i: c_int = 0;
     while (i < bi.?.*.nr_tasks) : (i += 1) {
-        const tasks_ptr: [*]c.struct_module = @ptrCast(&bi.?.*.tasks);
-        const mod: *c.struct_module = &tasks_ptr[@intCast(i)];
-        var task: c.task_t = null;
-        var t: c.thread_t = null;
+        const tasks_ptr: [*]ffi.hal.Module = @ptrCast(&bi.?.*.tasks);
+        const mod: *ffi.hal.Module = &tasks_ptr[@intCast(i)];
+        var task: ffi.hal.TaskRef = null;
+        var t: ffi.hal.ThreadRef = null;
         var stack: ?*anyopaque = null;
 
         var err = create(&kernel_task, c.VM_NEW, &task);
@@ -395,7 +395,7 @@ pub fn bootstrap() callconv(.c) void {
 
         const sp: ?*anyopaque = @ptrFromInt(@as(usize, @intFromPtr(stack)) + c.DFLSTKSZ - @sizeOf(c_int) * 3);
         const entry_fn: *const fn () callconv(.c) void = @ptrCast(@alignCast(@as(?*anyopaque, @ptrFromInt(@as(usize, mod.*.entry)))));
-        const gp: ?*anyopaque = if (@hasField(c.struct_module, "got_base")) (if (mod.*.got_base != 0) @ptrFromInt(mod.*.got_base) else null) else null;
+        const gp: ?*anyopaque = if (@hasField(ffi.hal.Module, "got_base")) (if (mod.*.got_base != 0) @ptrFromInt(mod.*.got_base) else null) else null;
         err = thread.setup(t, entry_fn, sp, gp);
         if (err != 0) {
             lib.panic("unable to load boot task");

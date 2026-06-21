@@ -11,14 +11,14 @@ const thread = ffi.thread;
 
 var IST_NONE: ?*const fn (?*anyopaque) callconv(.c) void = undefined;
 
-var irq_table = std.mem.zeroes([c.MAXIRQS]?*c.struct_irq);
+var irq_table = std.mem.zeroes([c.MAXIRQS]?*ffi.kern.IRQ);
 
 inline fn ISTPRI(pri: c_int) c_int {
     return c.PRI_IST + (c.IPL_HIGH - pri);
 }
 
 fn irq_thread(arg: ?*anyopaque) callconv(.c) void {
-    const irq: *c.struct_irq = @ptrCast(@alignCast(arg.?));
+    const irq: *ffi.kern.IRQ = @ptrCast(@alignCast(arg.?));
     const fn_ptr = irq.ist;
     const data = irq.data;
 
@@ -26,7 +26,7 @@ fn irq_thread(arg: ?*anyopaque) callconv(.c) void {
 
     while (true) {
         if (irq.istreq <= 0) {
-            _ = sched.tsleep(@as(?*c.struct_event, @ptrCast(&irq.istevt)), 0);
+            _ = sched.tsleep(&irq.istevt, 0);
         }
         irq.istreq -= 1;
         std.debug.assert(irq.istreq >= 0);
@@ -37,17 +37,17 @@ fn irq_thread(arg: ?*anyopaque) callconv(.c) void {
     }
 }
 
-pub fn attach(vector: c_int, pri: c_int, shared: c_int, isr: ?*const fn (?*anyopaque) callconv(.c) c_int, ist: ?*const fn (?*anyopaque) callconv(.c) void, data: ?*anyopaque) callconv(.c) ?*c.struct_irq {
+pub fn attach(vector: c_int, pri: c_int, shared: c_int, isr: ?*const fn (?*anyopaque) callconv(.c) c_int, ist: ?*const fn (?*anyopaque) callconv(.c) void, data: ?*anyopaque) callconv(.c) ?*ffi.kern.IRQ {
     std.debug.assert(isr != null);
 
     sched.lock();
-    const irq_mem = kmem.alloc(@sizeOf(c.struct_irq));
+    const irq_mem = kmem.alloc(@sizeOf(ffi.kern.IRQ));
     if (irq_mem == null) {
         @panic("irq_attach");
     }
-    const irq: *c.struct_irq = @ptrCast(@alignCast(irq_mem));
+    const irq: *ffi.kern.IRQ = @ptrCast(@alignCast(irq_mem));
 
-    _ = lib.memset(irq, 0, @sizeOf(c.struct_irq));
+    _ = lib.memset(irq, 0, @sizeOf(ffi.kern.IRQ));
     irq.vector = vector;
     irq.priority = pri;
     irq.isr = isr;
@@ -70,7 +70,7 @@ pub fn attach(vector: c_int, pri: c_int, shared: c_int, isr: ?*const fn (?*anyop
     return irq;
 }
 
-pub fn detach(irq: ?*c.struct_irq) callconv(.c) void {
+pub fn detach(irq: ?*ffi.kern.IRQ) callconv(.c) void {
     std.debug.assert(irq != null);
     std.debug.assert(irq.?.vector < c.MAXIRQS);
 
@@ -96,12 +96,12 @@ pub fn handler(vector: c_int) callconv(.c) void {
     if (rc == c.INT_CONTINUE) {
         std.debug.assert(irq.ist != IST_NONE);
         irq.istreq += 1;
-        sched.wakeup(@as(?*c.struct_event, @ptrCast(&irq.istevt)));
+        sched.wakeup(&irq.istevt);
         std.debug.assert(irq.istreq != 0);
     }
 }
 
-pub fn info(irq_info_ptr: ?*c.struct_irqinfo) callconv(.c) c_int {
+pub fn info(irq_info_ptr: ?*ffi.hal.IrqInfo) callconv(.c) c_int {
     var vec = irq_info_ptr.?.cookie;
 
     while (vec < c.MAXIRQS) {

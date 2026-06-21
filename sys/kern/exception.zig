@@ -11,21 +11,21 @@ const thread = ffi.thread;
 
 var EXC_DFL: ?*const fn (c_int) callconv(.c) void = undefined;
 
-var exception_event: c.struct_event = undefined;
+var exception_event: ffi.sync.Event = undefined;
 
 
 
 
-inline fn list_first(head: *c.struct_list) ?*c.struct_list {
+inline fn list_first(head: *ffi.hal.List) ?*ffi.hal.List {
     return @ptrCast(head.next);
 }
 
-inline fn list_next(node: *c.struct_list) ?*c.struct_list {
+inline fn list_next(node: *ffi.hal.List) ?*ffi.hal.List {
     return @ptrCast(node.next);
 }
 
-inline fn list_empty(head: *c.struct_list) bool {
-    return head.next == @as(?*c.struct_list, @ptrCast(head));
+inline fn list_empty(head: *ffi.hal.List) bool {
+    return head.next == @as(?*ffi.hal.List, @ptrCast(head));
 }
 
 pub fn setup(handler: ?*const fn (c_int) callconv(.c) void) callconv(.c) c_int {
@@ -41,13 +41,13 @@ pub fn setup(handler: ?*const fn (c_int) callconv(.c) void) callconv(.c) c_int {
     sched.lock();
     if (self.handler != EXC_DFL and handler == EXC_DFL) {
         var n = list_first(&self.threads);
-        while (n != null and n.? != @as(?*c.struct_list, @ptrCast(&self.threads))) {
+        while (n != null and n.? != @as(?*ffi.hal.List, @ptrCast(&self.threads))) {
             const s = hal.splhigh();
-            const t: *c.struct_thread = @fieldParentPtr("task_link", n.?);
+            const t: *ffi.kern.Thread = @fieldParentPtr("task_link", n.?);
             t.excbits = 0;
             _ = hal.splx(s);
 
-            if (t.slpevt == @as(?*c.struct_event, @ptrCast(&exception_event))) {
+            if (t.slpevt == @as(?*ffi.hal.Event, @alignCast(@ptrCast(&exception_event)))) {
                 sched.unsleep(t, c.SLP_BREAK);
             }
             n = list_next(n.?);
@@ -58,15 +58,15 @@ pub fn setup(handler: ?*const fn (c_int) callconv(.c) void) callconv(.c) c_int {
     return 0;
 }
 
-pub fn raise(task: c.task_t, excno: c_int) callconv(.c) c_int {
+pub fn raise(task: ffi.kern.TaskRef, excno: c_int) callconv(.c) c_int {
     var error_code: c_int = undefined;
 
     sched.lock();
-    if (c.task_valid(task) == 0) {
+    if (ffi.task.valid(task) == 0) {
         sched.unlock();
         return c.ESRCH;
     }
-    if (task != @as(?*c.struct_task, @ptrCast(kutil.get_curtask())) and c.task_capable(c.CAP_KILL) == 0) {
+    if (task != @as(?*ffi.kern.Task, @ptrCast(kutil.get_curtask())) and ffi.task.capable(c.CAP_KILL) == 0) {
         sched.unlock();
         return c.EPERM;
     }
@@ -75,8 +75,8 @@ pub fn raise(task: c.task_t, excno: c_int) callconv(.c) c_int {
     return error_code;
 }
 
-pub fn post(task: c.task_t, excno: c_int) callconv(.c) c_int {
-    var t: ?*c.struct_thread = null;
+pub fn post(task: ffi.kern.TaskRef, excno: c_int) callconv(.c) c_int {
+    var t: ?*ffi.kern.Thread = null;
     var found: c_int = 0;
 
     sched.lock();
@@ -91,9 +91,9 @@ pub fn post(task: c.task_t, excno: c_int) callconv(.c) c_int {
     }
 
     var n = list_first(&task.*.threads);
-    while (n != null and n.? != @as(?*c.struct_list, @ptrCast(&task.*.threads))) {
-        const tmp: *c.struct_thread = @fieldParentPtr("task_link", n.?);
-        if (tmp.slpevt == @as(?*c.struct_event, @ptrCast(&exception_event))) {
+    while (n != null and n.? != @as(?*ffi.hal.List, @ptrCast(&task.*.threads))) {
+        const tmp: *ffi.kern.Thread = @fieldParentPtr("task_link", n.?);
+        if (tmp.slpevt == @as(?*ffi.hal.Event, @alignCast(@ptrCast(&exception_event)))) {
             t = tmp;
             found = 1;
             break;
@@ -103,7 +103,7 @@ pub fn post(task: c.task_t, excno: c_int) callconv(.c) c_int {
 
     if (found == 0) {
         if (!list_empty(&task.*.threads)) {
-            const first: *c.struct_thread = @fieldParentPtr("task_link", list_first(&task.*.threads).?);
+            const first: *ffi.kern.Thread = @fieldParentPtr("task_link", list_first(&task.*.threads).?);
             t = first;
         }
     }
