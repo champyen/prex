@@ -1,3 +1,4 @@
+const std = @import("std");
 const c = @import("c").c;
 
 pub const smp = struct {
@@ -229,3 +230,215 @@ pub const lib = struct {
 };
 
 pub const kutil = @import("lib/kutil.zig");
+
+pub const sync = struct {
+    pub const Event = extern struct {
+        sleepq: c.struct_queue,
+        name: [*:0]const u8,
+
+        pub fn init(self: *Event, name: [*:0]const u8) void {
+            c.queue_init(&self.sleepq);
+            self.name = name;
+        }
+
+        pub fn isWaiting(self: *const Event) bool {
+            return !c.queue_empty(&self.sleepq);
+        }
+    };
+
+    pub const Mutex = extern struct {
+        task_link: c.struct_list,
+        owner: c.task_t,
+        event: sync.Event,
+        link: c.struct_list,
+        holder: c.thread_t,
+        priority: c_int,
+        locks: c_int,
+
+        pub fn lock(self: *Mutex) void {
+            _ = c.mutex_lock(@ptrCast(self));
+        }
+
+        pub fn unlock(self: *Mutex) void {
+            _ = c.mutex_unlock(@ptrCast(self));
+        }
+    };
+
+    pub const Cond = extern struct {
+        task_link: c.struct_list,
+        owner: c.task_t,
+        event: sync.Event,
+    };
+
+    pub const Sem = extern struct {
+        next: *Sem,
+        task_link: c.struct_list,
+        owner: c.task_t,
+        event: sync.Event,
+        value: c.u_int,
+        refcnt: c_int,
+    };
+
+    comptime {
+        std.debug.assert(@sizeOf(Event) == @sizeOf(c.struct_event));
+        std.debug.assert(@sizeOf(Mutex) == @sizeOf(c.struct_mutex));
+        std.debug.assert(@sizeOf(Cond) == @sizeOf(c.struct_cond));
+        std.debug.assert(@sizeOf(Sem) == @sizeOf(c.struct_sem));
+    }
+};
+
+pub const ipc = struct {
+    pub const Object = extern struct {
+        link: c.struct_list,
+        name: [c.MAXOBJNAME]u8,
+        task_link: c.struct_list,
+        owner: c.task_t,
+        sendq: c.struct_queue,
+        recvq: c.struct_queue,
+    };
+
+    comptime {
+        std.debug.assert(@sizeOf(Object) == @sizeOf(c.struct_object));
+    }
+};
+
+pub const kern = struct {
+    pub const Device = extern struct {
+        next: *Device,
+        driver: *c.struct_driver,
+        name: [c.MAXDEVNAME]u8,
+        flags: c_int,
+        active: c_int,
+        refcnt: c_int,
+        private: ?*anyopaque,
+    };
+
+    pub const IRQ = extern struct {
+        vector: c_int,
+        isr: *const fn (void) callconv(.c) c_int,
+        ist: *const fn (void) callconv(.c) void,
+        data: ?*anyopaque,
+        priority: c_int,
+        count: c.u_int,
+        istreq: c_int,
+        thread: c.thread_t,
+        istevt: sync.Event,
+    };
+
+    pub const Timer = extern struct {
+        link: c.struct_list,
+        state: c_int,
+        expire: c.u_long,
+        interval: c.u_long,
+        func: *const fn (void) callconv(.c) void,
+        arg: ?*anyopaque,
+        event: sync.Event,
+    };
+
+    pub const Dpc = extern struct {
+        link: c.struct_queue,
+        state: c_int,
+        func: *const fn (void) callconv(.c) void,
+        arg: ?*anyopaque,
+    };
+
+    pub const Thread = extern struct {
+        link: c.struct_list,
+        task_link: c.struct_list,
+        sched_link: c.struct_queue,
+        task: c.task_t,
+        state: c_int,
+        policy: c_int,
+        priority: c_int,
+        basepri: c_int,
+        timeleft: c_int,
+        time: c.u_int,
+        resched: c_int,
+        locks: c_int,
+        suscnt: c_int,
+        slpevt: *sync.Event,
+        slpret: c_int,
+        timeout: kern.Timer,
+        periodic: *kern.Timer,
+        excbits: u32,
+        mutexes: c.struct_list,
+        mutex_waiting: c.mutex_t,
+        ipc_link: c.struct_queue,
+        wait_start_tick: if (@hasDecl(c, "CONFIG_KD")) u32 else void,
+        msgaddr: ?*anyopaque,
+        msgsize: c.size_t,
+        sender: c.thread_t,
+        receiver: c.thread_t,
+        sendobj: c.object_t,
+        recvobj: c.object_t,
+        kstack: ?*anyopaque,
+        ctx: c.struct_context,
+    };
+
+    pub const Task = extern struct {
+        link: c.struct_list,
+        name: [c.MAXTASKNAME]u8,
+        parent: c.task_t,
+        map: c.vm_map_t,
+        suscnt: c_int,
+        flags: c_int,
+        capability: c.cap_t,
+        alarm: kern.Timer,
+        handler: *const fn (c_int) callconv(.c) void,
+        threads: c.struct_list,
+        objects: c.struct_list,
+        mutexes: c.struct_list,
+        conds: c.struct_list,
+        sems: c.struct_list,
+        nthreads: c_int,
+        nobjects: c_int,
+        nsyncs: c_int,
+        backtrace: if (@hasDecl(c, "CONFIG_USR_BACKTRACE")) [16]struct { pc: u32, func: u32 } else void,
+        got_base: if (@hasDecl(c, "CONFIG_ARMV8M")) c.vaddr_t else void,
+    };
+
+    pub const CpuControl = extern struct {
+        active_thread: *Thread,
+        idle_thread: *Thread,
+        nest_count: c_int,
+        spl_level: c_int,
+        int_stack: ?*anyopaque,
+        cpu_id: c_int,
+        padding: [10]c_long,
+    };
+
+    comptime {
+        std.debug.assert(@sizeOf(Device) == @sizeOf(c.struct_device));
+        std.debug.assert(@sizeOf(IRQ) == @sizeOf(c.struct_irq));
+        std.debug.assert(@sizeOf(Timer) == @sizeOf(c.struct_timer));
+        std.debug.assert(@sizeOf(Dpc) == @sizeOf(c.struct_dpc));
+        std.debug.assert(@sizeOf(Thread) == @sizeOf(c.struct_thread));
+        std.debug.assert(@sizeOf(Task) == @sizeOf(c.struct_task));
+        std.debug.assert(@sizeOf(CpuControl) == @sizeOf(c.struct_cpu_control));
+    }
+};
+
+pub const mem = struct {
+    pub const Segment = extern struct {
+        prev: *Segment,
+        next: *Segment,
+        sh_prev: *Segment,
+        sh_next: *Segment,
+        addr: c.vaddr_t,
+        size: c.size_t,
+        flags: c_int,
+        phys: c.paddr_t,
+    };
+
+    pub const VmMap = extern struct {
+        head: mem.Segment,
+        refcnt: c_int,
+        pgd: c.pgd_t,
+        total: c.size_t,
+    };
+
+    comptime {
+        std.debug.assert(@sizeOf(Segment) == @sizeOf(c.struct_seg));
+        std.debug.assert(@sizeOf(VmMap) == @sizeOf(c.struct_vm_map));
+    }
+};
