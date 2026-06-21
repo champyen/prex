@@ -17,44 +17,13 @@ inline fn is_mutex_initializer(m: c.mutex_t) bool {
     return false;
 }
 
-
-
-inline fn list_init(head: *c.struct_list) void {
-    head.next = @ptrCast(head);
-    head.prev = @ptrCast(head);
-}
-
-inline fn list_insert(prev: *c.struct_list, node: *c.struct_list) void {
-    node.prev = @ptrCast(prev);
-    node.next = prev.next;
-    prev.next.?.*.prev = @ptrCast(node);
-    prev.next = @ptrCast(node);
-}
-
-inline fn list_remove(node: *c.struct_list) void {
-    node.prev.?.*.next = node.next;
-    node.next.?.*.prev = node.prev;
-}
-
-inline fn list_empty(head: *c.struct_list) bool {
-    return head.next == @as(?*c.struct_list, @ptrCast(head));
-}
-
-inline fn list_first(head: *c.struct_list) *c.struct_list {
-    return @ptrCast(head.next.?);
-}
-
-inline fn list_next(node: *c.struct_list) *c.struct_list {
-    return @ptrCast(node.next.?);
-}
-
 fn valid(m: c.mutex_t) c_int {
+    const km: *ffi.sync.Mutex = @ptrCast(m);
     const head = &kutil.cur_task().*.mutexes;
-    var n = head.*.next.?;
-    while (n != @as(*c.struct_list, @ptrCast(head))) : (n = n.*.next.?) {
-        const node: *c.struct_list = @ptrCast(n);
-        const tmp: *c.struct_mutex = @fieldParentPtr("task_link", node);
-        if (tmp == m) {
+    var n = @as(*ffi.List, @ptrCast(head)).first();
+    while (n != @as(*ffi.List, @ptrCast(head))) : (n = n.nextNode()) {
+        const tmp = n.entry(ffi.sync.Mutex, "task_link");
+        if (tmp == km) {
             return 1;
         }
     }
@@ -117,11 +86,10 @@ fn prio_uninherit(t: c.thread_t) void {
     }
 
     var maxpri = t.*.basepri;
-    const head = &t.*.mutexes;
-    var n = head.*.next.?;
-    while (n != @as(*c.struct_list, @ptrCast(head))) : (n = n.*.next.?) {
-        const node: *c.struct_list = @ptrCast(n);
-        const m: *c.struct_mutex = @fieldParentPtr("link", node);
+    const head = @as(*ffi.List, @ptrCast(&t.*.mutexes));
+    var n = head.first();
+    while (n != head) : (n = n.nextNode()) {
+        const m = n.entry(ffi.sync.Mutex, "link");
         if (m.*.priority < maxpri) {
             maxpri = m.*.priority;
         }
@@ -136,9 +104,8 @@ pub fn init(mp: ?*c.mutex_t) callconv(.c) c_int {
         return c.EAGAIN;
     }
 
-    const mem = kmem.alloc(@sizeOf(c.struct_mutex)) orelse return c.ENOMEM;
+    const mem = kmem.alloc(@sizeOf(ffi.sync.Mutex)) orelse return c.ENOMEM;
     const m: c.mutex_t = @ptrCast(@alignCast(mem));
-
     c.event_init(&m.*.event, "mutex");
     m.*.owner = self;
     m.*.holder = null;
@@ -150,7 +117,7 @@ pub fn init(mp: ?*c.mutex_t) callconv(.c) c_int {
     }
 
     sched.lock();
-    list_insert(&self.*.mutexes, &m.*.task_link);
+    @as(*ffi.List, @ptrCast(&self.*.mutexes)).insertAfter(@as(*ffi.List, @ptrCast(&m.*.task_link)));
     self.*.nsyncs += 1;
     sched.unlock();
     return 0;
@@ -158,7 +125,7 @@ pub fn init(mp: ?*c.mutex_t) callconv(.c) c_int {
 
 fn deallocate(m: c.mutex_t) void {
     m.*.owner.*.nsyncs -= 1;
-    list_remove(&m.*.task_link);
+    @as(*ffi.List, @ptrCast(&m.*.task_link)).remove();
     kmem.free(m);
 }
 
@@ -173,7 +140,8 @@ pub fn destroy(mp: ?*c.mutex_t) callconv(.c) c_int {
         sched.unlock();
         return c.EINVAL;
     }
-    if (m.*.holder != null or !ffi.queue.empty(&m.*.event.sleepq)) {
+    const km: *ffi.sync.Mutex = @ptrCast(m);
+    if (km.*.holder != null or !km.*.event.sleepq.isEmpty()) {
         sched.unlock();
         return c.EBUSY;
     }
@@ -183,10 +151,10 @@ pub fn destroy(mp: ?*c.mutex_t) callconv(.c) c_int {
 }
 
 pub fn cleanup(task: c.task_t) callconv(.c) void {
-    while (!list_empty(&task.*.mutexes)) {
-        const n = list_first(&task.*.mutexes);
-        const m: *c.struct_mutex = @fieldParentPtr("task_link", n);
-        deallocate(m);
+    while (!@as(*ffi.List, @ptrCast(&task.*.mutexes)).isEmpty()) {
+        const n = @as(*ffi.List, @ptrCast(&task.*.mutexes)).first();
+        const m = n.entry(ffi.sync.Mutex, "task_link");
+        deallocate(@ptrCast(m));
     }
 }
 
@@ -200,14 +168,15 @@ pub fn lock(mp: ?*c.mutex_t) callconv(.c) c_int {
         return error_code;
     }
 
-    if (m.*.holder == kutil.cur_thread()) {
-        m.*.locks += 1;
+    const km: *ffi.sync.Mutex = @ptrCast(m);
+    if (km.*.holder == kutil.cur_thread()) {
+        km.*.locks += 1;
     } else {
-        if (m.*.holder == null) {
-            m.*.priority = kutil.cur_thread().*.priority;
-            m.*.locks = 1;
-            m.*.holder = kutil.cur_thread();
-            list_insert(&kutil.cur_thread().*.mutexes, &m.*.link);
+        if (km.*.holder == null) {
+            km.*.priority = kutil.cur_thread().*.priority;
+            km.*.locks = 1;
+            km.*.holder = kutil.cur_thread();
+            @as(*ffi.List, @ptrCast(&kutil.cur_thread().*.mutexes)).insertAfter(&km.*.link);
             ffi.deadlock.record_lock(m, c.LOCK_TYPE_MUTEX);
         } else {
             ffi.deadlock.mutex_wait(m, kutil.cur_thread());
@@ -219,15 +188,15 @@ pub fn lock(mp: ?*c.mutex_t) callconv(.c) c_int {
                 sched.unlock();
                 return inherit_err;
             }
-            const rc = sched.tsleep(&m.*.event, 0);
+            const rc = sched.tsleep(&km.*.event, 0);
             ffi.deadlock.mutex_stop_wait(kutil.cur_thread());
             kutil.cur_thread().*.mutex_waiting = null;
             if (rc == c.SLP_INTR) {
                 sched.unlock();
                 return c.EINTR;
             }
-            m.*.locks = 1;
-            list_insert(&kutil.cur_thread().*.mutexes, &m.*.link);
+            km.*.locks = 1;
+            @as(*ffi.List, @ptrCast(&kutil.cur_thread().*.mutexes)).insertAfter(&km.*.link);
             ffi.deadlock.record_lock(m, c.LOCK_TYPE_MUTEX);
         }
     }
@@ -245,16 +214,17 @@ pub fn tryLock(mp: ?*c.mutex_t) callconv(.c) c_int {
         return error_code;
     }
 
+    const km: *ffi.sync.Mutex = @ptrCast(m);
     var err: c_int = 0;
-    if (m.*.holder == kutil.cur_thread()) {
-        m.*.locks += 1;
+    if (km.*.holder == kutil.cur_thread()) {
+        km.*.locks += 1;
     } else {
-        if (m.*.holder != null) {
+        if (km.*.holder != null) {
             err = c.EBUSY;
         } else {
-            m.*.locks = 1;
-            m.*.holder = kutil.cur_thread();
-            list_insert(&kutil.cur_thread().*.mutexes, &m.*.link);
+            km.*.locks = 1;
+            km.*.holder = kutil.cur_thread();
+            @as(*ffi.List, @ptrCast(&kutil.cur_thread().*.mutexes)).insertAfter(&km.*.link);
             ffi.deadlock.record_lock(m, c.LOCK_TYPE_MUTEX);
         }
     }
@@ -277,36 +247,37 @@ pub fn unlock(mp: ?*c.mutex_t) callconv(.c) c_int {
         return c.EPERM;
     }
 
-    m.*.locks -= 1;
-    if (m.*.locks == 0) {
+    const km: *ffi.sync.Mutex = @ptrCast(m);
+    km.*.locks -= 1;
+    if (km.*.locks == 0) {
         ffi.deadlock.record_unlock(m);
-        list_remove(&m.*.link);
+        @as(*ffi.List, @ptrCast(&km.*.link)).remove();
         prio_uninherit(kutil.cur_thread());
 
-        m.*.holder = sched.wakeone(&m.*.event);
-        if (m.*.holder) |holder| {
+        km.*.holder = sched.wakeone(&km.*.event);
+        if (km.*.holder) |holder| {
             holder.*.mutex_waiting = null;
         }
 
-        m.*.priority = if (m.*.holder) |holder| holder.*.priority else c.MINPRI;
+        km.*.priority = if (km.*.holder) |holder| holder.*.priority else c.MINPRI;
     }
     sched.unlock();
     return 0;
 }
 
 pub fn cancel(t: c.thread_t) callconv(.c) void {
-    const head = &t.*.mutexes;
-    while (!list_empty(head)) {
-        const n = list_first(head);
-        const m: *c.struct_mutex = @fieldParentPtr("link", n);
+    const head = @as(*ffi.List, @ptrCast(&t.*.mutexes));
+    while (!head.isEmpty()) {
+        const n = head.first();
+        const m = n.entry(ffi.sync.Mutex, "link");
         m.*.locks = 0;
-        list_remove(&m.*.link);
+        @as(*ffi.List, @ptrCast(&m.*.link)).remove();
 
         const holder = sched.wakeone(&m.*.event);
         if (holder) |h| {
             h.*.mutex_waiting = null;
             m.*.locks = 1;
-            list_insert(&h.*.mutexes, &m.*.link);
+            @as(*ffi.List, @ptrCast(&h.*.mutexes)).insertAfter(&m.*.link);
         }
         m.*.holder = holder;
     }

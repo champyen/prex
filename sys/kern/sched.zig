@@ -11,16 +11,16 @@ const thread = ffi.thread;
 const smp = ffi.smp;
 
 pub var kernel_lock: c.spinlock_t = 0;
-var runq: [c.NPRI]c.struct_queue = undefined;
-var wakeq: c.struct_queue = undefined;
-var dpcq: c.struct_queue = undefined;
-var dpc_event: c.struct_event = undefined;
+var runq: [c.NPRI]ffi.Queue = undefined;
+var wakeq: ffi.Queue = undefined;
+var dpcq: ffi.Queue = undefined;
+var dpc_event: ffi.sync.Event = undefined;
 var maxpri: c_int = c.PRI_IDLE;
 
 fn runq_getbest() c_int {
     var pri: c_int = 0;
     while (pri < c.MINPRI) : (pri += 1) {
-        if (!ffi.queue.empty(&runq[@intCast(pri)])) {
+        if (!runq[@intCast(pri)].isEmpty()) {
             break;
         }
     }
@@ -28,7 +28,7 @@ fn runq_getbest() c_int {
 }
 
 fn runq_enqueue(t: c.thread_t) void {
-    ffi.queue.enqueue(&runq[@intCast(t.*.priority)], &t.*.sched_link);
+    runq[@intCast(t.*.priority)].enqueue(@as(*ffi.Queue, @ptrCast(&t.*.sched_link)));
     if (t.*.priority < maxpri) {
         maxpri = t.*.priority;
         if (kutil.get_curthread()) |ct| {
@@ -38,7 +38,7 @@ fn runq_enqueue(t: c.thread_t) void {
 }
 
 fn runq_insert(t: c.thread_t) void {
-    ffi.queue.insert(&runq[@intCast(t.*.priority)], &t.*.sched_link);
+    runq[@intCast(t.*.priority)].insert(@as(*ffi.Queue, @ptrCast(&t.*.sched_link)));
     if (t.*.priority < maxpri) {
         maxpri = t.*.priority;
     }
@@ -48,16 +48,16 @@ fn runq_dequeue() c.thread_t {
     if (maxpri >= c.PRI_IDLE) {
         return &c.idle_thread;
     }
-    const q = ffi.queue.dequeue(&runq[@intCast(maxpri)]).?;
-    const t: *c.struct_thread = @fieldParentPtr("sched_link", @as(*c.struct_queue, @ptrCast(q)));
-    if (ffi.queue.empty(&runq[@intCast(maxpri)])) {
+    const q = runq[@intCast(maxpri)].dequeue().?;
+    const t = q.entry(c.struct_thread, "sched_link");
+    if (runq[@intCast(maxpri)].isEmpty()) {
         maxpri = runq_getbest();
     }
     return t;
 }
 
 fn runq_remove(t: c.thread_t) void {
-    ffi.queue.remove(&t.*.sched_link);
+    t.*.sched_link.remove();
     maxpri = runq_getbest();
 }
 
@@ -75,9 +75,9 @@ fn curthread() *c.struct_thread {
 }
 
 fn wakeq_flush() callconv(.c) void {
-    while (!ffi.queue.empty(&wakeq)) {
-        const q = ffi.queue.dequeue(&wakeq).?;
-        const t: *c.struct_thread = @fieldParentPtr("sched_link", @as(*c.struct_queue, @ptrCast(q)));
+    while (!wakeq.isEmpty()) {
+        const q = wakeq.dequeue().?;
+        const t = q.entry(c.struct_thread, "sched_link");
         t.*.slpevt = null;
         t.*.state &= ~@as(c_int, c.TS_SLEEP);
         if (t != curthread() and t.*.state == c.TS_RUN) {
@@ -87,7 +87,7 @@ fn wakeq_flush() callconv(.c) void {
 }
 
 fn setrun(t: c.thread_t) callconv(.c) void {
-    ffi.queue.enqueue(&wakeq, &t.*.sched_link);
+    wakeq.enqueue(@as(*ffi.Queue, @ptrCast(&t.*.sched_link)));
     timer.stop(&t.*.timeout);
 }
 
@@ -150,12 +150,13 @@ fn swtch() callconv(.c) void {
 }
 
 fn tsleep(evt: *c.struct_event, msec: c_ulong) callconv(.c) c_int {
+    const e: *ffi.sync.Event = @ptrCast(evt);
     lock();
     const s = hal.splhigh();
 
-    curthread().*.slpevt = evt;
+    curthread().*.slpevt = @as([*c]c.struct_event, @ptrCast(e));
     curthread().*.state |= @as(c_int, c.TS_SLEEP);
-    ffi.queue.enqueue(&evt.*.sleepq, &curthread().*.sched_link);
+    e.*.sleepq.enqueue(@as(*ffi.Queue, @ptrCast(&curthread().*.sched_link)));
 
     if (msec != 0) {
         timer.callout(&curthread().*.timeout, @intCast(msec), sleep_timeout, curthread());
@@ -170,11 +171,12 @@ fn tsleep(evt: *c.struct_event, msec: c_ulong) callconv(.c) c_int {
 }
 
 fn wakeup(evt: *c.struct_event) callconv(.c) void {
+    const e: *ffi.sync.Event = @ptrCast(evt);
     lock();
     const s = hal.splhigh();
-    while (!ffi.queue.empty(&evt.*.sleepq)) {
-        const q = ffi.queue.dequeue(&evt.*.sleepq).?;
-        const t: *c.struct_thread = @fieldParentPtr("sched_link", @as(*c.struct_queue, @ptrCast(q)));
+    while (!e.*.sleepq.isEmpty()) {
+        const q = e.*.sleepq.dequeue().?;
+        const t = q.entry(c.struct_thread, "sched_link");
         t.*.slpret = 0;
         setrun(t);
     }
@@ -183,21 +185,22 @@ fn wakeup(evt: *c.struct_event) callconv(.c) void {
 }
 
 fn wakeone(evt: *c.struct_event) callconv(.c) c.thread_t {
+    const e: *ffi.sync.Event = @ptrCast(evt);
     lock();
     const s = hal.splhigh();
     var result: c.thread_t = null;
-    const head = &evt.*.sleepq;
-    if (!ffi.queue.empty(head)) {
-        var q = head.*.next;
-        var top: *c.struct_thread = @fieldParentPtr("sched_link", @as(*c.struct_queue, @ptrCast(q)));
+    const head: *ffi.Queue = @ptrCast(&e.*.sleepq);
+    if (!head.isEmpty()) {
+        var q = head.first();
+        var top = q.entry(c.struct_thread, "sched_link");
         while (q != head) {
-            const t: *c.struct_thread = @fieldParentPtr("sched_link", @as(*c.struct_queue, @ptrCast(q)));
+            const t = q.entry(c.struct_thread, "sched_link");
             if (t.*.priority < top.*.priority) {
                 top = t;
             }
-            q = q.*.next;
+            q = q.nextNode();
         }
-        ffi.queue.remove(&top.*.sched_link);
+        top.*.sched_link.remove();
         top.*.slpret = 0;
         setrun(top);
         result = top;
@@ -211,7 +214,7 @@ fn unsleep(t: c.thread_t, result: c_int) callconv(.c) void {
     lock();
     if (t.*.state & c.TS_SLEEP != 0) {
         const s = hal.splhigh();
-        ffi.queue.remove(&t.*.sched_link);
+        t.*.sched_link.remove();
         t.*.slpret = result;
         setrun(t);
         hal.splx(s);
@@ -221,7 +224,7 @@ fn unsleep(t: c.thread_t, result: c_int) callconv(.c) void {
 
 fn yield() callconv(.c) void {
     lock();
-    if (!ffi.queue.empty(&runq[@intCast(curthread().*.priority)])) {
+    if (!runq[@intCast(curthread().*.priority)].isEmpty()) {
         curthread().*.resched = 1;
     }
     unlock();
@@ -278,7 +281,7 @@ fn stop(t: c.thread_t) callconv(.c) void {
         if (t.*.state == c.TS_RUN) {
             runq_remove(t);
         } else if (t.*.state & c.TS_SLEEP != 0) {
-            ffi.queue.remove(&t.*.sched_link);
+            t.*.sched_link.remove();
         }
     }
     timer.stop(&t.*.timeout);
@@ -382,11 +385,11 @@ fn dpc(dpc_ptr: *c.struct_dpc, fn_ptr: ?*const fn (?*anyopaque) callconv(.c) voi
     dpc_ptr.*.func = fn_ptr;
     dpc_ptr.*.arg = arg;
     if (dpc_ptr.*.state != c.DPC_PENDING) {
-        ffi.queue.enqueue(&dpcq, &dpc_ptr.*.link);
+        dpcq.enqueue(@as(*ffi.Queue, @ptrCast(&dpc_ptr.*.link)));
     }
     dpc_ptr.*.state = c.DPC_PENDING;
     hal.splx(s);
-    wakeup(&dpc_event);
+    wakeup(@ptrCast(&dpc_event));
     unlock();
 }
 
@@ -394,10 +397,10 @@ fn dpc_thread(dummy: ?*anyopaque) callconv(.c) void {
     _ = dummy;
     _ = hal.splhigh();
     while (true) {
-        _ = tsleep(&dpc_event, 0);
-        while (!ffi.queue.empty(&dpcq)) {
-            const q = ffi.queue.dequeue(&dpcq).?;
-            const dpc_val: *c.struct_dpc = @fieldParentPtr("link", @as(*c.struct_queue, @ptrCast(q)));
+        _ = tsleep(@ptrCast(&dpc_event), 0);
+        while (!dpcq.isEmpty()) {
+            const q = dpcq.dequeue().?;
+            const dpc_val = q.entry(c.struct_dpc, "link");
             dpc_val.*.state = c.DPC_FREE;
             _ = hal.spl0();
             if (dpc_val.*.func) |f| {
@@ -412,23 +415,18 @@ fn init() callconv(.c) void {
     {
         var i: c_int = 0;
         while (i < c.NPRI) : (i += 1) {
-            const q = &runq[@intCast(i)];
-            q.*.next = @ptrCast(q);
-            q.*.prev = @ptrCast(q);
+            runq[@intCast(i)].init();
         }
     }
     {
-        wakeq.next = @ptrCast(&wakeq);
-        wakeq.prev = @ptrCast(&wakeq);
+        wakeq.init();
     }
     {
-        dpcq.next = @ptrCast(&dpcq);
-        dpcq.prev = @ptrCast(&dpcq);
+        dpcq.init();
     }
     {
-        dpc_event.sleepq.next = @ptrCast(&dpc_event.sleepq);
-        dpc_event.sleepq.prev = @ptrCast(&dpc_event.sleepq);
-        dpc_event.name = @ptrCast(@as([*:0]u8, @constCast("dpc")));
+        dpc_event.sleepq.init();
+        dpc_event.name = "dpc";
     }
     maxpri = c.PRI_IDLE;
     curthread().*.resched = 1;

@@ -3,7 +3,7 @@ const builtin = @import("builtin");
 
 const c = @import("c").c;
 
-var sem_list: ?*c.struct_sem = null;
+var sem_list: ?*ffi.sync.Sem = null;
 
 const ffi = @import("ffi");
 const kutil = ffi.kutil;
@@ -12,41 +12,11 @@ const kmem = ffi.kmem;
 const sched = ffi.sched;
 const thread = ffi.thread;
 
-
-
-inline fn list_init(head: *c.struct_list) void {
-    head.next = @ptrCast(head);
-    head.prev = @ptrCast(head);
-}
-
-inline fn list_insert(prev: *c.struct_list, node: *c.struct_list) void {
-    node.prev = @ptrCast(prev);
-    node.next = prev.next;
-    prev.next.?.*.prev = @ptrCast(node);
-    prev.next = @ptrCast(node);
-}
-
-inline fn list_remove(node: *c.struct_list) void {
-    node.prev.?.*.next = node.next;
-    node.next.?.*.prev = node.prev;
-}
-
-inline fn list_empty(head: *c.struct_list) bool {
-    return head.next == @as(?*c.struct_list, @ptrCast(head));
-}
-
-inline fn list_first(head: *c.struct_list) *c.struct_list {
-    return @ptrCast(head.next.?);
-}
-
-inline fn list_next(node: *c.struct_list) *c.struct_list {
-    return @ptrCast(node.next.?);
-}
-
 fn valid(s: c.sem_t) bool {
+    const ks: *ffi.sync.Sem = @ptrCast(s);
     var tmp = sem_list;
     while (tmp) |current| {
-        if (current == s) {
+        if (current == ks) {
             return true;
         }
         tmp = current.*.next;
@@ -59,16 +29,17 @@ fn reference(s: c.sem_t) void {
 }
 
 fn release(s: c.sem_t) void {
-    s.*.refcnt -= 1;
-    if (s.*.refcnt > 0) {
+    const ks: *ffi.sync.Sem = @ptrCast(s);
+    ks.*.refcnt -= 1;
+    if (ks.*.refcnt > 0) {
         return;
     }
-    list_remove(&s.*.task_link);
-    s.*.owner.*.nsyncs -= 1;
+    @as(*ffi.List, @ptrCast(&ks.*.task_link)).remove();
+    ks.*.owner.*.nsyncs -= 1;
 
-    var sp: *?*c.struct_sem = &sem_list;
+    var sp: *?*ffi.sync.Sem = &sem_list;
     while (sp.*) |current| {
-        if (current == s) {
+        if (current == ks) {
             sp.* = current.*.next;
             break;
         }
@@ -102,17 +73,18 @@ pub fn init(sp: ?*c.sem_t, value: c_uint) callconv(.c) c_int {
 
     sched.lock();
     if (s != null and valid(s)) {
-        if (s.*.owner != self) {
+        const ks: *ffi.sync.Sem = @ptrCast(s);
+        if (ks.*.owner != self) {
             sched.unlock();
             return c.EINVAL;
         }
-        if (!ffi.queue.empty(&s.*.event.sleepq)) {
+        if (!ks.*.event.sleepq.isEmpty()) {
             sched.unlock();
             return c.EBUSY;
         }
-        s.*.value = value;
+        ks.*.value = value;
     } else {
-        const mem = kmem.alloc(@sizeOf(c.struct_sem)) orelse {
+        const mem = kmem.alloc(@sizeOf(ffi.sync.Sem)) orelse {
             sched.unlock();
             return c.ENOSPC;
         };
@@ -122,15 +94,16 @@ pub fn init(sp: ?*c.sem_t, value: c_uint) callconv(.c) c_int {
             sched.unlock();
             return c.EFAULT;
         }
+        const ks: *ffi.sync.Sem = @ptrCast(s);
         c.event_init(&s.*.event, "semaphore");
-        s.*.owner = self;
-        s.*.refcnt = 1;
-        s.*.value = value;
+        ks.*.owner = self;
+        ks.*.refcnt = 1;
+        ks.*.value = value;
 
-        list_insert(&self.*.sems, &s.*.task_link);
+        @as(*ffi.List, @ptrCast(&self.*.sems)).insertAfter(@as(*ffi.List, @ptrCast(&ks.*.task_link)));
         self.*.nsyncs += 1;
-        s.*.next = sem_list;
-        sem_list = s;
+        ks.*.next = sem_list;
+        sem_list = ks;
     }
     sched.unlock();
     return 0;
@@ -144,7 +117,8 @@ pub fn destroy(sp: ?*c.sem_t) callconv(.c) c_int {
         sched.unlock();
         return c.EINVAL;
     }
-    if (!ffi.queue.empty(&s.*.event.sleepq) or s.*.value == 0) {
+    const ks: *ffi.sync.Sem = @ptrCast(s);
+    if (!ks.*.event.sleepq.isEmpty() or ks.*.value == 0) {
         sched.unlock();
         return c.EBUSY;
     }
@@ -164,9 +138,10 @@ pub fn wait(sp: ?*c.sem_t, timeout: c_ulong) callconv(.c) c_int {
     }
     reference(s);
 
-    while (s.*.value == 0) {
-        ffi.deadlock.sleep(@ptrCast(s), "semaphore");
-        const rc = sched.tsleep(&s.*.event, @intCast(timeout));
+    const ks: *ffi.sync.Sem = @ptrCast(s);
+    while (ks.*.value == 0) {
+        ffi.deadlock.sleep(@ptrCast(ks), "semaphore");
+        const rc = sched.tsleep(&ks.*.event, @intCast(timeout));
         ffi.deadlock.stop_sleep();
         if (rc == c.SLP_TIMEOUT) {
             error_code = c.ETIMEDOUT;
@@ -178,7 +153,7 @@ pub fn wait(sp: ?*c.sem_t, timeout: c_ulong) callconv(.c) c_int {
         }
     }
     if (error_code == 0) {
-        s.*.value -= 1;
+        ks.*.value -= 1;
     }
 
     release(s);
@@ -215,9 +190,10 @@ pub fn post(sp: ?*c.sem_t) callconv(.c) c_int {
         sched.unlock();
         return c.ERANGE;
     }
-    s.*.value += 1;
-    if (s.*.value > 0) {
-        _ = sched.wakeone(&s.*.event);
+    const ks: *ffi.sync.Sem = @ptrCast(s);
+    ks.*.value += 1;
+    if (ks.*.value > 0) {
+        _ = sched.wakeone(&ks.*.event);
     }
 
     sched.unlock();
@@ -230,13 +206,14 @@ pub fn postKernel(s: c.sem_t) callconv(.c) c_int {
         sched.unlock();
         return c.EINVAL;
     }
-    if (s.*.value >= c.MAXSEMVAL) {
+    const ks: *ffi.sync.Sem = @ptrCast(s);
+    if (ks.*.value >= c.MAXSEMVAL) {
         sched.unlock();
         return c.ERANGE;
     }
-    s.*.value += 1;
-    if (s.*.value > 0) {
-        _ = sched.wakeone(&s.*.event);
+    ks.*.value += 1;
+    if (ks.*.value > 0) {
+        _ = sched.wakeone(&ks.*.event);
     }
 
     sched.unlock();
@@ -260,11 +237,11 @@ pub fn getValue(sp: ?*c.sem_t, value: ?*c_uint) callconv(.c) c_int {
 }
 
 pub fn cleanup(task: c.task_t) callconv(.c) void {
-    const head = &task.*.sems;
-    var n = list_first(head);
-    while (n != @as(*c.struct_list, @ptrCast(head))) {
-        const next = list_next(n);
-        const s: *c.struct_sem = @fieldParentPtr("task_link", n);
+    const head = @as(*ffi.List, @ptrCast(&task.*.sems));
+    var n = head.first();
+    while (n != head) {
+        const next = n.nextNode();
+        const s = n.entry(ffi.sync.Sem, "task_link");
         release(@ptrCast(s));
         n = next;
     }

@@ -14,40 +14,13 @@ inline fn is_cond_initializer(m: c.cond_t) bool {
     return false;
 }
 
-
-
-inline fn list_init(head: *c.struct_list) void {
-    head.next = @ptrCast(head);
-    head.prev = @ptrCast(head);
-}
-
-inline fn list_insert(prev: *c.struct_list, node: *c.struct_list) void {
-    node.prev = @ptrCast(prev);
-    node.next = prev.next;
-    prev.next.?.*.prev = @ptrCast(node);
-    prev.next = @ptrCast(node);
-}
-
-inline fn list_remove(node: *c.struct_list) void {
-    node.prev.?.*.next = node.next;
-    node.next.?.*.prev = node.prev;
-}
-
-inline fn list_empty(head: *c.struct_list) bool {
-    return head.next == @as(?*c.struct_list, @ptrCast(head));
-}
-
-inline fn list_first(head: *c.struct_list) *c.struct_list {
-    return @ptrCast(head.next.?);
-}
-
 fn valid(m: c.cond_t) c_int {
+    const km: *ffi.sync.Cond = @ptrCast(m);
     const head = &kutil.cur_task().*.conds;
-    var n = head.*.next.?;
-    while (n != @as(*c.struct_list, @ptrCast(head))) : (n = n.*.next.?) {
-        const node: *c.struct_list = @ptrCast(n);
-        const tmp: *c.struct_cond = @fieldParentPtr("task_link", node);
-        if (tmp == m) {
+    var n = @as(*ffi.List, @ptrCast(head)).first();
+    while (n != @as(*ffi.List, @ptrCast(head))) : (n = n.nextNode()) {
+        const tmp = n.entry(ffi.sync.Cond, "task_link");
+        if (tmp == km) {
             return 1;
         }
     }
@@ -81,7 +54,7 @@ pub fn init(cp: ?*c.cond_t) callconv(.c) c_int {
         return c.EAGAIN;
     }
 
-    const mem = kmem.alloc(@sizeOf(c.struct_cond)) orelse return c.ENOMEM;
+    const mem = kmem.alloc(@sizeOf(ffi.sync.Cond)) orelse return c.ENOMEM;
     const m: c.cond_t = @ptrCast(@alignCast(mem));
 
     c.event_init(&m.*.event, "condvar");
@@ -93,7 +66,7 @@ pub fn init(cp: ?*c.cond_t) callconv(.c) c_int {
     }
 
     sched.lock();
-    list_insert(&self.*.conds, &m.*.task_link);
+    @as(*ffi.List, @ptrCast(&self.*.conds)).insertAfter(@as(*ffi.List, @ptrCast(&m.*.task_link)));
     self.*.nsyncs += 1;
     sched.unlock();
     return 0;
@@ -101,7 +74,7 @@ pub fn init(cp: ?*c.cond_t) callconv(.c) c_int {
 
 fn deallocate(m: c.cond_t) void {
     m.*.owner.*.nsyncs -= 1;
-    list_remove(&m.*.task_link);
+    @as(*ffi.List, @ptrCast(&m.*.task_link)).remove();
     kmem.free(m);
 }
 
@@ -116,7 +89,8 @@ pub fn destroy(cp: ?*c.cond_t) callconv(.c) c_int {
         sched.unlock();
         return c.EINVAL;
     }
-    if (!ffi.queue.empty(&m.*.event.sleepq)) {
+    const km: *ffi.sync.Cond = @ptrCast(m);
+    if (!km.*.event.sleepq.isEmpty()) {
         sched.unlock();
         return c.EBUSY;
     }
@@ -126,9 +100,9 @@ pub fn destroy(cp: ?*c.cond_t) callconv(.c) c_int {
 }
 
 pub fn cleanup(task: c.task_t) callconv(.c) void {
-    while (!list_empty(&task.*.conds)) {
-        const n = list_first(&task.*.conds);
-        const m: *c.struct_cond = @fieldParentPtr("task_link", n);
+    while (!@as(*ffi.List, @ptrCast(&task.*.conds)).isEmpty()) {
+        const n = @as(*ffi.List, @ptrCast(&task.*.conds)).first();
+        const m = n.entry(ffi.sync.Cond, "task_link");
         deallocate(@ptrCast(m));
     }
 }
@@ -155,6 +129,7 @@ pub fn wait(cp: ?*c.cond_t, mp: ?*c.mutex_t) callconv(.c) c_int {
         }
     }
 
+    const km: *ffi.sync.Cond = @ptrCast(m);
     var err: c_int = 0;
 
     const unlock_err = mutex.unlock(mp);
@@ -163,8 +138,8 @@ pub fn wait(cp: ?*c.cond_t, mp: ?*c.mutex_t) callconv(.c) c_int {
         return unlock_err;
     }
 
-    ffi.deadlock.sleep(@ptrCast(m), "cond");
-    const rc = sched.tsleep(&m.*.event, 0);
+    ffi.deadlock.sleep(@ptrCast(km), "cond");
+    const rc = sched.tsleep(&km.*.event, 0);
     ffi.deadlock.stop_sleep();
     if (rc == c.SLP_INTR) {
         err = c.EINTR;
@@ -186,7 +161,8 @@ pub fn signal(cp: ?*c.cond_t) callconv(.c) c_int {
         sched.unlock();
         return c.EINVAL;
     }
-    _ = sched.wakeone(&m.*.event);
+    const km: *ffi.sync.Cond = @ptrCast(m);
+    _ = sched.wakeone(&km.*.event);
     sched.unlock();
     return 0;
 }
@@ -199,7 +175,8 @@ pub fn broadcast(cp: ?*c.cond_t) callconv(.c) c_int {
         sched.unlock();
         return c.EINVAL;
     }
-    sched.wakeup(&m.*.event);
+    const km: *ffi.sync.Cond = @ptrCast(m);
+    sched.wakeup(&km.*.event);
     sched.unlock();
     return 0;
 }

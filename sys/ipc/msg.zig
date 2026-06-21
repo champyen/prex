@@ -9,45 +9,25 @@ const sched = ffi.sched;
 const object = ffi.object;
 const thread = ffi.thread;
 
-var ipc_event: c.struct_event = undefined;
+var ipc_event: ffi.sync.Event = undefined;
 
 
 
 
 
-inline fn queue_empty(head: c.queue_t) bool {
-    return head.?.*.next == head;
-}
+fn dequeue(head: *ffi.Queue) ?*c.struct_thread {
+    var q = head.first();
+    var top = q.entry(c.struct_thread, "ipc_link");
 
-inline fn queue_first(head: c.queue_t) c.queue_t {
-    return head.?.*.next;
-}
-
-inline fn queue_next(q: c.queue_t) c.queue_t {
-    return q.?.*.next;
-}
-
-inline fn queue_end(head: c.queue_t, q: c.queue_t) bool {
-    return q == head;
-}
-
-inline fn dequeue(head: c.queue_t) ?*c.struct_thread {
-    var q = queue_first(head);
-    var top: ?*c.struct_thread = @fieldParentPtr("ipc_link", @as(*c.struct_queue, @ptrCast(q)));
-
-    while (!queue_end(head, q)) {
-        const t: ?*c.struct_thread = @fieldParentPtr("ipc_link", @as(*c.struct_queue, @ptrCast(q)));
-        if (t.?.priority < top.?.priority) {
+    while (q != head) {
+        const t = q.entry(c.struct_thread, "ipc_link");
+        if (t.priority < top.priority) {
             top = t;
         }
-        q = queue_next(q);
+        q = q.nextNode();
     }
-    ffi.queue.remove(&top.?.ipc_link);
+    @as(*ffi.Queue, @ptrCast(&top.ipc_link)).remove();
     return top;
-}
-
-inline fn enqueue(head: c.queue_t, t: ?*c.struct_thread) void {
-    ffi.queue.enqueue(head, &t.?.ipc_link);
 }
 
 pub fn send(obj: c.object_t, msg: ?*anyopaque, size: usize) callconv(.c) c_int {
@@ -81,16 +61,16 @@ pub fn send(obj: c.object_t, msg: ?*anyopaque, size: usize) callconv(.c) c_int {
     const hdr: *c.struct_msg_header = @ptrCast(@alignCast(kmsg));
     hdr.task = kutil.get_curtask();
 
-    if (!queue_empty(&obj.*.recvq)) {
-        const t = dequeue(&obj.*.recvq);
+    if (!@as(*ffi.Queue, @ptrCast(&obj.*.recvq)).isEmpty()) {
+        const t = dequeue(@as(*ffi.Queue, @ptrCast(&obj.*.recvq)));
         sched.unsleep(t, 0);
     }
 
     kutil.get_curthread().?.sendobj = obj;
-    enqueue(&obj.*.sendq, kutil.get_curthread());
+    @as(*ffi.Queue, @ptrCast(&obj.*.sendq)).enqueue(@as(*ffi.Queue, @ptrCast(&kutil.get_curthread().?.ipc_link)));
     const rc = sched.tsleep(&ipc_event, 0);
     if (rc == c.SLP_INTR) {
-        ffi.queue.remove(&kutil.get_curthread().?.ipc_link);
+        @as(*ffi.Queue, @ptrCast(&kutil.get_curthread().?.ipc_link)).remove();
     }
     kutil.get_curthread().?.sendobj = null;
 
@@ -136,8 +116,8 @@ pub fn receive(obj: c.object_t, msg: ?*anyopaque, size: usize) callconv(.c) c_in
     }
     kutil.get_curthread().?.recvobj = obj;
 
-    while (queue_empty(&obj.*.sendq)) {
-        enqueue(&obj.*.recvq, kutil.get_curthread());
+    while (@as(*ffi.Queue, @ptrCast(&obj.*.sendq)).isEmpty()) {
+        @as(*ffi.Queue, @ptrCast(&obj.*.recvq)).enqueue(@as(*ffi.Queue, @ptrCast(&kutil.get_curthread().?.ipc_link)));
         rc = sched.tsleep(&ipc_event, 0);
         if (rc != 0) {
             switch (rc) {
@@ -145,7 +125,7 @@ pub fn receive(obj: c.object_t, msg: ?*anyopaque, size: usize) callconv(.c) c_in
                     err_code = c.EINVAL;
                 },
                 c.SLP_INTR => {
-                    ffi.queue.remove(&kutil.get_curthread().?.ipc_link);
+                    @as(*ffi.Queue, @ptrCast(&kutil.get_curthread().?.ipc_link)).remove();
                     err_code = c.EINTR;
                 },
                 else => {
@@ -158,12 +138,12 @@ pub fn receive(obj: c.object_t, msg: ?*anyopaque, size: usize) callconv(.c) c_in
         }
     }
 
-    const t = dequeue(&obj.*.sendq);
+    const t = dequeue(@as(*ffi.Queue, @ptrCast(&obj.*.sendq)));
 
     const len: usize = if (size < t.?.msgsize) size else t.?.msgsize;
     if (len > 0) {
         if (ffi.hal.copyout(t.?.msgaddr, msg, len) != 0) {
-            enqueue(&obj.*.sendq, t);
+            @as(*ffi.Queue, @ptrCast(&obj.*.sendq)).enqueue(@as(*ffi.Queue, @ptrCast(&t.?.ipc_link)));
             kutil.get_curthread().?.recvobj = null;
             sched.unlock();
             return c.EFAULT;
@@ -222,7 +202,7 @@ pub fn cancel(t: ?*c.struct_thread) callconv(.c) void {
             const receiver: ?*c.struct_thread = @ptrCast(t.?.receiver);
             receiver.?.sender = null;
         } else {
-            ffi.queue.remove(&t.?.ipc_link);
+            @as(*ffi.Queue, @ptrCast(&t.?.ipc_link)).remove();
         }
     }
     if (t.?.recvobj != null) {
@@ -231,7 +211,7 @@ pub fn cancel(t: ?*c.struct_thread) callconv(.c) void {
             sched.unsleep(sender, c.SLP_BREAK);
             sender.?.receiver = null;
         } else {
-            ffi.queue.remove(&t.?.ipc_link);
+            @as(*ffi.Queue, @ptrCast(&t.?.ipc_link)).remove();
         }
     }
     sched.unlock();
@@ -240,15 +220,15 @@ pub fn cancel(t: ?*c.struct_thread) callconv(.c) void {
 pub fn abort(obj: c.object_t) callconv(.c) void {
     sched.lock();
 
-    while (!queue_empty(&obj.*.sendq)) {
-        const q = ffi.queue.dequeue(&obj.*.sendq);
-        const t: ?*c.struct_thread = @fieldParentPtr("ipc_link", @as(*c.struct_queue, @ptrCast(q)));
+    while (!@as(*ffi.Queue, @ptrCast(&obj.*.sendq)).isEmpty()) {
+        const q = @as(*ffi.Queue, @ptrCast(&obj.*.sendq)).dequeue().?;
+        const t = q.entry(c.struct_thread, "ipc_link");
         sched.unsleep(t, c.SLP_INVAL);
     }
 
-    while (!queue_empty(&obj.*.recvq)) {
-        const q = ffi.queue.dequeue(&obj.*.recvq);
-        const t: ?*c.struct_thread = @fieldParentPtr("ipc_link", @as(*c.struct_queue, @ptrCast(q)));
+    while (!@as(*ffi.Queue, @ptrCast(&obj.*.recvq)).isEmpty()) {
+        const q = @as(*ffi.Queue, @ptrCast(&obj.*.recvq)).dequeue().?;
+        const t = q.entry(c.struct_thread, "ipc_link");
         sched.unsleep(t, c.SLP_INVAL);
     }
     sched.unlock();

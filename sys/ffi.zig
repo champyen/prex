@@ -45,10 +45,16 @@ pub const sched = struct {
     pub const set_pri = c.sched_setpri;
     pub const get_policy = c.sched_getpolicy;
     pub const set_policy = c.sched_setpolicy;
-    pub const tsleep = c.sched_tsleep;
-    pub const wakeup = c.sched_wakeup;
+    pub fn tsleep(ev: *sync.Event, timeout: c_ulong) callconv(.c) c_int {
+        return c.sched_tsleep(@ptrCast(ev), timeout);
+    }
+    pub fn wakeup(ev: *sync.Event) callconv(.c) void {
+        c.sched_wakeup(@ptrCast(ev));
+    }
     pub const unsleep = c.sched_unsleep;
-    pub const wakeone = c.sched_wakeone;
+    pub fn wakeone(ev: *sync.Event) callconv(.c) c.thread_t {
+        return c.sched_wakeone(@ptrCast(ev));
+    }
     pub const init = c.sched_init;
     pub const tick = c.sched_tick;
     pub const sleep = c.sched_sleep;
@@ -160,13 +166,7 @@ pub const sem = struct {
     pub const cleanup = c.sem_cleanup;
 };
 
-pub const queue = struct {
-    pub const empty = c.queue_empty;
-    pub const insert = c.queue_insert;
-    pub const remove = c.queue_remove;
-    pub const enqueue = c.enqueue;
-    pub const dequeue = c.dequeue;
-};
+pub const Queue = @import("lib/queue.zig").Queue;
 
 pub const hal = struct {
     pub const machine_startup = c.machine_startup;
@@ -230,27 +230,29 @@ pub const lib = struct {
 };
 
 pub const kutil = @import("lib/kutil.zig");
+pub const List = @import("lib/list.zig").List;
+
 
 pub const sync = struct {
     pub const Event = extern struct {
-        sleepq: c.struct_queue,
+        sleepq: Queue,
         name: [*:0]const u8,
 
         pub fn init(self: *Event, name: [*:0]const u8) void {
-            c.queue_init(&self.sleepq);
+            self.sleepq.init();
             self.name = name;
         }
 
         pub fn isWaiting(self: *const Event) bool {
-            return !c.queue_empty(&self.sleepq);
+            return !self.sleepq.isEmpty();
         }
     };
 
     pub const Mutex = extern struct {
-        task_link: c.struct_list,
+        task_link: List,
         owner: c.task_t,
         event: sync.Event,
-        link: c.struct_list,
+        link: List,
         holder: c.thread_t,
         priority: c_int,
         locks: c_int,
@@ -265,14 +267,14 @@ pub const sync = struct {
     };
 
     pub const Cond = extern struct {
-        task_link: c.struct_list,
+        task_link: List,
         owner: c.task_t,
         event: sync.Event,
     };
 
     pub const Sem = extern struct {
-        next: *Sem,
-        task_link: c.struct_list,
+        next: ?*Sem,
+        task_link: List,
         owner: c.task_t,
         event: sync.Event,
         value: c.u_int,
@@ -289,12 +291,12 @@ pub const sync = struct {
 
 pub const ipc = struct {
     pub const Object = extern struct {
-        link: c.struct_list,
+        link: List,
         name: [c.MAXOBJNAME]u8,
-        task_link: c.struct_list,
+        task_link: List,
         owner: c.task_t,
-        sendq: c.struct_queue,
-        recvq: c.struct_queue,
+        sendq: Queue,
+        recvq: Queue,
     };
 
     comptime {
@@ -315,8 +317,8 @@ pub const kern = struct {
 
     pub const IRQ = extern struct {
         vector: c_int,
-        isr: *const fn (void) callconv(.c) c_int,
-        ist: *const fn (void) callconv(.c) void,
+        isr: ?*const fn (?*anyopaque) callconv(.c) c_int,
+        ist: ?*const fn (?*anyopaque) callconv(.c) void,
         data: ?*anyopaque,
         priority: c_int,
         count: c.u_int,
@@ -326,7 +328,7 @@ pub const kern = struct {
     };
 
     pub const Timer = extern struct {
-        link: c.struct_list,
+        link: List,
         state: c_int,
         expire: c.u_long,
         interval: c.u_long,
@@ -336,16 +338,16 @@ pub const kern = struct {
     };
 
     pub const Dpc = extern struct {
-        link: c.struct_queue,
+        link: Queue,
         state: c_int,
         func: *const fn (void) callconv(.c) void,
         arg: ?*anyopaque,
     };
 
     pub const Thread = extern struct {
-        link: c.struct_list,
-        task_link: c.struct_list,
-        sched_link: c.struct_queue,
+        link: List,
+        task_link: List,
+        sched_link: Queue,
         task: c.task_t,
         state: c_int,
         policy: c_int,
@@ -361,12 +363,12 @@ pub const kern = struct {
         timeout: kern.Timer,
         periodic: *kern.Timer,
         excbits: u32,
-        mutexes: c.struct_list,
+        mutexes: List,
         mutex_waiting: c.mutex_t,
-        ipc_link: c.struct_queue,
+        ipc_link: Queue,
         wait_start_tick: if (@hasDecl(c, "CONFIG_KD")) u32 else void,
         msgaddr: ?*anyopaque,
-        msgsize: c.size_t,
+        msgsize: usize,
         sender: c.thread_t,
         receiver: c.thread_t,
         sendobj: c.object_t,
@@ -376,7 +378,7 @@ pub const kern = struct {
     };
 
     pub const Task = extern struct {
-        link: c.struct_list,
+        link: List,
         name: [c.MAXTASKNAME]u8,
         parent: c.task_t,
         map: c.vm_map_t,
@@ -385,15 +387,15 @@ pub const kern = struct {
         capability: c.cap_t,
         alarm: kern.Timer,
         handler: *const fn (c_int) callconv(.c) void,
-        threads: c.struct_list,
-        objects: c.struct_list,
-        mutexes: c.struct_list,
-        conds: c.struct_list,
-        sems: c.struct_list,
+        threads: List,
+        objects: List,
+        mutexes: List,
+        conds: List,
+        sems: List,
         nthreads: c_int,
         nobjects: c_int,
         nsyncs: c_int,
-        backtrace: if (@hasDecl(c, "CONFIG_USR_BACKTRACE")) [16]struct { pc: u32, func: u32 } else void,
+        backtrace: if (@hasDecl(c, "CONFIG_USR_BACKTRACE")) [16]extern struct { pc: u32, func: u32 } else void,
         got_base: if (@hasDecl(c, "CONFIG_ARMV8M")) c.vaddr_t else void,
     };
 
@@ -425,7 +427,7 @@ pub const mem = struct {
         sh_prev: *Segment,
         sh_next: *Segment,
         addr: c.vaddr_t,
-        size: c.size_t,
+        size: usize,
         flags: c_int,
         phys: c.paddr_t,
     };
@@ -434,7 +436,7 @@ pub const mem = struct {
         head: mem.Segment,
         refcnt: c_int,
         pgd: c.pgd_t,
-        total: c.size_t,
+        total: usize,
     };
 
     comptime {
