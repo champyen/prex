@@ -3,8 +3,14 @@ const builtin = @import("builtin");
 
 const c = @import("c").c;
 const ffi = @import("ffi");
-const kutil = ffi.kutil;
+const device = ffi.device;
 const hal = ffi.hal;
+const irq = ffi.irq;
+const kern = ffi.kern;
+const page = ffi.page;
+const task = ffi.task;
+const timer = ffi.timer;
+const kutil = ffi.kutil;
 const lib = ffi.lib;
 
 const sched = ffi.sched;
@@ -52,25 +58,25 @@ pub fn sysinfo(sysinfo_type: c_int, buf: ?*anyopaque) callconv(.c) c_int {
             _ = lib.memcpy(buf, &kerninfo, @sizeOf(c.struct_kerninfo));
         },
         c.INFO_MEMORY => {
-            ffi.page.info(@ptrCast(@alignCast(buf)));
+            page.info(@ptrCast(@alignCast(buf)));
         },
         c.INFO_TIMER => {
-            ffi.timer.info(@ptrCast(@alignCast(buf)));
+            timer.info(@ptrCast(@alignCast(buf)));
         },
         c.INFO_THREAD => {
             error_val = thread.info(@ptrCast(@alignCast(buf)));
         },
         c.INFO_DEVICE => {
-            error_val = ffi.device.info(@ptrCast(@alignCast(buf)));
+            error_val = device.info(@ptrCast(@alignCast(buf)));
         },
         c.INFO_TASK => {
-            error_val = ffi.task.info(@ptrCast(@alignCast(buf)));
+            error_val = task.info(@ptrCast(@alignCast(buf)));
         },
         c.INFO_VM => {
             error_val = vm.info(@ptrCast(@alignCast(buf)));
         },
         c.INFO_IRQ => {
-            error_val = ffi.irq.info(@ptrCast(@alignCast(buf)));
+            error_val = irq.info(@ptrCast(@alignCast(buf)));
         },
         else => {
             error_val = c.EINVAL;
@@ -96,25 +102,25 @@ pub fn sysInfo(sysinfo_type: c_int, buf: ?*anyopaque) callconv(.c) c_int {
             bufsz = @sizeOf(c.struct_kerninfo);
         },
         c.INFO_MEMORY => {
-            bufsz = @sizeOf(ffi.hal.MemInfo);
+            bufsz = @sizeOf(hal.MemInfo);
         },
         c.INFO_TIMER => {
-            bufsz = @sizeOf(ffi.hal.TimerInfo);
+            bufsz = @sizeOf(hal.TimerInfo);
         },
         c.INFO_THREAD => {
-            bufsz = @sizeOf(ffi.hal.ThreadInfo);
+            bufsz = @sizeOf(hal.ThreadInfo);
         },
         c.INFO_DEVICE => {
-            bufsz = @sizeOf(ffi.hal.DeviceInfo);
+            bufsz = @sizeOf(hal.DeviceInfo);
         },
         c.INFO_TASK => {
-            bufsz = @sizeOf(ffi.hal.TaskInfo);
+            bufsz = @sizeOf(hal.TaskInfo);
         },
         c.INFO_VM => {
-            bufsz = @sizeOf(ffi.hal.VmInfo);
+            bufsz = @sizeOf(hal.VmInfo);
         },
         c.INFO_IRQ => {
-            bufsz = @sizeOf(ffi.hal.IrqInfo);
+            bufsz = @sizeOf(hal.IrqInfo);
         },
         else => {
             sched.unlock();
@@ -122,11 +128,11 @@ pub fn sysInfo(sysinfo_type: c_int, buf: ?*anyopaque) callconv(.c) c_int {
         },
     }
 
-    error_val = ffi.hal.copyin(buf, &infobuf, bufsz);
+    error_val = hal.copyin(buf, &infobuf, bufsz);
     if (error_val == 0) {
         error_val = sysinfo(sysinfo_type, &infobuf);
         if (error_val == 0) {
-            error_val = ffi.hal.copyout(&infobuf, buf, bufsz);
+            error_val = hal.copyout(&infobuf, buf, bufsz);
         }
     }
 
@@ -140,7 +146,7 @@ pub fn sysLog(str: [*c]const u8) callconv(.c) c_int {
         return c.ENOSYS;
     } else {
         var buf: [c.DBGMSGSZ]u8 = undefined;
-        if (ffi.hal.copyinstr(str, &buf, c.DBGMSGSZ) != 0) {
+        if (hal.copyinstr(str, &buf, c.DBGMSGSZ) != 0) {
             return c.EINVAL;
         }
         lib.printf("%s", &buf);
@@ -154,18 +160,18 @@ pub fn sysDebug(cmd: c_int, data: ?*anyopaque) callconv(.c) c_int {
         return c.ENOSYS;
     } else {
         var error_val: c_int = c.EINVAL;
-        var task: ffi.kern.TaskRef = null;
+        var task_ref: kern.TaskRef = null;
 
         switch (cmd) {
             c.DBGC_LOGSIZE, c.DBGC_GETLOG, c.DBGC_SAVEBT => {
                 error_val = hal.dbgctl(cmd, data);
             },
             c.DBGC_TRACE => {
-                task = @ptrCast(@alignCast(data));
-                if (ffi.task.valid(task) == 0) {
+                task_ref = @ptrCast(@alignCast(data));
+                if (task.valid(task_ref) == 0) {
                     error_val = c.ESRCH;
                 } else {
-                    _ = hal.dbgctl(cmd, task);
+                    _ = hal.dbgctl(cmd, task_ref);
                     error_val = 0;
                 }
             },
@@ -186,7 +192,7 @@ pub fn sysPanic(str: [*c]const u8) callconv(.c) c_int {
     if (comptime is_debug) {
         var buf: [c.DBGMSGSZ]u8 = undefined;
         sched.lock();
-        _ = ffi.hal.copyinstr(str, &buf, c.DBGMSGSZ - 20);
+        _ = hal.copyinstr(str, &buf, c.DBGMSGSZ - 20);
         lib.printf("User panic: %s\n", &buf);
         const cur_task = kutil.get_curtask();
         const cur_thread = kutil.get_curthread();
@@ -196,7 +202,7 @@ pub fn sysPanic(str: [*c]const u8) callconv(.c) c_int {
         hal.machine_abort();
     } else {
         if (kutil.get_curtask()) |t| {
-            _ = ffi.task.terminate(t);
+            _ = task.terminate(t);
         }
     }
     return 0;
@@ -204,8 +210,8 @@ pub fn sysPanic(str: [*c]const u8) callconv(.c) c_int {
 
 /// Get system time - return ticks since OS boot.
 pub fn sysTime(ticks: ?*c_ulong) callconv(.c) c_int {
-    const t = ffi.timer.ticks();
-    return ffi.hal.copyout(&t, ticks, @sizeOf(c_ulong));
+    const t = timer.ticks();
+    return hal.copyout(&t, ticks, @sizeOf(c_ulong));
 }
 
 /// nonexistent system call.

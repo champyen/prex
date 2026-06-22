@@ -172,6 +172,21 @@ pub const sem = struct {
 
 pub const Queue = @import("lib/queue.zig").Queue;
 
+pub const lib = struct {
+    pub const memcpy = c.memcpy;
+    pub const memset = c.memset;
+    pub const memmove = c.memmove;
+    pub const strlen = c.strlen;
+    pub const strnlen = c.strnlen;
+    pub const strlcpy = c.strlcpy;
+    pub const strncmp = c.strncmp;
+    pub const printf = c.printf;
+    pub const panic = c.panic;
+};
+
+pub const kutil = @import("lib/kutil.zig");
+pub const List = @import("lib/list.zig").List;
+
 pub const hal = struct {
     pub const machine_startup = c.machine_startup;
     pub const machine_idle = c.machine_idle;
@@ -219,17 +234,26 @@ pub const hal = struct {
     pub const copyin = c.copyin;
     pub const copyout = c.copyout;
     pub const copyinstr = c.copyinstr;
-    pub const Vaddr = c.vaddr_t;
-    pub const Paddr = c.paddr_t;
-    pub const Vsize = c.vsize_t;
-    pub const Psize = c.psize_t;
-    pub const TaskRef = c.task_t;
-    pub const ThreadRef = c.thread_t;
-    pub const DeviceRef = c.device_t;
+
+    // Single canonical place for all c.struct_* type aliases.
+    // These are direct aliases to the C struct types, used for
+    // C-compatible function parameters and field types.
     pub const List = c.struct_list;
     pub const Queue = c.struct_queue;
     pub const Event = c.struct_event;
+    pub const Mutex = c.struct_mutex;
+    pub const Cond = c.struct_cond;
+    pub const Sem = c.struct_sem;
+    pub const Segment = c.struct_seg;
+    pub const VmMap = c.struct_vm_map;
+    pub const Thread = c.struct_thread;
+    pub const Task = c.struct_task;
+    pub const Device = c.struct_device;
+    pub const IRQ = c.struct_irq;
     pub const Timer = c.struct_timer;
+    pub const Driver = c.struct_driver;
+    pub const DevOps = c.struct_devops;
+    pub const DevIO = c.struct_dev_io;
     pub const BootInfo = c.struct_bootinfo;
     pub const MemInfo = c.struct_meminfo;
     pub const Module = c.struct_module;
@@ -241,23 +265,13 @@ pub const hal = struct {
     pub const DeviceInfo = c.struct_devinfo;
     pub const IrqInfo = c.struct_irqinfo;
     pub const TimerInfo = c.struct_timerinfo;
+    pub const RiscvCpu = c.struct_riscv_cpu;
+    pub const KernInfo = c.struct_kerninfo;
+    pub const Object = c.struct_object;
+    pub const MsgHeader = c.struct_msg_header;
+    pub const Dpc = c.struct_dpc;
+    pub const CpuControl = c.struct_cpu_control;
 };
-
-pub const lib = struct {
-    pub const memcpy = c.memcpy;
-    pub const memset = c.memset;
-    pub const memmove = c.memmove;
-    pub const strlen = c.strlen;
-    pub const strnlen = c.strnlen;
-    pub const strlcpy = c.strlcpy;
-    pub const strncmp = c.strncmp;
-    pub const printf = c.printf;
-    pub const panic = c.panic;
-};
-
-pub const kutil = @import("lib/kutil.zig");
-pub const List = @import("lib/list.zig").List;
-
 
 pub const sync = struct {
     pub const Event = extern struct {
@@ -276,10 +290,10 @@ pub const sync = struct {
 
     pub const Mutex = extern struct {
         task_link: List,
-        owner: c.task_t,
-        event: sync.Event,
+        owner: kern.TaskRef,
+        event: Event,
         link: List,
-        holder: c.thread_t,
+        holder: kern.ThreadRef,
         priority: c_int,
         locks: c_int,
 
@@ -294,16 +308,16 @@ pub const sync = struct {
 
     pub const Cond = extern struct {
         task_link: List,
-        owner: c.task_t,
-        event: sync.Event,
+        owner: kern.TaskRef,
+        event: Event,
     };
 
     pub const Sem = extern struct {
         next: ?*Sem,
         task_link: List,
-        owner: c.task_t,
-        event: sync.Event,
-        value: c.u_int,
+        owner: kern.TaskRef,
+        event: Event,
+        value: kern.Uint,
         refcnt: c_int,
     };
 
@@ -315,25 +329,33 @@ pub const sync = struct {
     }
 };
 
-pub const ipc = struct {
-    pub const Object = extern struct {
-        link: List,
-        name: [c.MAXOBJNAME]u8,
-        task_link: List,
-        owner: c.task_t,
-        sendq: Queue,
-        recvq: Queue,
-    };
-
-    comptime {
-        std.debug.assert(@sizeOf(Object) == @sizeOf(c.struct_object));
-    }
-};
-
 pub const kern = struct {
+    // Single canonical place for all c.*_t handle type aliases.
+    pub const TaskRef = c.task_t;
+    pub const ThreadRef = c.thread_t;
+    pub const Task = c.struct_task;
+    pub const Thread = c.struct_thread;
+    pub const DeviceRef = c.device_t;
+    pub const ObjectRef = c.object_t;
+    pub const MutexRef = c.mutex_t;
+    pub const CondRef = c.cond_t;
+    pub const SemRef = c.sem_t;
+    pub const VmMapRef = c.vm_map_t;
+    pub const Pgd = c.pgd_t;
+    pub const Spinlock = c.spinlock_t;
+    pub const Register = c.register_t;
+    pub const QueueRef = c.queue_t;
+    pub const Cap = c.cap_t;
+    pub const Uint = c.u_int;
+    pub const Ulong = c.u_long;
+    pub const Vaddr = c.vaddr_t;
+    pub const Paddr = c.paddr_t;
+    pub const Vsize = c.vsize_t;
+    pub const Psize = c.psize_t;
+
     pub const Device = extern struct {
         next: ?*Device,
-        driver: ?*Driver,
+        driver: ?*c.struct_driver,
         name: [c.MAXDEVNAME]u8,
         flags: c_int,
         active: c_int,
@@ -347,57 +369,27 @@ pub const kern = struct {
         ist: ?*const fn (?*anyopaque) callconv(.c) void,
         data: ?*anyopaque,
         priority: c_int,
-        count: c.u_int,
+        count: Uint,
         istreq: c_int,
         thread: ThreadRef,
         istevt: sync.Event,
     };
 
     pub const Timer = extern struct {
-        link: List,
+        link: hal.List,
         state: c_int,
-        expire: c.u_long,
-        interval: c.u_long,
-        func: *const fn (void) callconv(.c) void,
+        expire: Ulong,
+        interval: Ulong,
+        func: ?*const fn (?*anyopaque) callconv(.c) void,
         arg: ?*anyopaque,
         event: sync.Event,
-    };
-
-    pub const Dpc = extern struct {
-        link: Queue,
-        state: c_int,
-        func: *const fn (void) callconv(.c) void,
-        arg: ?*anyopaque,
-    };
-
-    pub const TaskRef = c.task_t;
-    pub const ThreadRef = c.thread_t;
-    pub const Thread = c.struct_thread;
-    pub const Task = c.struct_task;
-
-    pub const CpuControl = extern struct {
-        active_thread: *Thread,
-        idle_thread: *Thread,
-        nest_count: c_int,
-        spl_level: c_int,
-        int_stack: ?*anyopaque,
-        cpu_id: c_int,
-        padding: [10]c_long,
     };
 
     comptime {
         std.debug.assert(@sizeOf(Device) == @sizeOf(c.struct_device));
         std.debug.assert(@sizeOf(IRQ) == @sizeOf(c.struct_irq));
         std.debug.assert(@sizeOf(Timer) == @sizeOf(c.struct_timer));
-        std.debug.assert(@sizeOf(Dpc) == @sizeOf(c.struct_dpc));
-        std.debug.assert(@sizeOf(Thread) == @sizeOf(c.struct_thread));
-        std.debug.assert(@sizeOf(Task) == @sizeOf(c.struct_task));
-        std.debug.assert(@sizeOf(CpuControl) == @sizeOf(c.struct_cpu_control));
     }
-
-    pub const Driver = c.struct_driver;
-    pub const DevOps = c.struct_devops;
-    pub const DevIO = c.struct_dev_io;
 };
 
 pub const mem = struct {
@@ -406,16 +398,16 @@ pub const mem = struct {
         next: *Segment,
         sh_prev: *Segment,
         sh_next: *Segment,
-        addr: hal.Vaddr,
+        addr: kern.Vaddr,
         size: usize,
         flags: c_int,
-        phys: hal.Paddr,
+        phys: kern.Paddr,
     };
 
     pub const VmMap = extern struct {
-        head: mem.Segment,
+        head: Segment,
         refcnt: c_int,
-        pgd: c.pgd_t,
+        pgd: kern.Pgd,
         total: usize,
     };
 

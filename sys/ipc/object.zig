@@ -4,6 +4,8 @@ const c = @import("c").c;
 extern fn zig_memory_barrier() callconv(.c) void;
 
 const ffi = @import("ffi");
+const hal = ffi.hal;
+const kern = ffi.kern;
 const kutil = ffi.kutil;
 const lib = ffi.lib;
 const smp = ffi.smp;
@@ -29,7 +31,7 @@ fn find(name: [*:0]const u8) ?*c.struct_object {
 
 fn deallocate(obj: *c.struct_object) void {
     msg.abort(obj);
-    const owner = @as(*ffi.kern.Task, @ptrCast(obj.owner));
+    const owner = @as(*kern.Task, @ptrCast(obj.owner));
     owner.nobjects -|= 1;
     @as(*ffi.List, @ptrCast(&obj.task_link)).remove();
     @as(*ffi.List, @ptrCast(&obj.link)).remove();
@@ -63,7 +65,7 @@ pub fn create(name: ?[*:0]const u8, objp: ?*c.object_t) callconv(.c) c_int {
     }
 
     const null_obj: c.object_t = null;
-    if (ffi.hal.copyout(@as(?*const anyopaque, @ptrCast(&null_obj)), @as(?*anyopaque, @ptrCast(objp)), @sizeOf(c.object_t)) != 0) {
+    if (hal.copyout(@as(?*const anyopaque, @ptrCast(&null_obj)), @as(?*anyopaque, @ptrCast(objp)), @sizeOf(c.object_t)) != 0) {
         sched.unlock();
         return c.EFAULT;
     }
@@ -93,7 +95,7 @@ pub fn create(name: ?[*:0]const u8, objp: ?*c.object_t) callconv(.c) c_int {
 
     zig_memory_barrier();
 
-    _ = ffi.hal.copyout(@as(?*const anyopaque, @ptrCast(&obj)), @as(?*anyopaque, @ptrCast(objp)), @sizeOf(c.object_t));
+    _ = hal.copyout(@as(?*const anyopaque, @ptrCast(&obj)), @as(?*anyopaque, @ptrCast(objp)), @sizeOf(c.object_t));
 
     sched.unlock();
     return 0;
@@ -116,7 +118,7 @@ pub fn lookup(name: [*:0]const u8, objp: ?*c.object_t) callconv(.c) c_int {
         return c.ENOENT;
     }
 
-    if (ffi.hal.copyout(@as(?*const anyopaque, @ptrCast(&obj)), @as(?*anyopaque, @ptrCast(objp)), @sizeOf(c.object_t)) != 0) {
+    if (hal.copyout(@as(?*const anyopaque, @ptrCast(&obj)), @as(?*anyopaque, @ptrCast(objp)), @sizeOf(c.object_t)) != 0) {
         return c.EFAULT;
     }
     return 0;
@@ -150,8 +152,8 @@ pub fn destroy(obj: c.object_t) callconv(.c) c_int {
     return 0;
 }
 
-pub fn cleanup(tsk: ffi.kern.TaskRef) callconv(.c) void {
-    const t = @as(*ffi.kern.Task, @ptrCast(tsk));
+pub fn cleanup(tsk: kern.TaskRef) callconv(.c) void {
+    const t = @as(*kern.Task, @ptrCast(tsk));
     while (!@as(*ffi.List, @ptrCast(&t.objects)).isEmpty()) {
         const obj = @as(*ffi.List, @ptrCast(&t.objects)).first().entry(c.struct_object, "task_link");
         deallocate(obj);

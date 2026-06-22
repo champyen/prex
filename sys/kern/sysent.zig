@@ -3,6 +3,10 @@ const builtin = @import("builtin");
 const c = @import("c").c;
 
 const ffi = @import("ffi");
+const hal = ffi.hal;
+const kern = ffi.kern;
+const task = ffi.task;
+const thread = ffi.thread;
 const lib = ffi.lib;
 const kutil = ffi.kutil;
 
@@ -30,21 +34,21 @@ const sysent: [NSYSCALL]SysEnt = .{
     SysEnt.init("exception_setup", 1, c.exception_setup),
     SysEnt.init("exception_raise", 2, c.exception_raise),
     SysEnt.init("exception_wait", 1, c.exception_wait),
-    SysEnt.init("task_create", 3, ffi.task.create),
-    SysEnt.init("task_terminate", 1, ffi.task.terminate),
-    SysEnt.init("task_self", 0, ffi.task.self),
+    SysEnt.init("task_create", 3, task.create),
+    SysEnt.init("task_terminate", 1, task.terminate),
+    SysEnt.init("task_self", 0, task.self),
     SysEnt.init("task_suspend", 1, c.task_suspend),
     SysEnt.init("task_resume", 1, c.task_resume),
     SysEnt.init("task_setname", 2, c.task_setname),
     SysEnt.init("task_setcap", 2, c.task_setcap),
     SysEnt.init("task_chkcap", 2, c.task_chkcap),
-    SysEnt.init("thread_create", 2, ffi.thread.create),
-    SysEnt.init("thread_terminate", 1, ffi.thread.terminate),
-    SysEnt.init("thread_setup", 4, ffi.thread.setup),
-    SysEnt.init("thread_self", 0, ffi.thread.self),
-    SysEnt.init("thread_yield", 0, ffi.thread.yield),
-    SysEnt.init("thread_suspend", 1, ffi.thread.@"suspend"),
-    SysEnt.init("thread_resume", 1, ffi.thread.@"resume"),
+    SysEnt.init("thread_create", 2, thread.create),
+    SysEnt.init("thread_terminate", 1, thread.terminate),
+    SysEnt.init("thread_setup", 4, thread.setup),
+    SysEnt.init("thread_self", 0, thread.self),
+    SysEnt.init("thread_yield", 0, thread.yield),
+    SysEnt.init("thread_suspend", 1, thread.@"suspend"),
+    SysEnt.init("thread_resume", 1, thread.@"resume"),
     SysEnt.init("thread_schedparam", 3, c.thread_schedparam),
     SysEnt.init("vm_allocate", 4, c.vm_allocate),
     SysEnt.init("vm_free", 2, c.vm_free),
@@ -108,7 +112,7 @@ fn syscall_handler_std(a1: c.register_t, a2: c.register_t, a3: c.register_t, a4:
     return retval;
 }
 
-fn syscall_handler_armv8m(regs: *ffi.hal.CpuRegs, id: c.register_t) callconv(.c) c.register_t {
+fn syscall_handler_armv8m(regs: *hal.CpuRegs, id: c.register_t) callconv(.c) c.register_t {
     var retval: c.register_t = c.EINVAL;
 
     if (kutil.get_curthread()) |cur| {

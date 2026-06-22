@@ -4,8 +4,11 @@ const builtin = @import("builtin");
 const c = @import("c").c;
 
 const ffi = @import("ffi");
-const kutil = ffi.kutil;
 const hal = ffi.hal;
+const kern = ffi.kern;
+const sync = ffi.sync;
+const vm = ffi.vm;
+const kutil = ffi.kutil;
 const timer = ffi.timer;
 const thread = ffi.thread;
 const smp = ffi.smp;
@@ -14,7 +17,7 @@ pub var kernel_lock: c.spinlock_t = 0;
 var runq: [c.NPRI]ffi.Queue = undefined;
 var wakeq: ffi.Queue = undefined;
 var dpcq: ffi.Queue = undefined;
-var dpc_event: ffi.sync.Event = undefined;
+var dpc_event: sync.Event = undefined;
 var maxpri: c_int = c.PRI_IDLE;
 
 fn runq_getbest() c_int {
@@ -27,7 +30,7 @@ fn runq_getbest() c_int {
     return pri;
 }
 
-fn runq_enqueue(t: ffi.kern.ThreadRef) void {
+fn runq_enqueue(t: kern.ThreadRef) void {
     runq[@intCast(t.*.priority)].enqueue(@as(*ffi.Queue, @ptrCast(&t.*.sched_link)));
     if (t.*.priority < maxpri) {
         maxpri = t.*.priority;
@@ -37,32 +40,32 @@ fn runq_enqueue(t: ffi.kern.ThreadRef) void {
     }
 }
 
-fn runq_insert(t: ffi.kern.ThreadRef) void {
+fn runq_insert(t: kern.ThreadRef) void {
     runq[@intCast(t.*.priority)].insert(@as(*ffi.Queue, @ptrCast(&t.*.sched_link)));
     if (t.*.priority < maxpri) {
         maxpri = t.*.priority;
     }
 }
 
-fn runq_dequeue() ffi.kern.ThreadRef {
+fn runq_dequeue() kern.ThreadRef {
     if (maxpri >= c.PRI_IDLE) {
         return &c.idle_thread;
     }
     const q = runq[@intCast(maxpri)].dequeue().?;
-    const t = q.entry(ffi.kern.Thread, "sched_link");
+    const t = q.entry(kern.Thread, "sched_link");
     if (runq[@intCast(maxpri)].isEmpty()) {
         maxpri = runq_getbest();
     }
     return t;
 }
 
-fn runq_remove(t: ffi.kern.ThreadRef) void {
+fn runq_remove(t: kern.ThreadRef) void {
     t.*.sched_link.remove();
     maxpri = runq_getbest();
 }
 
 
-fn set_curthread(t: ffi.kern.ThreadRef) void {
+fn set_curthread(t: kern.ThreadRef) void {
     if (comptime @hasDecl(c, "CONFIG_SMP")) {
         smp.get_cpu_control().*.active_thread = t;
     } else {
@@ -70,14 +73,14 @@ fn set_curthread(t: ffi.kern.ThreadRef) void {
     }
 }
 
-fn curthread() *ffi.kern.Thread {
+fn curthread() *kern.Thread {
     return kutil.get_curthread().?;
 }
 
 fn wakeq_flush() callconv(.c) void {
     while (!wakeq.isEmpty()) {
         const q = wakeq.dequeue().?;
-        const t = q.entry(ffi.kern.Thread, "sched_link");
+        const t = q.entry(kern.Thread, "sched_link");
         t.*.slpevt = null;
         t.*.state &= ~@as(c_int, c.TS_SLEEP);
         if (t != curthread() and t.*.state == c.TS_RUN) {
@@ -86,13 +89,13 @@ fn wakeq_flush() callconv(.c) void {
     }
 }
 
-fn setrun(t: ffi.kern.ThreadRef) callconv(.c) void {
+fn setrun(t: kern.ThreadRef) callconv(.c) void {
     wakeq.enqueue(@as(*ffi.Queue, @ptrCast(&t.*.sched_link)));
     timer.stop(&t.*.timeout);
 }
 
 fn sleep_timeout(arg: ?*anyopaque) callconv(.c) void {
-    const t: ffi.kern.ThreadRef = @ptrCast(@alignCast(arg));
+    const t: kern.ThreadRef = @ptrCast(@alignCast(arg));
     unsleep(t, c.SLP_TIMEOUT);
 }
 
@@ -114,7 +117,7 @@ fn swtch() callconv(.c) void {
     set_curthread(next);
 
     if (prev.*.task != next.*.task) {
-        ffi.vm.switch_map(next.*.task.*.map);
+        vm.switch_map(next.*.task.*.map);
     }
 
     var locks: c_int = undefined;
@@ -149,12 +152,12 @@ fn swtch() callconv(.c) void {
     }
 }
 
-fn tsleep(evt: *ffi.hal.Event, msec: c_ulong) callconv(.c) c_int {
-    const e: *ffi.sync.Event = @ptrCast(evt);
+fn tsleep(evt: *hal.Event, msec: c_ulong) callconv(.c) c_int {
+    const e: *sync.Event = @ptrCast(evt);
     lock();
     const s = hal.splhigh();
 
-    curthread().*.slpevt = @as([*c]ffi.hal.Event, @ptrCast(e));
+    curthread().*.slpevt = @as([*c]hal.Event, @ptrCast(e));
     curthread().*.state |= @as(c_int, c.TS_SLEEP);
     e.*.sleepq.enqueue(@as(*ffi.Queue, @ptrCast(&curthread().*.sched_link)));
 
@@ -170,13 +173,13 @@ fn tsleep(evt: *ffi.hal.Event, msec: c_ulong) callconv(.c) c_int {
     return curthread().*.slpret;
 }
 
-fn wakeup(evt: *ffi.hal.Event) callconv(.c) void {
-    const e: *ffi.sync.Event = @ptrCast(evt);
+fn wakeup(evt: *hal.Event) callconv(.c) void {
+    const e: *sync.Event = @ptrCast(evt);
     lock();
     const s = hal.splhigh();
     while (!e.*.sleepq.isEmpty()) {
         const q = e.*.sleepq.dequeue().?;
-        const t = q.entry(ffi.kern.Thread, "sched_link");
+        const t = q.entry(kern.Thread, "sched_link");
         t.*.slpret = 0;
         setrun(t);
     }
@@ -184,17 +187,17 @@ fn wakeup(evt: *ffi.hal.Event) callconv(.c) void {
     unlock();
 }
 
-fn wakeone(evt: *ffi.hal.Event) callconv(.c) ffi.kern.ThreadRef {
-    const e: *ffi.sync.Event = @ptrCast(evt);
+fn wakeone(evt: *hal.Event) callconv(.c) kern.ThreadRef {
+    const e: *sync.Event = @ptrCast(evt);
     lock();
     const s = hal.splhigh();
-    var result: ffi.kern.ThreadRef = null;
+    var result: kern.ThreadRef = null;
     const head: *ffi.Queue = @ptrCast(&e.*.sleepq);
     if (!head.isEmpty()) {
         var q = head.first();
-        var top = q.entry(ffi.kern.Thread, "sched_link");
+        var top = q.entry(kern.Thread, "sched_link");
         while (q != head) {
-            const t = q.entry(ffi.kern.Thread, "sched_link");
+            const t = q.entry(kern.Thread, "sched_link");
             if (t.*.priority < top.*.priority) {
                 top = t;
             }
@@ -210,7 +213,7 @@ fn wakeone(evt: *ffi.hal.Event) callconv(.c) ffi.kern.ThreadRef {
     return result;
 }
 
-fn unsleep(t: ffi.kern.ThreadRef, result: c_int) callconv(.c) void {
+fn unsleep(t: kern.ThreadRef, result: c_int) callconv(.c) void {
     lock();
     if (t.*.state & c.TS_SLEEP != 0) {
         const s = hal.splhigh();
@@ -230,7 +233,7 @@ fn yield() callconv(.c) void {
     unlock();
 }
 
-fn @"suspend"(t: ffi.kern.ThreadRef) callconv(.c) void {
+fn @"suspend"(t: kern.ThreadRef) callconv(.c) void {
     if (t.*.state == c.TS_RUN) {
         if (t == curthread()) {
             curthread().*.resched = 1;
@@ -241,7 +244,7 @@ fn @"suspend"(t: ffi.kern.ThreadRef) callconv(.c) void {
     t.*.state |= @as(c_int, c.TS_SUSP);
 }
 
-fn @"resume"(t: ffi.kern.ThreadRef) callconv(.c) void {
+fn @"resume"(t: kern.ThreadRef) callconv(.c) void {
     if (t.*.state & c.TS_SUSP != 0) {
         t.*.state &= ~@as(c_int, c.TS_SUSP);
         if (t.*.state == c.TS_RUN) {
@@ -263,7 +266,7 @@ fn tick() callconv(.c) void {
     }
 }
 
-fn start(t: ffi.kern.ThreadRef, pri: c_int, policy: c_int) callconv(.c) void {
+fn start(t: kern.ThreadRef, pri: c_int, policy: c_int) callconv(.c) void {
     t.*.state = c.TS_RUN | @as(c_int, c.TS_SUSP);
     t.*.policy = policy;
     t.*.priority = pri;
@@ -273,7 +276,7 @@ fn start(t: ffi.kern.ThreadRef, pri: c_int, policy: c_int) callconv(.c) void {
     }
 }
 
-fn stop(t: ffi.kern.ThreadRef) callconv(.c) void {
+fn stop(t: kern.ThreadRef) callconv(.c) void {
     if (t == curthread()) {
         curthread().*.locks = 1;
         curthread().*.resched = 1;
@@ -338,11 +341,11 @@ fn bklUnlock() callconv(.c) void {
     }
 }
 
-fn getpri(t: ffi.kern.ThreadRef) callconv(.c) c_int {
+fn getpri(t: kern.ThreadRef) callconv(.c) c_int {
     return t.*.priority;
 }
 
-fn setpri(t: ffi.kern.ThreadRef, basepri: c_int, pri: c_int) callconv(.c) void {
+fn setpri(t: kern.ThreadRef, basepri: c_int, pri: c_int) callconv(.c) void {
     t.*.basepri = basepri;
     if (t == curthread()) {
         t.*.priority = pri;
@@ -361,11 +364,11 @@ fn setpri(t: ffi.kern.ThreadRef, basepri: c_int, pri: c_int) callconv(.c) void {
     }
 }
 
-fn getpolicy(t: ffi.kern.ThreadRef) callconv(.c) c_int {
+fn getpolicy(t: kern.ThreadRef) callconv(.c) c_int {
     return t.*.policy;
 }
 
-fn setpolicy(t: ffi.kern.ThreadRef, policy: c_int) callconv(.c) c_int {
+fn setpolicy(t: kern.ThreadRef, policy: c_int) callconv(.c) c_int {
     var err: c_int = 0;
     switch (policy) {
         c.SCHED_RR, c.SCHED_FIFO => {

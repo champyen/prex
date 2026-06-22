@@ -1,5 +1,9 @@
 const c = @import("c").c;
 const ffi = @import("ffi");
+const deadlock = ffi.deadlock;
+const hal = ffi.hal;
+const kern = ffi.kern;
+const sync = ffi.sync;
 const kutil = ffi.kutil;
 const smp = ffi.smp;
 const kmem = ffi.kmem;
@@ -15,11 +19,11 @@ inline fn is_cond_initializer(m: c.cond_t) bool {
 }
 
 fn valid(m: c.cond_t) c_int {
-    const km: *ffi.sync.Cond = @ptrCast(m);
+    const km: *sync.Cond = @ptrCast(m);
     const head = &kutil.cur_task().*.conds;
     var n = @as(*ffi.List, @ptrCast(head)).first();
     while (n != @as(*ffi.List, @ptrCast(head))) : (n = n.nextNode()) {
-        const tmp = n.entry(ffi.sync.Cond, "task_link");
+        const tmp = n.entry(sync.Cond, "task_link");
         if (tmp == km) {
             return 1;
         }
@@ -29,7 +33,7 @@ fn valid(m: c.cond_t) c_int {
 
 fn copyin(ucp: ?*c.cond_t, kcp: ?*c.cond_t) c_int {
     var m: c.cond_t = undefined;
-    if (ffi.hal.copyin(@as(?*const anyopaque, @ptrCast(ucp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t)) != 0) {
+    if (hal.copyin(@as(?*const anyopaque, @ptrCast(ucp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t)) != 0) {
         return c.EFAULT;
     }
 
@@ -38,7 +42,7 @@ fn copyin(ucp: ?*c.cond_t, kcp: ?*c.cond_t) c_int {
         if (error_code != 0) {
             return error_code;
         }
-        _ = ffi.hal.copyin(@as(?*const anyopaque, @ptrCast(ucp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t));
+        _ = hal.copyin(@as(?*const anyopaque, @ptrCast(ucp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t));
     } else {
         if (valid(m) == 0) {
             return c.EINVAL;
@@ -54,13 +58,13 @@ pub fn init(cp: ?*c.cond_t) callconv(.c) c_int {
         return c.EAGAIN;
     }
 
-    const mem = kmem.alloc(@sizeOf(ffi.sync.Cond)) orelse return c.ENOMEM;
+    const mem = kmem.alloc(@sizeOf(sync.Cond)) orelse return c.ENOMEM;
     const m: c.cond_t = @ptrCast(@alignCast(mem));
 
     c.event_init(&m.*.event, "condvar");
     m.*.owner = self;
 
-    if (ffi.hal.copyout(@as(?*const anyopaque, @ptrCast(&m)), @as(?*anyopaque, @ptrCast(cp)), @sizeOf(c.cond_t)) != 0) {
+    if (hal.copyout(@as(?*const anyopaque, @ptrCast(&m)), @as(?*anyopaque, @ptrCast(cp)), @sizeOf(c.cond_t)) != 0) {
         kmem.free(m);
         return c.EFAULT;
     }
@@ -81,7 +85,7 @@ fn deallocate(m: c.cond_t) void {
 pub fn destroy(cp: ?*c.cond_t) callconv(.c) c_int {
     var m: c.cond_t = undefined;
     sched.lock();
-    if (ffi.hal.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t)) != 0) {
+    if (hal.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t)) != 0) {
         sched.unlock();
         return c.EFAULT;
     }
@@ -89,7 +93,7 @@ pub fn destroy(cp: ?*c.cond_t) callconv(.c) c_int {
         sched.unlock();
         return c.EINVAL;
     }
-    const km: *ffi.sync.Cond = @ptrCast(m);
+    const km: *sync.Cond = @ptrCast(m);
     if (!km.*.event.sleepq.isEmpty()) {
         sched.unlock();
         return c.EBUSY;
@@ -99,10 +103,10 @@ pub fn destroy(cp: ?*c.cond_t) callconv(.c) c_int {
     return 0;
 }
 
-pub fn cleanup(task: ffi.kern.TaskRef) callconv(.c) void {
+pub fn cleanup(task: kern.TaskRef) callconv(.c) void {
     while (!@as(*ffi.List, @ptrCast(&task.*.conds)).isEmpty()) {
         const n = @as(*ffi.List, @ptrCast(&task.*.conds)).first();
-        const m = n.entry(ffi.sync.Cond, "task_link");
+        const m = n.entry(sync.Cond, "task_link");
         deallocate(@ptrCast(m));
     }
 }
@@ -110,7 +114,7 @@ pub fn cleanup(task: ffi.kern.TaskRef) callconv(.c) void {
 pub fn wait(cp: ?*c.cond_t, mp: ?*c.mutex_t) callconv(.c) c_int {
     var m: c.cond_t = undefined;
 
-    if (ffi.hal.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t)) != 0) {
+    if (hal.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t)) != 0) {
         return c.EINVAL;
     }
 
@@ -121,7 +125,7 @@ pub fn wait(cp: ?*c.cond_t, mp: ?*c.mutex_t) callconv(.c) c_int {
             sched.unlock();
             return error_code;
         }
-        _ = ffi.hal.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t));
+        _ = hal.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t));
     } else {
         if (valid(m) == 0) {
             sched.unlock();
@@ -129,7 +133,7 @@ pub fn wait(cp: ?*c.cond_t, mp: ?*c.mutex_t) callconv(.c) c_int {
         }
     }
 
-    const km: *ffi.sync.Cond = @ptrCast(m);
+    const km: *sync.Cond = @ptrCast(m);
     var err: c_int = 0;
 
     const unlock_err = mutex.unlock(mp);
@@ -138,9 +142,9 @@ pub fn wait(cp: ?*c.cond_t, mp: ?*c.mutex_t) callconv(.c) c_int {
         return unlock_err;
     }
 
-    ffi.deadlock.sleep(@ptrCast(km), "cond");
+    deadlock.sleep(@ptrCast(km), "cond");
     const rc = sched.tsleep(&km.*.event, 0);
-    ffi.deadlock.stop_sleep();
+    deadlock.stop_sleep();
     if (rc == c.SLP_INTR) {
         err = c.EINTR;
     }
@@ -157,11 +161,11 @@ pub fn signal(cp: ?*c.cond_t) callconv(.c) c_int {
     var m: c.cond_t = undefined;
 
     sched.lock();
-    if (ffi.hal.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t)) != 0) {
+    if (hal.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t)) != 0) {
         sched.unlock();
         return c.EINVAL;
     }
-    const km: *ffi.sync.Cond = @ptrCast(m);
+    const km: *sync.Cond = @ptrCast(m);
     _ = sched.wakeone(&km.*.event);
     sched.unlock();
     return 0;
@@ -171,11 +175,11 @@ pub fn broadcast(cp: ?*c.cond_t) callconv(.c) c_int {
     var m: c.cond_t = undefined;
 
     sched.lock();
-    if (ffi.hal.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t)) != 0) {
+    if (hal.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t)) != 0) {
         sched.unlock();
         return c.EINVAL;
     }
-    const km: *ffi.sync.Cond = @ptrCast(m);
+    const km: *sync.Cond = @ptrCast(m);
     sched.wakeup(&km.*.event);
     sched.unlock();
     return 0;

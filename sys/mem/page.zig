@@ -7,8 +7,9 @@ pub fn panic(msg: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
 const c = @import("c").c;
 
 const ffi = @import("ffi");
-const kutil = ffi.kutil;
 const hal = ffi.hal;
+const kern = ffi.kern;
+const kutil = ffi.kutil;
 const lib = ffi.lib;
 const sched = ffi.sched;
 
@@ -23,7 +24,7 @@ inline fn dprintf(comptime fmt: [*:0]const u8, args: anytype) void {
 const Page = extern struct {
     next: ?*Page,
     prev: ?*Page,
-    size: ffi.hal.Vsize,
+    size: kern.Vsize,
 };
 
 var page_head = Page{
@@ -31,16 +32,16 @@ var page_head = Page{
     .prev = null,
     .size = 0,
 };
-var total_size: ffi.hal.Psize = 0;
-var used_size: ffi.hal.Psize = 0;
-var bootdisk_size: ffi.hal.Psize = 0;
+var total_size: kern.Psize = 0;
+var used_size: kern.Psize = 0;
+var bootdisk_size: kern.Psize = 0;
 
 
 
 
 
-fn page_is_ram(pa: ffi.hal.Paddr) bool {
-    var bi: ?*ffi.hal.BootInfo = null;
+fn page_is_ram(pa: kern.Paddr) bool {
+    var bi: ?*hal.BootInfo = null;
     hal.machine_bootinfo(&bi);
     const binfo = bi orelse return false;
     var i: usize = 0;
@@ -55,7 +56,7 @@ fn page_is_ram(pa: ffi.hal.Paddr) bool {
     return false;
 }
 
-pub fn alloc(psize: ffi.hal.Psize) callconv(.c) ffi.hal.Paddr {
+pub fn alloc(psize: kern.Psize) callconv(.c) kern.Paddr {
     sched.lock();
     dprintf("page_alloc: psize=0x%x\n", .{psize});
     defer sched.unlock();
@@ -90,13 +91,13 @@ pub fn alloc(psize: ffi.hal.Psize) callconv(.c) ffi.hal.Paddr {
         next.*.prev = tmp;
     }
 
-    used_size += @as(ffi.hal.Psize, @intCast(size));
+    used_size += @as(kern.Psize, @intCast(size));
     const ret_val = kutil.kvtop(block);
     dprintf("page_alloc: returning 0x%x\n", .{ret_val});
     return ret_val;
 }
 
-pub fn free(paddr: ffi.hal.Paddr, psize: ffi.hal.Psize) callconv(.c) void {
+pub fn free(paddr: kern.Paddr, psize: kern.Psize) callconv(.c) void {
     sched.lock();
     defer sched.unlock();
 
@@ -142,16 +143,16 @@ pub fn free(paddr: ffi.hal.Paddr, psize: ffi.hal.Psize) callconv(.c) void {
         }
     }
 
-    used_size = used_size -% @as(ffi.hal.Psize, @intCast(size));
+    used_size = used_size -% @as(kern.Psize, @intCast(size));
     dprintf("page_free: done, page_head.next=0x%x\n", .{@intFromPtr(page_head.next)});
 }
 
-pub fn reserve(paddr: ffi.hal.Paddr, psize: ffi.hal.Psize) callconv(.c) c_int {
+pub fn reserve(paddr: kern.Paddr, psize: kern.Psize) callconv(.c) c_int {
     if (psize == 0) return 0;
 
     var pa = paddr;
     var sz = psize;
-    const page_size = @as(ffi.hal.Paddr, @intCast(c.PAGE_SIZE));
+    const page_size = @as(kern.Paddr, @intCast(c.PAGE_SIZE));
     if (pa < page_size) {
         if (pa + sz <= page_size) return 0;
         sz -= (page_size - pa);
@@ -205,11 +206,11 @@ pub fn reserve(paddr: ffi.hal.Paddr, psize: ffi.hal.Psize) callconv(.c) c_int {
         }
     }
 
-    used_size += @as(ffi.hal.Psize, @intCast(size));
+    used_size += @as(kern.Psize, @intCast(size));
     return 0;
 }
 
-pub fn info(mem_info: *ffi.hal.MemInfo) callconv(.c) void {
+pub fn info(mem_info: *hal.MemInfo) callconv(.c) void {
     mem_info.*.total = total_size;
     mem_info.*.free = total_size - used_size;
     mem_info.*.bootdisk = bootdisk_size;
@@ -219,7 +220,7 @@ pub fn info(mem_info: *ffi.hal.MemInfo) callconv(.c) void {
 }
 
 pub fn init() callconv(.c) void {
-    var bi: ?*ffi.hal.BootInfo = null;
+    var bi: ?*hal.BootInfo = null;
     hal.machine_bootinfo(&bi);
     const binfo = bi orelse return;
 

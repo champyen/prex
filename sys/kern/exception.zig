@@ -3,29 +3,32 @@ const std = @import("std");
 const c = @import("c").c;
 
 const ffi = @import("ffi");
-const kutil = ffi.kutil;
 const hal = ffi.hal;
+const kern = ffi.kern;
+const sync = ffi.sync;
+const task = ffi.task;
+const kutil = ffi.kutil;
 const sched = ffi.sched;
 const smp = ffi.smp;
 const thread = ffi.thread;
 
 var EXC_DFL: ?*const fn (c_int) callconv(.c) void = undefined;
 
-var exception_event: ffi.sync.Event = undefined;
+var exception_event: sync.Event = undefined;
 
 
 
 
-inline fn list_first(head: *ffi.hal.List) ?*ffi.hal.List {
+inline fn list_first(head: *hal.List) ?*hal.List {
     return @ptrCast(head.next);
 }
 
-inline fn list_next(node: *ffi.hal.List) ?*ffi.hal.List {
+inline fn list_next(node: *hal.List) ?*hal.List {
     return @ptrCast(node.next);
 }
 
-inline fn list_empty(head: *ffi.hal.List) bool {
-    return head.next == @as(?*ffi.hal.List, @ptrCast(head));
+inline fn list_empty(head: *hal.List) bool {
+    return head.next == @as(?*hal.List, @ptrCast(head));
 }
 
 pub fn setup(handler: ?*const fn (c_int) callconv(.c) void) callconv(.c) c_int {
@@ -41,13 +44,13 @@ pub fn setup(handler: ?*const fn (c_int) callconv(.c) void) callconv(.c) c_int {
     sched.lock();
     if (self.handler != EXC_DFL and handler == EXC_DFL) {
         var n = list_first(&self.threads);
-        while (n != null and n.? != @as(?*ffi.hal.List, @ptrCast(&self.threads))) {
+        while (n != null and n.? != @as(?*hal.List, @ptrCast(&self.threads))) {
             const s = hal.splhigh();
-            const t: *ffi.kern.Thread = @fieldParentPtr("task_link", n.?);
+            const t: *kern.Thread = @fieldParentPtr("task_link", n.?);
             t.excbits = 0;
             _ = hal.splx(s);
 
-            if (t.slpevt == @as(?*ffi.hal.Event, @alignCast(@ptrCast(&exception_event)))) {
+            if (t.slpevt == @as(?*hal.Event, @alignCast(@ptrCast(&exception_event)))) {
                 sched.unsleep(t, c.SLP_BREAK);
             }
             n = list_next(n.?);
@@ -58,42 +61,42 @@ pub fn setup(handler: ?*const fn (c_int) callconv(.c) void) callconv(.c) c_int {
     return 0;
 }
 
-pub fn raise(task: ffi.kern.TaskRef, excno: c_int) callconv(.c) c_int {
+pub fn raise(t: kern.TaskRef, excno: c_int) callconv(.c) c_int {
     var error_code: c_int = undefined;
 
     sched.lock();
-    if (ffi.task.valid(task) == 0) {
+    if (task.valid(t) == 0) {
         sched.unlock();
         return c.ESRCH;
     }
-    if (task != @as(?*ffi.kern.Task, @ptrCast(kutil.get_curtask())) and ffi.task.capable(c.CAP_KILL) == 0) {
+    if (t != @as(?*kern.Task, @ptrCast(kutil.get_curtask())) and task.capable(c.CAP_KILL) == 0) {
         sched.unlock();
         return c.EPERM;
     }
-    error_code = post(task, excno);
+    error_code = post(t, excno);
     sched.unlock();
     return error_code;
 }
 
-pub fn post(task: ffi.kern.TaskRef, excno: c_int) callconv(.c) c_int {
-    var t: ?*ffi.kern.Thread = null;
+pub fn post(task_arg: kern.TaskRef, excno: c_int) callconv(.c) c_int {
+    var t: ?*kern.Thread = null;
     var found: c_int = 0;
 
     sched.lock();
-    if (task.*.flags & c.TF_SYSTEM != 0) {
+    if (task_arg.*.flags & c.TF_SYSTEM != 0) {
         sched.unlock();
         return c.EPERM;
     }
 
-    if (task.*.handler == EXC_DFL or task.*.nthreads == 0 or excno < 0 or excno >= c.NEXC) {
+    if (task_arg.*.handler == EXC_DFL or task_arg.*.nthreads == 0 or excno < 0 or excno >= c.NEXC) {
         sched.unlock();
         return c.EINVAL;
     }
 
-    var n = list_first(&task.*.threads);
-    while (n != null and n.? != @as(?*ffi.hal.List, @ptrCast(&task.*.threads))) {
-        const tmp: *ffi.kern.Thread = @fieldParentPtr("task_link", n.?);
-        if (tmp.slpevt == @as(?*ffi.hal.Event, @alignCast(@ptrCast(&exception_event)))) {
+    var n = list_first(&task_arg.*.threads);
+    while (n != null and n.? != @as(?*hal.List, @ptrCast(&task_arg.*.threads))) {
+        const tmp: *kern.Thread = @fieldParentPtr("task_link", n.?);
+        if (tmp.slpevt == @as(?*hal.Event, @alignCast(@ptrCast(&exception_event)))) {
             t = tmp;
             found = 1;
             break;
@@ -102,8 +105,8 @@ pub fn post(task: ffi.kern.TaskRef, excno: c_int) callconv(.c) c_int {
     }
 
     if (found == 0) {
-        if (!list_empty(&task.*.threads)) {
-            const first: *ffi.kern.Thread = @fieldParentPtr("task_link", list_first(&task.*.threads).?);
+        if (!list_empty(&task_arg.*.threads)) {
+            const first: *kern.Thread = @fieldParentPtr("task_link", list_first(&task_arg.*.threads).?);
             t = first;
         }
     }
@@ -128,7 +131,7 @@ pub fn wait(excno: ?*c_int) callconv(.c) c_int {
     }
 
     i = 0;
-    if (ffi.hal.copyout(@as(?*const anyopaque, @ptrCast(&i)), @as(?*anyopaque, @ptrCast(excno)), @sizeOf(c_int)) != 0) {
+    if (hal.copyout(@as(?*const anyopaque, @ptrCast(&i)), @as(?*anyopaque, @ptrCast(excno)), @sizeOf(c_int)) != 0) {
         return c.EFAULT;
     }
 
@@ -150,7 +153,7 @@ pub fn wait(excno: ?*c_int) callconv(.c) c_int {
     sched.unlock();
 
     i = j;
-    if (ffi.hal.copyout(@as(?*const anyopaque, @ptrCast(&i)), @as(?*anyopaque, @ptrCast(excno)), @sizeOf(c_int)) != 0) {
+    if (hal.copyout(@as(?*const anyopaque, @ptrCast(&i)), @as(?*anyopaque, @ptrCast(excno)), @sizeOf(c_int)) != 0) {
         return c.EFAULT;
     }
     return c.EINTR;
@@ -184,7 +187,7 @@ pub fn deliver() callconv(.c) void {
         }
         handler = self.handler;
         if (handler == EXC_DFL) {
-            _ = ffi.task.terminate(self);
+            _ = task.terminate(self);
         }
 
         s = hal.splhigh();

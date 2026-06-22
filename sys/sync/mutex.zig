@@ -4,6 +4,10 @@ const builtin = @import("builtin");
 const c = @import("c").c;
 
 const ffi = @import("ffi");
+const deadlock = ffi.deadlock;
+const hal = ffi.hal;
+const kern = ffi.kern;
+const sync = ffi.sync;
 const kutil = ffi.kutil;
 const smp = ffi.smp;
 const kmem = ffi.kmem;
@@ -18,11 +22,11 @@ inline fn is_mutex_initializer(m: c.mutex_t) bool {
 }
 
 fn valid(m: c.mutex_t) c_int {
-    const km: *ffi.sync.Mutex = @ptrCast(m);
+    const km: *sync.Mutex = @ptrCast(m);
     const head = &kutil.cur_task().*.mutexes;
     var n = @as(*ffi.List, @ptrCast(head)).first();
     while (n != @as(*ffi.List, @ptrCast(head))) : (n = n.nextNode()) {
-        const tmp = n.entry(ffi.sync.Mutex, "task_link");
+        const tmp = n.entry(sync.Mutex, "task_link");
         if (tmp == km) {
             return 1;
         }
@@ -32,7 +36,7 @@ fn valid(m: c.mutex_t) c_int {
 
 fn copyin(ump: ?*c.mutex_t, kmp: ?*c.mutex_t) c_int {
     var m: c.mutex_t = undefined;
-    if (ffi.hal.copyin(@as(?*const anyopaque, @ptrCast(ump)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.mutex_t)) != 0) {
+    if (hal.copyin(@as(?*const anyopaque, @ptrCast(ump)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.mutex_t)) != 0) {
         return c.EFAULT;
     }
 
@@ -41,7 +45,7 @@ fn copyin(ump: ?*c.mutex_t, kmp: ?*c.mutex_t) c_int {
         if (error_code != 0) {
             return error_code;
         }
-        _ = ffi.hal.copyin(@as(?*const anyopaque, @ptrCast(ump)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.mutex_t));
+        _ = hal.copyin(@as(?*const anyopaque, @ptrCast(ump)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.mutex_t));
     } else {
         if (valid(m) == 0) {
             return c.EINVAL;
@@ -51,15 +55,15 @@ fn copyin(ump: ?*c.mutex_t, kmp: ?*c.mutex_t) c_int {
     return 0;
 }
 
-fn prio_inherit(waiter: ffi.kern.ThreadRef) c_int {
+fn prio_inherit(waiter: kern.ThreadRef) c_int {
     var m: c.mutex_t = waiter.*.mutex_waiting;
-    var holder: ffi.kern.ThreadRef = undefined;
+    var holder: kern.ThreadRef = undefined;
     var count: c_int = 0;
     var iters: u32 = 0;
 
     while (m != null) {
         holder = m.*.holder;
-        ffi.deadlock.check_loop("prio_inherit", &iters);
+        deadlock.check_loop("prio_inherit", &iters);
 
         if (holder == waiter) {
             return c.EDEADLK;
@@ -80,7 +84,7 @@ fn prio_inherit(waiter: ffi.kern.ThreadRef) c_int {
     return 0;
 }
 
-fn prio_uninherit(t: ffi.kern.ThreadRef) void {
+fn prio_uninherit(t: kern.ThreadRef) void {
     if (t.*.priority == t.*.basepri) {
         return;
     }
@@ -89,7 +93,7 @@ fn prio_uninherit(t: ffi.kern.ThreadRef) void {
     const head = @as(*ffi.List, @ptrCast(&t.*.mutexes));
     var n = head.first();
     while (n != head) : (n = n.nextNode()) {
-        const m = n.entry(ffi.sync.Mutex, "link");
+        const m = n.entry(sync.Mutex, "link");
         if (m.*.priority < maxpri) {
             maxpri = m.*.priority;
         }
@@ -104,14 +108,14 @@ pub fn init(mp: ?*c.mutex_t) callconv(.c) c_int {
         return c.EAGAIN;
     }
 
-    const mem = kmem.alloc(@sizeOf(ffi.sync.Mutex)) orelse return c.ENOMEM;
+    const mem = kmem.alloc(@sizeOf(sync.Mutex)) orelse return c.ENOMEM;
     const m: c.mutex_t = @ptrCast(@alignCast(mem));
     c.event_init(&m.*.event, "mutex");
     m.*.owner = self;
     m.*.holder = null;
     m.*.priority = c.MINPRI;
 
-    if (ffi.hal.copyout(@as(?*const anyopaque, @ptrCast(&m)), @as(?*anyopaque, @ptrCast(mp)), @sizeOf(c.mutex_t)) != 0) {
+    if (hal.copyout(@as(?*const anyopaque, @ptrCast(&m)), @as(?*anyopaque, @ptrCast(mp)), @sizeOf(c.mutex_t)) != 0) {
         kmem.free(m);
         return c.EFAULT;
     }
@@ -132,7 +136,7 @@ fn deallocate(m: c.mutex_t) void {
 pub fn destroy(mp: ?*c.mutex_t) callconv(.c) c_int {
     var m: c.mutex_t = undefined;
     sched.lock();
-    if (ffi.hal.copyin(@as(?*const anyopaque, @ptrCast(mp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.mutex_t)) != 0) {
+    if (hal.copyin(@as(?*const anyopaque, @ptrCast(mp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.mutex_t)) != 0) {
         sched.unlock();
         return c.EFAULT;
     }
@@ -140,7 +144,7 @@ pub fn destroy(mp: ?*c.mutex_t) callconv(.c) c_int {
         sched.unlock();
         return c.EINVAL;
     }
-    const km: *ffi.sync.Mutex = @ptrCast(m);
+    const km: *sync.Mutex = @ptrCast(m);
     if (km.*.holder != null or !km.*.event.sleepq.isEmpty()) {
         sched.unlock();
         return c.EBUSY;
@@ -150,10 +154,10 @@ pub fn destroy(mp: ?*c.mutex_t) callconv(.c) c_int {
     return 0;
 }
 
-pub fn cleanup(task: ffi.kern.TaskRef) callconv(.c) void {
+pub fn cleanup(task: kern.TaskRef) callconv(.c) void {
     while (!@as(*ffi.List, @ptrCast(&task.*.mutexes)).isEmpty()) {
         const n = @as(*ffi.List, @ptrCast(&task.*.mutexes)).first();
-        const m = n.entry(ffi.sync.Mutex, "task_link");
+        const m = n.entry(sync.Mutex, "task_link");
         deallocate(@ptrCast(m));
     }
 }
@@ -168,7 +172,7 @@ pub fn lock(mp: ?*c.mutex_t) callconv(.c) c_int {
         return error_code;
     }
 
-    const km: *ffi.sync.Mutex = @ptrCast(m);
+    const km: *sync.Mutex = @ptrCast(m);
     if (km.*.holder == kutil.cur_thread()) {
         km.*.locks += 1;
     } else {
@@ -177,19 +181,19 @@ pub fn lock(mp: ?*c.mutex_t) callconv(.c) c_int {
             km.*.locks = 1;
             km.*.holder = kutil.cur_thread();
             @as(*ffi.List, @ptrCast(&kutil.cur_thread().*.mutexes)).insertAfter(&km.*.link);
-            ffi.deadlock.record_lock(m, c.LOCK_TYPE_MUTEX);
+            deadlock.record_lock(m, c.LOCK_TYPE_MUTEX);
         } else {
-            ffi.deadlock.mutex_wait(m, kutil.cur_thread());
+            deadlock.mutex_wait(m, kutil.cur_thread());
             kutil.cur_thread().*.mutex_waiting = m;
             const inherit_err = prio_inherit(kutil.cur_thread());
             if (inherit_err != 0) {
-                ffi.deadlock.mutex_stop_wait(kutil.cur_thread());
+                deadlock.mutex_stop_wait(kutil.cur_thread());
                 kutil.cur_thread().*.mutex_waiting = null;
                 sched.unlock();
                 return inherit_err;
             }
             const rc = sched.tsleep(&km.*.event, 0);
-            ffi.deadlock.mutex_stop_wait(kutil.cur_thread());
+            deadlock.mutex_stop_wait(kutil.cur_thread());
             kutil.cur_thread().*.mutex_waiting = null;
             if (rc == c.SLP_INTR) {
                 sched.unlock();
@@ -197,7 +201,7 @@ pub fn lock(mp: ?*c.mutex_t) callconv(.c) c_int {
             }
             km.*.locks = 1;
             @as(*ffi.List, @ptrCast(&kutil.cur_thread().*.mutexes)).insertAfter(&km.*.link);
-            ffi.deadlock.record_lock(m, c.LOCK_TYPE_MUTEX);
+            deadlock.record_lock(m, c.LOCK_TYPE_MUTEX);
         }
     }
     sched.unlock();
@@ -214,7 +218,7 @@ pub fn tryLock(mp: ?*c.mutex_t) callconv(.c) c_int {
         return error_code;
     }
 
-    const km: *ffi.sync.Mutex = @ptrCast(m);
+    const km: *sync.Mutex = @ptrCast(m);
     var err: c_int = 0;
     if (km.*.holder == kutil.cur_thread()) {
         km.*.locks += 1;
@@ -225,7 +229,7 @@ pub fn tryLock(mp: ?*c.mutex_t) callconv(.c) c_int {
             km.*.locks = 1;
             km.*.holder = kutil.cur_thread();
             @as(*ffi.List, @ptrCast(&kutil.cur_thread().*.mutexes)).insertAfter(&km.*.link);
-            ffi.deadlock.record_lock(m, c.LOCK_TYPE_MUTEX);
+            deadlock.record_lock(m, c.LOCK_TYPE_MUTEX);
         }
     }
     sched.unlock();
@@ -247,10 +251,10 @@ pub fn unlock(mp: ?*c.mutex_t) callconv(.c) c_int {
         return c.EPERM;
     }
 
-    const km: *ffi.sync.Mutex = @ptrCast(m);
+    const km: *sync.Mutex = @ptrCast(m);
     km.*.locks -= 1;
     if (km.*.locks == 0) {
-        ffi.deadlock.record_unlock(m);
+        deadlock.record_unlock(m);
         @as(*ffi.List, @ptrCast(&km.*.link)).remove();
         prio_uninherit(kutil.cur_thread());
 
@@ -265,11 +269,11 @@ pub fn unlock(mp: ?*c.mutex_t) callconv(.c) c_int {
     return 0;
 }
 
-pub fn cancel(t: ffi.kern.ThreadRef) callconv(.c) void {
+pub fn cancel(t: kern.ThreadRef) callconv(.c) void {
     const head = @as(*ffi.List, @ptrCast(&t.*.mutexes));
     while (!head.isEmpty()) {
         const n = head.first();
-        const m = n.entry(ffi.sync.Mutex, "link");
+        const m = n.entry(sync.Mutex, "link");
         m.*.locks = 0;
         @as(*ffi.List, @ptrCast(&m.*.link)).remove();
 
@@ -283,7 +287,7 @@ pub fn cancel(t: ffi.kern.ThreadRef) callconv(.c) void {
     }
 }
 
-pub fn setpri(t: ffi.kern.ThreadRef, pri: c_int) callconv(.c) void {
+pub fn setpri(t: kern.ThreadRef, pri: c_int) callconv(.c) void {
     if (t.*.mutex_waiting != null and pri < t.*.priority) {
         _ = prio_inherit(t);
     }

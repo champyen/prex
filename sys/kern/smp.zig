@@ -3,6 +3,9 @@ const builtin = @import("builtin");
 
 const ffi = @import("ffi");
 const hal = ffi.hal;
+const irq = ffi.irq;
+const kern = ffi.kern;
+const thread = ffi.thread;
 const c = @import("c").c;
 
 const NCPUS = if (@hasDecl(c, "CONFIG_SMP_NCPUS")) c.CONFIG_SMP_NCPUS else 1;
@@ -27,11 +30,10 @@ fn ipi_isr(arg: ?*anyopaque) callconv(.c) c_int {
     return c.INT_DONE;
 }
 
-pub fn kvtop(va: anytype) ffi.hal.Paddr {
+pub fn kvtop(va: anytype) kern.Paddr {
     return @intFromPtr(va) - c.KERNOFFSET;
 }
 
-const thread = ffi.thread;
 
 pub fn initEarly() callconv(.c) void {
     const cpu: *c.struct_cpu_control = &cpu_table[0];
@@ -49,7 +51,7 @@ pub fn initEarly() callconv(.c) void {
 }
 
 pub fn startAps() callconv(.c) void {
-    _ = ffi.irq.attach(ipi_irq, c.IPL_HIGH, 0, ipi_isr, IST_NONE, null);
+    _ = irq.attach(ipi_irq, c.IPL_HIGH, 0, ipi_isr, IST_NONE, null);
 
     _ = @atomicRmw(c_int, &ready_count, .Add, 1, .seq_cst);
 
@@ -102,7 +104,7 @@ pub fn apBoot() callconv(.c) void {
     while (@atomicLoad(c_int, &smp_active, .seq_cst) == 0) {}
     zig_memory_barrier();
 
-    ffi.thread.idle();
+    thread.idle();
 }
 
 extern fn ap_reset_entry() callconv(.c) void;

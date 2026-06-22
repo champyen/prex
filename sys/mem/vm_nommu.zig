@@ -2,6 +2,8 @@ const std = @import("std");
 const c = @import("c").c;
 const ffi = @import("ffi");
 const hal = ffi.hal;
+const kern = ffi.kern;
+const mem = ffi.mem;
 const kutil = ffi.kutil;
 
 const sched = ffi.sched;
@@ -31,13 +33,13 @@ const assert = std.debug.assert;
 // Kernel map (module-level)
 // ---------------------------------------------------------------------------
 
-var kernel_map: ffi.mem.VmMap = undefined;
+var kernel_map: mem.VmMap = undefined;
 
 // ---------------------------------------------------------------------------
 // Segment list helpers (operate on circular doubly-linked list)
 // ---------------------------------------------------------------------------
 
-fn seg_init(seg: *ffi.mem.Segment) void {
+fn seg_init(seg: *mem.Segment) void {
     seg.next = seg;
     seg.prev = seg;
     seg.sh_next = seg;
@@ -48,9 +50,9 @@ fn seg_init(seg: *ffi.mem.Segment) void {
     seg.flags = c.SEG_FREE;
 }
 
-fn seg_create(prev: *ffi.mem.Segment, addr: ffi.hal.Vaddr, size: usize) ?*ffi.mem.Segment {
-    const seg_ptr = kmem.alloc(@sizeOf(ffi.mem.Segment)) orelse return null;
-    const seg: *ffi.mem.Segment = @ptrCast(@alignCast(seg_ptr));
+fn seg_create(prev: *mem.Segment, addr: kern.Vaddr, size: usize) ?*mem.Segment {
+    const seg_ptr = kmem.alloc(@sizeOf(mem.Segment)) orelse return null;
+    const seg: *mem.Segment = @ptrCast(@alignCast(seg_ptr));
 
     seg.addr = addr;
     seg.size = size;
@@ -67,7 +69,7 @@ fn seg_create(prev: *ffi.mem.Segment, addr: ffi.hal.Vaddr, size: usize) ?*ffi.me
     return seg;
 }
 
-fn seg_delete(head: *ffi.mem.Segment, seg: *ffi.mem.Segment) void {
+fn seg_delete(head: *mem.Segment, seg: *mem.Segment) void {
     if (seg.flags & c.SEG_SHARED != 0) {
         seg.sh_prev.*.sh_next = seg.sh_next;
         seg.sh_next.*.sh_prev = seg.sh_prev;
@@ -80,8 +82,8 @@ fn seg_delete(head: *ffi.mem.Segment, seg: *ffi.mem.Segment) void {
     }
 }
 
-fn seg_lookup(head: *ffi.mem.Segment, addr: ffi.hal.Vaddr, size: usize) ?*ffi.mem.Segment {
-    var seg: *ffi.mem.Segment = head;
+fn seg_lookup(head: *mem.Segment, addr: kern.Vaddr, size: usize) ?*mem.Segment {
+    var seg: *mem.Segment = head;
     while (true) {
         if (seg.addr <= addr and seg.addr + seg.size >= addr + size) {
             return seg;
@@ -92,7 +94,7 @@ fn seg_lookup(head: *ffi.mem.Segment, addr: ffi.hal.Vaddr, size: usize) ?*ffi.me
     return null;
 }
 
-fn seg_alloc(head: *ffi.mem.Segment, size: usize) ?*ffi.mem.Segment {
+fn seg_alloc(head: *mem.Segment, size: usize) ?*mem.Segment {
     const pa = page.alloc(size);
     if (pa == 0) return null;
 
@@ -103,7 +105,7 @@ fn seg_alloc(head: *ffi.mem.Segment, size: usize) ?*ffi.mem.Segment {
     return seg;
 }
 
-fn seg_free(head: *ffi.mem.Segment, seg: *ffi.mem.Segment) void {
+fn seg_free(head: *mem.Segment, seg: *mem.Segment) void {
     _ = head;
     assert(seg.flags != c.SEG_FREE);
 
@@ -120,8 +122,8 @@ fn seg_free(head: *ffi.mem.Segment, seg: *ffi.mem.Segment) void {
     kmem.free(seg);
 }
 
-fn seg_reserve(head: *ffi.mem.Segment, addr: ffi.hal.Vaddr, size: usize) ?*ffi.mem.Segment {
-    const pa: ffi.hal.Paddr = @intCast(addr);
+fn seg_reserve(head: *mem.Segment, addr: kern.Vaddr, size: usize) ?*mem.Segment {
+    const pa: kern.Paddr = @intCast(addr);
 
     if (page.reserve(pa, size) != 0) return null;
 
@@ -136,12 +138,12 @@ fn seg_reserve(head: *ffi.mem.Segment, addr: ffi.hal.Vaddr, size: usize) ?*ffi.m
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-fn do_allocate(vm_map: *ffi.mem.VmMap, addr: *?*anyopaque, size: usize, anywhere: c_int) c_int {
+fn do_allocate(vm_map: *mem.VmMap, addr: *?*anyopaque, size: usize, anywhere: c_int) c_int {
     if (size == 0) return c.EINVAL;
     if (vm_map.total + size >= c.MAXMEM) return c.ENOMEM;
 
-    var seg: *ffi.mem.Segment = undefined;
-    var start: ffi.hal.Vaddr = undefined;
+    var seg: *mem.Segment = undefined;
+    var start: kern.Vaddr = undefined;
 
     if (anywhere != 0) {
         const alloc_size = kutil.round_page(size);
@@ -166,7 +168,7 @@ fn do_allocate(vm_map: *ffi.mem.VmMap, addr: *?*anyopaque, size: usize, anywhere
     return 0;
 }
 
-fn do_free(vm_map: *ffi.mem.VmMap, addr: ?*anyopaque) c_int {
+fn do_free(vm_map: *mem.VmMap, addr: ?*anyopaque) c_int {
     const va = kutil.trunc_page(@intFromPtr(addr));
 
     const seg = seg_lookup(&vm_map.head, @intCast(va), 1) orelse return c.EINVAL;
@@ -182,7 +184,7 @@ fn do_free(vm_map: *ffi.mem.VmMap, addr: ?*anyopaque) c_int {
     return 0;
 }
 
-fn do_attribute(vm_map: *ffi.mem.VmMap, addr: ?*anyopaque, attr: c_int) c_int {
+fn do_attribute(vm_map: *mem.VmMap, addr: ?*anyopaque, attr: c_int) c_int {
     const va = kutil.trunc_page(@intFromPtr(addr));
 
     const seg = seg_lookup(&vm_map.head, @intCast(va), 1) orelse return c.EINVAL;
@@ -204,7 +206,7 @@ fn do_attribute(vm_map: *ffi.mem.VmMap, addr: ?*anyopaque, attr: c_int) c_int {
     return 0;
 }
 
-fn do_map(vm_map: *ffi.mem.VmMap, addr: ?*anyopaque, size: usize, alloc: *?*anyopaque) c_int {
+fn do_map(vm_map: *mem.VmMap, addr: ?*anyopaque, size: usize, alloc: *?*anyopaque) c_int {
     if (size == 0) return c.EINVAL;
     if (vm_map.total + size >= c.MAXMEM) return c.ENOMEM;
 
@@ -222,7 +224,7 @@ fn do_map(vm_map: *ffi.mem.VmMap, addr: ?*anyopaque, size: usize, alloc: *?*anyo
 
     // Create new segment to map
     const map_ptr = kutil.cur_task().map orelse return c.ENOMEM;
-    const curmap: *ffi.mem.VmMap = @ptrCast(@alignCast(map_ptr));
+    const curmap: *mem.VmMap = @ptrCast(@alignCast(map_ptr));
     const seg = seg_create(&curmap.head, @intCast(start), alloc_size) orelse return c.ENOMEM;
     seg.flags = tgt.flags | c.SEG_MAPPED;
 
@@ -236,7 +238,7 @@ fn do_map(vm_map: *ffi.mem.VmMap, addr: ?*anyopaque, size: usize, alloc: *?*anyo
 // Exported FFI functions
 // ---------------------------------------------------------------------------
 
-pub fn allocate(tsk: ?*ffi.kern.Task, addr: [*c]?*anyopaque, size: usize, anywhere: c_int) callconv(.c) c_int {
+pub fn allocate(tsk: ?*kern.Task, addr: [*c]?*anyopaque, size: usize, anywhere: c_int) callconv(.c) c_int {
     var error_val: c_int = undefined;
     var uaddr: ?*anyopaque = undefined;
 
@@ -269,7 +271,7 @@ pub fn allocate(tsk: ?*ffi.kern.Task, addr: [*c]?*anyopaque, size: usize, anywhe
     return error_val;
 }
 
-pub fn free(tsk: ?*ffi.kern.Task, addr: ?*anyopaque) callconv(.c) c_int {
+pub fn free(tsk: ?*kern.Task, addr: ?*anyopaque) callconv(.c) c_int {
     var error_val: c_int = undefined;
 
     sched.lock();
@@ -292,7 +294,7 @@ pub fn free(tsk: ?*ffi.kern.Task, addr: ?*anyopaque) callconv(.c) c_int {
     return error_val;
 }
 
-pub fn attribute(tsk: ?*ffi.kern.Task, addr: ?*anyopaque, attr: c_int) callconv(.c) c_int {
+pub fn attribute(tsk: ?*kern.Task, addr: ?*anyopaque, attr: c_int) callconv(.c) c_int {
     var error_val: c_int = undefined;
 
     sched.lock();
@@ -319,7 +321,7 @@ pub fn attribute(tsk: ?*ffi.kern.Task, addr: ?*anyopaque, attr: c_int) callconv(
     return error_val;
 }
 
-pub fn map(target: ?*ffi.kern.Task, addr: ?*anyopaque, size: usize, alloc: [*c]?*anyopaque) callconv(.c) c_int {
+pub fn map(target: ?*kern.Task, addr: ?*anyopaque, size: usize, alloc: [*c]?*anyopaque) callconv(.c) c_int {
     var error_val: c_int = undefined;
 
     sched.lock();
@@ -347,8 +349,8 @@ pub fn map(target: ?*ffi.kern.Task, addr: ?*anyopaque, size: usize, alloc: [*c]?
 }
 
 pub fn create() callconv(.c) c.vm_map_t {
-    const map_ptr = kmem.alloc(@sizeOf(ffi.mem.VmMap)) orelse return null;
-    const vm_map: *ffi.mem.VmMap = @ptrCast(@alignCast(map_ptr));
+    const map_ptr = kmem.alloc(@sizeOf(mem.VmMap)) orelse return null;
+    const vm_map: *mem.VmMap = @ptrCast(@alignCast(map_ptr));
 
     vm_map.refcnt = 1;
     vm_map.total = 0;
@@ -357,7 +359,7 @@ pub fn create() callconv(.c) c.vm_map_t {
     return @ptrCast(vm_map);
 }
 
-pub fn terminate(vm_map: ?*ffi.mem.VmMap) callconv(.c) void {
+pub fn terminate(vm_map: ?*mem.VmMap) callconv(.c) void {
     if (vm_map == null) return;
     const m = vm_map.?;
     if (m.refcnt - 1 > 0) {
@@ -367,7 +369,7 @@ pub fn terminate(vm_map: ?*ffi.mem.VmMap) callconv(.c) void {
     m.refcnt -= 1;
 
     sched.lock();
-    var seg: *ffi.mem.Segment = &m.head;
+    var seg: *mem.Segment = &m.head;
     while (true) {
         if (seg.flags != c.SEG_FREE) {
             if (seg.flags & c.SEG_SHARED == 0 and seg.flags & c.SEG_MAPPED == 0) {
@@ -384,21 +386,21 @@ pub fn terminate(vm_map: ?*ffi.mem.VmMap) callconv(.c) void {
     sched.unlock();
 }
 
-pub fn dup(org_map: ?*ffi.mem.VmMap) callconv(.c) c.vm_map_t {
+pub fn dup(org_map: ?*mem.VmMap) callconv(.c) c.vm_map_t {
     _ = org_map;
     return null;
 }
 
-pub fn @"switch"(vm_map: ?*ffi.mem.VmMap) callconv(.c) void {
+pub fn @"switch"(vm_map: ?*mem.VmMap) callconv(.c) void {
     _ = vm_map;
 }
 
-pub fn reference(vm_map: ?*ffi.mem.VmMap) callconv(.c) c_int {
+pub fn reference(vm_map: ?*mem.VmMap) callconv(.c) c_int {
     vm_map.?.refcnt += 1;
     return 0;
 }
 
-pub fn load(vm_map: ?*ffi.mem.VmMap, mod: *ffi.hal.Module, stack: [*c]?*anyopaque) callconv(.c) c_int {
+pub fn load(vm_map: ?*mem.VmMap, mod: *hal.Module, stack: [*c]?*anyopaque) callconv(.c) c_int {
     const m = vm_map.?;
 
     if (mod.textsz == 0) return c.EINVAL;
@@ -445,14 +447,14 @@ pub fn load(vm_map: ?*ffi.mem.VmMap, mod: *ffi.hal.Module, stack: [*c]?*anyopaqu
     return do_allocate(m, stack, c.DFLSTKSZ, 1);
 }
 
-pub fn translate(addr: ffi.hal.Vaddr, size: usize) callconv(.c) ffi.hal.Paddr {
+pub fn translate(addr: kern.Vaddr, size: usize) callconv(.c) kern.Paddr {
     _ = size;
     return @intCast(addr);
 }
 
-pub fn info(vminfo: *ffi.hal.VmInfo) callconv(.c) c_int {
+pub fn info(vminfo: *hal.VmInfo) callconv(.c) c_int {
     const target = vminfo.cookie;
-    const tsk: ?*ffi.kern.Task = vminfo.task;
+    const tsk: ?*kern.Task = vminfo.task;
 
     sched.lock();
     if (task.valid(tsk) == 0) {
@@ -460,8 +462,8 @@ pub fn info(vminfo: *ffi.hal.VmInfo) callconv(.c) c_int {
         return c.ESRCH;
     }
     const map_ptr = tsk.?.map orelse return c.ESRCH;
-    const vm_map: *ffi.mem.VmMap = @ptrCast(@alignCast(map_ptr));
-    var seg: *ffi.mem.Segment = &vm_map.head;
+    const vm_map: *mem.VmMap = @ptrCast(@alignCast(map_ptr));
+    var seg: *mem.Segment = &vm_map.head;
     var i: c_ulong = 0;
     while (true) {
         if (i == target) {

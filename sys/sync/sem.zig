@@ -3,9 +3,13 @@ const builtin = @import("builtin");
 
 const c = @import("c").c;
 
-var sem_list: ?*ffi.sync.Sem = null;
+var sem_list: ?*sync.Sem = null;
 
 const ffi = @import("ffi");
+const deadlock = ffi.deadlock;
+const hal = ffi.hal;
+const kern = ffi.kern;
+const sync = ffi.sync;
 const kutil = ffi.kutil;
 const smp = ffi.smp;
 const kmem = ffi.kmem;
@@ -13,7 +17,7 @@ const sched = ffi.sched;
 const thread = ffi.thread;
 
 fn valid(s: c.sem_t) bool {
-    const ks: *ffi.sync.Sem = @ptrCast(s);
+    const ks: *sync.Sem = @ptrCast(s);
     var tmp = sem_list;
     while (tmp) |current| {
         if (current == ks) {
@@ -29,7 +33,7 @@ fn reference(s: c.sem_t) void {
 }
 
 fn release(s: c.sem_t) void {
-    const ks: *ffi.sync.Sem = @ptrCast(s);
+    const ks: *sync.Sem = @ptrCast(s);
     ks.*.refcnt -= 1;
     if (ks.*.refcnt > 0) {
         return;
@@ -37,7 +41,7 @@ fn release(s: c.sem_t) void {
     @as(*ffi.List, @ptrCast(&ks.*.task_link)).remove();
     ks.*.owner.*.nsyncs -= 1;
 
-    var sp: *?*ffi.sync.Sem = &sem_list;
+    var sp: *?*sync.Sem = &sem_list;
     while (sp.*) |current| {
         if (current == ks) {
             sp.* = current.*.next;
@@ -50,7 +54,7 @@ fn release(s: c.sem_t) void {
 
 fn copyin(usp: ?*c.sem_t, ksp: ?*c.sem_t) c_int {
     var s: c.sem_t = undefined;
-    if (ffi.hal.copyin(@as(?*const anyopaque, @ptrCast(usp)), @as(?*anyopaque, @ptrCast(&s)), @sizeOf(c.sem_t)) != 0 or !valid(s)) {
+    if (hal.copyin(@as(?*const anyopaque, @ptrCast(usp)), @as(?*anyopaque, @ptrCast(&s)), @sizeOf(c.sem_t)) != 0 or !valid(s)) {
         return c.EINVAL;
     }
     ksp.?.* = s;
@@ -67,13 +71,13 @@ pub fn init(sp: ?*c.sem_t, value: c_uint) callconv(.c) c_int {
     }
 
     var s: c.sem_t = undefined;
-    if (ffi.hal.copyin(@as(?*const anyopaque, @ptrCast(sp)), @as(?*anyopaque, @ptrCast(&s)), @sizeOf(c.sem_t)) != 0) {
+    if (hal.copyin(@as(?*const anyopaque, @ptrCast(sp)), @as(?*anyopaque, @ptrCast(&s)), @sizeOf(c.sem_t)) != 0) {
         return c.EFAULT;
     }
 
     sched.lock();
     if (s != null and valid(s)) {
-        const ks: *ffi.sync.Sem = @ptrCast(s);
+        const ks: *sync.Sem = @ptrCast(s);
         if (ks.*.owner != self) {
             sched.unlock();
             return c.EINVAL;
@@ -84,17 +88,17 @@ pub fn init(sp: ?*c.sem_t, value: c_uint) callconv(.c) c_int {
         }
         ks.*.value = value;
     } else {
-        const mem = kmem.alloc(@sizeOf(ffi.sync.Sem)) orelse {
+        const mem = kmem.alloc(@sizeOf(sync.Sem)) orelse {
             sched.unlock();
             return c.ENOSPC;
         };
         s = @ptrCast(@alignCast(mem));
-        if (ffi.hal.copyout(@as(?*const anyopaque, @ptrCast(&s)), @as(?*anyopaque, @ptrCast(sp)), @sizeOf(c.sem_t)) != 0) {
+        if (hal.copyout(@as(?*const anyopaque, @ptrCast(&s)), @as(?*anyopaque, @ptrCast(sp)), @sizeOf(c.sem_t)) != 0) {
             kmem.free(s);
             sched.unlock();
             return c.EFAULT;
         }
-        const ks: *ffi.sync.Sem = @ptrCast(s);
+        const ks: *sync.Sem = @ptrCast(s);
         c.event_init(&s.*.event, "semaphore");
         ks.*.owner = self;
         ks.*.refcnt = 1;
@@ -117,7 +121,7 @@ pub fn destroy(sp: ?*c.sem_t) callconv(.c) c_int {
         sched.unlock();
         return c.EINVAL;
     }
-    const ks: *ffi.sync.Sem = @ptrCast(s);
+    const ks: *sync.Sem = @ptrCast(s);
     if (!ks.*.event.sleepq.isEmpty() or ks.*.value == 0) {
         sched.unlock();
         return c.EBUSY;
@@ -138,11 +142,11 @@ pub fn wait(sp: ?*c.sem_t, timeout: c_ulong) callconv(.c) c_int {
     }
     reference(s);
 
-    const ks: *ffi.sync.Sem = @ptrCast(s);
+    const ks: *sync.Sem = @ptrCast(s);
     while (ks.*.value == 0) {
-        ffi.deadlock.sleep(@ptrCast(ks), "semaphore");
+        deadlock.sleep(@ptrCast(ks), "semaphore");
         const rc = sched.tsleep(&ks.*.event, @intCast(timeout));
-        ffi.deadlock.stop_sleep();
+        deadlock.stop_sleep();
         if (rc == c.SLP_TIMEOUT) {
             error_code = c.ETIMEDOUT;
             break;
@@ -190,7 +194,7 @@ pub fn post(sp: ?*c.sem_t) callconv(.c) c_int {
         sched.unlock();
         return c.ERANGE;
     }
-    const ks: *ffi.sync.Sem = @ptrCast(s);
+    const ks: *sync.Sem = @ptrCast(s);
     ks.*.value += 1;
     if (ks.*.value > 0) {
         _ = sched.wakeone(&ks.*.event);
@@ -206,7 +210,7 @@ pub fn postKernel(s: c.sem_t) callconv(.c) c_int {
         sched.unlock();
         return c.EINVAL;
     }
-    const ks: *ffi.sync.Sem = @ptrCast(s);
+    const ks: *sync.Sem = @ptrCast(s);
     if (ks.*.value >= c.MAXSEMVAL) {
         sched.unlock();
         return c.ERANGE;
@@ -228,7 +232,7 @@ pub fn getValue(sp: ?*c.sem_t, value: ?*c_uint) callconv(.c) c_int {
         sched.unlock();
         return c.EINVAL;
     }
-    if (ffi.hal.copyout(@as(?*const anyopaque, @ptrCast(&s.*.value)), @as(?*anyopaque, @ptrCast(value)), @sizeOf(@TypeOf(s.*.value))) != 0) {
+    if (hal.copyout(@as(?*const anyopaque, @ptrCast(&s.*.value)), @as(?*anyopaque, @ptrCast(value)), @sizeOf(@TypeOf(s.*.value))) != 0) {
         sched.unlock();
         return c.EFAULT;
     }
@@ -236,12 +240,12 @@ pub fn getValue(sp: ?*c.sem_t, value: ?*c_uint) callconv(.c) c_int {
     return 0;
 }
 
-pub fn cleanup(task: ffi.kern.TaskRef) callconv(.c) void {
+pub fn cleanup(task: kern.TaskRef) callconv(.c) void {
     const head = @as(*ffi.List, @ptrCast(&task.*.sems));
     var n = head.first();
     while (n != head) {
         const next = n.nextNode();
-        const s = n.entry(ffi.sync.Sem, "task_link");
+        const s = n.entry(sync.Sem, "task_link");
         release(@ptrCast(s));
         n = next;
     }
