@@ -155,7 +155,7 @@ fn control(dev: ?*kern.Device, cmd: c_ulong, arg: ?*anyopaque) callconv(.c) c_in
     sched.lock();
     defer sched.unlock();
     const drv: ?*hal.Driver = if (dev) |d| d.driver else null;
-    const ops: ?*c.struct_devops = if (drv) |dr| dr.devops else null;
+    const ops: ?*ffi.hal.DevOps = if (drv) |dr| dr.devops else null;
     if (ops == null or ops.?.devctl == null) {
         return kern.Errno.EINVAL;
     }
@@ -173,11 +173,11 @@ fn broadcast(cmd: c_ulong, arg: ?*anyopaque, force: c_int) callconv(.c) c_int {
     var dev = device_list;
     while (dev) |d| : (dev = @ptrCast(d.next)) {
         const drv: ?*hal.Driver = d.driver;
-        const ops: ?*c.struct_devops = if (drv) |dr| dr.devops else null;
+        const ops: ?*ffi.hal.DevOps = if (drv) |dr| dr.devops else null;
         if (ops == null) continue;
         if (ops.?.devctl == null) continue;
 
-        const err: c_int = ops.?.devctl.?(@as(?*c.struct_device, @ptrCast(d)), cmd, arg);
+        const err: c_int = ops.?.devctl.?(@as(?*ffi.hal.Device, @ptrCast(d)), cmd, arg);
         if (err != 0) {
             if (force != 0) {
                 retval = kern.Errno.EIO;
@@ -214,7 +214,7 @@ pub fn open(name: [*c]const u8, mode: c_int, devp: ?*?*kern.Device) callconv(.c)
     sched.unlock();
 
     const drv: ?*hal.Driver = dev.?.driver;
-    const ops: ?*c.struct_devops = if (drv) |d| d.devops else null;
+    const ops: ?*ffi.hal.DevOps = if (drv) |d| d.devops else null;
     var err: c_int = 0;
     if (ops != null and ops.?.open != null) {
         err = ops.?.open.?(@ptrCast(dev), mode);
@@ -234,7 +234,7 @@ pub fn close(dev: ?*kern.Device) callconv(.c) c_int {
     if (ref_err != 0) return ref_err;
 
     const drv: ?*hal.Driver = dev.?.driver;
-    const ops: ?*c.struct_devops = if (drv) |d| d.devops else null;
+    const ops: ?*ffi.hal.DevOps = if (drv) |d| d.devops else null;
     var err: c_int = 0;
     if (ops != null and ops.?.close != null) {
         err = ops.?.close.?(@ptrCast(dev));
@@ -261,7 +261,7 @@ pub fn read(dev: ?*kern.Device, buf: ?*anyopaque, nbyte: ?*usize, blkno: c_int) 
     }
 
     const drv: ?*hal.Driver = dev.?.driver;
-    const ops: ?*c.struct_devops = if (drv) |d| d.devops else null;
+    const ops: ?*ffi.hal.DevOps = if (drv) |d| d.devops else null;
     var err: c_int = 0;
     if (ops != null and ops.?.read != null) {
         err = ops.?.read.?(@ptrCast(dev), @ptrCast(buf), &count, blkno);
@@ -292,7 +292,7 @@ pub fn write(dev: ?*kern.Device, buf: ?*anyopaque, nbyte: ?*usize, blkno: c_int)
     }
 
     const drv: ?*hal.Driver = dev.?.driver;
-    const ops: ?*c.struct_devops = if (drv) |d| d.devops else null;
+    const ops: ?*ffi.hal.DevOps = if (drv) |d| d.devops else null;
     var err: c_int = 0;
     if (ops != null and ops.?.write != null) {
         err = ops.?.write.?(@ptrCast(dev), @ptrCast(buf), &count, blkno);
@@ -307,7 +307,7 @@ pub fn write(dev: ?*kern.Device, buf: ?*anyopaque, nbyte: ?*usize, blkno: c_int)
 }
 
 /// gatherRead – gather read from a device.
-pub fn gatherRead(dev: ?*kern.Device, buf: ?*anyopaque, nbyte: ?*usize, io: ?*c.struct_dev_io) callconv(.c) c_int {
+pub fn gatherRead(dev: ?*kern.Device, buf: ?*anyopaque, nbyte: ?*usize, io: ?*ffi.hal.DevIo) callconv(.c) c_int {
     if (!kutil.user_area(buf)) return kern.Errno.EFAULT;
 
     const ref_err: c_int = reference(dev);
@@ -322,9 +322,9 @@ pub fn gatherRead(dev: ?*kern.Device, buf: ?*anyopaque, nbyte: ?*usize, io: ?*c.
         }
     }
 
-    var kio: c.struct_dev_io = undefined;
+    var kio: ffi.hal.DevIo = undefined;
     if (io != null) {
-        const ci_err: c_int = hal.copyin(@ptrCast(io), @ptrCast(&kio), @sizeOf(c.struct_dev_io));
+        const ci_err: c_int = hal.copyin(@ptrCast(io), @ptrCast(&kio), @sizeOf(ffi.hal.DevIo));
         if (ci_err != 0) {
             release(dev);
             return kern.Errno.EFAULT;
@@ -337,7 +337,7 @@ pub fn gatherRead(dev: ?*kern.Device, buf: ?*anyopaque, nbyte: ?*usize, io: ?*c.
     }
 
     const drv: ?*hal.Driver = dev.?.driver;
-    const ops: ?*c.struct_devops = if (drv) |d| d.devops else null;
+    const ops: ?*ffi.hal.DevOps = if (drv) |d| d.devops else null;
     var total: usize = 0;
     var err: c_int = 0;
     const p: [*]u8 = @ptrCast(buf);
@@ -375,7 +375,7 @@ pub fn gatherRead(dev: ?*kern.Device, buf: ?*anyopaque, nbyte: ?*usize, io: ?*c.
 }
 
 /// scatterWrite – scatter write to a device.
-pub fn scatterWrite(dev: ?*kern.Device, buf: ?*anyopaque, nbyte: ?*usize, io: ?*c.struct_dev_io) callconv(.c) c_int {
+pub fn scatterWrite(dev: ?*kern.Device, buf: ?*anyopaque, nbyte: ?*usize, io: ?*ffi.hal.DevIo) callconv(.c) c_int {
     if (!kutil.user_area(buf)) return kern.Errno.EFAULT;
 
     const ref_err: c_int = reference(dev);
@@ -390,9 +390,9 @@ pub fn scatterWrite(dev: ?*kern.Device, buf: ?*anyopaque, nbyte: ?*usize, io: ?*
         }
     }
 
-    var kio: c.struct_dev_io = undefined;
+    var kio: ffi.hal.DevIo = undefined;
     if (io != null) {
-        const ci_err: c_int = hal.copyin(@ptrCast(io), @ptrCast(&kio), @sizeOf(c.struct_dev_io));
+        const ci_err: c_int = hal.copyin(@ptrCast(io), @ptrCast(&kio), @sizeOf(ffi.hal.DevIo));
         if (ci_err != 0) {
             release(dev);
             return kern.Errno.EFAULT;
@@ -405,7 +405,7 @@ pub fn scatterWrite(dev: ?*kern.Device, buf: ?*anyopaque, nbyte: ?*usize, io: ?*
     }
 
     const drv: ?*hal.Driver = dev.?.driver;
-    const ops: ?*c.struct_devops = if (drv) |d| d.devops else null;
+    const ops: ?*ffi.hal.DevOps = if (drv) |d| d.devops else null;
     var total: usize = 0;
     var err: c_int = 0;
     const p: [*]u8 = @ptrCast(buf);
@@ -448,7 +448,7 @@ pub fn ioctl(dev: ?*kern.Device, cmd: c_ulong, arg: ?*anyopaque) callconv(.c) c_
     if (ref_err != 0) return ref_err;
 
     const drv: ?*hal.Driver = dev.?.driver;
-    const ops: ?*c.struct_devops = if (drv) |d| d.devops else null;
+    const ops: ?*ffi.hal.DevOps = if (drv) |d| d.devops else null;
     var err: c_int = 0;
     if (ops != null and ops.?.ioctl != null) {
         err = ops.?.ioctl.?(@ptrCast(dev), cmd, arg);
@@ -471,7 +471,7 @@ pub fn info(dev_info: ?*hal.DeviceInfo) callconv(.c) c_int {
     while (dev) |d| : (dev = @ptrCast(d.next)) {
         if (i == target) {
             dev_info.?.cookie = i + 1;
-            dev_info.?.id = @as(?*c.struct_device, @ptrCast(d));
+            dev_info.?.id = @as(?*ffi.hal.Device, @ptrCast(d));
             dev_info.?.flags = d.flags;
             _ = lib.strlcpy(@ptrCast(&dev_info.?.name), @ptrCast(&d.name), hal.MAXDEVNAME);
             err = 0;
@@ -511,21 +511,21 @@ const dkient = [40]dkifn_t{
     //  2: copyinstr
     @ptrCast(&hal.copyinstr),
     //  3: kmem_alloc
-    @ptrCast(&c.kmem_alloc),
+    @ptrCast(&ffi.kmem.alloc),
     //  4: kmem_free
-    @ptrCast(&c.kmem_free),
+    @ptrCast(&ffi.kmem.free),
     //  5: kmem_map
-    @ptrCast(&c.kmem_map),
+    @ptrCast(&ffi.kmem.map),
     //  6: page_alloc
-    @ptrCast(&c.page_alloc),
+    @ptrCast(&ffi.page.alloc),
     //  7: page_free
-    @ptrCast(&c.page_free),
+    @ptrCast(&ffi.page.free),
     //  8: page_reserve
     @ptrCast(&c.page_reserve),
     //  9: irq_attach
-    @ptrCast(&c.irq_attach),
+    @ptrCast(&ffi.irq.attach),
     // 10: irq_detach
-    @ptrCast(&c.irq_detach),
+    @ptrCast(&ffi.irq.detach),
     // 11: spl0
     @ptrCast(&hal.spl0),
     // 12: splhigh
@@ -533,11 +533,11 @@ const dkient = [40]dkifn_t{
     // 13: splx
     @ptrCast(&hal.splx),
     // 14: timer_callout
-    @ptrCast(&c.timer_callout),
+    @ptrCast(&ffi.timer.callout),
     // 15: timer_stop
-    @ptrCast(&c.timer_stop),
+    @ptrCast(&ffi.timer.stop),
     // 16: timer_delay
-    @ptrCast(&c.timer_delay),
+    @ptrCast(&ffi.timer.delay),
     // 17: timer_ticks
     @ptrCast(&timer.ticks),
     // 18: sched_lock
@@ -545,13 +545,13 @@ const dkient = [40]dkifn_t{
     // 19: sched_unlock
     @ptrCast(&sched.unlock),
     // 20: sched_tsleep
-    @ptrCast(&c.sched_tsleep),
+    @ptrCast(&ffi.sched.tsleep),
     // 21: sched_wakeup
-    @ptrCast(&c.sched_wakeup),
+    @ptrCast(&ffi.sched.wakeup),
     // 22: sched_dpc
-    @ptrCast(&c.sched_dpc),
+    @ptrCast(&ffi.sched.dpc),
     // 23: task_capable
-    @ptrCast(&c.task_capable),
+    @ptrCast(&ffi.task.capable),
     // 24: exception_post
     @ptrCast(&exception.post),
     // 25: create (local)
@@ -583,7 +583,7 @@ const dkient = [40]dkifn_t{
     // 38: hal_uart_unlock
     @ptrCast(&c.hal_uart_unlock),
     // 39: ksem_post
-    @ptrCast(&c.ksem_post),
+    @ptrCast(&ffi.sem.postKernel),
 };
 
 // ---------------------------------------------------------------------------

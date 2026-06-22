@@ -333,7 +333,7 @@ pub fn map(target: ?*kern.Task, addr: ?*anyopaque, size: usize, alloc: [*c]?*any
     return error_val;
 }
 
-pub fn create() callconv(.c) c.vm_map_t {
+pub fn create() callconv(.c) kern.VmMapRef {
     const map_ptr = kmem.alloc(@sizeOf(mem.VmMap)) orelse return null;
     const vm_map: *mem.VmMap = @ptrCast(@alignCast(map_ptr));
 
@@ -371,7 +371,7 @@ pub fn terminate(vm_map: ?*mem.VmMap) callconv(.c) void {
     kmem.free(m);
 }
 
-pub fn dup(org_map: ?*mem.VmMap) callconv(.c) c.vm_map_t {
+pub fn dup(org_map: ?*mem.VmMap) callconv(.c) kern.VmMapRef {
     _ = org_map;
     return null;
 }
@@ -468,7 +468,7 @@ pub fn info(vminfo: *hal.VmInfo) callconv(.c) c_int {
 
 pub fn init() callconv(.c) void {
     seg_init(&kernel_map.head);
-    c.kernel_task.map = @ptrCast(&kernel_map);
+    kern.kernel_task.map = @ptrCast(&kernel_map);
 }
 
 comptime {

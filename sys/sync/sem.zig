@@ -16,7 +16,7 @@ const kmem = ffi.kmem;
 const sched = ffi.sched;
 const thread = ffi.thread;
 
-fn valid(s: c.sem_t) bool {
+fn valid(s: kern.SemRef) bool {
     const ks: *sync.Sem = @ptrCast(s);
     var tmp = sem_list;
     while (tmp) |current| {
@@ -28,11 +28,11 @@ fn valid(s: c.sem_t) bool {
     return false;
 }
 
-fn reference(s: c.sem_t) void {
+fn reference(s: kern.SemRef) void {
     s.*.refcnt += 1;
 }
 
-fn release(s: c.sem_t) void {
+fn release(s: kern.SemRef) void {
     const ks: *sync.Sem = @ptrCast(s);
     ks.*.refcnt -= 1;
     if (ks.*.refcnt > 0) {
@@ -52,16 +52,16 @@ fn release(s: c.sem_t) void {
     kmem.free(s);
 }
 
-fn copyin(usp: ?*c.sem_t, ksp: ?*c.sem_t) c_int {
-    var s: c.sem_t = undefined;
-    if (hal.copyin(@as(?*const anyopaque, @ptrCast(usp)), @as(?*anyopaque, @ptrCast(&s)), @sizeOf(c.sem_t)) != 0 or !valid(s)) {
+fn copyin(usp: ?*kern.SemRef, ksp: ?*kern.SemRef) c_int {
+    var s: kern.SemRef = undefined;
+    if (hal.copyin(@as(?*const anyopaque, @ptrCast(usp)), @as(?*anyopaque, @ptrCast(&s)), @sizeOf(kern.SemRef)) != 0 or !valid(s)) {
         return kern.Errno.EINVAL;
     }
     ksp.?.* = s;
     return 0;
 }
 
-pub fn init(sp: ?*c.sem_t, value: c_uint) callconv(.c) c_int {
+pub fn init(sp: ?*kern.SemRef, value: c_uint) callconv(.c) c_int {
     const self = kutil.cur_task();
     if (self.*.nsyncs >= hal.MAXSYNCS) {
         return kern.Errno.EAGAIN;
@@ -70,8 +70,8 @@ pub fn init(sp: ?*c.sem_t, value: c_uint) callconv(.c) c_int {
         return kern.Errno.EINVAL;
     }
 
-    var s: c.sem_t = undefined;
-    if (hal.copyin(@as(?*const anyopaque, @ptrCast(sp)), @as(?*anyopaque, @ptrCast(&s)), @sizeOf(c.sem_t)) != 0) {
+    var s: kern.SemRef = undefined;
+    if (hal.copyin(@as(?*const anyopaque, @ptrCast(sp)), @as(?*anyopaque, @ptrCast(&s)), @sizeOf(kern.SemRef)) != 0) {
         return kern.Errno.EFAULT;
     }
 
@@ -90,11 +90,11 @@ pub fn init(sp: ?*c.sem_t, value: c_uint) callconv(.c) c_int {
         const mem = kmem.alloc(@sizeOf(sync.Sem)) orelse return kern.Errno.ENOSPC;
         s = @ptrCast(@alignCast(mem));
         errdefer kmem.free(s);
-        if (hal.copyout(@as(?*const anyopaque, @ptrCast(&s)), @as(?*anyopaque, @ptrCast(sp)), @sizeOf(c.sem_t)) != 0) {
+        if (hal.copyout(@as(?*const anyopaque, @ptrCast(&s)), @as(?*anyopaque, @ptrCast(sp)), @sizeOf(kern.SemRef)) != 0) {
             return kern.Errno.EFAULT;
         }
         const ks: *sync.Sem = @ptrCast(s);
-        c.event_init(&s.*.event, "semaphore");
+        sync.event_init(&s.*.event, "semaphore");
         ks.*.owner = self;
         ks.*.refcnt = 1;
         ks.*.value = value;
@@ -109,8 +109,8 @@ pub fn init(sp: ?*c.sem_t, value: c_uint) callconv(.c) c_int {
     return 0;
 }
 
-pub fn destroy(sp: ?*c.sem_t) callconv(.c) c_int {
-    var s: c.sem_t = undefined;
+pub fn destroy(sp: ?*kern.SemRef) callconv(.c) c_int {
+    var s: kern.SemRef = undefined;
 
     sched.lock();
     defer sched.unlock();
@@ -125,8 +125,8 @@ pub fn destroy(sp: ?*c.sem_t) callconv(.c) c_int {
     return 0;
 }
 
-pub fn wait(sp: ?*c.sem_t, timeout: c_ulong) callconv(.c) c_int {
-    var s: c.sem_t = undefined;
+pub fn wait(sp: ?*kern.SemRef, timeout: c_ulong) callconv(.c) c_int {
+    var s: kern.SemRef = undefined;
     var error_code: c_int = 0;
 
     sched.lock();
@@ -158,8 +158,8 @@ pub fn wait(sp: ?*c.sem_t, timeout: c_ulong) callconv(.c) c_int {
     return error_code;
 }
 
-pub fn tryWait(sp: ?*c.sem_t) callconv(.c) c_int {
-    var s: c.sem_t = undefined;
+pub fn tryWait(sp: ?*kern.SemRef) callconv(.c) c_int {
+    var s: kern.SemRef = undefined;
 
     sched.lock();
     defer sched.unlock();
@@ -173,8 +173,8 @@ pub fn tryWait(sp: ?*c.sem_t) callconv(.c) c_int {
     return 0;
 }
 
-pub fn post(sp: ?*c.sem_t) callconv(.c) c_int {
-    var s: c.sem_t = undefined;
+pub fn post(sp: ?*kern.SemRef) callconv(.c) c_int {
+    var s: kern.SemRef = undefined;
 
     sched.lock();
     defer sched.unlock();
@@ -193,7 +193,7 @@ pub fn post(sp: ?*c.sem_t) callconv(.c) c_int {
     return 0;
 }
 
-pub fn postKernel(s: c.sem_t) callconv(.c) c_int {
+pub fn postKernel(s: kern.SemRef) callconv(.c) c_int {
     sched.lock();
     defer sched.unlock();
     if (!valid(s)) {
@@ -211,8 +211,8 @@ pub fn postKernel(s: c.sem_t) callconv(.c) c_int {
     return 0;
 }
 
-pub fn getValue(sp: ?*c.sem_t, value: ?*c_uint) callconv(.c) c_int {
-    var s: c.sem_t = undefined;
+pub fn getValue(sp: ?*kern.SemRef, value: ?*c_uint) callconv(.c) c_int {
+    var s: kern.SemRef = undefined;
 
     sched.lock();
     defer sched.unlock();

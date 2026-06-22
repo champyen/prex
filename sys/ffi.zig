@@ -10,6 +10,7 @@ pub const smp = struct {
     pub const start_aps = smp_start_aps;
     pub const activate = smp_activate;
     pub const get_cpu_control = c.hal_get_cpu_control;
+    pub const processor_id = c.smp_processor_id;
 };
 
 pub const thread = struct {
@@ -31,6 +32,8 @@ pub const thread = struct {
     pub const init = c.thread_init;
     pub const idle = c.thread_idle;
     pub const valid = c.thread_valid;
+    pub const schedparam = c.thread_schedparam;
+    pub const syscall_ret = c.syscall_ret;
 };
 
 pub const sched = struct {
@@ -55,6 +58,7 @@ pub const sched = struct {
     pub fn wakeone(ev: *sync.Event) callconv(.c) c.thread_t {
         return c.sched_wakeone(@ptrCast(ev));
     }
+    pub const dpc = c.sched_dpc;
     pub const init = c.sched_init;
     pub const tick = c.sched_tick;
     pub const sleep = c.sched_sleep;
@@ -65,6 +69,15 @@ pub const kmem = struct {
     pub const free = c.kmem_free;
     pub const map = c.kmem_map;
     pub const init = c.kmem_init;
+};
+
+pub const system = struct {
+    pub const info = c.sys_info;
+    pub const log = c.sys_log;
+    pub const panic = c.sys_panic;
+    pub const time = c.sys_time;
+    pub const debug = c.sys_debug;
+    pub const init = c.sys_init;
 };
 
 pub const task = struct {
@@ -79,6 +92,10 @@ pub const task = struct {
     pub const self = c.task_self;
     pub const @"suspend" = c.task_suspend;
     pub const @"resume" = c.task_resume;
+    pub const setname = c.task_setname;
+    pub const setcap = c.task_setcap;
+    pub const chkcap = c.task_chkcap;
+    pub const cleanup = c.task_cleanup;
 };
 
 pub const page = struct {
@@ -99,6 +116,10 @@ pub const vm = struct {
     pub const init = c.vm_init;
     pub const info = c.vm_info;
     pub const switch_map = c.vm_switch;
+    pub const allocate = c.vm_allocate;
+    pub const free = c.vm_free;
+    pub const attribute = c.vm_attribute;
+    pub const map = c.vm_map;
 };
 
 pub const timer = struct {
@@ -108,8 +129,14 @@ pub const timer = struct {
     pub const cancel = c.timer_cancel;
     pub const info = c.timer_info;
     pub const ticks = c.timer_ticks;
+    pub const delay = c.timer_delay;
     pub const hztoms = c.hztoms;
     pub const mstohz = c.mstohz;
+    pub const sleep = c.timer_sleep;
+    pub const alarm = c.timer_alarm;
+    pub const periodic = c.timer_periodic;
+    pub const waitperiod = c.timer_waitperiod;
+    pub const handler = c.timer_handler;
 };
 
 pub const irq = struct {
@@ -117,28 +144,45 @@ pub const irq = struct {
     pub const detach = c.irq_detach;
     pub const init = c.irq_init;
     pub const info = c.irq_info;
+    pub const handler = c.irq_handler;
 };
 
 pub const device = struct {
     pub const init = c.device_init;
     pub const info = c.device_info;
+    pub const open = c.device_open;
+    pub const close = c.device_close;
+    pub const read = c.device_read;
+    pub const write = c.device_write;
 };
 
 pub const exception = struct {
     pub const init = c.exception_init;
     pub const post = c.exception_post;
+    pub const @"return" = c.exception_return;
+    pub const setup = c.exception_setup;
+    pub const raise = c.exception_raise;
+    pub const wait = c.exception_wait;
+    pub const mark = c.exception_mark;
+    pub const deliver = c.exception_deliver;
 };
 
 pub const object = struct {
     pub const valid = c.object_valid;
     pub const init = c.object_init;
     pub const cleanup = c.object_cleanup;
+    pub const create = c.object_create;
+    pub const destroy = c.object_destroy;
+    pub const lookup = c.object_lookup;
 };
 
 pub const msg = struct {
     pub const abort = c.msg_abort;
     pub const init = c.msg_init;
     pub const cancel = c.msg_cancel;
+    pub const send = c.msg_send;
+    pub const receive = c.msg_receive;
+    pub const reply = c.msg_reply;
 };
 
 pub const deadlock = struct {
@@ -160,13 +204,28 @@ pub const mutex = struct {
     pub const cleanup = c.mutex_cleanup;
     pub const cancel = c.mutex_cancel;
     pub const setpri = c.mutex_setpri;
+    pub const init = c.mutex_init;
+    pub const destroy = c.mutex_destroy;
+    pub const tryLock = c.mutex_trylock;
 };
 
 pub const cond = struct {
     pub const cleanup = c.cond_cleanup;
+    pub const init = c.cond_init;
+    pub const destroy = c.cond_destroy;
+    pub const wait = c.cond_wait;
+    pub const signal = c.cond_signal;
+    pub const broadcast = c.cond_broadcast;
 };
 
 pub const sem = struct {
+    pub const init = c.sem_init;
+    pub const destroy = c.sem_destroy;
+    pub const wait = c.sem_wait;
+    pub const tryWait = c.sem_trywait;
+    pub const post = c.sem_post;
+    pub const postKernel = c.ksem_post;
+    pub const getValue = c.sem_getvalue;
     pub const cleanup = c.sem_cleanup;
 };
 
@@ -271,6 +330,8 @@ pub const hal = struct {
     pub const KernInfo = c.struct_kerninfo;
     pub const Object = c.struct_object;
     pub const MsgHeader = c.struct_msg_header;
+    pub const DevIo = c.struct_dev_io;
+    pub const RiscVCpu = c.struct_riscv_cpu;
     pub const Dpc = c.struct_dpc;
     pub const CpuControl = c.struct_cpu_control;
 
@@ -408,6 +469,11 @@ pub const sync = struct {
         }
     };
 
+    /// Namespaced alias for the C `event_init()` kernel function.
+    /// Equivalent to `Event.init()` for type-checked call sites; use
+    /// the C entrypoint for cross-FFI / opaque-pointer scenarios.
+    pub const event_init = c.event_init;
+
     pub const Mutex = extern struct {
         task_link: List,
         owner: kern.TaskRef,
@@ -475,6 +541,9 @@ pub const kern = struct {
     pub const Paddr = c.paddr_t;
     pub const Vsize = c.vsize_t;
     pub const Psize = c.psize_t;
+
+    // Global kernel task (extern C variable, single instance).
+    pub extern var kernel_task: Task;
 
     pub const Device = extern struct {
         next: ?*Device,

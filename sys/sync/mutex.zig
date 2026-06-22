@@ -14,14 +14,14 @@ const kmem = ffi.kmem;
 const sched = ffi.sched;
 const thread = ffi.thread;
 
-inline fn is_mutex_initializer(m: c.mutex_t) bool {
+inline fn is_mutex_initializer(m: kern.MutexRef) bool {
     if (m) |ptr| {
         return @intFromPtr(ptr) == 0x4d496e69;
     }
     return false;
 }
 
-fn valid(m: c.mutex_t) c_int {
+fn valid(m: kern.MutexRef) c_int {
     const km: *sync.Mutex = @ptrCast(m);
     const TL = ffi.IntrusiveList(kern.Task, ffi.List, "mutexes");
     const self = kutil.cur_task();
@@ -36,9 +36,9 @@ fn valid(m: c.mutex_t) c_int {
     return 0;
 }
 
-fn copyin(ump: ?*c.mutex_t, kmp: ?*c.mutex_t) c_int {
-    var m: c.mutex_t = undefined;
-    if (hal.copyin(@as(?*const anyopaque, @ptrCast(ump)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.mutex_t)) != 0) {
+fn copyin(ump: ?*kern.MutexRef, kmp: ?*kern.MutexRef) c_int {
+    var m: kern.MutexRef = undefined;
+    if (hal.copyin(@as(?*const anyopaque, @ptrCast(ump)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(kern.MutexRef)) != 0) {
         return kern.Errno.EFAULT;
     }
 
@@ -47,7 +47,7 @@ fn copyin(ump: ?*c.mutex_t, kmp: ?*c.mutex_t) c_int {
         if (error_code != 0) {
             return error_code;
         }
-        _ = hal.copyin(@as(?*const anyopaque, @ptrCast(ump)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.mutex_t));
+        _ = hal.copyin(@as(?*const anyopaque, @ptrCast(ump)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(kern.MutexRef));
     } else {
         if (valid(m) == 0) {
             return kern.Errno.EINVAL;
@@ -58,7 +58,7 @@ fn copyin(ump: ?*c.mutex_t, kmp: ?*c.mutex_t) c_int {
 }
 
 fn prio_inherit(waiter: kern.ThreadRef) c_int {
-    var m: c.mutex_t = waiter.*.mutex_waiting;
+    var m: kern.MutexRef = waiter.*.mutex_waiting;
     var holder: kern.ThreadRef = undefined;
     var count: c_int = 0;
     var iters: u32 = 0;
@@ -105,22 +105,22 @@ fn prio_uninherit(t: kern.ThreadRef) void {
     sched.set_pri(t, t.*.basepri, maxpri);
 }
 
-pub fn init(mp: ?*c.mutex_t) callconv(.c) c_int {
+pub fn init(mp: ?*kern.MutexRef) callconv(.c) c_int {
     const self = kutil.cur_task();
     if (self.*.nsyncs >= hal.MAXSYNCS) {
         return kern.Errno.EAGAIN;
     }
 
     const mem = kmem.alloc(@sizeOf(sync.Mutex)) orelse return kern.Errno.ENOMEM;
-    const m: c.mutex_t = @ptrCast(@alignCast(mem));
+    const m: kern.MutexRef = @ptrCast(@alignCast(mem));
     errdefer kmem.free(m);
 
-    c.event_init(&m.*.event, "mutex");
+    sync.event_init(&m.*.event, "mutex");
     m.*.owner = self;
     m.*.holder = null;
     m.*.priority = hal.MINPRI;
 
-    if (hal.copyout(@as(?*const anyopaque, @ptrCast(&m)), @as(?*anyopaque, @ptrCast(mp)), @sizeOf(c.mutex_t)) != 0) {
+    if (hal.copyout(@as(?*const anyopaque, @ptrCast(&m)), @as(?*anyopaque, @ptrCast(mp)), @sizeOf(kern.MutexRef)) != 0) {
         return kern.Errno.EFAULT;
     }
 
@@ -133,17 +133,17 @@ pub fn init(mp: ?*c.mutex_t) callconv(.c) c_int {
     return 0;
 }
 
-fn deallocate(m: c.mutex_t) void {
+fn deallocate(m: kern.MutexRef) void {
     m.*.owner.*.nsyncs -= 1;
     ffi.IntrusiveList(sync.Mutex, ffi.List, "task_link").node(m.?).remove();
     kmem.free(m);
 }
 
-pub fn destroy(mp: ?*c.mutex_t) callconv(.c) c_int {
-    var m: c.mutex_t = undefined;
+pub fn destroy(mp: ?*kern.MutexRef) callconv(.c) c_int {
+    var m: kern.MutexRef = undefined;
     sched.lock();
     defer sched.unlock();
-    if (hal.copyin(@as(?*const anyopaque, @ptrCast(mp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.mutex_t)) != 0) {
+    if (hal.copyin(@as(?*const anyopaque, @ptrCast(mp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(kern.MutexRef)) != 0) {
         return kern.Errno.EFAULT;
     }
     if (valid(m) == 0) {
@@ -167,8 +167,8 @@ pub fn cleanup(task: kern.TaskRef) callconv(.c) void {
     }
 }
 
-pub fn lock(mp: ?*c.mutex_t) callconv(.c) c_int {
-    var m: c.mutex_t = undefined;
+pub fn lock(mp: ?*kern.MutexRef) callconv(.c) c_int {
+    var m: kern.MutexRef = undefined;
 
     sched.lock();
     defer sched.unlock();
@@ -210,8 +210,8 @@ pub fn lock(mp: ?*c.mutex_t) callconv(.c) c_int {
     return 0;
 }
 
-pub fn tryLock(mp: ?*c.mutex_t) callconv(.c) c_int {
-    var m: c.mutex_t = undefined;
+pub fn tryLock(mp: ?*kern.MutexRef) callconv(.c) c_int {
+    var m: kern.MutexRef = undefined;
 
     sched.lock();
     defer sched.unlock();
@@ -237,8 +237,8 @@ pub fn tryLock(mp: ?*c.mutex_t) callconv(.c) c_int {
     return err;
 }
 
-pub fn unlock(mp: ?*c.mutex_t) callconv(.c) c_int {
-    var m: c.mutex_t = undefined;
+pub fn unlock(mp: ?*kern.MutexRef) callconv(.c) c_int {
+    var m: kern.MutexRef = undefined;
 
     sched.lock();
     defer sched.unlock();

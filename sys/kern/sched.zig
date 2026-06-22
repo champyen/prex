@@ -49,7 +49,7 @@ fn runq_insert(t: kern.ThreadRef) void {
 
 fn runq_dequeue() kern.ThreadRef {
     if (maxpri >= hal.PRI_IDLE) {
-        return &c.idle_thread;
+        return &ffi.thread.idle_thread;
     }
     const q = runq[@intCast(maxpri)].dequeue().?;
     const t = q.entry(kern.Thread, "sched_link");
@@ -356,7 +356,7 @@ fn setpolicy(t: kern.ThreadRef, policy: c_int) callconv(.c) c_int {
     return err;
 }
 
-fn dpc(dpc_ptr: *c.struct_dpc, fn_ptr: ?*const fn (?*anyopaque) callconv(.c) void, arg: ?*anyopaque) callconv(.c) void {
+fn dpc(dpc_ptr: *ffi.hal.Dpc, fn_ptr: ?*const fn (?*anyopaque) callconv(.c) void, arg: ?*anyopaque) callconv(.c) void {
     lock();
     const s = hal.splhigh();
     dpc_ptr.*.func = fn_ptr;
@@ -377,7 +377,7 @@ fn dpc_thread(dummy: ?*anyopaque) callconv(.c) void {
         _ = tsleep(@ptrCast(&dpc_event), 0);
         while (!dpcq.isEmpty()) {
             const q = dpcq.dequeue().?;
-            const dpc_val = q.entry(c.struct_dpc, "link");
+            const dpc_val = q.entry(ffi.hal.Dpc, "link");
             dpc_val.*.state = hal.DPC_FREE;
             _ = hal.spl0();
             if (dpc_val.*.func) |f| {

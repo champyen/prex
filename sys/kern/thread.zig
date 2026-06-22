@@ -125,7 +125,7 @@ pub fn create(tsk: kern.TaskRef, tp: ?*kern.ThreadRef) callconv(.c) c_int {
 
     const sp: usize = @intFromPtr(t.*.kstack) + hal.KSTACKSZ;
     hal.context_set(&t.*.ctx, hal.CTX_KSTACK, kutil.toReg(sp));
-    hal.context_set(&t.*.ctx, hal.CTX_KENTRY, kutil.toReg(&c.syscall_ret));
+    hal.context_set(&t.*.ctx, hal.CTX_KENTRY, kutil.toReg(&ffi.thread.syscall_ret));
     sched.start(t, kutil.get_curthread().?.*.basepri, kern.SCHED_RR);
     t.*.suscnt = tsk.*.suscnt + 1;
 
@@ -361,7 +361,7 @@ pub fn info(tinfo: ?*hal.ThreadInfo) callconv(.c) c_int {
 }
 
 pub fn createKernel(entry: ?*const fn (?*anyopaque) callconv(.c) void, arg: ?*anyopaque, pri: c_int) callconv(.c) kern.ThreadRef {
-    const t = allocate(&c.kernel_task) orelse return null;
+    const t = allocate(&kern.kernel_task) orelse return null;
 
     _ = lib.memset(t.*.kstack, 0, hal.KSTACKSZ);
     const sp: usize = @intFromPtr(t.*.kstack) + hal.KSTACKSZ;
@@ -386,7 +386,7 @@ pub fn terminateKernel(t: kern.ThreadRef) callconv(.c) void {
 }
 
 pub fn createIdle() callconv(.c) kern.ThreadRef {
-    const t = allocate(&c.kernel_task) orelse @panic("thread_create_idle");
+    const t = allocate(&kern.kernel_task) orelse @panic("thread_create_idle");
 
     _ = lib.memset(t.*.kstack, 0, hal.KSTACKSZ);
     t.*.state = kern.TS_RUN;
@@ -405,13 +405,13 @@ pub fn init() callconv(.c) void {
     hal.context_set(&idle_thread.ctx, hal.CTX_KSTACK, kutil.toReg(sp));
     sched.start(&idle_thread, hal.PRI_IDLE, kern.SCHED_FIFO);
     idle_thread.kstack = stack;
-    idle_thread.task = &c.kernel_task;
+    idle_thread.task = &kern.kernel_task;
     idle_thread.state = kern.TS_RUN;
     list_init(&idle_thread.mutexes);
 
     list_insert(&thread_list, &idle_thread.link);
-    list_insert(&c.kernel_task.threads, &idle_thread.task_link);
-    c.kernel_task.nthreads = 1;
+    list_insert(&kern.kernel_task.threads, &idle_thread.task_link);
+    kern.kernel_task.nthreads = 1;
 }
 
 

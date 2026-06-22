@@ -9,6 +9,7 @@ const c = @import("c").c;
 const sched = ffi.sched;
 const kmem = ffi.kmem;
 const thread = ffi.thread;
+const sync = ffi.sync;
 
 var IST_NONE: ?*const fn (?*anyopaque) callconv(.c) void = undefined;
 
@@ -57,7 +58,7 @@ pub fn attach(vector: c_int, pri: c_int, shared: c_int, isr: ?*const fn (?*anyop
 
     if (ist != IST_NONE) {
         irq.thread = thread.kcreate(irq_thread, irq, ISTPRI(pri)) orelse @panic("irq_attach");
-        c.event_init(@as(?*anyopaque, @ptrCast(&irq.istevt)), "interrupt");
+        sync.event_init(@as(?*anyopaque, @ptrCast(&irq.istevt)), "interrupt");
     }
     irq_table[@intCast(vector)] = irq;
     const mode: c_int = if (shared != 0) hal.IMODE_LEVEL else hal.IMODE_EDGE;

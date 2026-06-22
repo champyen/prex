@@ -11,14 +11,14 @@ const sched = ffi.sched;
 const mutex = ffi.mutex;
 const thread = ffi.thread;
 
-inline fn is_cond_initializer(m: c.cond_t) bool {
+inline fn is_cond_initializer(m: kern.CondRef) bool {
     if (m) |ptr| {
         return @intFromPtr(ptr) == 0x43496e69;
     }
     return false;
 }
 
-fn valid(m: c.cond_t) c_int {
+fn valid(m: kern.CondRef) c_int {
     const km: *sync.Cond = @ptrCast(m);
     const CL = ffi.IntrusiveList(kern.Task, ffi.List, "conds");
     const self = kutil.cur_task();
@@ -33,9 +33,9 @@ fn valid(m: c.cond_t) c_int {
     return 0;
 }
 
-fn copyin(ucp: ?*c.cond_t, kcp: ?*c.cond_t) c_int {
-    var m: c.cond_t = undefined;
-    if (hal.copyin(@as(?*const anyopaque, @ptrCast(ucp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t)) != 0) {
+fn copyin(ucp: ?*kern.CondRef, kcp: ?*kern.CondRef) c_int {
+    var m: kern.CondRef = undefined;
+    if (hal.copyin(@as(?*const anyopaque, @ptrCast(ucp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(kern.CondRef)) != 0) {
         return kern.Errno.EFAULT;
     }
 
@@ -44,7 +44,7 @@ fn copyin(ucp: ?*c.cond_t, kcp: ?*c.cond_t) c_int {
         if (error_code != 0) {
             return error_code;
         }
-        _ = hal.copyin(@as(?*const anyopaque, @ptrCast(ucp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t));
+        _ = hal.copyin(@as(?*const anyopaque, @ptrCast(ucp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(kern.CondRef));
     } else {
         if (valid(m) == 0) {
             return kern.Errno.EINVAL;
@@ -54,20 +54,20 @@ fn copyin(ucp: ?*c.cond_t, kcp: ?*c.cond_t) c_int {
     return 0;
 }
 
-pub fn init(cp: ?*c.cond_t) callconv(.c) c_int {
+pub fn init(cp: ?*kern.CondRef) callconv(.c) c_int {
     const self = kutil.cur_task();
     if (self.*.nsyncs >= hal.MAXSYNCS) {
         return kern.Errno.EAGAIN;
     }
 
     const mem = kmem.alloc(@sizeOf(sync.Cond)) orelse return kern.Errno.ENOMEM;
-    const m: c.cond_t = @ptrCast(@alignCast(mem));
+    const m: kern.CondRef = @ptrCast(@alignCast(mem));
     errdefer kmem.free(m);
 
-    c.event_init(&m.*.event, "condvar");
+    sync.event_init(&m.*.event, "condvar");
     m.*.owner = self;
 
-    if (hal.copyout(@as(?*const anyopaque, @ptrCast(&m)), @as(?*anyopaque, @ptrCast(cp)), @sizeOf(c.cond_t)) != 0) {
+    if (hal.copyout(@as(?*const anyopaque, @ptrCast(&m)), @as(?*anyopaque, @ptrCast(cp)), @sizeOf(kern.CondRef)) != 0) {
         return kern.Errno.EFAULT;
     }
 
@@ -80,17 +80,17 @@ pub fn init(cp: ?*c.cond_t) callconv(.c) c_int {
     return 0;
 }
 
-fn deallocate(m: c.cond_t) void {
+fn deallocate(m: kern.CondRef) void {
     m.*.owner.*.nsyncs -= 1;
     ffi.IntrusiveList(sync.Cond, ffi.List, "task_link").node(m).remove();
     kmem.free(m);
 }
 
-pub fn destroy(cp: ?*c.cond_t) callconv(.c) c_int {
-    var m: c.cond_t = undefined;
+pub fn destroy(cp: ?*kern.CondRef) callconv(.c) c_int {
+    var m: kern.CondRef = undefined;
     sched.lock();
     defer sched.unlock();
-    if (hal.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t)) != 0) {
+    if (hal.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(kern.CondRef)) != 0) {
         return kern.Errno.EFAULT;
     }
     if (valid(m) == 0) {
@@ -114,10 +114,10 @@ pub fn cleanup(task: kern.TaskRef) callconv(.c) void {
     }
 }
 
-pub fn wait(cp: ?*c.cond_t, mp: ?*c.mutex_t) callconv(.c) c_int {
-    var m: c.cond_t = undefined;
+pub fn wait(cp: ?*kern.CondRef, mp: ?*kern.MutexRef) callconv(.c) c_int {
+    var m: kern.CondRef = undefined;
 
-    if (hal.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t)) != 0) {
+    if (hal.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(kern.CondRef)) != 0) {
         return kern.Errno.EINVAL;
     }
 
@@ -128,7 +128,7 @@ pub fn wait(cp: ?*c.cond_t, mp: ?*c.mutex_t) callconv(.c) c_int {
             sched.unlock();
             return error_code;
         }
-        _ = hal.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t));
+        _ = hal.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(kern.CondRef));
     } else {
         if (valid(m) == 0) {
             sched.unlock();
@@ -160,12 +160,12 @@ pub fn wait(cp: ?*c.cond_t, mp: ?*c.mutex_t) callconv(.c) c_int {
     return err;
 }
 
-pub fn signal(cp: ?*c.cond_t) callconv(.c) c_int {
-    var m: c.cond_t = undefined;
+pub fn signal(cp: ?*kern.CondRef) callconv(.c) c_int {
+    var m: kern.CondRef = undefined;
 
     sched.lock();
     defer sched.unlock();
-    if (hal.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t)) != 0) {
+    if (hal.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(kern.CondRef)) != 0) {
         return kern.Errno.EINVAL;
     }
     const km: *sync.Cond = @ptrCast(m);
@@ -173,12 +173,12 @@ pub fn signal(cp: ?*c.cond_t) callconv(.c) c_int {
     return 0;
 }
 
-pub fn broadcast(cp: ?*c.cond_t) callconv(.c) c_int {
-    var m: c.cond_t = undefined;
+pub fn broadcast(cp: ?*kern.CondRef) callconv(.c) c_int {
+    var m: kern.CondRef = undefined;
 
     sched.lock();
     defer sched.unlock();
-    if (hal.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t)) != 0) {
+    if (hal.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(kern.CondRef)) != 0) {
         return kern.Errno.EINVAL;
     }
     const km: *sync.Cond = @ptrCast(m);

@@ -303,7 +303,7 @@ pub fn cancel(t_ref: kern.ThreadRef) callconv(.c) void {
 pub fn handler() callconv(.c) void {
     var wakeup: c_int = 0;
 
-    if (c.smp_processor_id() == 0) {
+    if (ffi.smp.processor_id() == 0) {
         lbolt +%= 1;
         const cur_thread: ?*kern.Thread = kutil.get_curthread();
         if (cur_thread.?.priority == hal.PRI_IDLE)

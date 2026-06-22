@@ -33,11 +33,11 @@ fn dequeue(head: *ffi.Queue) ?*kern.Thread {
     return top;
 }
 
-pub fn send(obj: c.object_t, msg: ?*anyopaque, size: usize) callconv(.c) c_int {
+pub fn send(obj: kern.ObjectRef, msg: ?*anyopaque, size: usize) callconv(.c) c_int {
     if (!kutil.user_area(msg)) {
         return kern.Errno.EFAULT;
     }
-    if (size < @sizeOf(c.struct_msg_header)) {
+    if (size < @sizeOf(ffi.hal.MsgHeader)) {
         return kern.Errno.EINVAL;
     }
 
@@ -56,7 +56,7 @@ pub fn send(obj: c.object_t, msg: ?*anyopaque, size: usize) callconv(.c) c_int {
     kutil.get_curthread().?.msgaddr = kmsg;
     kutil.get_curthread().?.msgsize = size;
 
-    const hdr: *c.struct_msg_header = @ptrCast(@alignCast(kmsg));
+    const hdr: *ffi.hal.MsgHeader = @ptrCast(@alignCast(kmsg));
     hdr.task = kutil.get_curtask();
 
     if (!ffi.IntrusiveQueue(ffi.hal.Object, ffi.Queue, "recvq").node(obj.?).isEmpty()) {
@@ -87,7 +87,7 @@ pub fn send(obj: c.object_t, msg: ?*anyopaque, size: usize) callconv(.c) c_int {
     return 0;
 }
 
-pub fn receive(obj: c.object_t, msg: ?*anyopaque, size: usize) callconv(.c) c_int {
+pub fn receive(obj: kern.ObjectRef, msg: ?*anyopaque, size: usize) callconv(.c) c_int {
     var rc: c_int = undefined;
     var err_code: c_int = 0;
 
@@ -148,7 +148,7 @@ pub fn receive(obj: c.object_t, msg: ?*anyopaque, size: usize) callconv(.c) c_in
     return err_code;
 }
 
-pub fn reply(obj: c.object_t, msg: ?*anyopaque, size: usize) callconv(.c) c_int {
+pub fn reply(obj: kern.ObjectRef, msg: ?*anyopaque, size: usize) callconv(.c) c_int {
     if (!kutil.user_area(msg)) {
         return kern.Errno.EFAULT;
     }
@@ -205,7 +205,7 @@ pub fn cancel(t: ?*kern.Thread) callconv(.c) void {
     }
 }
 
-pub fn abort(obj: c.object_t) callconv(.c) void {
+pub fn abort(obj: kern.ObjectRef) callconv(.c) void {
     sched.lock();
     defer sched.unlock();
 
@@ -223,7 +223,7 @@ pub fn abort(obj: c.object_t) callconv(.c) void {
 }
 
 pub fn init() callconv(.c) void {
-    c.event_init(@as(?*anyopaque, @ptrCast(&ipc_event)), "ipc");
+    sync.event_init(@as(?*anyopaque, @ptrCast(&ipc_event)), "ipc");
 }
 
 comptime {

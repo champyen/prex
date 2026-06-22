@@ -204,7 +204,7 @@ pub fn @"return"() callconv(.c) void {
 
 pub fn init() callconv(.c) void {
     @as(*usize, @ptrCast(&EXC_DFL)).* = @as(usize, @bitCast(@as(isize, -1)));
-    c.event_init(@as(?*anyopaque, @ptrCast(&exception_event)), "exception");
+    sync.event_init(@as(?*anyopaque, @ptrCast(&exception_event)), "exception");
 }
 
 

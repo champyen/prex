@@ -419,7 +419,7 @@ fn vm_create_internal() ?*mem.VmMap {
     return vm_map;
 }
 
-pub fn create() callconv(.c) c.vm_map_t {
+pub fn create() callconv(.c) kern.VmMapRef {
     sched.lock();
     defer sched.unlock();
     const m = vm_create_internal();
@@ -486,7 +486,7 @@ pub fn map(target: kern.TaskRef, addr: ?*anyopaque, size: usize, alloc: *?*anyop
     return do_map(@ptrCast(@alignCast(target_opt.?.map.?)), addr, size, alloc);
 }
 
-pub fn terminate(vm_map: c.vm_map_t) callconv(.c) void {
+pub fn terminate(vm_map: kern.VmMapRef) callconv(.c) void {
     const map_opt: ?*mem.VmMap = @ptrCast(vm_map);
     if (map_opt.?.refcnt > 0) {
         map_opt.?.refcnt -= 1;
@@ -519,27 +519,27 @@ pub fn terminate(vm_map: c.vm_map_t) callconv(.c) void {
     kmem.free(@ptrCast(@alignCast(map_opt)));
 }
 
-pub fn dup(org_map: c.vm_map_t) callconv(.c) c.vm_map_t {
+pub fn dup(org_map: kern.VmMapRef) callconv(.c) kern.VmMapRef {
     const org_map_opt: ?*mem.VmMap = @ptrCast(org_map);
     sched.lock();
     defer sched.unlock();
     return @ptrCast(do_dup(org_map_opt.?));
 }
 
-pub fn @"switch"(vm_map: c.vm_map_t) callconv(.c) void {
+pub fn @"switch"(vm_map: kern.VmMapRef) callconv(.c) void {
     const map_opt: ?*mem.VmMap = @ptrCast(vm_map);
     if (map_opt != &kernel_map) {
         hal.mmu_switch(map_opt.?.pgd);
     }
 }
 
-pub fn reference(vm_map: c.vm_map_t) callconv(.c) c_int {
+pub fn reference(vm_map: kern.VmMapRef) callconv(.c) c_int {
     const map_opt: ?*mem.VmMap = @ptrCast(vm_map);
     map_opt.?.refcnt += 1;
     return 0;
 }
 
-pub fn load(vm_map: c.vm_map_t, mod: *hal.Module, stack: *?*anyopaque) callconv(.c) c_int {
+pub fn load(vm_map: kern.VmMapRef, mod: *hal.Module, stack: *?*anyopaque) callconv(.c) c_int {
     const map_opt: ?*mem.VmMap = @ptrCast(vm_map);
     const src_addr: usize = @intFromPtr(kutil.ptokv(mod.*.phys));
     var text: ?*anyopaque = @as(?*anyopaque, @ptrFromInt(mod.*.text));
@@ -614,7 +614,7 @@ pub fn init() callconv(.c) void {
     hal.mmu_switch(pgd);
 
     seg_init(&kernel_map.head);
-    c.kernel_task.map = @ptrCast(&kernel_map);
+    kern.kernel_task.map = @ptrCast(&kernel_map);
 }
 
 comptime {

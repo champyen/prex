@@ -31,11 +31,11 @@ extern fn wrap_get_build_date() callconv(.c) [*c]const u8;
 
 var infobuf: [hal.MAXINFOSZ]u8 align(16) = undefined;
 var kerninfo_inited: bool = false;
-var kerninfo: c.struct_kerninfo = undefined;
+var kerninfo: ffi.hal.KernInfo = undefined;
 
 fn init_kerninfo() void {
     if (kerninfo_inited) return;
-    _ = lib.memset(&kerninfo, 0, @sizeOf(c.struct_kerninfo));
+    _ = lib.memset(&kerninfo, 0, @sizeOf(ffi.hal.KernInfo));
     _ = lib.strlcpy(&kerninfo.sysname, "Prex+", @sizeOf(@TypeOf(kerninfo.sysname)));
     _ = lib.strlcpy(&kerninfo.nodename, wrap_get_hostname(), @sizeOf(@TypeOf(kerninfo.nodename)));
     _ = lib.strlcpy(&kerninfo.release, wrap_get_version(), @sizeOf(@TypeOf(kerninfo.release)));
@@ -56,7 +56,7 @@ pub fn sysinfo(sysinfo_type: c_int, buf: ?*anyopaque) callconv(.c) c_int {
     switch (sysinfo_type) {
         hal.INFO_KERNEL => {
             init_kerninfo();
-            _ = lib.memcpy(buf, &kerninfo, @sizeOf(c.struct_kerninfo));
+            _ = lib.memcpy(buf, &kerninfo, @sizeOf(ffi.hal.KernInfo));
         },
         hal.INFO_MEMORY => {
             page.info(@ptrCast(@alignCast(buf)));
@@ -100,7 +100,7 @@ pub fn sysInfo(sysinfo_type: c_int, buf: ?*anyopaque) callconv(.c) c_int {
 
     switch (sysinfo_type) {
         hal.INFO_KERNEL => {
-            bufsz = @sizeOf(c.struct_kerninfo);
+            bufsz = @sizeOf(ffi.hal.KernInfo);
         },
         hal.INFO_MEMORY => {
             bufsz = @sizeOf(hal.MemInfo);

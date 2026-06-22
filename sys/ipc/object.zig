@@ -38,7 +38,7 @@ fn deallocate(obj: *ffi.hal.Object) void {
     kmem.free(obj);
 }
 
-pub fn create(name: ?[*:0]const u8, objp: ?*c.object_t) callconv(.c) c_int {
+pub fn create(name: ?[*:0]const u8, objp: ?*kern.ObjectRef) callconv(.c) c_int {
     var str: [hal.MAXOBJNAME:0]u8 = undefined;
 
     if (name == null) {
@@ -64,8 +64,8 @@ pub fn create(name: ?[*:0]const u8, objp: ?*c.object_t) callconv(.c) c_int {
         return kern.Errno.EAGAIN;
     }
 
-    const null_obj: c.object_t = null;
-    if (hal.copyout(@as(?*const anyopaque, @ptrCast(&null_obj)), @as(?*anyopaque, @ptrCast(objp)), @sizeOf(c.object_t)) != 0) {
+    const null_obj: kern.ObjectRef = null;
+    if (hal.copyout(@as(?*const anyopaque, @ptrCast(&null_obj)), @as(?*anyopaque, @ptrCast(objp)), @sizeOf(kern.ObjectRef)) != 0) {
         return kern.Errno.EFAULT;
     }
 
@@ -90,12 +90,12 @@ pub fn create(name: ?[*:0]const u8, objp: ?*c.object_t) callconv(.c) c_int {
 
     zig_memory_barrier();
 
-    _ = hal.copyout(@as(?*const anyopaque, @ptrCast(&obj)), @as(?*anyopaque, @ptrCast(objp)), @sizeOf(c.object_t));
+    _ = hal.copyout(@as(?*const anyopaque, @ptrCast(&obj)), @as(?*anyopaque, @ptrCast(objp)), @sizeOf(kern.ObjectRef));
 
     return 0;
 }
 
-pub fn lookup(name: [*:0]const u8, objp: ?*c.object_t) callconv(.c) c_int {
+pub fn lookup(name: [*:0]const u8, objp: ?*kern.ObjectRef) callconv(.c) c_int {
     var str: [hal.MAXOBJNAME:0]u8 = undefined;
 
     var i: usize = 0;
@@ -112,13 +112,13 @@ pub fn lookup(name: [*:0]const u8, objp: ?*c.object_t) callconv(.c) c_int {
         return kern.Errno.ENOENT;
     }
 
-    if (hal.copyout(@as(?*const anyopaque, @ptrCast(&obj)), @as(?*anyopaque, @ptrCast(objp)), @sizeOf(c.object_t)) != 0) {
+    if (hal.copyout(@as(?*const anyopaque, @ptrCast(&obj)), @as(?*anyopaque, @ptrCast(objp)), @sizeOf(kern.ObjectRef)) != 0) {
         return kern.Errno.EFAULT;
     }
     return 0;
 }
 
-pub fn valid(obj: c.object_t) callconv(.c) c_int {
+pub fn valid(obj: kern.ObjectRef) callconv(.c) c_int {
     var n = object_list.first();
     while (n != &object_list) {
         const tmp = n.entry(ffi.hal.Object, "link");
@@ -130,7 +130,7 @@ pub fn valid(obj: c.object_t) callconv(.c) c_int {
     return 0;
 }
 
-pub fn destroy(obj: c.object_t) callconv(.c) c_int {
+pub fn destroy(obj: kern.ObjectRef) callconv(.c) c_int {
     sched.lock();
     defer sched.unlock();
     if (valid(obj) == 0) {

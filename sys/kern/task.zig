@@ -76,7 +76,7 @@ fn access(task: kern.TaskRef) callconv(.c) c_int {
     return 0;
 }
 
-fn capable(cap: c.cap_t) callconv(.c) c_int {
+fn capable(cap: kern.Cap) callconv(.c) c_int {
     var capable_val: c_int = 1;
 
     if ((kutil.cur_task().*.capability & cap) == 0) {
@@ -90,7 +90,7 @@ fn capable(cap: c.cap_t) callconv(.c) c_int {
 
 pub fn create(parent: kern.TaskRef, vm_option: c_int, childp: ?*kern.TaskRef) callconv(.c) c_int {
     var task: kern.TaskRef = null;
-    var map: c.vm_map_t = null;
+    var map: kern.VmMapRef = null;
 
     if (parent == null) return kern.Errno.EINVAL;
 
@@ -285,7 +285,7 @@ pub fn setname(task: kern.TaskRef, name: [*:0]const u8) callconv(.c) c_int {
     return 0;
 }
 
-pub fn setcap(task: kern.TaskRef, cap: c.cap_t) callconv(.c) c_int {
+pub fn setcap(task: kern.TaskRef, cap: kern.Cap) callconv(.c) c_int {
     if (capable(kern.CAP_SETPCAP) == 0) return kern.Errno.EPERM;
 
     sched.lock();
@@ -300,7 +300,7 @@ pub fn setcap(task: kern.TaskRef, cap: c.cap_t) callconv(.c) c_int {
     return 0;
 }
 
-pub fn chkcap(task: kern.TaskRef, cap: c.cap_t) callconv(.c) c_int {
+pub fn chkcap(task: kern.TaskRef, cap: kern.Cap) callconv(.c) c_int {
     var err: c_int = 0;
 
     sched.lock();
@@ -318,8 +318,8 @@ pub fn chkcap(task: kern.TaskRef, cap: c.cap_t) callconv(.c) c_int {
 }
 
 pub fn info(task_info_ptr: ?*hal.TaskInfo) callconv(.c) c_int {
-    const target: c.u_long = task_info_ptr.?.*.cookie;
-    var i: c.u_long = 0;
+    const target: kern.Ulong = task_info_ptr.?.*.cookie;
+    var i: kern.Ulong = 0;
 
     sched.lock();
     defer sched.unlock();
