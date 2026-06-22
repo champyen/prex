@@ -47,7 +47,7 @@ fn page_is_ram(pa: kern.Paddr) bool {
     var i: usize = 0;
     while (i < binfo.*.nr_rams) : (i += 1) {
         const ram = &binfo.*.ram[i];
-        if (ram.*.type == c.MT_USABLE) {
+        if (ram.*.type == hal.MT_USABLE) {
             if (pa >= ram.*.base and pa < ram.*.base + ram.*.size) {
                 return true;
             }
@@ -152,7 +152,7 @@ pub fn reserve(paddr: kern.Paddr, psize: kern.Psize) callconv(.c) c_int {
 
     var pa = paddr;
     var sz = psize;
-    const page_size = @as(kern.Paddr, @intCast(c.PAGE_SIZE));
+    const page_size = @as(kern.Paddr, @intCast(hal.PAGE_SIZE));
     if (pa < page_size) {
         if (pa + sz <= page_size) return 0;
         sz -= (page_size - pa);
@@ -173,7 +173,7 @@ pub fn reserve(paddr: kern.Paddr, psize: kern.Psize) callconv(.c) c_int {
     }
 
     if (blk == &page_head or blk == null) {
-        return @intCast(c.ENOMEM);
+        return @intCast(kern.Errno.ENOMEM);
     }
 
     const block = blk.?;
@@ -239,12 +239,12 @@ pub fn init() callconv(.c) void {
     var i: usize = 0;
     while (i < binfo.*.nr_rams) : (i += 1) {
         const ram = &binfo.*.ram[i];
-        if (ram.*.type == c.MT_USABLE) {
+        if (ram.*.type == hal.MT_USABLE) {
             var base = ram.*.base;
             var size = ram.*.size;
             if (base == 0) {
-                base += c.PAGE_SIZE;
-                size -= c.PAGE_SIZE;
+                base += hal.PAGE_SIZE;
+                size -= hal.PAGE_SIZE;
             }
             free(base, size);
             total_size += size;
@@ -254,9 +254,9 @@ pub fn init() callconv(.c) void {
     i = 0;
     while (i < binfo.*.nr_rams) : (i += 1) {
         const ram = &binfo.*.ram[i];
-        const is_bootdisk = ram.*.type == c.MT_BOOTDISK;
-        const is_memhole = ram.*.type == c.MT_MEMHOLE;
-        const is_reserved = ram.*.type == c.MT_RESERVED;
+        const is_bootdisk = ram.*.type == hal.MT_BOOTDISK;
+        const is_memhole = ram.*.type == hal.MT_MEMHOLE;
+        const is_reserved = ram.*.type == hal.MT_RESERVED;
 
         if (is_bootdisk or is_memhole or is_reserved) {
             if (is_bootdisk) {
@@ -269,7 +269,7 @@ pub fn init() callconv(.c) void {
             var overlap: bool = false;
             var j: usize = 0;
             while (j < binfo.*.nr_rams) : (j += 1) {
-                if (binfo.*.ram[j].type == c.MT_USABLE) {
+                if (binfo.*.ram[j].type == hal.MT_USABLE) {
                     if (!(ram.*.base >= binfo.*.ram[j].base + binfo.*.ram[j].size or
                         ram.*.base + ram.*.size <= binfo.*.ram[j].base))
                     {

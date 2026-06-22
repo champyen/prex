@@ -7,11 +7,11 @@ const kern = ffi.kern;
 const hal = ffi.hal;
 
 pub inline fn round_page(x: usize) usize {
-    return (x + (c.PAGE_SIZE - 1)) & ~@as(usize, c.PAGE_SIZE - 1);
+    return (x + (hal.PAGE_SIZE - 1)) & ~@as(usize, hal.PAGE_SIZE - 1);
 }
 
 pub inline fn trunc_page(x: usize) usize {
-    return x & ~@as(usize, c.PAGE_SIZE - 1);
+    return x & ~@as(usize, hal.PAGE_SIZE - 1);
 }
 
 pub inline fn user_area(a: anytype) bool {
@@ -21,7 +21,7 @@ pub inline fn user_area(a: anytype) bool {
         else => a,
     };
     if (comptime @hasDecl(c, "CONFIG_MMU")) {
-        return val < c.USERLIMIT;
+        return val < hal.USERLIMIT;
     } else {
         return true;
     }
@@ -33,11 +33,11 @@ pub inline fn kvtop(va: anytype) kern.Paddr {
         .optional => if (va) |p| @intFromPtr(p) else 0,
         else => @as(usize, @intCast(va)),
     };
-    return u - c.KERNOFFSET;
+    return u - hal.KERNOFFSET;
 }
 
 pub inline fn ptokv(pa: kern.Paddr) ?*anyopaque {
-    return @ptrFromInt(pa + c.KERNOFFSET);
+    return @ptrFromInt(pa + hal.KERNOFFSET);
 }
 
 pub inline fn get_curthread() ?*hal.Thread {

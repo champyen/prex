@@ -21,7 +21,7 @@ fn find(name: [*:0]const u8) ?*c.struct_object {
     var n = object_list.first();
     while (n != &object_list) {
         const obj = n.entry(c.struct_object, "link");
-        if (lib.strncmp(&obj.name, name, c.MAXOBJNAME) == 0) {
+        if (lib.strncmp(&obj.name, name, hal.MAXOBJNAME) == 0) {
             return obj;
         }
         n = n.nextNode();
@@ -39,51 +39,51 @@ fn deallocate(obj: *c.struct_object) void {
 }
 
 pub fn create(name: ?[*:0]const u8, objp: ?*c.object_t) callconv(.c) c_int {
-    var str: [c.MAXOBJNAME:0]u8 = undefined;
+    var str: [hal.MAXOBJNAME:0]u8 = undefined;
 
     if (name == null) {
         str[0] = 0;
     } else {
         const name_ptr = name.?;
         var i: usize = 0;
-        while (i < c.MAXOBJNAME - 1 and name_ptr[i] != 0) : (i += 1) {
+        while (i < hal.MAXOBJNAME - 1 and name_ptr[i] != 0) : (i += 1) {
             str[i] = name_ptr[i];
         }
         str[i] = 0;
 
-        if (name_ptr[0] == '!' and task.capable(c.CAP_PROTSERV) == 0) {
-            return c.EPERM;
+        if (name_ptr[0] == '!' and task.capable(kern.CAP_PROTSERV) == 0) {
+            return kern.Errno.EPERM;
         }
     }
 
     sched.lock();
 
     const cur = kutil.get_curtask().?;
-    if (cur.nobjects >= c.MAXOBJECTS) {
+    if (cur.nobjects >= hal.MAXOBJECTS) {
         sched.unlock();
-        return c.EAGAIN;
+        return kern.Errno.EAGAIN;
     }
 
     const null_obj: c.object_t = null;
     if (hal.copyout(@as(?*const anyopaque, @ptrCast(&null_obj)), @as(?*anyopaque, @ptrCast(objp)), @sizeOf(c.object_t)) != 0) {
         sched.unlock();
-        return c.EFAULT;
+        return kern.Errno.EFAULT;
     }
 
     if (find(&str) != null) {
         sched.unlock();
-        return c.EEXIST;
+        return kern.Errno.EEXIST;
     }
 
     const mem = kmem.alloc(@sizeOf(c.struct_object));
     const obj: ?*c.struct_object = @ptrCast(@alignCast(mem));
     if (obj == null) {
         sched.unlock();
-        return c.ENOMEM;
+        return kern.Errno.ENOMEM;
     }
 
     if (name != null) {
-        _ = lib.strlcpy(&obj.?.name, &str, c.MAXOBJNAME);
+        _ = lib.strlcpy(&obj.?.name, &str, hal.MAXOBJNAME);
     }
 
     obj.?.owner = cur;
@@ -102,10 +102,10 @@ pub fn create(name: ?[*:0]const u8, objp: ?*c.object_t) callconv(.c) c_int {
 }
 
 pub fn lookup(name: [*:0]const u8, objp: ?*c.object_t) callconv(.c) c_int {
-    var str: [c.MAXOBJNAME:0]u8 = undefined;
+    var str: [hal.MAXOBJNAME:0]u8 = undefined;
 
     var i: usize = 0;
-    while (i < c.MAXOBJNAME - 1 and name[i] != 0) : (i += 1) {
+    while (i < hal.MAXOBJNAME - 1 and name[i] != 0) : (i += 1) {
         str[i] = name[i];
     }
     str[i] = 0;
@@ -115,11 +115,11 @@ pub fn lookup(name: [*:0]const u8, objp: ?*c.object_t) callconv(.c) c_int {
     sched.unlock();
 
     if (obj == null) {
-        return c.ENOENT;
+        return kern.Errno.ENOENT;
     }
 
     if (hal.copyout(@as(?*const anyopaque, @ptrCast(&obj)), @as(?*anyopaque, @ptrCast(objp)), @sizeOf(c.object_t)) != 0) {
-        return c.EFAULT;
+        return kern.Errno.EFAULT;
     }
     return 0;
 }
@@ -140,12 +140,12 @@ pub fn destroy(obj: c.object_t) callconv(.c) c_int {
     sched.lock();
     if (valid(obj) == 0) {
         sched.unlock();
-        return c.EINVAL;
+        return kern.Errno.EINVAL;
     }
     const target_obj = @as(*c.struct_object, @ptrCast(obj));
     if (@intFromPtr(target_obj.owner) != @intFromPtr(kutil.get_curtask())) {
         sched.unlock();
-        return c.EACCES;
+        return kern.Errno.EACCES;
     }
     deallocate(target_obj);
     sched.unlock();

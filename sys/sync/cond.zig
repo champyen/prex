@@ -34,7 +34,7 @@ fn valid(m: c.cond_t) c_int {
 fn copyin(ucp: ?*c.cond_t, kcp: ?*c.cond_t) c_int {
     var m: c.cond_t = undefined;
     if (hal.copyin(@as(?*const anyopaque, @ptrCast(ucp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t)) != 0) {
-        return c.EFAULT;
+        return kern.Errno.EFAULT;
     }
 
     if (is_cond_initializer(m)) {
@@ -45,7 +45,7 @@ fn copyin(ucp: ?*c.cond_t, kcp: ?*c.cond_t) c_int {
         _ = hal.copyin(@as(?*const anyopaque, @ptrCast(ucp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t));
     } else {
         if (valid(m) == 0) {
-            return c.EINVAL;
+            return kern.Errno.EINVAL;
         }
     }
     kcp.?.* = m;
@@ -54,11 +54,11 @@ fn copyin(ucp: ?*c.cond_t, kcp: ?*c.cond_t) c_int {
 
 pub fn init(cp: ?*c.cond_t) callconv(.c) c_int {
     const self = kutil.cur_task();
-    if (self.*.nsyncs >= c.MAXSYNCS) {
-        return c.EAGAIN;
+    if (self.*.nsyncs >= hal.MAXSYNCS) {
+        return kern.Errno.EAGAIN;
     }
 
-    const mem = kmem.alloc(@sizeOf(sync.Cond)) orelse return c.ENOMEM;
+    const mem = kmem.alloc(@sizeOf(sync.Cond)) orelse return kern.Errno.ENOMEM;
     const m: c.cond_t = @ptrCast(@alignCast(mem));
 
     c.event_init(&m.*.event, "condvar");
@@ -66,7 +66,7 @@ pub fn init(cp: ?*c.cond_t) callconv(.c) c_int {
 
     if (hal.copyout(@as(?*const anyopaque, @ptrCast(&m)), @as(?*anyopaque, @ptrCast(cp)), @sizeOf(c.cond_t)) != 0) {
         kmem.free(m);
-        return c.EFAULT;
+        return kern.Errno.EFAULT;
     }
 
     sched.lock();
@@ -87,16 +87,16 @@ pub fn destroy(cp: ?*c.cond_t) callconv(.c) c_int {
     sched.lock();
     if (hal.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t)) != 0) {
         sched.unlock();
-        return c.EFAULT;
+        return kern.Errno.EFAULT;
     }
     if (valid(m) == 0) {
         sched.unlock();
-        return c.EINVAL;
+        return kern.Errno.EINVAL;
     }
     const km: *sync.Cond = @ptrCast(m);
     if (!km.*.event.sleepq.isEmpty()) {
         sched.unlock();
-        return c.EBUSY;
+        return kern.Errno.EBUSY;
     }
     deallocate(m);
     sched.unlock();
@@ -115,7 +115,7 @@ pub fn wait(cp: ?*c.cond_t, mp: ?*c.mutex_t) callconv(.c) c_int {
     var m: c.cond_t = undefined;
 
     if (hal.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t)) != 0) {
-        return c.EINVAL;
+        return kern.Errno.EINVAL;
     }
 
     sched.lock();
@@ -129,7 +129,7 @@ pub fn wait(cp: ?*c.cond_t, mp: ?*c.mutex_t) callconv(.c) c_int {
     } else {
         if (valid(m) == 0) {
             sched.unlock();
-            return c.EINVAL;
+            return kern.Errno.EINVAL;
         }
     }
 
@@ -145,8 +145,8 @@ pub fn wait(cp: ?*c.cond_t, mp: ?*c.mutex_t) callconv(.c) c_int {
     deadlock.sleep(@ptrCast(km), "cond");
     const rc = sched.tsleep(&km.*.event, 0);
     deadlock.stop_sleep();
-    if (rc == c.SLP_INTR) {
-        err = c.EINTR;
+    if (rc == kern.SLP_INTR) {
+        err = kern.Errno.EINTR;
     }
     sched.unlock();
 
@@ -163,7 +163,7 @@ pub fn signal(cp: ?*c.cond_t) callconv(.c) c_int {
     sched.lock();
     if (hal.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t)) != 0) {
         sched.unlock();
-        return c.EINVAL;
+        return kern.Errno.EINVAL;
     }
     const km: *sync.Cond = @ptrCast(m);
     _ = sched.wakeone(&km.*.event);
@@ -177,7 +177,7 @@ pub fn broadcast(cp: ?*c.cond_t) callconv(.c) c_int {
     sched.lock();
     if (hal.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t)) != 0) {
         sched.unlock();
-        return c.EINVAL;
+        return kern.Errno.EINVAL;
     }
     const km: *sync.Cond = @ptrCast(m);
     sched.wakeup(&km.*.event);

@@ -95,7 +95,7 @@ const sysent: [NSYSCALL]SysEnt = .{
 };
 
 fn syscall_handler_std(a1: c.register_t, a2: c.register_t, a3: c.register_t, a4: c.register_t, id: c.register_t) callconv(.c) c.register_t {
-    var retval: c.register_t = c.EINVAL;
+    var retval: c.register_t = kern.Errno.EINVAL;
 
     if (comptime builtin.mode == .Debug) {
         strace_entry(a1, a2, a3, a4, id);
@@ -113,7 +113,7 @@ fn syscall_handler_std(a1: c.register_t, a2: c.register_t, a3: c.register_t, a4:
 }
 
 fn syscall_handler_armv8m(regs: *hal.CpuRegs, id: c.register_t) callconv(.c) c.register_t {
-    var retval: c.register_t = c.EINVAL;
+    var retval: c.register_t = kern.Errno.EINVAL;
 
     if (kutil.get_curthread()) |cur| {
         cur.*.ctx.uregs = regs;

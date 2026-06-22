@@ -271,6 +271,124 @@ pub const hal = struct {
     pub const MsgHeader = c.struct_msg_header;
     pub const Dpc = c.struct_dpc;
     pub const CpuControl = c.struct_cpu_control;
+
+    // Constants from sys/include/hal.h
+    pub const CTX_KARG = c.CTX_KARG;
+    pub const CTX_KENTRY = c.CTX_KENTRY;
+    pub const CTX_KSTACK = c.CTX_KSTACK;
+    pub const CTX_UARG = c.CTX_UARG;
+    pub const CTX_UENTRY = c.CTX_UENTRY;
+    pub const CTX_USTACK = c.CTX_USTACK;
+    pub const IMODE_EDGE = c.IMODE_EDGE;
+    pub const IMODE_LEVEL = c.IMODE_LEVEL;
+    pub const INT_CONTINUE = c.INT_CONTINUE;
+    pub const INT_DONE = c.INT_DONE;
+    pub const NO_PGD = c.NO_PGD;
+    pub const PG_READ = c.PG_READ;
+    pub const PG_UNMAP = c.PG_UNMAP;
+    pub const PG_WRITE = c.PG_WRITE;
+
+    // Constants from include/sys/dbgctl.h and sys/include/debug.h
+    pub const DBGC_FLUSHCACHE = c.DBGC_FLUSHCACHE;
+    pub const DBGC_GETLOG = c.DBGC_GETLOG;
+    pub const DBGC_LOGSIZE = c.DBGC_LOGSIZE;
+    pub const DBGC_SAVEBT = c.DBGC_SAVEBT;
+    pub const DBGC_TRACE = c.DBGC_TRACE;
+    pub const DBGMSGSZ = c.DBGMSGSZ;
+
+    // Constants from include/sys/param.h
+    pub const DFLSTKSZ = c.DFLSTKSZ;
+    pub const HZ = c.HZ;
+    pub const KSTACKSZ = c.KSTACKSZ;
+    pub const MAXDEVNAME = c.MAXDEVNAME;
+    pub const MAXEVTNAME = c.MAXEVTNAME;
+    pub const MAXIRQS = c.MAXIRQS;
+    pub const MAXMEM = c.MAXMEM;
+    pub const MAXOBJECTS = c.MAXOBJECTS;
+    pub const MAXOBJNAME = c.MAXOBJNAME;
+    pub const MAXSYNCS = c.MAXSYNCS;
+    pub const MAXTASKNAME = c.MAXTASKNAME;
+    pub const MAXTASKS = c.MAXTASKS;
+    pub const MAXTHREADS = c.MAXTHREADS;
+    pub const MINPRI = c.MINPRI;
+    pub const NPRI = c.NPRI;
+    pub const PRI_DPC = c.PRI_DPC;
+    pub const PRI_IDLE = c.PRI_IDLE;
+    pub const PRI_IST = c.PRI_IST;
+    pub const PRI_REALTIME = c.PRI_REALTIME;
+    pub const PRI_TIMER = c.PRI_TIMER;
+    pub const USRSTACK = c.USRSTACK;
+
+    // Constants from sys/include/sched.h
+    pub const DPC_FREE = c.DPC_FREE;
+    pub const DPC_PENDING = c.DPC_PENDING;
+    pub const QUANTUM = c.QUANTUM;
+
+    // Constants from include/sys/sysinfo.h
+    pub const INFO_DEVICE = c.INFO_DEVICE;
+    pub const INFO_IRQ = c.INFO_IRQ;
+    pub const INFO_KERNEL = c.INFO_KERNEL;
+    pub const INFO_MEMORY = c.INFO_MEMORY;
+    pub const INFO_TASK = c.INFO_TASK;
+    pub const INFO_THREAD = c.INFO_THREAD;
+    pub const INFO_TIMER = c.INFO_TIMER;
+    pub const INFO_VM = c.INFO_VM;
+    pub const MAXINFOSZ = c.MAXINFOSZ;
+
+    // Constants from include/sys/ipl.h
+    pub const IPL_HIGH = c.IPL_HIGH;
+
+    // Arch-specific constants (include/arm/memory.h, etc.)
+    pub const INTSTKTOP = c.INTSTKTOP;
+    pub const KERNOFFSET = c.KERNOFFSET;
+    pub const PAGE_SIZE = c.PAGE_SIZE;
+    pub const USERLIMIT = c.USERLIMIT;
+
+    // Constants from sys/include/deadlock.h
+    pub const LOCK_TYPE_MUTEX = c.LOCK_TYPE_MUTEX;
+
+    // Constants from include/sys/bootinfo.h
+    pub const MT_BOOTDISK = c.MT_BOOTDISK;
+    pub const MT_MEMHOLE = c.MT_MEMHOLE;
+    pub const MT_RESERVED = c.MT_RESERVED;
+    pub const MT_USABLE = c.MT_USABLE;
+
+    // Constants from sys/include/exception.h
+    pub const NEXC = c.NEXC;
+
+    // Constants from sys/include/smp.h
+    pub const SPINLOCK_INITIALIZER = c.SPINLOCK_INITIALIZER;
+
+    // Spinlock with inline methods (moved from sys/kern/timer.zig)
+    pub const Spinlock = extern struct {
+        value: c.spinlock_t,
+
+        pub inline fn lock(self: *Spinlock) void {
+            if (comptime @hasDecl(c, "__broken_spinlock_lock")) {
+                c.__broken_spinlock_lock(&self.value);
+            }
+        }
+
+        pub inline fn unlock(self: *Spinlock) void {
+            if (comptime @hasDecl(c, "__broken_spinlock_unlock")) {
+                c.__broken_spinlock_unlock(&self.value);
+            }
+        }
+
+        pub inline fn lock_irq(self: *Spinlock, s: *c_int) void {
+            s.* = splhigh();
+            if (comptime @hasDecl(c, "__broken_spinlock_lock")) {
+                c.__broken_spinlock_lock(&self.value);
+            }
+        }
+
+        pub inline fn unlock_irq(self: *Spinlock, s: c_int) void {
+            if (comptime @hasDecl(c, "__broken_spinlock_unlock")) {
+                c.__broken_spinlock_unlock(&self.value);
+            }
+            _ = splx(s);
+        }
+    };
 };
 
 pub const sync = struct {
@@ -327,6 +445,10 @@ pub const sync = struct {
         std.debug.assert(@sizeOf(Cond) == @sizeOf(c.struct_cond));
         std.debug.assert(@sizeOf(Sem) == @sizeOf(c.struct_sem));
     }
+
+    // Constants from include/sys/sync.h
+    pub const MAXINHERIT = c.MAXINHERIT;
+    pub const MAXSEMVAL = c.MAXSEMVAL;
 };
 
 pub const kern = struct {
@@ -342,7 +464,6 @@ pub const kern = struct {
     pub const SemRef = c.sem_t;
     pub const VmMapRef = c.vm_map_t;
     pub const Pgd = c.pgd_t;
-    pub const Spinlock = c.spinlock_t;
     pub const Register = c.register_t;
     pub const QueueRef = c.queue_t;
     pub const Cap = c.cap_t;
@@ -390,9 +511,78 @@ pub const kern = struct {
         std.debug.assert(@sizeOf(IRQ) == @sizeOf(c.struct_irq));
         std.debug.assert(@sizeOf(Timer) == @sizeOf(c.struct_timer));
     }
+
+    // Constants from include/sys/capability.h
+    pub const CAP_EXTMEM = c.CAP_EXTMEM;
+    pub const CAP_KILL = c.CAP_KILL;
+    pub const CAP_NICE = c.CAP_NICE;
+    pub const CAP_PROTSERV = c.CAP_PROTSERV;
+    pub const CAP_RAWIO = c.CAP_RAWIO;
+    pub const CAP_SETPCAP = c.CAP_SETPCAP;
+    pub const CAP_TASKCTRL = c.CAP_TASKCTRL;
+    pub const CAPSET_BOOT = c.CAPSET_BOOT;
+
+    // POSIX errno constants from include/sys/errno.h
+    pub const Errno = struct {
+        pub const EPERM = c.EPERM;
+        pub const ENOENT = c.ENOENT;
+        pub const EAGAIN = c.EAGAIN;
+        pub const ENOMEM = c.ENOMEM;
+        pub const EACCES = c.EACCES;
+        pub const EFAULT = c.EFAULT;
+        pub const EBUSY = c.EBUSY;
+        pub const EEXIST = c.EEXIST;
+        pub const ENODEV = c.ENODEV;
+        pub const EINVAL = c.EINVAL;
+        pub const ENOSPC = c.ENOSPC;
+        pub const ERANGE = c.ERANGE;
+        pub const ENOSYS = c.ENOSYS;
+        pub const EIO = c.EIO;
+        pub const ENXIO = c.ENXIO;
+        pub const ESRCH = c.ESRCH;
+        pub const EDEADLK = c.EDEADLK;
+        pub const EINTR = c.EINTR;
+        pub const ETIMEDOUT = c.ETIMEDOUT;
+    };
+
+    // Constants from sys/include/task.h
+    pub const TF_AUDIT = c.TF_AUDIT;
+    pub const TF_DEFAULT = c.TF_DEFAULT;
+    pub const TF_SYSTEM = c.TF_SYSTEM;
+
+    // Constants from sys/include/thread.h (thread states and sleep results)
+    pub const SLP_BREAK = c.SLP_BREAK;
+    pub const SLP_INTR = c.SLP_INTR;
+    pub const SLP_INVAL = c.SLP_INVAL;
+    pub const SLP_SUCCESS = c.SLP_SUCCESS;
+    pub const SLP_TIMEOUT = c.SLP_TIMEOUT;
+    pub const SOP_GETPOLICY = c.SOP_GETPOLICY;
+    pub const SOP_GETPRI = c.SOP_GETPRI;
+    pub const SOP_SETPOLICY = c.SOP_SETPOLICY;
+    pub const SOP_SETPRI = c.SOP_SETPRI;
+    pub const TS_EXIT = c.TS_EXIT;
+    pub const TS_RUN = c.TS_RUN;
+    pub const TS_SLEEP = c.TS_SLEEP;
+    pub const TS_SUSP = c.TS_SUSP;
+
+    // Constants from include/sys/prex.h (scheduling policies, VM options, protection)
+    pub const PROT_READ = c.PROT_READ;
+    pub const PROT_WRITE = c.PROT_WRITE;
+    pub const SCHED_FIFO = c.SCHED_FIFO;
+    pub const SCHED_RR = c.SCHED_RR;
+    pub const VM_COPY = c.VM_COPY;
+    pub const VM_NEW = c.VM_NEW;
+    pub const VM_SHARE = c.VM_SHARE;
 };
 
 pub const mem = struct {
+    // Constants from sys/include/vm.h (VM segment flags)
+    pub const SEG_FREE = c.SEG_FREE;
+    pub const SEG_MAPPED = c.SEG_MAPPED;
+    pub const SEG_READ = c.SEG_READ;
+    pub const SEG_SHARED = c.SEG_SHARED;
+    pub const SEG_WRITE = c.SEG_WRITE;
+
     pub const Segment = extern struct {
         prev: *Segment,
         next: *Segment,

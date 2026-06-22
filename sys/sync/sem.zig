@@ -55,7 +55,7 @@ fn release(s: c.sem_t) void {
 fn copyin(usp: ?*c.sem_t, ksp: ?*c.sem_t) c_int {
     var s: c.sem_t = undefined;
     if (hal.copyin(@as(?*const anyopaque, @ptrCast(usp)), @as(?*anyopaque, @ptrCast(&s)), @sizeOf(c.sem_t)) != 0 or !valid(s)) {
-        return c.EINVAL;
+        return kern.Errno.EINVAL;
     }
     ksp.?.* = s;
     return 0;
@@ -63,16 +63,16 @@ fn copyin(usp: ?*c.sem_t, ksp: ?*c.sem_t) c_int {
 
 pub fn init(sp: ?*c.sem_t, value: c_uint) callconv(.c) c_int {
     const self = kutil.cur_task();
-    if (self.*.nsyncs >= c.MAXSYNCS) {
-        return c.EAGAIN;
+    if (self.*.nsyncs >= hal.MAXSYNCS) {
+        return kern.Errno.EAGAIN;
     }
-    if (value > c.MAXSEMVAL) {
-        return c.EINVAL;
+    if (value > sync.MAXSEMVAL) {
+        return kern.Errno.EINVAL;
     }
 
     var s: c.sem_t = undefined;
     if (hal.copyin(@as(?*const anyopaque, @ptrCast(sp)), @as(?*anyopaque, @ptrCast(&s)), @sizeOf(c.sem_t)) != 0) {
-        return c.EFAULT;
+        return kern.Errno.EFAULT;
     }
 
     sched.lock();
@@ -80,23 +80,23 @@ pub fn init(sp: ?*c.sem_t, value: c_uint) callconv(.c) c_int {
         const ks: *sync.Sem = @ptrCast(s);
         if (ks.*.owner != self) {
             sched.unlock();
-            return c.EINVAL;
+            return kern.Errno.EINVAL;
         }
         if (!ks.*.event.sleepq.isEmpty()) {
             sched.unlock();
-            return c.EBUSY;
+            return kern.Errno.EBUSY;
         }
         ks.*.value = value;
     } else {
         const mem = kmem.alloc(@sizeOf(sync.Sem)) orelse {
             sched.unlock();
-            return c.ENOSPC;
+            return kern.Errno.ENOSPC;
         };
         s = @ptrCast(@alignCast(mem));
         if (hal.copyout(@as(?*const anyopaque, @ptrCast(&s)), @as(?*anyopaque, @ptrCast(sp)), @sizeOf(c.sem_t)) != 0) {
             kmem.free(s);
             sched.unlock();
-            return c.EFAULT;
+            return kern.Errno.EFAULT;
         }
         const ks: *sync.Sem = @ptrCast(s);
         c.event_init(&s.*.event, "semaphore");
@@ -119,12 +119,12 @@ pub fn destroy(sp: ?*c.sem_t) callconv(.c) c_int {
     sched.lock();
     if (copyin(sp, &s) != 0 or s.*.owner != kutil.cur_task()) {
         sched.unlock();
-        return c.EINVAL;
+        return kern.Errno.EINVAL;
     }
     const ks: *sync.Sem = @ptrCast(s);
     if (!ks.*.event.sleepq.isEmpty() or ks.*.value == 0) {
         sched.unlock();
-        return c.EBUSY;
+        return kern.Errno.EBUSY;
     }
     release(s);
     sched.unlock();
@@ -138,7 +138,7 @@ pub fn wait(sp: ?*c.sem_t, timeout: c_ulong) callconv(.c) c_int {
     sched.lock();
     if (copyin(sp, &s) != 0) {
         sched.unlock();
-        return c.EINVAL;
+        return kern.Errno.EINVAL;
     }
     reference(s);
 
@@ -147,12 +147,12 @@ pub fn wait(sp: ?*c.sem_t, timeout: c_ulong) callconv(.c) c_int {
         deadlock.sleep(@ptrCast(ks), "semaphore");
         const rc = sched.tsleep(&ks.*.event, @intCast(timeout));
         deadlock.stop_sleep();
-        if (rc == c.SLP_TIMEOUT) {
-            error_code = c.ETIMEDOUT;
+        if (rc == kern.SLP_TIMEOUT) {
+            error_code = kern.Errno.ETIMEDOUT;
             break;
         }
-        if (rc == c.SLP_INTR) {
-            error_code = c.EINTR;
+        if (rc == kern.SLP_INTR) {
+            error_code = kern.Errno.EINTR;
             break;
         }
     }
@@ -171,11 +171,11 @@ pub fn tryWait(sp: ?*c.sem_t) callconv(.c) c_int {
     sched.lock();
     if (copyin(sp, &s) != 0) {
         sched.unlock();
-        return c.EINVAL;
+        return kern.Errno.EINVAL;
     }
     if (s.*.value == 0) {
         sched.unlock();
-        return c.EAGAIN;
+        return kern.Errno.EAGAIN;
     }
     s.*.value -= 1;
     sched.unlock();
@@ -188,11 +188,11 @@ pub fn post(sp: ?*c.sem_t) callconv(.c) c_int {
     sched.lock();
     if (copyin(sp, &s) != 0) {
         sched.unlock();
-        return c.EINVAL;
+        return kern.Errno.EINVAL;
     }
-    if (s.*.value >= c.MAXSEMVAL) {
+    if (s.*.value >= sync.MAXSEMVAL) {
         sched.unlock();
-        return c.ERANGE;
+        return kern.Errno.ERANGE;
     }
     const ks: *sync.Sem = @ptrCast(s);
     ks.*.value += 1;
@@ -208,12 +208,12 @@ pub fn postKernel(s: c.sem_t) callconv(.c) c_int {
     sched.lock();
     if (!valid(s)) {
         sched.unlock();
-        return c.EINVAL;
+        return kern.Errno.EINVAL;
     }
     const ks: *sync.Sem = @ptrCast(s);
-    if (ks.*.value >= c.MAXSEMVAL) {
+    if (ks.*.value >= sync.MAXSEMVAL) {
         sched.unlock();
-        return c.ERANGE;
+        return kern.Errno.ERANGE;
     }
     ks.*.value += 1;
     if (ks.*.value > 0) {
@@ -230,11 +230,11 @@ pub fn getValue(sp: ?*c.sem_t, value: ?*c_uint) callconv(.c) c_int {
     sched.lock();
     if (copyin(sp, &s) != 0) {
         sched.unlock();
-        return c.EINVAL;
+        return kern.Errno.EINVAL;
     }
     if (hal.copyout(@as(?*const anyopaque, @ptrCast(&s.*.value)), @as(?*anyopaque, @ptrCast(value)), @sizeOf(@TypeOf(s.*.value))) != 0) {
         sched.unlock();
-        return c.EFAULT;
+        return kern.Errno.EFAULT;
     }
     sched.unlock();
     return 0;

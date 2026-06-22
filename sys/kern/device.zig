@@ -36,8 +36,8 @@ fn create(drv: ?*hal.Driver, name: [*c]const u8, flags: c_int) callconv(.c) ?*ke
     sched.lock();
 
     // Check the length of the name.
-    len = lib.strnlen(name, c.MAXDEVNAME);
-    if (len == 0 or len >= c.MAXDEVNAME) {
+    len = lib.strnlen(name, hal.MAXDEVNAME);
+    if (len == 0 or len >= hal.MAXDEVNAME) {
         sched.unlock();
         return null;
     }
@@ -82,7 +82,7 @@ fn destroy(dev: ?*kern.Device) callconv(.c) c_int {
     sched.lock();
     if (valid(dev) == 0) {
         sched.unlock();
-        return c.ENODEV;
+        return kern.Errno.ENODEV;
     }
     dev.?.active = 0;
     release(dev);
@@ -95,7 +95,7 @@ fn destroy(dev: ?*kern.Device) callconv(.c) c_int {
 fn lookup(name: [*c]const u8) callconv(.c) ?*kern.Device {
     var dev = device_list;
     while (dev) |d| : (dev = @ptrCast(d.next)) {
-        if (lib.strncmp(&d.name, name, c.MAXDEVNAME) == 0) {
+        if (lib.strncmp(&d.name, name, hal.MAXDEVNAME) == 0) {
             return d;
         }
     }
@@ -122,11 +122,11 @@ fn reference(dev: ?*kern.Device) callconv(.c) c_int {
     sched.lock();
     if (valid(dev) == 0) {
         sched.unlock();
-        return c.ENODEV;
+        return kern.Errno.ENODEV;
     }
-    if (task.capable(c.CAP_RAWIO) == 0) {
+    if (task.capable(kern.CAP_RAWIO) == 0) {
         sched.unlock();
-        return c.EPERM;
+        return kern.Errno.EPERM;
     }
     dev.?.refcnt += 1;
     sched.unlock();
@@ -169,7 +169,7 @@ fn control(dev: ?*kern.Device, cmd: c_ulong, arg: ?*anyopaque) callconv(.c) c_in
     const ops: ?*c.struct_devops = if (drv) |dr| dr.devops else null;
     if (ops == null or ops.?.devctl == null) {
         sched.unlock();
-        return c.EINVAL;
+        return kern.Errno.EINVAL;
     }
     const err: c_int = ops.?.devctl.?(@ptrCast(dev), cmd, arg);
     sched.unlock();
@@ -192,7 +192,7 @@ fn broadcast(cmd: c_ulong, arg: ?*anyopaque, force: c_int) callconv(.c) c_int {
         const err: c_int = ops.?.devctl.?(@as(?*c.struct_device, @ptrCast(d)), cmd, arg);
         if (err != 0) {
             if (force != 0) {
-                retval = c.EIO;
+                retval = kern.Errno.EIO;
             } else {
                 retval = err;
                 break;
@@ -209,15 +209,15 @@ fn broadcast(cmd: c_ulong, arg: ?*anyopaque, force: c_int) callconv(.c) c_int {
 
 /// open – open the specified device.
 pub fn open(name: [*c]const u8, mode: c_int, devp: ?*?*kern.Device) callconv(.c) c_int {
-    var str: [c.MAXDEVNAME]u8 = undefined;
-    const copy_err: c_int = hal.copyinstr(@ptrCast(name), @ptrCast(&str), c.MAXDEVNAME);
+    var str: [hal.MAXDEVNAME]u8 = undefined;
+    const copy_err: c_int = hal.copyinstr(@ptrCast(name), @ptrCast(&str), hal.MAXDEVNAME);
     if (copy_err != 0) return copy_err;
 
     sched.lock();
     const dev: ?*kern.Device = lookup(@ptrCast(&str));
     if (dev == null) {
         sched.unlock();
-        return c.ENXIO;
+        return kern.Errno.ENXIO;
     }
     const ref_err: c_int = reference(dev);
     if (ref_err != 0) {
@@ -259,7 +259,7 @@ pub fn close(dev: ?*kern.Device) callconv(.c) c_int {
 
 /// read – read from a device.
 pub fn read(dev: ?*kern.Device, buf: ?*anyopaque, nbyte: ?*usize, blkno: c_int) callconv(.c) c_int {
-    if (!kutil.user_area(buf)) return c.EFAULT;
+    if (!kutil.user_area(buf)) return kern.Errno.EFAULT;
 
     const ref_err: c_int = reference(dev);
     if (ref_err != 0) return ref_err;
@@ -269,7 +269,7 @@ pub fn read(dev: ?*kern.Device, buf: ?*anyopaque, nbyte: ?*usize, blkno: c_int) 
         const ci_err: c_int = hal.copyin(@ptrCast(nbyte), @ptrCast(&count), @sizeOf(usize));
         if (ci_err != 0) {
             release(dev);
-            return c.EFAULT;
+            return kern.Errno.EFAULT;
         }
     }
 
@@ -290,7 +290,7 @@ pub fn read(dev: ?*kern.Device, buf: ?*anyopaque, nbyte: ?*usize, blkno: c_int) 
 
 /// write – write to a device.
 pub fn write(dev: ?*kern.Device, buf: ?*anyopaque, nbyte: ?*usize, blkno: c_int) callconv(.c) c_int {
-    if (!kutil.user_area(buf)) return c.EFAULT;
+    if (!kutil.user_area(buf)) return kern.Errno.EFAULT;
 
     const ref_err: c_int = reference(dev);
     if (ref_err != 0) return ref_err;
@@ -300,7 +300,7 @@ pub fn write(dev: ?*kern.Device, buf: ?*anyopaque, nbyte: ?*usize, blkno: c_int)
         const ci_err: c_int = hal.copyin(@ptrCast(nbyte), @ptrCast(&count), @sizeOf(usize));
         if (ci_err != 0) {
             release(dev);
-            return c.EFAULT;
+            return kern.Errno.EFAULT;
         }
     }
 
@@ -321,7 +321,7 @@ pub fn write(dev: ?*kern.Device, buf: ?*anyopaque, nbyte: ?*usize, blkno: c_int)
 
 /// gatherRead – gather read from a device.
 pub fn gatherRead(dev: ?*kern.Device, buf: ?*anyopaque, nbyte: ?*usize, io: ?*c.struct_dev_io) callconv(.c) c_int {
-    if (!kutil.user_area(buf)) return c.EFAULT;
+    if (!kutil.user_area(buf)) return kern.Errno.EFAULT;
 
     const ref_err: c_int = reference(dev);
     if (ref_err != 0) return ref_err;
@@ -331,7 +331,7 @@ pub fn gatherRead(dev: ?*kern.Device, buf: ?*anyopaque, nbyte: ?*usize, io: ?*c.
         const ci_err: c_int = hal.copyin(@ptrCast(nbyte), @ptrCast(&count), @sizeOf(usize));
         if (ci_err != 0) {
             release(dev);
-            return c.EFAULT;
+            return kern.Errno.EFAULT;
         }
     }
 
@@ -340,13 +340,13 @@ pub fn gatherRead(dev: ?*kern.Device, buf: ?*anyopaque, nbyte: ?*usize, io: ?*c.
         const ci_err: c_int = hal.copyin(@ptrCast(io), @ptrCast(&kio), @sizeOf(c.struct_dev_io));
         if (ci_err != 0) {
             release(dev);
-            return c.EFAULT;
+            return kern.Errno.EFAULT;
         }
     }
 
     if (kio.blksz == 0) {
         release(dev);
-        return c.EINVAL;
+        return kern.Errno.EINVAL;
     }
 
     const drv: ?*hal.Driver = dev.?.driver;
@@ -362,7 +362,7 @@ pub fn gatherRead(dev: ?*kern.Device, buf: ?*anyopaque, nbyte: ?*usize, io: ?*c.
         var b: c_int = 0;
         const ci_err: c_int = hal.copyin(@ptrCast(@as([*]c_int, @ptrCast(kio.blkno)) + offset / kio.blksz), @ptrCast(&b), @sizeOf(c_int));
         if (ci_err != 0) {
-            err = c.EFAULT;
+            err = kern.Errno.EFAULT;
             break;
         }
         var size: usize = kio.blksz;
@@ -389,7 +389,7 @@ pub fn gatherRead(dev: ?*kern.Device, buf: ?*anyopaque, nbyte: ?*usize, io: ?*c.
 
 /// scatterWrite – scatter write to a device.
 pub fn scatterWrite(dev: ?*kern.Device, buf: ?*anyopaque, nbyte: ?*usize, io: ?*c.struct_dev_io) callconv(.c) c_int {
-    if (!kutil.user_area(buf)) return c.EFAULT;
+    if (!kutil.user_area(buf)) return kern.Errno.EFAULT;
 
     const ref_err: c_int = reference(dev);
     if (ref_err != 0) return ref_err;
@@ -399,7 +399,7 @@ pub fn scatterWrite(dev: ?*kern.Device, buf: ?*anyopaque, nbyte: ?*usize, io: ?*
         const ci_err: c_int = hal.copyin(@ptrCast(nbyte), @ptrCast(&count), @sizeOf(usize));
         if (ci_err != 0) {
             release(dev);
-            return c.EFAULT;
+            return kern.Errno.EFAULT;
         }
     }
 
@@ -408,13 +408,13 @@ pub fn scatterWrite(dev: ?*kern.Device, buf: ?*anyopaque, nbyte: ?*usize, io: ?*
         const ci_err: c_int = hal.copyin(@ptrCast(io), @ptrCast(&kio), @sizeOf(c.struct_dev_io));
         if (ci_err != 0) {
             release(dev);
-            return c.EFAULT;
+            return kern.Errno.EFAULT;
         }
     }
 
     if (kio.blksz == 0) {
         release(dev);
-        return c.EINVAL;
+        return kern.Errno.EINVAL;
     }
 
     const drv: ?*hal.Driver = dev.?.driver;
@@ -430,7 +430,7 @@ pub fn scatterWrite(dev: ?*kern.Device, buf: ?*anyopaque, nbyte: ?*usize, io: ?*
         var b: c_int = 0;
         const ci_err: c_int = hal.copyin(@ptrCast(@as([*]c_int, @ptrCast(kio.blkno)) + offset / kio.blksz), @ptrCast(&b), @sizeOf(c_int));
         if (ci_err != 0) {
-            err = c.EFAULT;
+            err = kern.Errno.EFAULT;
             break;
         }
         var size: usize = kio.blksz;
@@ -473,10 +473,10 @@ pub fn ioctl(dev: ?*kern.Device, cmd: c_ulong, arg: ?*anyopaque) callconv(.c) c_
 
 /// info – return device information.
 pub fn info(dev_info: ?*hal.DeviceInfo) callconv(.c) c_int {
-    if (dev_info == null) return c.EINVAL;
+    if (dev_info == null) return kern.Errno.EINVAL;
     const target = dev_info.?.cookie;
     var i: c_ulong = 0;
-    var err: c_int = c.ESRCH;
+    var err: c_int = kern.Errno.ESRCH;
 
     sched.lock();
     var dev = device_list;
@@ -485,7 +485,7 @@ pub fn info(dev_info: ?*hal.DeviceInfo) callconv(.c) c_int {
             dev_info.?.cookie = i + 1;
             dev_info.?.id = @as(?*c.struct_device, @ptrCast(d));
             dev_info.?.flags = d.flags;
-            _ = lib.strlcpy(@ptrCast(&dev_info.?.name), @ptrCast(&d.name), c.MAXDEVNAME);
+            _ = lib.strlcpy(@ptrCast(&dev_info.?.name), @ptrCast(&d.name), hal.MAXDEVNAME);
             err = 0;
             break;
         }

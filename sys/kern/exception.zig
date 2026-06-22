@@ -32,13 +32,13 @@ inline fn list_empty(head: *hal.List) bool {
 }
 
 pub fn setup(handler: ?*const fn (c_int) callconv(.c) void) callconv(.c) c_int {
-    const self = kutil.get_curtask() orelse return c.EINVAL;
+    const self = kutil.get_curtask() orelse return kern.Errno.EINVAL;
 
     if (handler != EXC_DFL and !kutil.user_area(handler)) {
-        return c.EFAULT;
+        return kern.Errno.EFAULT;
     }
     if (handler == null) {
-        return c.EINVAL;
+        return kern.Errno.EINVAL;
     }
 
     sched.lock();
@@ -51,7 +51,7 @@ pub fn setup(handler: ?*const fn (c_int) callconv(.c) void) callconv(.c) c_int {
             _ = hal.splx(s);
 
             if (t.slpevt == @as(?*hal.Event, @alignCast(@ptrCast(&exception_event)))) {
-                sched.unsleep(t, c.SLP_BREAK);
+                sched.unsleep(t, kern.SLP_BREAK);
             }
             n = list_next(n.?);
         }
@@ -67,11 +67,11 @@ pub fn raise(t: kern.TaskRef, excno: c_int) callconv(.c) c_int {
     sched.lock();
     if (task.valid(t) == 0) {
         sched.unlock();
-        return c.ESRCH;
+        return kern.Errno.ESRCH;
     }
-    if (t != @as(?*kern.Task, @ptrCast(kutil.get_curtask())) and task.capable(c.CAP_KILL) == 0) {
+    if (t != @as(?*kern.Task, @ptrCast(kutil.get_curtask())) and task.capable(kern.CAP_KILL) == 0) {
         sched.unlock();
-        return c.EPERM;
+        return kern.Errno.EPERM;
     }
     error_code = post(t, excno);
     sched.unlock();
@@ -83,14 +83,14 @@ pub fn post(task_arg: kern.TaskRef, excno: c_int) callconv(.c) c_int {
     var found: c_int = 0;
 
     sched.lock();
-    if (task_arg.*.flags & c.TF_SYSTEM != 0) {
+    if (task_arg.*.flags & kern.TF_SYSTEM != 0) {
         sched.unlock();
-        return c.EPERM;
+        return kern.Errno.EPERM;
     }
 
-    if (task_arg.*.handler == EXC_DFL or task_arg.*.nthreads == 0 or excno < 0 or excno >= c.NEXC) {
+    if (task_arg.*.handler == EXC_DFL or task_arg.*.nthreads == 0 or excno < 0 or excno >= hal.NEXC) {
         sched.unlock();
-        return c.EINVAL;
+        return kern.Errno.EINVAL;
     }
 
     var n = list_first(&task_arg.*.threads);
@@ -115,7 +115,7 @@ pub fn post(task_arg: kern.TaskRef, excno: c_int) callconv(.c) c_int {
     t.?.excbits |= @as(u32, 1) << @intCast(excno);
     _ = hal.splx(s);
 
-    sched.unsleep(t.?, c.SLP_INTR);
+    sched.unsleep(t.?, kern.SLP_INTR);
 
     sched.unlock();
     return 0;
@@ -127,24 +127,24 @@ pub fn wait(excno: ?*c_int) callconv(.c) c_int {
     var s: c_int = undefined;
 
     if (kutil.get_curtask().?.handler == EXC_DFL) {
-        return c.EINVAL;
+        return kern.Errno.EINVAL;
     }
 
     i = 0;
     if (hal.copyout(@as(?*const anyopaque, @ptrCast(&i)), @as(?*anyopaque, @ptrCast(excno)), @sizeOf(c_int)) != 0) {
-        return c.EFAULT;
+        return kern.Errno.EFAULT;
     }
 
     sched.lock();
 
     rc = sched.tsleep(&exception_event, 0);
-    if (rc == c.SLP_BREAK) {
+    if (rc == kern.SLP_BREAK) {
         sched.unlock();
-        return c.EINVAL;
+        return kern.Errno.EINVAL;
     }
     s = hal.splhigh();
     var j: c_int = 0;
-    while (j < c.NEXC) : (j += 1) {
+    while (j < hal.NEXC) : (j += 1) {
         if (kutil.get_curthread().?.excbits & (@as(u32, 1) << @intCast(j)) != 0) {
             break;
         }
@@ -154,9 +154,9 @@ pub fn wait(excno: ?*c_int) callconv(.c) c_int {
 
     i = j;
     if (hal.copyout(@as(?*const anyopaque, @ptrCast(&i)), @as(?*anyopaque, @ptrCast(excno)), @sizeOf(c_int)) != 0) {
-        return c.EFAULT;
+        return kern.Errno.EFAULT;
     }
-    return c.EINTR;
+    return kern.Errno.EINTR;
 }
 
 pub fn mark(excno: c_int) callconv(.c) void {
@@ -180,7 +180,7 @@ pub fn deliver() callconv(.c) void {
 
     if (bitmap != 0) {
         excno = 0;
-        while (excno < c.NEXC) : (excno += 1) {
+        while (excno < hal.NEXC) : (excno += 1) {
             if (bitmap & (@as(u32, 1) << @intCast(excno)) != 0) {
                 break;
             }
@@ -192,8 +192,8 @@ pub fn deliver() callconv(.c) void {
 
         s = hal.splhigh();
         hal.context_save(&kutil.get_curthread().?.ctx);
-        hal.context_set(&kutil.get_curthread().?.ctx, c.CTX_UENTRY, kutil.toReg(handler));
-        hal.context_set(&kutil.get_curthread().?.ctx, c.CTX_UARG, kutil.toReg(excno));
+        hal.context_set(&kutil.get_curthread().?.ctx, hal.CTX_UENTRY, kutil.toReg(handler));
+        hal.context_set(&kutil.get_curthread().?.ctx, hal.CTX_UARG, kutil.toReg(excno));
         kutil.get_curthread().?.excbits &= ~(@as(u32, 1) << @intCast(excno));
         _ = hal.splx(s);
     }

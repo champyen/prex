@@ -49,7 +49,7 @@ fn allocate(tsk: kern.TaskRef) kern.ThreadRef {
     const t: kern.ThreadRef = @ptrCast(@alignCast(mem));
     if (t == null) return null;
 
-    const stack = kmem.alloc(c.KSTACKSZ);
+    const stack = kmem.alloc(hal.KSTACKSZ);
     if (stack == null) {
         kmem.free(t);
         return null;
@@ -94,42 +94,42 @@ pub fn create(tsk: kern.TaskRef, tp: ?*kern.ThreadRef) callconv(.c) c_int {
     defer sched.unlock();
 
     if (task.valid(tsk) == 0) {
-        return c.ESRCH;
+        return kern.Errno.ESRCH;
     }
     if (task.access(tsk) == 0) {
-        return c.EPERM;
+        return kern.Errno.EPERM;
     }
-    if (tsk.*.nthreads >= c.MAXTHREADS) {
-        return c.EAGAIN;
+    if (tsk.*.nthreads >= hal.MAXTHREADS) {
+        return kern.Errno.EAGAIN;
     }
 
-    if ((kutil.get_curtask().?.*.flags & c.TF_SYSTEM) == 0) {
+    if ((kutil.get_curtask().?.*.flags & kern.TF_SYSTEM) == 0) {
         var tmp: kern.ThreadRef = null;
         if (hal.copyout(@as(?*const anyopaque, @ptrCast(&tmp)), @as(?*anyopaque, @ptrCast(tp)), @sizeOf(kern.ThreadRef)) != 0) {
-            return c.EFAULT;
+            return kern.Errno.EFAULT;
         }
     }
 
     const t = allocate(tsk) orelse {
-        return c.ENOMEM;
+        return kern.Errno.ENOMEM;
     };
 
     if (comptime @hasDecl(c, "CONFIG_ARMV8M")) {
-        _ = lib.memset(t.*.kstack, 0, c.KSTACKSZ);
+        _ = lib.memset(t.*.kstack, 0, hal.KSTACKSZ);
         const parent_uregs = kutil.get_curthread().?.*.ctx.uregs;
-        const child_uregs: *hal.CpuRegs = @ptrCast(@alignCast(@as(*anyopaque, @ptrFromInt(@intFromPtr(t.*.kstack) + c.KSTACKSZ - @sizeOf(hal.CpuRegs)))));
+        const child_uregs: *hal.CpuRegs = @ptrCast(@alignCast(@as(*anyopaque, @ptrFromInt(@intFromPtr(t.*.kstack) + hal.KSTACKSZ - @sizeOf(hal.CpuRegs)))));
         _ = lib.memcpy(child_uregs, parent_uregs, @sizeOf(hal.CpuRegs));
     } else {
-        _ = lib.memcpy(t.*.kstack, kutil.get_curthread().?.*.kstack, c.KSTACKSZ);
+        _ = lib.memcpy(t.*.kstack, kutil.get_curthread().?.*.kstack, hal.KSTACKSZ);
     }
 
-    const sp: usize = @intFromPtr(t.*.kstack) + c.KSTACKSZ;
-    hal.context_set(&t.*.ctx, c.CTX_KSTACK, kutil.toReg(sp));
-    hal.context_set(&t.*.ctx, c.CTX_KENTRY, kutil.toReg(&c.syscall_ret));
-    sched.start(t, kutil.get_curthread().?.*.basepri, c.SCHED_RR);
+    const sp: usize = @intFromPtr(t.*.kstack) + hal.KSTACKSZ;
+    hal.context_set(&t.*.ctx, hal.CTX_KSTACK, kutil.toReg(sp));
+    hal.context_set(&t.*.ctx, hal.CTX_KENTRY, kutil.toReg(&c.syscall_ret));
+    sched.start(t, kutil.get_curthread().?.*.basepri, kern.SCHED_RR);
     t.*.suscnt = tsk.*.suscnt + 1;
 
-    if (kutil.get_curtask().?.*.flags & c.TF_SYSTEM != 0) {
+    if (kutil.get_curtask().?.*.flags & kern.TF_SYSTEM != 0) {
         if (tp) |tp_ptr| {
             tp_ptr.* = t;
         }
@@ -145,10 +145,10 @@ pub fn terminate(t: kern.ThreadRef) callconv(.c) c_int {
     defer sched.unlock();
 
     if (valid(t) == 0) {
-        return c.ESRCH;
+        return kern.Errno.ESRCH;
     }
     if (task.access(t.*.task) == 0) {
-        return c.EPERM;
+        return kern.Errno.EPERM;
     }
     destroy(t);
     return 0;
@@ -163,17 +163,17 @@ pub fn destroy(th: kern.ThreadRef) callconv(.c) void {
 }
 
 pub fn setup(t: kern.ThreadRef, entry: ?*anyopaque, stack: ?*anyopaque, gp: ?*anyopaque) callconv(.c) c_int {
-    if (entry != null and !kutil.user_area(entry)) return c.EINVAL;
-    if (stack != null and !kutil.user_area(stack)) return c.EINVAL;
+    if (entry != null and !kutil.user_area(entry)) return kern.Errno.EINVAL;
+    if (stack != null and !kutil.user_area(stack)) return kern.Errno.EINVAL;
 
     sched.lock();
     defer sched.unlock();
 
     if (valid(t) == 0) {
-        return c.ESRCH;
+        return kern.Errno.ESRCH;
     }
     if (task.access(t.*.task) == 0) {
-        return c.EPERM;
+        return kern.Errno.EPERM;
     }
 
     const s = hal.splhigh();
@@ -181,10 +181,10 @@ pub fn setup(t: kern.ThreadRef, entry: ?*anyopaque, stack: ?*anyopaque, gp: ?*an
         if (comptime @hasDecl(c, "CONFIG_ARMV8M")) {
             t.*.task.*.got_base = if (gp) |p| @intFromPtr(p) else 0;
         }
-        hal.context_set(&t.*.ctx, c.CTX_UENTRY, kutil.toReg(entry));
+        hal.context_set(&t.*.ctx, hal.CTX_UENTRY, kutil.toReg(entry));
     }
     if (stack != null) {
-        hal.context_set(&t.*.ctx, c.CTX_USTACK, kutil.toReg(stack));
+        hal.context_set(&t.*.ctx, hal.CTX_USTACK, kutil.toReg(stack));
     }
     _ = hal.splx(s);
 
@@ -214,10 +214,10 @@ pub fn @"suspend"(t: kern.ThreadRef) callconv(.c) c_int {
     defer sched.unlock();
 
     if (valid(t) == 0) {
-        return c.ESRCH;
+        return kern.Errno.ESRCH;
     }
     if (task.access(t.*.task) == 0) {
-        return c.EPERM;
+        return kern.Errno.EPERM;
     }
     t.*.suscnt += 1;
     if (t.*.suscnt == 1) {
@@ -240,13 +240,13 @@ pub fn @"resume"(t: kern.ThreadRef) callconv(.c) c_int {
     defer sched.unlock();
 
     if (valid(t) == 0) {
-        return c.ESRCH;
+        return kern.Errno.ESRCH;
     }
     if (task.access(t.*.task) == 0) {
-        return c.EPERM;
+        return kern.Errno.EPERM;
     }
     if (t.*.suscnt == 0) {
-        return c.EINVAL;
+        return kern.Errno.EINVAL;
     }
     t.*.suscnt -= 1;
     if (t.*.suscnt == 0 and t.*.task.*.suscnt == 0) {
@@ -265,32 +265,32 @@ pub fn schedparam(t: kern.ThreadRef, op: c_int, param: ?*c_int) callconv(.c) c_i
     defer sched.unlock();
 
     if (valid(t) == 0) {
-        return c.ESRCH;
+        return kern.Errno.ESRCH;
     }
-    if (t.*.task.*.flags & c.TF_SYSTEM != 0) {
-        return c.EINVAL;
+    if (t.*.task.*.flags & kern.TF_SYSTEM != 0) {
+        return kern.Errno.EINVAL;
     }
 
-    if (!(t.*.task == kutil.get_curtask() or t.*.task.*.parent == kutil.get_curtask()) and task.capable(c.CAP_NICE) == 0) {
-        return c.EPERM;
+    if (!(t.*.task == kutil.get_curtask() or t.*.task.*.parent == kutil.get_curtask()) and task.capable(kern.CAP_NICE) == 0) {
+        return kern.Errno.EPERM;
     }
 
     switch (op) {
-        c.SOP_GETPRI => {
+        kern.SOP_GETPRI => {
             pri = sched.get_pri(t);
             if (hal.copyout(&pri, param, @sizeOf(c_int)) != 0) {
-                err = c.EINVAL;
+                err = kern.Errno.EINVAL;
             }
         },
-        c.SOP_SETPRI => {
+        kern.SOP_SETPRI => {
             if (hal.copyin(param, &pri, @sizeOf(c_int)) != 0) {
-                err = c.EINVAL;
+                err = kern.Errno.EINVAL;
             } else {
                 if (pri < 0) pri = 0;
-                if (pri >= c.PRI_IDLE) pri = c.PRI_IDLE - 1;
+                if (pri >= hal.PRI_IDLE) pri = hal.PRI_IDLE - 1;
 
-                if (pri <= c.PRI_REALTIME and task.capable(c.CAP_NICE) == 0) {
-                    err = c.EPERM;
+                if (pri <= hal.PRI_REALTIME and task.capable(kern.CAP_NICE) == 0) {
+                    err = kern.Errno.EPERM;
                 } else {
                     if (t.*.priority != t.*.basepri and pri > t.*.priority) {
                         pri = t.*.priority;
@@ -301,21 +301,21 @@ pub fn schedparam(t: kern.ThreadRef, op: c_int, param: ?*c_int) callconv(.c) c_i
                 }
             }
         },
-        c.SOP_GETPOLICY => {
+        kern.SOP_GETPOLICY => {
             policy = sched.get_policy(t);
             if (hal.copyout(&policy, param, @sizeOf(c_int)) != 0) {
-                err = c.EINVAL;
+                err = kern.Errno.EINVAL;
             }
         },
-        c.SOP_SETPOLICY => {
+        kern.SOP_SETPOLICY => {
             if (hal.copyin(param, &policy, @sizeOf(c_int)) != 0) {
-                err = c.EINVAL;
+                err = kern.Errno.EINVAL;
             } else {
                 err = sched.set_policy(t, policy);
             }
         },
         else => {
-            err = c.EINVAL;
+            err = kern.Errno.EINVAL;
         },
     }
 
@@ -349,26 +349,26 @@ pub fn info(tinfo: ?*hal.ThreadInfo) callconv(.c) c_int {
             tinfo.?.suscnt = t.suscnt;
             tinfo.?.task = t.task;
             tinfo.?.active = if (t == @as(?*kern.Thread, @ptrCast(kutil.get_curthread().?))) 1 else 0;
-            _ = lib.strlcpy(@ptrCast(&tinfo.?.taskname), @ptrCast(&t.task.*.name), c.MAXTASKNAME);
-            _ = lib.strlcpy(@ptrCast(&tinfo.?.slpevt), if (t.slpevt) |evt| @as([*c]const u8, @ptrCast(evt.*.name)) else @as([*c]const u8, "-"), c.MAXEVTNAME);
+            _ = lib.strlcpy(@ptrCast(&tinfo.?.taskname), @ptrCast(&t.task.*.name), hal.MAXTASKNAME);
+            _ = lib.strlcpy(@ptrCast(&tinfo.?.slpevt), if (t.slpevt) |evt| @as([*c]const u8, @ptrCast(evt.*.name)) else @as([*c]const u8, "-"), hal.MAXEVTNAME);
             return 0;
         }
         i += 1;
         n = @ptrCast(n.prev);
     }
 
-    return c.ESRCH;
+    return kern.Errno.ESRCH;
 }
 
 pub fn createKernel(entry: ?*const fn (?*anyopaque) callconv(.c) void, arg: ?*anyopaque, pri: c_int) callconv(.c) kern.ThreadRef {
     const t = allocate(&c.kernel_task) orelse return null;
 
-    _ = lib.memset(t.*.kstack, 0, c.KSTACKSZ);
-    const sp: usize = @intFromPtr(t.*.kstack) + c.KSTACKSZ;
-    hal.context_set(&t.*.ctx, c.CTX_KSTACK, kutil.toReg(sp));
-    hal.context_set(&t.*.ctx, c.CTX_KENTRY, kutil.toReg(entry));
-    hal.context_set(&t.*.ctx, c.CTX_KARG, kutil.toReg(arg));
-    sched.start(t, pri, c.SCHED_FIFO);
+    _ = lib.memset(t.*.kstack, 0, hal.KSTACKSZ);
+    const sp: usize = @intFromPtr(t.*.kstack) + hal.KSTACKSZ;
+    hal.context_set(&t.*.ctx, hal.CTX_KSTACK, kutil.toReg(sp));
+    hal.context_set(&t.*.ctx, hal.CTX_KENTRY, kutil.toReg(entry));
+    hal.context_set(&t.*.ctx, hal.CTX_KARG, kutil.toReg(arg));
+    sched.start(t, pri, kern.SCHED_FIFO);
     t.*.suscnt = 1;
     sched.@"resume"(t);
 
@@ -388,25 +388,25 @@ pub fn terminateKernel(t: kern.ThreadRef) callconv(.c) void {
 pub fn createIdle() callconv(.c) kern.ThreadRef {
     const t = allocate(&c.kernel_task) orelse @panic("thread_create_idle");
 
-    _ = lib.memset(t.*.kstack, 0, c.KSTACKSZ);
-    t.*.state = c.TS_RUN;
+    _ = lib.memset(t.*.kstack, 0, hal.KSTACKSZ);
+    t.*.state = kern.TS_RUN;
     t.*.locks = 1;
-    t.*.priority = c.PRI_IDLE;
+    t.*.priority = hal.PRI_IDLE;
 
     return t;
 }
 
 pub fn init() callconv(.c) void {
-    const stack = kmem.alloc(c.KSTACKSZ) orelse @panic("thread_init");
+    const stack = kmem.alloc(hal.KSTACKSZ) orelse @panic("thread_init");
     list_init(&thread_list);
 
-    _ = lib.memset(stack, 0, c.KSTACKSZ);
-    const sp: usize = @intFromPtr(stack) + c.KSTACKSZ;
-    hal.context_set(&idle_thread.ctx, c.CTX_KSTACK, kutil.toReg(sp));
-    sched.start(&idle_thread, c.PRI_IDLE, c.SCHED_FIFO);
+    _ = lib.memset(stack, 0, hal.KSTACKSZ);
+    const sp: usize = @intFromPtr(stack) + hal.KSTACKSZ;
+    hal.context_set(&idle_thread.ctx, hal.CTX_KSTACK, kutil.toReg(sp));
+    sched.start(&idle_thread, hal.PRI_IDLE, kern.SCHED_FIFO);
     idle_thread.kstack = stack;
     idle_thread.task = &c.kernel_task;
-    idle_thread.state = c.TS_RUN;
+    idle_thread.state = kern.TS_RUN;
     list_init(&idle_thread.mutexes);
 
     list_insert(&thread_list, &idle_thread.link);

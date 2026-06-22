@@ -12,13 +12,13 @@ const NCPUS = if (@hasDecl(c, "CONFIG_SMP_NCPUS")) c.CONFIG_SMP_NCPUS else 1;
 
 const ipi_irq = if (@hasDecl(c, "IPI_IRQ")) c.IPI_IRQ else 0;
 
-const INTSTKTOP = @as(usize, @intCast(c.INTSTKTOP));
+const INTSTKTOP = @as(usize, @intCast(hal.INTSTKTOP));
 
 var IST_NONE: ?*const fn (?*anyopaque) callconv(.c) void = undefined;
 
 pub var cpu_table: [NCPUS]c.struct_cpu_control = std.mem.zeroes([NCPUS]c.struct_cpu_control);
 
-pub var ap_boot_stacks: [NCPUS][c.KSTACKSZ]u8 align(16) = std.mem.zeroes([NCPUS][c.KSTACKSZ]u8);
+pub var ap_boot_stacks: [NCPUS][hal.KSTACKSZ]u8 align(16) = std.mem.zeroes([NCPUS][hal.KSTACKSZ]u8);
 
 var ready_count: c_int = 0;
 var smp_active: c_int = 0;
@@ -27,11 +27,11 @@ extern fn zig_memory_barrier() callconv(.c) void;
 
 fn ipi_isr(arg: ?*anyopaque) callconv(.c) c_int {
     _ = arg;
-    return c.INT_DONE;
+    return hal.INT_DONE;
 }
 
 pub fn kvtop(va: anytype) kern.Paddr {
-    return @intFromPtr(va) - c.KERNOFFSET;
+    return @intFromPtr(va) - hal.KERNOFFSET;
 }
 
 
@@ -51,7 +51,7 @@ pub fn initEarly() callconv(.c) void {
 }
 
 pub fn startAps() callconv(.c) void {
-    _ = irq.attach(ipi_irq, c.IPL_HIGH, 0, ipi_isr, IST_NONE, null);
+    _ = irq.attach(ipi_irq, hal.IPL_HIGH, 0, ipi_isr, IST_NONE, null);
 
     _ = @atomicRmw(c_int, &ready_count, .Add, 1, .seq_cst);
 
@@ -65,7 +65,7 @@ pub fn startAps() callconv(.c) void {
         cpu_table[@intCast(i)].idle_thread = t;
         cpu_table[@intCast(i)].nest_count = 0;
         cpu_table[@intCast(i)].spl_level = 15;
-        cpu_table[@intCast(i)].int_stack = @ptrFromInt(@intFromPtr(&ap_boot_stacks[@intCast(i)]) + c.KSTACKSZ);
+        cpu_table[@intCast(i)].int_stack = @ptrFromInt(@intFromPtr(&ap_boot_stacks[@intCast(i)]) + hal.KSTACKSZ);
         cpu_table[@intCast(i)].cpu_id = i;
 
         zig_memory_barrier();

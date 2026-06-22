@@ -29,7 +29,7 @@ extern fn wrap_get_version() callconv(.c) [*c]const u8;
 extern fn wrap_get_machine() callconv(.c) [*c]const u8;
 extern fn wrap_get_build_date() callconv(.c) [*c]const u8;
 
-var infobuf: [c.MAXINFOSZ]u8 align(16) = undefined;
+var infobuf: [hal.MAXINFOSZ]u8 align(16) = undefined;
 var kerninfo_inited: bool = false;
 var kerninfo: c.struct_kerninfo = undefined;
 
@@ -53,33 +53,33 @@ pub fn sysinfo(sysinfo_type: c_int, buf: ?*anyopaque) callconv(.c) c_int {
     sched.lock();
 
     switch (sysinfo_type) {
-        c.INFO_KERNEL => {
+        hal.INFO_KERNEL => {
             init_kerninfo();
             _ = lib.memcpy(buf, &kerninfo, @sizeOf(c.struct_kerninfo));
         },
-        c.INFO_MEMORY => {
+        hal.INFO_MEMORY => {
             page.info(@ptrCast(@alignCast(buf)));
         },
-        c.INFO_TIMER => {
+        hal.INFO_TIMER => {
             timer.info(@ptrCast(@alignCast(buf)));
         },
-        c.INFO_THREAD => {
+        hal.INFO_THREAD => {
             error_val = thread.info(@ptrCast(@alignCast(buf)));
         },
-        c.INFO_DEVICE => {
+        hal.INFO_DEVICE => {
             error_val = device.info(@ptrCast(@alignCast(buf)));
         },
-        c.INFO_TASK => {
+        hal.INFO_TASK => {
             error_val = task.info(@ptrCast(@alignCast(buf)));
         },
-        c.INFO_VM => {
+        hal.INFO_VM => {
             error_val = vm.info(@ptrCast(@alignCast(buf)));
         },
-        c.INFO_IRQ => {
+        hal.INFO_IRQ => {
             error_val = irq.info(@ptrCast(@alignCast(buf)));
         },
         else => {
-            error_val = c.EINVAL;
+            error_val = kern.Errno.EINVAL;
         },
     }
 
@@ -93,38 +93,38 @@ pub fn sysInfo(sysinfo_type: c_int, buf: ?*anyopaque) callconv(.c) c_int {
     var bufsz: usize = 0;
 
     if (buf == null or !kutil.user_area(buf))
-        return c.EFAULT;
+        return kern.Errno.EFAULT;
 
     sched.lock();
 
     switch (sysinfo_type) {
-        c.INFO_KERNEL => {
+        hal.INFO_KERNEL => {
             bufsz = @sizeOf(c.struct_kerninfo);
         },
-        c.INFO_MEMORY => {
+        hal.INFO_MEMORY => {
             bufsz = @sizeOf(hal.MemInfo);
         },
-        c.INFO_TIMER => {
+        hal.INFO_TIMER => {
             bufsz = @sizeOf(hal.TimerInfo);
         },
-        c.INFO_THREAD => {
+        hal.INFO_THREAD => {
             bufsz = @sizeOf(hal.ThreadInfo);
         },
-        c.INFO_DEVICE => {
+        hal.INFO_DEVICE => {
             bufsz = @sizeOf(hal.DeviceInfo);
         },
-        c.INFO_TASK => {
+        hal.INFO_TASK => {
             bufsz = @sizeOf(hal.TaskInfo);
         },
-        c.INFO_VM => {
+        hal.INFO_VM => {
             bufsz = @sizeOf(hal.VmInfo);
         },
-        c.INFO_IRQ => {
+        hal.INFO_IRQ => {
             bufsz = @sizeOf(hal.IrqInfo);
         },
         else => {
             sched.unlock();
-            return c.EINVAL;
+            return kern.Errno.EINVAL;
         },
     }
 
@@ -143,11 +143,11 @@ pub fn sysInfo(sysinfo_type: c_int, buf: ?*anyopaque) callconv(.c) c_int {
 /// Logging system call.
 pub fn sysLog(str: [*c]const u8) callconv(.c) c_int {
     if (comptime !is_debug) {
-        return c.ENOSYS;
+        return kern.Errno.ENOSYS;
     } else {
-        var buf: [c.DBGMSGSZ]u8 = undefined;
-        if (hal.copyinstr(str, &buf, c.DBGMSGSZ) != 0) {
-            return c.EINVAL;
+        var buf: [hal.DBGMSGSZ]u8 = undefined;
+        if (hal.copyinstr(str, &buf, hal.DBGMSGSZ) != 0) {
+            return kern.Errno.EINVAL;
         }
         lib.printf("%s", &buf);
         return 0;
@@ -157,25 +157,25 @@ pub fn sysLog(str: [*c]const u8) callconv(.c) c_int {
 /// Kernel debug service.
 pub fn sysDebug(cmd: c_int, data: ?*anyopaque) callconv(.c) c_int {
     if (comptime !is_debug) {
-        return c.ENOSYS;
+        return kern.Errno.ENOSYS;
     } else {
-        var error_val: c_int = c.EINVAL;
+        var error_val: c_int = kern.Errno.EINVAL;
         var task_ref: kern.TaskRef = null;
 
         switch (cmd) {
-            c.DBGC_LOGSIZE, c.DBGC_GETLOG, c.DBGC_SAVEBT => {
+            hal.DBGC_LOGSIZE, hal.DBGC_GETLOG, hal.DBGC_SAVEBT => {
                 error_val = hal.dbgctl(cmd, data);
             },
-            c.DBGC_TRACE => {
+            hal.DBGC_TRACE => {
                 task_ref = @ptrCast(@alignCast(data));
                 if (task.valid(task_ref) == 0) {
-                    error_val = c.ESRCH;
+                    error_val = kern.Errno.ESRCH;
                 } else {
                     _ = hal.dbgctl(cmd, task_ref);
                     error_val = 0;
                 }
             },
-            c.DBGC_FLUSHCACHE => {
+            hal.DBGC_FLUSHCACHE => {
                 if (@hasDecl(c, "CONFIG_CACHE")) {
                     hal.flush_cache();
                 }
@@ -190,9 +190,9 @@ pub fn sysDebug(cmd: c_int, data: ?*anyopaque) callconv(.c) c_int {
 /// Panic system call.
 pub fn sysPanic(str: [*c]const u8) callconv(.c) c_int {
     if (comptime is_debug) {
-        var buf: [c.DBGMSGSZ]u8 = undefined;
+        var buf: [hal.DBGMSGSZ]u8 = undefined;
         sched.lock();
-        _ = hal.copyinstr(str, &buf, c.DBGMSGSZ - 20);
+        _ = hal.copyinstr(str, &buf, hal.DBGMSGSZ - 20);
         lib.printf("User panic: %s\n", &buf);
         const cur_task = kutil.get_curtask();
         const cur_thread = kutil.get_curthread();
@@ -216,7 +216,7 @@ pub fn sysTime(ticks: ?*c_ulong) callconv(.c) c_int {
 
 /// nonexistent system call.
 pub fn sysNosys() callconv(.c) c_int {
-    return c.EINVAL;
+    return kern.Errno.EINVAL;
 }
 
 // Comptime exports – public API functions with strong C linkage

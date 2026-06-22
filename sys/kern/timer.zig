@@ -27,41 +27,12 @@ const SIGALRM: c_int = 14;
 // ---------------------------------------------------------------------------
 var lbolt: c_ulong = 0;
 var idle_ticks: c_ulong = 0;
-var timer_lock: c.spinlock_t = c.SPINLOCK_INITIALIZER;
+var timer_lock: hal.Spinlock = .{ .value = hal.SPINLOCK_INITIALIZER };
 
 var timer_event: hal.Event = std.mem.zeroes(hal.Event);
 var delay_event: hal.Event = std.mem.zeroes(hal.Event);
 var timer_list: hal.List = std.mem.zeroes(hal.List);
 var expire_list: hal.List = std.mem.zeroes(hal.List);
-
-// ---------------------------------------------------------------------------
-// Inline helper functions for spinlocks
-// ---------------------------------------------------------------------------
-inline fn spinlock_lock(lock: *c.spinlock_t) void {
-    if (@hasDecl(c, "__broken_spinlock_lock")) {
-        c.__broken_spinlock_lock(lock);
-    }
-}
-
-inline fn spinlock_unlock(lock: *c.spinlock_t) void {
-    if (@hasDecl(c, "__broken_spinlock_unlock")) {
-        c.__broken_spinlock_unlock(lock);
-    }
-}
-
-inline fn spinlock_lock_irq(lock: *c.spinlock_t, s: *c_int) void {
-    s.* = hal.splhigh();
-    if (@hasDecl(c, "__broken_spinlock_lock")) {
-        c.__broken_spinlock_lock(lock);
-    }
-}
-
-inline fn spinlock_unlock_irq(lock: *c.spinlock_t, s: c_int) void {
-    if (@hasDecl(c, "__broken_spinlock_unlock")) {
-        c.__broken_spinlock_unlock(lock);
-    }
-    _ = hal.splx(s);
-}
 
 // ---------------------------------------------------------------------------
 // Inline helper functions for lists and events
@@ -147,21 +118,21 @@ fn timerThread(dummy: ?*anyopaque) callconv(.c) void {
     while (true) {
         _ = sched.sleep(&timer_event);
 
-        spinlock_lock(&timer_lock);
+        timer_lock.lock();
         while (!list_empty(&expire_list)) {
             const tmr = timerNext(&expire_list);
             list_remove(&tmr.link);
             tmr.state = TM_STOP;
-            spinlock_unlock(&timer_lock);
+            timer_lock.unlock();
             sched.lock();
             _ = hal.spl0();
             const func = tmr.func.?;
             func(tmr.arg);
             sched.unlock();
             _ = hal.splhigh();
-            spinlock_lock(&timer_lock);
+            timer_lock.lock();
         }
-        spinlock_unlock(&timer_lock);
+        timer_lock.unlock();
     }
 }
 
@@ -173,12 +144,12 @@ fn timerThread(dummy: ?*anyopaque) callconv(.c) void {
 pub fn stop(tmr: ?*hal.Timer) callconv(.c) void {
     var s: c_int = undefined;
 
-    spinlock_lock_irq(&timer_lock, &s);
+    timer_lock.lock_irq(&s);
     if (tmr.?.state == TM_ACTIVE) {
         list_remove(&tmr.?.link);
         tmr.?.state = TM_STOP;
     }
-    spinlock_unlock_irq(&timer_lock, s);
+    timer_lock.unlock_irq(s);
 }
 
 /// callout – schedule a callout function after a specified delay.
@@ -190,7 +161,7 @@ pub fn callout(
 ) callconv(.c) void {
     var s: c_int = undefined;
 
-    spinlock_lock_irq(&timer_lock, &s);
+    timer_lock.lock_irq(&s);
 
     if (tmr.?.state == TM_ACTIVE)
         list_remove(&tmr.?.link);
@@ -200,7 +171,7 @@ pub fn callout(
     tmr.?.interval = 0;
     timerAdd(tmr.?, timer.mstohz(msec));
 
-    spinlock_unlock_irq(&timer_lock, s);
+    timer_lock.unlock_irq(s);
 }
 
 /// delay – delay thread execution for the specified time.
@@ -208,7 +179,7 @@ pub fn delay(msec: c_ulong) callconv(.c) c_ulong {
     var remain: c_ulong = 0;
 
     const rc = sched.tsleep(@ptrCast(&delay_event), msec);
-    if (rc != c.SLP_TIMEOUT) {
+    if (rc != kern.SLP_TIMEOUT) {
         const cur_thread: ?*kern.Thread = kutil.get_curthread();
         const tmr: *hal.Timer = @ptrCast(@alignCast(&cur_thread.?.timeout));
         remain = timer.hztoms(time_remain(tmr.expire));
@@ -222,10 +193,10 @@ pub fn sleep(msec: c_ulong, remain: ?*c_ulong) callconv(.c) c_int {
 
     if (remain != null) {
         if (hal.copyout(@ptrCast(&left), @ptrCast(remain), @sizeOf(c_ulong)) != 0)
-            return c.EFAULT;
+            return kern.Errno.EFAULT;
     }
     if (left > 0)
-        return c.EINTR;
+        return kern.Errno.EINTR;
     return 0;
 }
 
@@ -234,14 +205,14 @@ pub fn alarm(msec: c_ulong, remain: ?*c_ulong) callconv(.c) c_int {
     var s: c_int = undefined;
     var left: c_ulong = 0;
 
-    spinlock_lock_irq(&timer_lock, &s);
+    timer_lock.lock_irq(&s);
     const cur_thread: ?*kern.Thread = kutil.get_curthread();
     const cur_task: ?*kern.Task = cur_thread.?.task;
     const tmr: *hal.Timer = @ptrCast(@alignCast(&cur_task.?.alarm));
 
     if (tmr.state == TM_ACTIVE)
         left = timer.hztoms(time_remain(tmr.expire));
-    spinlock_unlock_irq(&timer_lock, s);
+    timer_lock.unlock_irq(s);
 
     if (msec == 0) {
         stop(tmr);
@@ -253,7 +224,7 @@ pub fn alarm(msec: c_ulong, remain: ?*c_ulong) callconv(.c) c_int {
 
     if (remain != null) {
         if (hal.copyout(@ptrCast(&left), @ptrCast(remain), @sizeOf(c_ulong)) != 0)
-            return c.EFAULT;
+            return kern.Errno.EFAULT;
     }
     return 0;
 }
@@ -263,25 +234,25 @@ pub fn periodic(t: kern.ThreadRef, start: c_ulong, period: c_ulong) callconv(.c)
     var s: c_int = undefined;
 
     if (start != 0 and period == 0)
-        return c.EINVAL;
+        return kern.Errno.EINVAL;
 
     sched.lock();
     if (thread.valid(t) == 0) {
         sched.unlock();
-        return c.ESRCH;
+        return kern.Errno.ESRCH;
     }
     const thread_ptr: ?*kern.Thread = t;
     const cur_thread: ?*kern.Thread = kutil.get_curthread();
     if (thread_ptr.?.task != cur_thread.?.task) {
         sched.unlock();
-        return c.EPERM;
+        return kern.Errno.EPERM;
     }
 
     var tmr: ?*hal.Timer = thread_ptr.?.periodic;
     if (start == 0) {
         if (tmr == null or tmr.?.state != TM_ACTIVE) {
             sched.unlock();
-            return c.EINVAL;
+            return kern.Errno.EINVAL;
         }
         stop(tmr);
     } else {
@@ -289,19 +260,19 @@ pub fn periodic(t: kern.ThreadRef, start: c_ulong, period: c_ulong) callconv(.c)
             const alloc: ?*anyopaque = kmem.alloc(@sizeOf(hal.Timer));
             if (alloc == null) {
                 sched.unlock();
-                return c.ENOMEM;
+                return kern.Errno.ENOMEM;
             }
             tmr = @ptrCast(@alignCast(alloc));
             _ = lib.memset(tmr, 0, @sizeOf(hal.Timer));
             event_init(&tmr.?.event, "periodic");
             thread_ptr.?.periodic = tmr;
         }
-        spinlock_lock_irq(&timer_lock, &s);
+        timer_lock.lock_irq(&s);
         tmr.?.interval = timer.mstohz(period);
         if (tmr.?.interval == 0)
             tmr.?.interval = 1;
         timerAdd(tmr.?, timer.mstohz(start));
-        spinlock_unlock_irq(&timer_lock, s);
+        timer_lock.unlock_irq(s);
     }
     sched.unlock();
     return 0;
@@ -312,12 +283,12 @@ pub fn waitperiod() callconv(.c) c_int {
     const cur_thread: ?*kern.Thread = kutil.get_curthread();
     const tmr: ?*hal.Timer = cur_thread.?.periodic;
     if (tmr == null or tmr.?.state != TM_ACTIVE)
-        return c.EINVAL;
+        return kern.Errno.EINVAL;
 
     if (time_before(lbolt, tmr.?.expire)) {
         const rc = sched.sleep(&tmr.?.event);
-        if (rc != c.SLP_SUCCESS)
-            return c.EINTR;
+        if (rc != kern.SLP_SUCCESS)
+            return kern.Errno.EINTR;
     }
     return 0;
 }
@@ -342,10 +313,10 @@ pub fn handler() callconv(.c) void {
     if (c.smp_processor_id() == 0) {
         lbolt +%= 1;
         const cur_thread: ?*kern.Thread = kutil.get_curthread();
-        if (cur_thread.?.priority == c.PRI_IDLE)
+        if (cur_thread.?.priority == hal.PRI_IDLE)
             idle_ticks +%= 1;
 
-        spinlock_lock(&timer_lock);
+        timer_lock.lock();
         while (!list_empty(&timer_list)) {
             const tmr = timerNext(&timer_list);
             if (time_before(lbolt, tmr.expire))
@@ -355,15 +326,15 @@ pub fn handler() callconv(.c) void {
             if (tmr.interval != 0) {
                 const ticks_val = time_remain(tmr.expire +% tmr.interval);
                 timerAdd(tmr, ticks_val);
-                spinlock_unlock(&timer_lock);
+                timer_lock.unlock();
                 sched.wakeup(@ptrCast(&tmr.event));
-                spinlock_lock(&timer_lock);
+                timer_lock.lock();
             } else {
                 list_insert(&expire_list, &tmr.link);
                 wakeup = 1;
             }
         }
-        spinlock_unlock(&timer_lock);
+        timer_lock.unlock();
         if (wakeup != 0)
             sched.wakeup(@ptrCast(&timer_event));
 
@@ -384,7 +355,7 @@ pub fn ticks() callconv(.c) c_ulong {
 /// info – return timer information.
 pub fn info(timer_info_ptr: ?*hal.TimerInfo) callconv(.c) void {
     if (timer_info_ptr) |inf| {
-        inf.hz = c.HZ;
+        inf.hz = hal.HZ;
         inf.cputicks = lbolt;
         inf.idleticks = idle_ticks;
     }
@@ -397,7 +368,7 @@ pub fn init() callconv(.c) void {
     list_init(&timer_list);
     list_init(&expire_list);
 
-    if (thread.kcreate(&timerThread, null, c.PRI_TIMER) == null)
+    if (thread.kcreate(&timerThread, null, hal.PRI_TIMER) == null)
         lib.panic("init");
 }
 

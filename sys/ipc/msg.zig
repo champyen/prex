@@ -35,28 +35,28 @@ fn dequeue(head: *ffi.Queue) ?*kern.Thread {
 
 pub fn send(obj: c.object_t, msg: ?*anyopaque, size: usize) callconv(.c) c_int {
     if (!kutil.user_area(msg)) {
-        return c.EFAULT;
+        return kern.Errno.EFAULT;
     }
     if (size < @sizeOf(c.struct_msg_header)) {
-        return c.EINVAL;
+        return kern.Errno.EINVAL;
     }
 
     sched.lock();
 
     if (object.valid(obj) == 0) {
         sched.unlock();
-        return c.EINVAL;
+        return kern.Errno.EINVAL;
     }
 
     if (obj == kutil.get_curthread().?.recvobj) {
         sched.unlock();
-        return c.EDEADLK;
+        return kern.Errno.EDEADLK;
     }
 
     const kmsg = kmem.map(msg, size);
     if (kmsg == null) {
         sched.unlock();
-        return c.EFAULT;
+        return kern.Errno.EFAULT;
     }
     kutil.get_curthread().?.msgaddr = kmsg;
     kutil.get_curthread().?.msgsize = size;
@@ -72,7 +72,7 @@ pub fn send(obj: c.object_t, msg: ?*anyopaque, size: usize) callconv(.c) c_int {
     kutil.get_curthread().?.sendobj = obj;
     @as(*ffi.Queue, @ptrCast(&obj.*.sendq)).enqueue(@as(*ffi.Queue, @ptrCast(&kutil.get_curthread().?.ipc_link)));
     const rc = sched.tsleep(&ipc_event, 0);
-    if (rc == c.SLP_INTR) {
+    if (rc == kern.SLP_INTR) {
         @as(*ffi.Queue, @ptrCast(&kutil.get_curthread().?.ipc_link)).remove();
     }
     kutil.get_curthread().?.sendobj = null;
@@ -80,14 +80,14 @@ pub fn send(obj: c.object_t, msg: ?*anyopaque, size: usize) callconv(.c) c_int {
     sched.unlock();
 
     switch (rc) {
-        c.SLP_BREAK => {
-            return c.EAGAIN;
+        kern.SLP_BREAK => {
+            return kern.Errno.EAGAIN;
         },
-        c.SLP_INVAL => {
-            return c.EINVAL;
+        kern.SLP_INVAL => {
+            return kern.Errno.EINVAL;
         },
-        c.SLP_INTR => {
-            return c.EINTR;
+        kern.SLP_INTR => {
+            return kern.Errno.EINTR;
         },
         else => {},
     }
@@ -99,23 +99,23 @@ pub fn receive(obj: c.object_t, msg: ?*anyopaque, size: usize) callconv(.c) c_in
     var err_code: c_int = 0;
 
     if (!kutil.user_area(msg)) {
-        return c.EFAULT;
+        return kern.Errno.EFAULT;
     }
 
     sched.lock();
 
     if (object.valid(obj) == 0) {
         sched.unlock();
-        return c.EINVAL;
+        return kern.Errno.EINVAL;
     }
     if (obj.*.owner != kutil.get_curtask()) {
         sched.unlock();
-        return c.EACCES;
+        return kern.Errno.EACCES;
     }
 
     if (kutil.get_curthread().?.recvobj != null) {
         sched.unlock();
-        return c.EBUSY;
+        return kern.Errno.EBUSY;
     }
     kutil.get_curthread().?.recvobj = obj;
 
@@ -124,12 +124,12 @@ pub fn receive(obj: c.object_t, msg: ?*anyopaque, size: usize) callconv(.c) c_in
         rc = sched.tsleep(&ipc_event, 0);
         if (rc != 0) {
             switch (rc) {
-                c.SLP_INVAL => {
-                    err_code = c.EINVAL;
+                kern.SLP_INVAL => {
+                    err_code = kern.Errno.EINVAL;
                 },
-                c.SLP_INTR => {
+                kern.SLP_INTR => {
                     @as(*ffi.Queue, @ptrCast(&kutil.get_curthread().?.ipc_link)).remove();
-                    err_code = c.EINTR;
+                    err_code = kern.Errno.EINTR;
                 },
                 else => {
                     @panic("receive");
@@ -149,7 +149,7 @@ pub fn receive(obj: c.object_t, msg: ?*anyopaque, size: usize) callconv(.c) c_in
             @as(*ffi.Queue, @ptrCast(&obj.*.sendq)).enqueue(@as(*ffi.Queue, @ptrCast(&t.?.ipc_link)));
             kutil.get_curthread().?.recvobj = null;
             sched.unlock();
-            return c.EFAULT;
+            return kern.Errno.EFAULT;
         }
     }
 
@@ -162,20 +162,20 @@ pub fn receive(obj: c.object_t, msg: ?*anyopaque, size: usize) callconv(.c) c_in
 
 pub fn reply(obj: c.object_t, msg: ?*anyopaque, size: usize) callconv(.c) c_int {
     if (!kutil.user_area(msg)) {
-        return c.EFAULT;
+        return kern.Errno.EFAULT;
     }
 
     sched.lock();
 
     if (object.valid(obj) == 0 or @intFromPtr(obj) != @intFromPtr(kutil.get_curthread().?.recvobj)) {
         sched.unlock();
-        return c.EINVAL;
+        return kern.Errno.EINVAL;
     }
 
     if (kutil.get_curthread().?.sender == null) {
         kutil.get_curthread().?.recvobj = null;
         sched.unlock();
-        return c.EINVAL;
+        return kern.Errno.EINVAL;
     }
 
     const t: ?*kern.Thread = @ptrCast(kutil.get_curthread().?.sender);
@@ -183,7 +183,7 @@ pub fn reply(obj: c.object_t, msg: ?*anyopaque, size: usize) callconv(.c) c_int 
     if (len > 0) {
         if (hal.copyin(msg, t.?.msgaddr, len) != 0) {
             sched.unlock();
-            return c.EFAULT;
+            return kern.Errno.EFAULT;
         }
     }
 
@@ -211,7 +211,7 @@ pub fn cancel(t: ?*kern.Thread) callconv(.c) void {
     if (t.?.recvobj != null) {
         if (t.?.sender != null) {
             const sender: ?*kern.Thread = @ptrCast(t.?.sender);
-            sched.unsleep(sender, c.SLP_BREAK);
+            sched.unsleep(sender, kern.SLP_BREAK);
             sender.?.receiver = null;
         } else {
             @as(*ffi.Queue, @ptrCast(&t.?.ipc_link)).remove();
@@ -226,13 +226,13 @@ pub fn abort(obj: c.object_t) callconv(.c) void {
     while (!@as(*ffi.Queue, @ptrCast(&obj.*.sendq)).isEmpty()) {
         const q = @as(*ffi.Queue, @ptrCast(&obj.*.sendq)).dequeue().?;
         const t = q.entry(kern.Thread, "ipc_link");
-        sched.unsleep(t, c.SLP_INVAL);
+        sched.unsleep(t, kern.SLP_INVAL);
     }
 
     while (!@as(*ffi.Queue, @ptrCast(&obj.*.recvq)).isEmpty()) {
         const q = @as(*ffi.Queue, @ptrCast(&obj.*.recvq)).dequeue().?;
         const t = q.entry(kern.Thread, "ipc_link");
-        sched.unsleep(t, c.SLP_INVAL);
+        sched.unsleep(t, kern.SLP_INVAL);
     }
     sched.unlock();
 }

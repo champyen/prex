@@ -12,10 +12,10 @@ const thread = ffi.thread;
 
 var IST_NONE: ?*const fn (?*anyopaque) callconv(.c) void = undefined;
 
-var irq_table = std.mem.zeroes([c.MAXIRQS]?*kern.IRQ);
+var irq_table = std.mem.zeroes([hal.MAXIRQS]?*kern.IRQ);
 
 inline fn ISTPRI(pri: c_int) c_int {
-    return c.PRI_IST + (c.IPL_HIGH - pri);
+    return hal.PRI_IST + (hal.IPL_HIGH - pri);
 }
 
 fn irq_thread(arg: ?*anyopaque) callconv(.c) void {
@@ -63,7 +63,7 @@ pub fn attach(vector: c_int, pri: c_int, shared: c_int, isr: ?*const fn (?*anyop
         c.event_init(@as(?*anyopaque, @ptrCast(&irq.istevt)), "interrupt");
     }
     irq_table[@intCast(vector)] = irq;
-    const mode: c_int = if (shared != 0) c.IMODE_LEVEL else c.IMODE_EDGE;
+    const mode: c_int = if (shared != 0) hal.IMODE_LEVEL else hal.IMODE_EDGE;
     hal.interrupt_setup(vector, mode);
     hal.interrupt_unmask(vector, pri);
 
@@ -73,7 +73,7 @@ pub fn attach(vector: c_int, pri: c_int, shared: c_int, isr: ?*const fn (?*anyop
 
 pub fn detach(irq: ?*kern.IRQ) callconv(.c) void {
     std.debug.assert(irq != null);
-    std.debug.assert(irq.?.vector < c.MAXIRQS);
+    std.debug.assert(irq.?.vector < hal.MAXIRQS);
 
     hal.interrupt_mask(irq.?.vector);
     irq_table[@intCast(irq.?.vector)] = null;
@@ -94,7 +94,7 @@ pub fn handler(vector: c_int) callconv(.c) void {
 
     const rc = irq.isr.?(irq.data);
 
-    if (rc == c.INT_CONTINUE) {
+    if (rc == hal.INT_CONTINUE) {
         std.debug.assert(irq.ist != IST_NONE);
         irq.istreq += 1;
         sched.wakeup(&irq.istevt);
@@ -105,14 +105,14 @@ pub fn handler(vector: c_int) callconv(.c) void {
 pub fn info(irq_info_ptr: ?*hal.IrqInfo) callconv(.c) c_int {
     var vec = irq_info_ptr.?.cookie;
 
-    while (vec < c.MAXIRQS) {
+    while (vec < hal.MAXIRQS) {
         if (irq_table[@intCast(vec)] != null) {
             break;
         }
         vec += 1;
     }
-    if (vec >= c.MAXIRQS) {
-        return c.ESRCH;
+    if (vec >= hal.MAXIRQS) {
+        return kern.Errno.ESRCH;
     }
 
     const irq = irq_table[@intCast(vec)].?;

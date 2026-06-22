@@ -13,16 +13,16 @@ const timer = ffi.timer;
 const thread = ffi.thread;
 const smp = ffi.smp;
 
-pub var kernel_lock: c.spinlock_t = 0;
-var runq: [c.NPRI]ffi.Queue = undefined;
+pub var kernel_lock: hal.Spinlock = .{ .value = 0 };
+var runq: [hal.NPRI]ffi.Queue = undefined;
 var wakeq: ffi.Queue = undefined;
 var dpcq: ffi.Queue = undefined;
 var dpc_event: sync.Event = undefined;
-var maxpri: c_int = c.PRI_IDLE;
+var maxpri: c_int = hal.PRI_IDLE;
 
 fn runq_getbest() c_int {
     var pri: c_int = 0;
-    while (pri < c.MINPRI) : (pri += 1) {
+    while (pri < hal.MINPRI) : (pri += 1) {
         if (!runq[@intCast(pri)].isEmpty()) {
             break;
         }
@@ -48,7 +48,7 @@ fn runq_insert(t: kern.ThreadRef) void {
 }
 
 fn runq_dequeue() kern.ThreadRef {
-    if (maxpri >= c.PRI_IDLE) {
+    if (maxpri >= hal.PRI_IDLE) {
         return &c.idle_thread;
     }
     const q = runq[@intCast(maxpri)].dequeue().?;
@@ -82,8 +82,8 @@ fn wakeq_flush() callconv(.c) void {
         const q = wakeq.dequeue().?;
         const t = q.entry(kern.Thread, "sched_link");
         t.*.slpevt = null;
-        t.*.state &= ~@as(c_int, c.TS_SLEEP);
-        if (t != curthread() and t.*.state == c.TS_RUN) {
+        t.*.state &= ~@as(c_int, kern.TS_SLEEP);
+        if (t != curthread() and t.*.state == kern.TS_RUN) {
             runq_enqueue(t);
         }
     }
@@ -96,12 +96,12 @@ fn setrun(t: kern.ThreadRef) callconv(.c) void {
 
 fn sleep_timeout(arg: ?*anyopaque) callconv(.c) void {
     const t: kern.ThreadRef = @ptrCast(@alignCast(arg));
-    unsleep(t, c.SLP_TIMEOUT);
+    unsleep(t, kern.SLP_TIMEOUT);
 }
 
 fn swtch() callconv(.c) void {
     const prev = curthread();
-    if (prev.*.state == c.TS_RUN and prev.*.priority < c.PRI_IDLE) {
+    if (prev.*.state == kern.TS_RUN and prev.*.priority < hal.PRI_IDLE) {
         if (prev.*.priority > maxpri) {
             runq_insert(prev);
         } else {
@@ -125,28 +125,15 @@ fn swtch() callconv(.c) void {
         locks = prev.*.locks;
         prev.*.locks = 0;
         if (locks > 0) {
-            @atomicStore(c.spinlock_t, &kernel_lock, 0, .seq_cst);
+            kernel_lock.unlock();
         }
     }
 
     hal.context_switch(&prev.*.ctx, &next.*.ctx);
 
     if (comptime @hasDecl(c, "CONFIG_SMP")) {
-        const cpu = smp.get_cpu_control();
-        var s = hal.splhigh();
-        while (@atomicRmw(c.spinlock_t, &kernel_lock, .Xchg, 1, .seq_cst) != 0) {
-            if (cpu.*.nest_count == 0) {
-                hal.splx(s);
-                while (kernel_lock != 0) {
-                    hal.zig_memory_barrier();
-                }
-                s = hal.splhigh();
-            } else {
-                while (kernel_lock != 0) {
-                    hal.zig_memory_barrier();
-                }
-            }
-        }
+        const s = hal.splhigh();
+        kernel_lock.lock();
         curthread().*.locks = locks;
         hal.splx(s);
     }
@@ -158,7 +145,7 @@ fn tsleep(evt: *hal.Event, msec: c_ulong) callconv(.c) c_int {
     const s = hal.splhigh();
 
     curthread().*.slpevt = @as([*c]hal.Event, @ptrCast(e));
-    curthread().*.state |= @as(c_int, c.TS_SLEEP);
+    curthread().*.state |= @as(c_int, kern.TS_SLEEP);
     e.*.sleepq.enqueue(@as(*ffi.Queue, @ptrCast(&curthread().*.sched_link)));
 
     if (msec != 0) {
@@ -215,7 +202,7 @@ fn wakeone(evt: *hal.Event) callconv(.c) kern.ThreadRef {
 
 fn unsleep(t: kern.ThreadRef, result: c_int) callconv(.c) void {
     lock();
-    if (t.*.state & c.TS_SLEEP != 0) {
+    if (t.*.state & kern.TS_SLEEP != 0) {
         const s = hal.splhigh();
         t.*.sched_link.remove();
         t.*.slpret = result;
@@ -234,32 +221,32 @@ fn yield() callconv(.c) void {
 }
 
 fn @"suspend"(t: kern.ThreadRef) callconv(.c) void {
-    if (t.*.state == c.TS_RUN) {
+    if (t.*.state == kern.TS_RUN) {
         if (t == curthread()) {
             curthread().*.resched = 1;
         } else {
             runq_remove(t);
         }
     }
-    t.*.state |= @as(c_int, c.TS_SUSP);
+    t.*.state |= @as(c_int, kern.TS_SUSP);
 }
 
 fn @"resume"(t: kern.ThreadRef) callconv(.c) void {
-    if (t.*.state & c.TS_SUSP != 0) {
-        t.*.state &= ~@as(c_int, c.TS_SUSP);
-        if (t.*.state == c.TS_RUN) {
+    if (t.*.state & kern.TS_SUSP != 0) {
+        t.*.state &= ~@as(c_int, kern.TS_SUSP);
+        if (t.*.state == kern.TS_RUN) {
             runq_enqueue(t);
         }
     }
 }
 
 fn tick() callconv(.c) void {
-    if (curthread().*.state != c.TS_EXIT) {
+    if (curthread().*.state != kern.TS_EXIT) {
         curthread().*.time += 1;
-        if (curthread().*.policy == c.SCHED_RR) {
+        if (curthread().*.policy == kern.SCHED_RR) {
             curthread().*.timeleft -= 1;
             if (curthread().*.timeleft <= 0) {
-                curthread().*.timeleft += c.QUANTUM;
+                curthread().*.timeleft += hal.QUANTUM;
                 curthread().*.resched = 1;
             }
         }
@@ -267,12 +254,12 @@ fn tick() callconv(.c) void {
 }
 
 fn start(t: kern.ThreadRef, pri: c_int, policy: c_int) callconv(.c) void {
-    t.*.state = c.TS_RUN | @as(c_int, c.TS_SUSP);
+    t.*.state = kern.TS_RUN | @as(c_int, kern.TS_SUSP);
     t.*.policy = policy;
     t.*.priority = pri;
     t.*.basepri = pri;
-    if (t.*.policy == c.SCHED_RR) {
-        t.*.timeleft = c.QUANTUM;
+    if (t.*.policy == kern.SCHED_RR) {
+        t.*.timeleft = hal.QUANTUM;
     }
 }
 
@@ -281,34 +268,21 @@ fn stop(t: kern.ThreadRef) callconv(.c) void {
         curthread().*.locks = 1;
         curthread().*.resched = 1;
     } else {
-        if (t.*.state == c.TS_RUN) {
+        if (t.*.state == kern.TS_RUN) {
             runq_remove(t);
-        } else if (t.*.state & c.TS_SLEEP != 0) {
+        } else if (t.*.state & kern.TS_SLEEP != 0) {
             t.*.sched_link.remove();
         }
     }
     timer.stop(&t.*.timeout);
-    t.*.state = c.TS_EXIT;
+    t.*.state = kern.TS_EXIT;
 }
 
 fn lock() callconv(.c) void {
-    var s = hal.splhigh();
+    const s = hal.splhigh();
     if (curthread().*.locks == 0) {
         if (comptime @hasDecl(c, "CONFIG_SMP")) {
-            const cpu = smp.get_cpu_control();
-            while (@atomicRmw(c.spinlock_t, &kernel_lock, .Xchg, 1, .seq_cst) != 0) {
-                if (cpu.*.nest_count == 0) {
-                    hal.splx(s);
-                    while (kernel_lock != 0) {
-                        hal.zig_memory_barrier();
-                    }
-                    s = hal.splhigh();
-                } else {
-                    while (kernel_lock != 0) {
-                        hal.zig_memory_barrier();
-                    }
-                }
-            }
+            kernel_lock.lock();
         }
     }
     curthread().*.locks += 1;
@@ -327,7 +301,7 @@ fn unlock() callconv(.c) void {
         }
         curthread().*.locks = 0;
         if (comptime @hasDecl(c, "CONFIG_SMP")) {
-            @atomicStore(c.spinlock_t, &kernel_lock, 0, .seq_cst);
+            kernel_lock.unlock();
         }
     } else {
         curthread().*.locks -= 1;
@@ -337,7 +311,7 @@ fn unlock() callconv(.c) void {
 
 fn bklUnlock() callconv(.c) void {
     if (comptime @hasDecl(c, "CONFIG_SMP")) {
-        @atomicStore(c.spinlock_t, &kernel_lock, 0, .seq_cst);
+        kernel_lock.unlock();
     }
 }
 
@@ -354,7 +328,7 @@ fn setpri(t: kern.ThreadRef, basepri: c_int, pri: c_int) callconv(.c) void {
             curthread().*.resched = 1;
         }
     } else {
-        if (t.*.state == c.TS_RUN) {
+        if (t.*.state == kern.TS_RUN) {
             runq_remove(t);
             t.*.priority = pri;
             runq_enqueue(t);
@@ -371,12 +345,12 @@ fn getpolicy(t: kern.ThreadRef) callconv(.c) c_int {
 fn setpolicy(t: kern.ThreadRef, policy: c_int) callconv(.c) c_int {
     var err: c_int = 0;
     switch (policy) {
-        c.SCHED_RR, c.SCHED_FIFO => {
-            t.*.timeleft = c.QUANTUM;
+        kern.SCHED_RR, kern.SCHED_FIFO => {
+            t.*.timeleft = hal.QUANTUM;
             t.*.policy = policy;
         },
         else => {
-            err = c.EINVAL;
+            err = kern.Errno.EINVAL;
         },
     }
     return err;
@@ -387,10 +361,10 @@ fn dpc(dpc_ptr: *c.struct_dpc, fn_ptr: ?*const fn (?*anyopaque) callconv(.c) voi
     const s = hal.splhigh();
     dpc_ptr.*.func = fn_ptr;
     dpc_ptr.*.arg = arg;
-    if (dpc_ptr.*.state != c.DPC_PENDING) {
+    if (dpc_ptr.*.state != hal.DPC_PENDING) {
         dpcq.enqueue(@as(*ffi.Queue, @ptrCast(&dpc_ptr.*.link)));
     }
-    dpc_ptr.*.state = c.DPC_PENDING;
+    dpc_ptr.*.state = hal.DPC_PENDING;
     hal.splx(s);
     wakeup(@ptrCast(&dpc_event));
     unlock();
@@ -404,7 +378,7 @@ fn dpc_thread(dummy: ?*anyopaque) callconv(.c) void {
         while (!dpcq.isEmpty()) {
             const q = dpcq.dequeue().?;
             const dpc_val = q.entry(c.struct_dpc, "link");
-            dpc_val.*.state = c.DPC_FREE;
+            dpc_val.*.state = hal.DPC_FREE;
             _ = hal.spl0();
             if (dpc_val.*.func) |f| {
                 f(dpc_val.*.arg);
@@ -417,7 +391,7 @@ fn dpc_thread(dummy: ?*anyopaque) callconv(.c) void {
 fn init() callconv(.c) void {
     {
         var i: c_int = 0;
-        while (i < c.NPRI) : (i += 1) {
+        while (i < hal.NPRI) : (i += 1) {
             runq[@intCast(i)].init();
         }
     }
@@ -431,10 +405,10 @@ fn init() callconv(.c) void {
         dpc_event.sleepq.init();
         dpc_event.name = "dpc";
     }
-    maxpri = c.PRI_IDLE;
+    maxpri = hal.PRI_IDLE;
     curthread().*.resched = 1;
 
-    const t = thread.kcreate(dpc_thread, null, c.PRI_DPC);
+    const t = thread.kcreate(dpc_thread, null, hal.PRI_DPC);
     if (t == null) {
         @panic("sched_init");
     }
