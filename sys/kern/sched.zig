@@ -4,19 +4,21 @@ const builtin = @import("builtin");
 const c = @import("c").c;
 
 const ffi = @import("ffi");
+const IntrusiveQueue = ffi.IntrusiveQueue;
+const Queue = ffi.Queue;
 const hal = ffi.hal;
 const kern = ffi.kern;
-const sync = ffi.sync;
-const vm = ffi.vm;
 const kutil = ffi.kutil;
-const timer = ffi.timer;
-const thread = ffi.thread;
 const smp = ffi.smp;
+const sync = ffi.sync;
+const thread = ffi.thread;
+const timer = ffi.timer;
+const vm = ffi.vm;
 
 pub var kernel_lock: hal.Spinlock = .{ .value = 0 };
-var runq: [hal.NPRI]ffi.Queue = undefined;
-var wakeq: ffi.Queue = undefined;
-var dpcq: ffi.Queue = undefined;
+var runq: [hal.NPRI]Queue = undefined;
+var wakeq: Queue = undefined;
+var dpcq: Queue = undefined;
 var dpc_event: sync.Event = undefined;
 var maxpri: c_int = hal.PRI_IDLE;
 
@@ -31,7 +33,7 @@ fn runq_getbest() c_int {
 }
 
 fn runq_enqueue(t: kern.ThreadRef) void {
-    runq[@intCast(t.*.priority)].enqueue(ffi.IntrusiveQueue(kern.Thread, ffi.Queue, "sched_link").node(t));
+    runq[@intCast(t.*.priority)].enqueue(IntrusiveQueue(kern.Thread, Queue, "sched_link").node(t));
     if (t.*.priority < maxpri) {
         maxpri = t.*.priority;
         if (kutil.get_curthread()) |ct| {
@@ -41,7 +43,7 @@ fn runq_enqueue(t: kern.ThreadRef) void {
 }
 
 fn runq_insert(t: kern.ThreadRef) void {
-    runq[@intCast(t.*.priority)].insert(ffi.IntrusiveQueue(kern.Thread, ffi.Queue, "sched_link").node(t));
+    runq[@intCast(t.*.priority)].insert(IntrusiveQueue(kern.Thread, Queue, "sched_link").node(t));
     if (t.*.priority < maxpri) {
         maxpri = t.*.priority;
     }
@@ -49,7 +51,7 @@ fn runq_insert(t: kern.ThreadRef) void {
 
 fn runq_dequeue() kern.ThreadRef {
     if (maxpri >= hal.PRI_IDLE) {
-        return &ffi.thread.idle_thread;
+        return &thread.idle_thread;
     }
     const q = runq[@intCast(maxpri)].dequeue().?;
     const t = q.entry(kern.Thread, "sched_link");
@@ -90,7 +92,7 @@ fn wakeq_flush() callconv(.c) void {
 }
 
 fn setrun(t: kern.ThreadRef) callconv(.c) void {
-    wakeq.enqueue(ffi.IntrusiveQueue(kern.Thread, ffi.Queue, "sched_link").node(t));
+    wakeq.enqueue(IntrusiveQueue(kern.Thread, Queue, "sched_link").node(t));
     timer.stop(&t.*.timeout);
 }
 
@@ -146,7 +148,7 @@ fn tsleep(evt: *hal.Event, msec: c_ulong) callconv(.c) c_int {
 
     curthread().*.slpevt = @as([*c]hal.Event, @ptrCast(e));
     curthread().*.state |= @as(c_int, kern.TS_SLEEP);
-    e.*.sleepq.enqueue(ffi.IntrusiveQueue(kern.Thread, ffi.Queue, "sched_link").node(curthread()));
+    e.*.sleepq.enqueue(IntrusiveQueue(kern.Thread, Queue, "sched_link").node(curthread()));
 
     if (msec != 0) {
         timer.callout(&curthread().*.timeout, @intCast(msec), sleep_timeout, curthread());
@@ -179,7 +181,7 @@ fn wakeone(evt: *hal.Event) callconv(.c) kern.ThreadRef {
     lock();
     const s = hal.splhigh();
     var result: kern.ThreadRef = null;
-    const head: *ffi.Queue = @ptrCast(&e.*.sleepq);
+    const head: *Queue = @ptrCast(&e.*.sleepq);
     if (!head.isEmpty()) {
         var q = head.first();
         var top = q.entry(kern.Thread, "sched_link");
@@ -356,13 +358,13 @@ fn setpolicy(t: kern.ThreadRef, policy: c_int) callconv(.c) c_int {
     return err;
 }
 
-fn dpc(dpc_ptr: *ffi.hal.Dpc, fn_ptr: ?*const fn (?*anyopaque) callconv(.c) void, arg: ?*anyopaque) callconv(.c) void {
+fn dpc(dpc_ptr: *hal.Dpc, fn_ptr: ?*const fn (?*anyopaque) callconv(.c) void, arg: ?*anyopaque) callconv(.c) void {
     lock();
     const s = hal.splhigh();
     dpc_ptr.*.func = fn_ptr;
     dpc_ptr.*.arg = arg;
     if (dpc_ptr.*.state != hal.DPC_PENDING) {
-        dpcq.enqueue(ffi.IntrusiveQueue(hal.Dpc, ffi.Queue, "link").node(dpc_ptr));
+        dpcq.enqueue(IntrusiveQueue(hal.Dpc, Queue, "link").node(dpc_ptr));
     }
     dpc_ptr.*.state = hal.DPC_PENDING;
     hal.splx(s);
@@ -377,7 +379,7 @@ fn dpc_thread(dummy: ?*anyopaque) callconv(.c) void {
         _ = tsleep(@ptrCast(&dpc_event), 0);
         while (!dpcq.isEmpty()) {
             const q = dpcq.dequeue().?;
-            const dpc_val = q.entry(ffi.hal.Dpc, "link");
+            const dpc_val = q.entry(hal.Dpc, "link");
             dpc_val.*.state = hal.DPC_FREE;
             _ = hal.spl0();
             if (dpc_val.*.func) |f| {

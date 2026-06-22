@@ -4,18 +4,18 @@ const builtin = @import("builtin");
 const c = @import("c").c;
 
 const ffi = @import("ffi");
+const IntrusiveList = ffi.IntrusiveList;
 const hal = ffi.hal;
 const kern = ffi.kern;
-const msg = ffi.msg;
-const mutex = ffi.mutex;
-const timer = ffi.timer;
+const kmem = ffi.kmem;
 const kutil = ffi.kutil;
 const lib = ffi.lib;
-const kmem = ffi.kmem;
+const msg = ffi.msg;
+const mutex = ffi.mutex;
 const sched = ffi.sched;
 const task = ffi.task;
-const smp = ffi.smp;
-
+const thread = ffi.thread;
+const timer = ffi.timer;
 pub var idle_thread: kern.Thread = std.mem.zeroes(kern.Thread);
 var zombie: kern.ThreadRef = null;
 var thread_list: hal.List = undefined;
@@ -125,7 +125,7 @@ pub fn create(tsk: kern.TaskRef, tp: ?*kern.ThreadRef) callconv(.c) c_int {
 
     const sp: usize = @intFromPtr(t.*.kstack) + hal.KSTACKSZ;
     hal.context_set(&t.*.ctx, hal.CTX_KSTACK, kutil.toReg(sp));
-    hal.context_set(&t.*.ctx, hal.CTX_KENTRY, kutil.toReg(&ffi.thread.syscall_ret));
+    hal.context_set(&t.*.ctx, hal.CTX_KENTRY, kutil.toReg(&thread.syscall_ret));
     sched.start(t, kutil.get_curthread().?.*.basepri, kern.SCHED_RR);
     t.*.suscnt = tsk.*.suscnt + 1;
 
@@ -199,7 +199,7 @@ pub fn valid(t: kern.ThreadRef) callconv(.c) c_int {
     const head = &thread_list;
     var n: *hal.List = @ptrCast(head.next);
     while (n != head) : (n = @ptrCast(n.next)) {
-        const tmp: *kern.Thread = ffi.IntrusiveList(kern.Thread, hal.List, "link").parent(n);
+        const tmp: *kern.Thread = IntrusiveList(kern.Thread, hal.List, "link").parent(n);
         if (tmp == t) return 1;
     }
     return 0;
@@ -338,7 +338,7 @@ pub fn info(tinfo: ?*hal.ThreadInfo) callconv(.c) c_int {
     var n: *hal.List = @ptrCast(thread_list.prev);
     while (n != &thread_list) {
         if (i == target) {
-            const t: *kern.Thread = ffi.IntrusiveList(kern.Thread, hal.List, "link").parent(n);
+            const t: *kern.Thread = IntrusiveList(kern.Thread, hal.List, "link").parent(n);
             tinfo.?.cookie = i;
             tinfo.?.id = t;
             tinfo.?.state = t.state;

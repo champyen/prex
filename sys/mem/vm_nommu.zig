@@ -3,16 +3,12 @@ const c = @import("c").c;
 const ffi = @import("ffi");
 const hal = ffi.hal;
 const kern = ffi.kern;
-const mem = ffi.mem;
+const kmem = ffi.kmem;
 const kutil = ffi.kutil;
-
+const mem = ffi.mem;
+const page = ffi.page;
 const sched = ffi.sched;
 const task = ffi.task;
-const page = ffi.page;
-const kmem = ffi.kmem;
-const smp = ffi.smp;
-const thread = ffi.thread;
-
 const assert = std.debug.assert;
 
 // ---------------------------------------------------------------------------

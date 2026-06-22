@@ -4,18 +4,18 @@ const builtin = @import("builtin");
 const c = @import("c").c;
 
 const ffi = @import("ffi");
+const IntrusiveList = ffi.IntrusiveList;
 const deadlock = ffi.deadlock;
 const exception = ffi.exception;
 const hal = ffi.hal;
 const kern = ffi.kern;
 const kmem = ffi.kmem;
-const sched = ffi.sched;
-const sync = ffi.sync;
-const thread = ffi.thread;
-const timer = ffi.timer;
 const kutil = ffi.kutil;
 const lib = ffi.lib;
+const sched = ffi.sched;
 const smp = ffi.smp;
+const thread = ffi.thread;
+const timer = ffi.timer;
 
 
 const TM_ACTIVE: c_int = 0x54616321; // 'Tac!'
@@ -71,7 +71,7 @@ inline fn time_before(a: c_ulong, b: c_ulong) bool {
 
 inline fn timerNext(head: *hal.List) *hal.Timer {
     const n: *hal.List = @ptrCast(head.next.?);
-    return ffi.IntrusiveList(hal.Timer, hal.List, "link").parent(n);
+    return IntrusiveList(hal.Timer, hal.List, "link").parent(n);
 }
 
 // ---------------------------------------------------------------------------
@@ -303,7 +303,7 @@ pub fn cancel(t_ref: kern.ThreadRef) callconv(.c) void {
 pub fn handler() callconv(.c) void {
     var wakeup: c_int = 0;
 
-    if (ffi.smp.processor_id() == 0) {
+    if (smp.processor_id() == 0) {
         lbolt +%= 1;
         const cur_thread: ?*kern.Thread = kutil.get_curthread();
         if (cur_thread.?.priority == hal.PRI_IDLE)

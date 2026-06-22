@@ -2,10 +2,12 @@ const std = @import("std");
 const c = @import("c").c;
 
 const ffi = @import("ffi");
+const IntrusiveList = ffi.IntrusiveList;
+const List = ffi.List;
 const hal = ffi.hal;
 const kutil = ffi.kutil;
-const sched = ffi.sched;
 const page = ffi.page;
+const sched = ffi.sched;
 const vm = ffi.vm;
 
 // Type-safe inline functions for macros
@@ -32,7 +34,7 @@ pub inline fn max(a: usize, b: usize) usize {
 const block_hdr = extern struct {
     magic: u16,
     size: u16,
-    link: ffi.List,
+    link: List,
     pg_next: ?*block_hdr,
 };
 
@@ -54,7 +56,7 @@ const MAX_ALLOC_SIZE = if (@hasDecl(c, "CONFIG_MAX_ALLOC_SIZE")) c.CONFIG_MAX_AL
 const MIN_BLOCK_SIZE = BLKHDR_SIZE + 16;
 
 // Global free_blocks array
-var free_blocks: [NR_BLOCK_LIST]ffi.List = undefined;
+var free_blocks: [NR_BLOCK_LIST]List = undefined;
 
 // Find the free block for the specified size
 fn block_find(size: usize) ?*block_hdr {
@@ -62,7 +64,7 @@ fn block_find(size: usize) ?*block_hdr {
     while (i < NR_BLOCK_LIST) : (i += 1) {
         if (!free_blocks[i].isEmpty()) {
             const n = free_blocks[i].first();
-            return ffi.IntrusiveList(block_hdr, ffi.List, "link").parent(n);
+            return IntrusiveList(block_hdr, List, "link").parent(n);
         }
     }
     return null;

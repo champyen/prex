@@ -16,7 +16,7 @@ const INTSTKTOP = @as(usize, @intCast(hal.INTSTKTOP));
 
 var IST_NONE: ?*const fn (?*anyopaque) callconv(.c) void = undefined;
 
-pub var cpu_table: [NCPUS]ffi.hal.CpuControl = std.mem.zeroes([NCPUS]ffi.hal.CpuControl);
+pub var cpu_table: [NCPUS]hal.CpuControl = std.mem.zeroes([NCPUS]hal.CpuControl);
 
 pub var ap_boot_stacks: [NCPUS][hal.KSTACKSZ]u8 align(16) = std.mem.zeroes([NCPUS][hal.KSTACKSZ]u8);
 
@@ -36,7 +36,7 @@ pub fn kvtop(va: anytype) kern.Paddr {
 
 
 pub fn initEarly() callconv(.c) void {
-    const cpu: *ffi.hal.CpuControl = &cpu_table[0];
+    const cpu: *hal.CpuControl = &cpu_table[0];
 
     cpu.active_thread = &thread.idle_thread;
     cpu.idle_thread = &thread.idle_thread;
@@ -91,7 +91,7 @@ pub fn activate() callconv(.c) void {
 pub fn apBoot() callconv(.c) void {
     zig_memory_barrier();
     const cpuid = hal.hal_cpu_id();
-    const cpu: *ffi.hal.CpuControl = &cpu_table[@intCast(cpuid)];
+    const cpu: *hal.CpuControl = &cpu_table[@intCast(cpuid)];
 
     hal_set_cpu_control(cpu);
 
@@ -109,9 +109,9 @@ pub fn apBoot() callconv(.c) void {
 
 extern fn ap_reset_entry() callconv(.c) void;
 
-extern var riscv_cpus: [c.CONFIG_SMP_NCPUS]ffi.hal.RiscVCpu;
+extern var riscv_cpus: [c.CONFIG_SMP_NCPUS]hal.RiscVCpu;
 
-pub fn hal_set_cpu_control(cpu: ?*ffi.hal.CpuControl) callconv(.c) void {
+pub fn hal_set_cpu_control(cpu: ?*hal.CpuControl) callconv(.c) void {
     if (builtin.cpu.arch == .riscv32 or builtin.cpu.arch == .riscv64) {
         asm volatile ("mv tp, %[cpu]"
             :
@@ -135,12 +135,12 @@ pub fn hal_set_cpu_control(cpu: ?*ffi.hal.CpuControl) callconv(.c) void {
     }
 }
 
-pub fn hal_get_cpu_control() callconv(.c) ?*ffi.hal.CpuControl {
+pub fn hal_get_cpu_control() callconv(.c) ?*hal.CpuControl {
     if (builtin.cpu.arch == .x86 or builtin.cpu.arch == .x86_64) {
         return &cpu_table[0];
     } else if (builtin.cpu.arch == .riscv32 or builtin.cpu.arch == .riscv64) {
         return asm volatile ("mv %[ret], tp"
-            : [ret] "=r" (-> ?*ffi.hal.CpuControl),
+            : [ret] "=r" (-> ?*hal.CpuControl),
         );
     } else if (builtin.cpu.arch == .arm or builtin.cpu.arch == .thumb) {
         if (@hasDecl(c, "CONFIG_ARMV8M")) {
@@ -149,7 +149,7 @@ pub fn hal_get_cpu_control() callconv(.c) ?*ffi.hal.CpuControl {
             ));
         } else {
             return asm volatile ("mrc p15, 0, %[ret], c13, c0, 4"
-                : [ret] "=r" (-> ?*ffi.hal.CpuControl),
+                : [ret] "=r" (-> ?*hal.CpuControl),
             );
         }
     }

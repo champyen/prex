@@ -1,16 +1,15 @@
 const c = @import("c").c;
 const ffi = @import("ffi");
+const IntrusiveList = ffi.IntrusiveList;
+const List = ffi.List;
 const deadlock = ffi.deadlock;
 const hal = ffi.hal;
 const kern = ffi.kern;
-const sync = ffi.sync;
-const kutil = ffi.kutil;
-const smp = ffi.smp;
 const kmem = ffi.kmem;
-const sched = ffi.sched;
+const kutil = ffi.kutil;
 const mutex = ffi.mutex;
-const thread = ffi.thread;
-
+const sched = ffi.sched;
+const sync = ffi.sync;
 inline fn is_cond_initializer(m: kern.CondRef) bool {
     if (m) |ptr| {
         return @intFromPtr(ptr) == 0x43496e69;
@@ -20,7 +19,7 @@ inline fn is_cond_initializer(m: kern.CondRef) bool {
 
 fn valid(m: kern.CondRef) c_int {
     const km: *sync.Cond = @ptrCast(m);
-    const CL = ffi.IntrusiveList(kern.Task, ffi.List, "conds");
+    const CL = IntrusiveList(kern.Task, List, "conds");
     const self = kutil.cur_task();
     const head = CL.node(self);
     var n = head.first();
@@ -73,8 +72,8 @@ pub fn init(cp: ?*kern.CondRef) callconv(.c) c_int {
 
     sched.lock();
     defer sched.unlock();
-    const TL = ffi.IntrusiveList(kern.Task, ffi.List, "conds");
-    const ML = ffi.IntrusiveList(sync.Cond, ffi.List, "task_link");
+    const TL = IntrusiveList(kern.Task, List, "conds");
+    const ML = IntrusiveList(sync.Cond, List, "task_link");
     TL.node(self).insertAfter(ML.node(m));
     self.*.nsyncs += 1;
     return 0;
@@ -82,7 +81,7 @@ pub fn init(cp: ?*kern.CondRef) callconv(.c) c_int {
 
 fn deallocate(m: kern.CondRef) void {
     m.*.owner.*.nsyncs -= 1;
-    ffi.IntrusiveList(sync.Cond, ffi.List, "task_link").node(m).remove();
+    IntrusiveList(sync.Cond, List, "task_link").node(m).remove();
     kmem.free(m);
 }
 
@@ -105,7 +104,7 @@ pub fn destroy(cp: ?*kern.CondRef) callconv(.c) c_int {
 }
 
 pub fn cleanup(task: kern.TaskRef) callconv(.c) void {
-    const TL = ffi.IntrusiveList(kern.Task, ffi.List, "conds");
+    const TL = IntrusiveList(kern.Task, List, "conds");
     const head = TL.node(task);
     while (!head.isEmpty()) {
         const n = head.first();

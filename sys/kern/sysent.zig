@@ -3,13 +3,22 @@ const builtin = @import("builtin");
 const c = @import("c").c;
 
 const ffi = @import("ffi");
+const cond = ffi.cond;
+const device = ffi.device;
+const exception = ffi.exception;
 const hal = ffi.hal;
 const kern = ffi.kern;
+const kutil = ffi.kutil;
+const lib = ffi.lib;
+const msg = ffi.msg;
+const mutex = ffi.mutex;
+const object = ffi.object;
+const sem = ffi.sem;
+const system = ffi.system;
 const task = ffi.task;
 const thread = ffi.thread;
-const lib = ffi.lib;
-const kutil = ffi.kutil;
-
+const timer = ffi.timer;
+const vm = ffi.vm;
 const TF_TRACE: c_int = 0x00000002;
 const NSYSCALL: comptime_int = 62;
 
@@ -30,18 +39,18 @@ const SysEnt = struct {
 };
 
 const sysent: [NSYSCALL]SysEnt = .{
-    SysEnt.init("exception_return", 0, ffi.exception.@"return"),
-    SysEnt.init("exception_setup", 1, ffi.exception.setup),
-    SysEnt.init("exception_raise", 2, ffi.exception.raise),
-    SysEnt.init("exception_wait", 1, ffi.exception.wait),
+    SysEnt.init("exception_return", 0, exception.@"return"),
+    SysEnt.init("exception_setup", 1, exception.setup),
+    SysEnt.init("exception_raise", 2, exception.raise),
+    SysEnt.init("exception_wait", 1, exception.wait),
     SysEnt.init("task_create", 3, task.create),
     SysEnt.init("task_terminate", 1, task.terminate),
     SysEnt.init("task_self", 0, task.self),
-    SysEnt.init("task_suspend", 1, ffi.task.@"suspend"),
-    SysEnt.init("task_resume", 1, ffi.task.@"resume"),
-    SysEnt.init("task_setname", 2, ffi.task.setname),
-    SysEnt.init("task_setcap", 2, ffi.task.setcap),
-    SysEnt.init("task_chkcap", 2, ffi.task.chkcap),
+    SysEnt.init("task_suspend", 1, task.@"suspend"),
+    SysEnt.init("task_resume", 1, task.@"resume"),
+    SysEnt.init("task_setname", 2, task.setname),
+    SysEnt.init("task_setcap", 2, task.setcap),
+    SysEnt.init("task_chkcap", 2, task.chkcap),
     SysEnt.init("thread_create", 2, thread.create),
     SysEnt.init("thread_terminate", 1, thread.terminate),
     SysEnt.init("thread_setup", 4, thread.setup),
@@ -49,47 +58,47 @@ const sysent: [NSYSCALL]SysEnt = .{
     SysEnt.init("thread_yield", 0, thread.yield),
     SysEnt.init("thread_suspend", 1, thread.@"suspend"),
     SysEnt.init("thread_resume", 1, thread.@"resume"),
-    SysEnt.init("thread_schedparam", 3, ffi.thread.schedparam),
-    SysEnt.init("vm_allocate", 4, ffi.vm.allocate),
-    SysEnt.init("vm_free", 2, ffi.vm.free),
-    SysEnt.init("vm_attribute", 3, ffi.vm.attribute),
-    SysEnt.init("vm_map", 4, ffi.vm.map),
-    SysEnt.init("object_create", 2, ffi.object.create),
-    SysEnt.init("object_destroy", 1, ffi.object.destroy),
-    SysEnt.init("object_lookup", 2, ffi.object.lookup),
-    SysEnt.init("msg_send", 3, ffi.msg.send),
-    SysEnt.init("msg_receive", 3, ffi.msg.receive),
-    SysEnt.init("msg_reply", 3, ffi.msg.reply),
-    SysEnt.init("timer_sleep", 2, ffi.timer.sleep),
-    SysEnt.init("timer_alarm", 2, ffi.timer.alarm),
-    SysEnt.init("timer_periodic", 3, ffi.timer.periodic),
-    SysEnt.init("timer_waitperiod", 0, ffi.timer.waitperiod),
-    SysEnt.init("device_open", 3, ffi.device.open),
-    SysEnt.init("device_close", 1, ffi.device.close),
-    SysEnt.init("device_read", 4, ffi.device.read),
-    SysEnt.init("device_write", 4, ffi.device.write),
+    SysEnt.init("thread_schedparam", 3, thread.schedparam),
+    SysEnt.init("vm_allocate", 4, vm.allocate),
+    SysEnt.init("vm_free", 2, vm.free),
+    SysEnt.init("vm_attribute", 3, vm.attribute),
+    SysEnt.init("vm_map", 4, vm.map),
+    SysEnt.init("object_create", 2, object.create),
+    SysEnt.init("object_destroy", 1, object.destroy),
+    SysEnt.init("object_lookup", 2, object.lookup),
+    SysEnt.init("msg_send", 3, msg.send),
+    SysEnt.init("msg_receive", 3, msg.receive),
+    SysEnt.init("msg_reply", 3, msg.reply),
+    SysEnt.init("timer_sleep", 2, timer.sleep),
+    SysEnt.init("timer_alarm", 2, timer.alarm),
+    SysEnt.init("timer_periodic", 3, timer.periodic),
+    SysEnt.init("timer_waitperiod", 0, timer.waitperiod),
+    SysEnt.init("device_open", 3, device.open),
+    SysEnt.init("device_close", 1, device.close),
+    SysEnt.init("device_read", 4, device.read),
+    SysEnt.init("device_write", 4, device.write),
     SysEnt.init("device_ioctl", 3, c.device_ioctl),
-    SysEnt.init("mutex_init", 1, ffi.mutex.init),
-    SysEnt.init("mutex_destroy", 1, ffi.mutex.destroy),
-    SysEnt.init("mutex_lock", 1, ffi.mutex.lock),
-    SysEnt.init("mutex_trylock", 1, ffi.mutex.tryLock),
-    SysEnt.init("mutex_unlock", 1, ffi.mutex.unlock),
-    SysEnt.init("cond_init", 1, ffi.cond.init),
-    SysEnt.init("cond_destroy", 1, ffi.cond.destroy),
-    SysEnt.init("cond_wait", 2, ffi.cond.wait),
-    SysEnt.init("cond_signal", 1, ffi.cond.signal),
-    SysEnt.init("cond_broadcast", 1, ffi.cond.broadcast),
-    SysEnt.init("sem_init", 2, ffi.sem.init),
-    SysEnt.init("sem_destroy", 1, ffi.sem.destroy),
-    SysEnt.init("sem_wait", 2, ffi.sem.wait),
-    SysEnt.init("sem_trywait", 1, ffi.sem.tryWait),
-    SysEnt.init("sem_post", 1, ffi.sem.post),
-    SysEnt.init("sem_getvalue", 2, ffi.sem.getValue),
-    SysEnt.init("sys_log", 1, ffi.system.log),
-    SysEnt.init("sys_panic", 1, ffi.system.panic),
-    SysEnt.init("sys_info", 2, ffi.system.info),
-    SysEnt.init("sys_time", 1, ffi.system.time),
-    SysEnt.init("sys_debug", 2, ffi.system.debug),
+    SysEnt.init("mutex_init", 1, mutex.init),
+    SysEnt.init("mutex_destroy", 1, mutex.destroy),
+    SysEnt.init("mutex_lock", 1, mutex.lock),
+    SysEnt.init("mutex_trylock", 1, mutex.tryLock),
+    SysEnt.init("mutex_unlock", 1, mutex.unlock),
+    SysEnt.init("cond_init", 1, cond.init),
+    SysEnt.init("cond_destroy", 1, cond.destroy),
+    SysEnt.init("cond_wait", 2, cond.wait),
+    SysEnt.init("cond_signal", 1, cond.signal),
+    SysEnt.init("cond_broadcast", 1, cond.broadcast),
+    SysEnt.init("sem_init", 2, sem.init),
+    SysEnt.init("sem_destroy", 1, sem.destroy),
+    SysEnt.init("sem_wait", 2, sem.wait),
+    SysEnt.init("sem_trywait", 1, sem.tryWait),
+    SysEnt.init("sem_post", 1, sem.post),
+    SysEnt.init("sem_getvalue", 2, sem.getValue),
+    SysEnt.init("sys_log", 1, system.log),
+    SysEnt.init("sys_panic", 1, system.panic),
+    SysEnt.init("sys_info", 2, system.info),
+    SysEnt.init("sys_time", 1, system.time),
+    SysEnt.init("sys_debug", 2, system.debug),
     SysEnt.init("device_gather_read", 4, c.device_gather_read),
     SysEnt.init("device_scatter_write", 4, c.device_scatter_write),
 };

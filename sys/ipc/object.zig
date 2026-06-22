@@ -4,23 +4,24 @@ const c = @import("c").c;
 extern fn zig_memory_barrier() callconv(.c) void;
 
 const ffi = @import("ffi");
+const IntrusiveList = ffi.IntrusiveList;
+const IntrusiveQueue = ffi.IntrusiveQueue;
+const List = ffi.List;
+const Queue = ffi.Queue;
 const hal = ffi.hal;
 const kern = ffi.kern;
+const kmem = ffi.kmem;
 const kutil = ffi.kutil;
 const lib = ffi.lib;
-const smp = ffi.smp;
-const kmem = ffi.kmem;
+const msg = ffi.msg;
 const sched = ffi.sched;
 const task = ffi.task;
-const msg = ffi.msg;
-const thread = ffi.thread;
+var object_list: List = .{};
 
-var object_list: ffi.List = .{};
-
-fn find(name: [*:0]const u8) ?*ffi.hal.Object {
+fn find(name: [*:0]const u8) ?*hal.Object {
     var n = object_list.first();
     while (n != &object_list) {
-        const obj = n.entry(ffi.hal.Object, "link");
+        const obj = n.entry(hal.Object, "link");
         if (lib.strncmp(&obj.name, name, hal.MAXOBJNAME) == 0) {
             return obj;
         }
@@ -29,12 +30,12 @@ fn find(name: [*:0]const u8) ?*ffi.hal.Object {
     return null;
 }
 
-fn deallocate(obj: *ffi.hal.Object) void {
+fn deallocate(obj: *hal.Object) void {
     msg.abort(obj);
     const owner = @as(*kern.Task, @ptrCast(obj.owner));
     owner.nobjects -|= 1;
-    ffi.IntrusiveList(ffi.hal.Object, ffi.List, "task_link").node(obj).remove();
-    ffi.IntrusiveList(ffi.hal.Object, ffi.List, "link").node(obj).remove();
+    IntrusiveList(hal.Object, List, "task_link").node(obj).remove();
+    IntrusiveList(hal.Object, List, "link").node(obj).remove();
     kmem.free(obj);
 }
 
@@ -73,8 +74,8 @@ pub fn create(name: ?[*:0]const u8, objp: ?*kern.ObjectRef) callconv(.c) c_int {
         return kern.Errno.EEXIST;
     }
 
-    const mem = kmem.alloc(@sizeOf(ffi.hal.Object)) orelse return kern.Errno.ENOMEM;
-    const obj: ?*ffi.hal.Object = @ptrCast(@alignCast(mem));
+    const mem = kmem.alloc(@sizeOf(hal.Object)) orelse return kern.Errno.ENOMEM;
+    const obj: ?*hal.Object = @ptrCast(@alignCast(mem));
     errdefer kmem.free(mem);
 
     if (name != null) {
@@ -82,11 +83,11 @@ pub fn create(name: ?[*:0]const u8, objp: ?*kern.ObjectRef) callconv(.c) c_int {
     }
 
     obj.?.owner = cur;
-    ffi.IntrusiveQueue(ffi.hal.Object, ffi.Queue, "sendq").node(obj.?).init();
-    ffi.IntrusiveQueue(ffi.hal.Object, ffi.Queue, "recvq").node(obj.?).init();
-    ffi.IntrusiveList(kern.Task, ffi.List, "objects").node(cur).insertAfter(ffi.IntrusiveList(ffi.hal.Object, ffi.List, "task_link").node(obj.?));
+    IntrusiveQueue(hal.Object, Queue, "sendq").node(obj.?).init();
+    IntrusiveQueue(hal.Object, Queue, "recvq").node(obj.?).init();
+    IntrusiveList(kern.Task, List, "objects").node(cur).insertAfter(IntrusiveList(hal.Object, List, "task_link").node(obj.?));
     cur.nobjects += 1;
-    object_list.insertAfter(ffi.IntrusiveList(ffi.hal.Object, ffi.List, "link").node(obj.?));
+    object_list.insertAfter(IntrusiveList(hal.Object, List, "link").node(obj.?));
 
     zig_memory_barrier();
 
@@ -121,7 +122,7 @@ pub fn lookup(name: [*:0]const u8, objp: ?*kern.ObjectRef) callconv(.c) c_int {
 pub fn valid(obj: kern.ObjectRef) callconv(.c) c_int {
     var n = object_list.first();
     while (n != &object_list) {
-        const tmp = n.entry(ffi.hal.Object, "link");
+        const tmp = n.entry(hal.Object, "link");
         if (tmp == obj) {
             return 1;
         }
@@ -136,7 +137,7 @@ pub fn destroy(obj: kern.ObjectRef) callconv(.c) c_int {
     if (valid(obj) == 0) {
         return kern.Errno.EINVAL;
     }
-    const target_obj = @as(*ffi.hal.Object, @ptrCast(obj));
+    const target_obj = @as(*hal.Object, @ptrCast(obj));
     if (@intFromPtr(target_obj.owner) != @intFromPtr(kutil.get_curtask())) {
         return kern.Errno.EACCES;
     }
@@ -146,9 +147,9 @@ pub fn destroy(obj: kern.ObjectRef) callconv(.c) c_int {
 
 pub fn cleanup(tsk: kern.TaskRef) callconv(.c) void {
     const t = @as(*kern.Task, @ptrCast(tsk));
-    const head = ffi.IntrusiveList(kern.Task, ffi.List, "objects").node(t);
+    const head = IntrusiveList(kern.Task, List, "objects").node(t);
     while (!head.isEmpty()) {
-        const obj = head.first().entry(ffi.hal.Object, "task_link");
+        const obj = head.first().entry(hal.Object, "task_link");
         deallocate(obj);
     }
 }

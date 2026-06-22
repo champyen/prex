@@ -4,16 +4,15 @@ const builtin = @import("builtin");
 const c = @import("c").c;
 
 const ffi = @import("ffi");
+const IntrusiveList = ffi.IntrusiveList;
+const List = ffi.List;
 const deadlock = ffi.deadlock;
 const hal = ffi.hal;
 const kern = ffi.kern;
-const sync = ffi.sync;
-const kutil = ffi.kutil;
-const smp = ffi.smp;
 const kmem = ffi.kmem;
+const kutil = ffi.kutil;
 const sched = ffi.sched;
-const thread = ffi.thread;
-
+const sync = ffi.sync;
 inline fn is_mutex_initializer(m: kern.MutexRef) bool {
     if (m) |ptr| {
         return @intFromPtr(ptr) == 0x4d496e69;
@@ -23,7 +22,7 @@ inline fn is_mutex_initializer(m: kern.MutexRef) bool {
 
 fn valid(m: kern.MutexRef) c_int {
     const km: *sync.Mutex = @ptrCast(m);
-    const TL = ffi.IntrusiveList(kern.Task, ffi.List, "mutexes");
+    const TL = IntrusiveList(kern.Task, List, "mutexes");
     const self = kutil.cur_task();
     const head = TL.node(self);
     var n = head.first();
@@ -92,7 +91,7 @@ fn prio_uninherit(t: kern.ThreadRef) void {
     }
 
     var maxpri = t.*.basepri;
-    const ML = ffi.IntrusiveList(kern.Thread, ffi.List, "mutexes");
+    const ML = IntrusiveList(kern.Thread, List, "mutexes");
     const head = ML.node(t);
     var n = head.first();
     while (n != head) : (n = n.nextNode()) {
@@ -126,8 +125,8 @@ pub fn init(mp: ?*kern.MutexRef) callconv(.c) c_int {
 
     sched.lock();
     defer sched.unlock();
-    const TL = ffi.IntrusiveList(kern.Task, ffi.List, "mutexes");
-    const ML = ffi.IntrusiveList(sync.Mutex, ffi.List, "task_link");
+    const TL = IntrusiveList(kern.Task, List, "mutexes");
+    const ML = IntrusiveList(sync.Mutex, List, "task_link");
     TL.node(self).insertAfter(ML.node(m.?));
     self.*.nsyncs += 1;
     return 0;
@@ -135,7 +134,7 @@ pub fn init(mp: ?*kern.MutexRef) callconv(.c) c_int {
 
 fn deallocate(m: kern.MutexRef) void {
     m.*.owner.*.nsyncs -= 1;
-    ffi.IntrusiveList(sync.Mutex, ffi.List, "task_link").node(m.?).remove();
+    IntrusiveList(sync.Mutex, List, "task_link").node(m.?).remove();
     kmem.free(m);
 }
 
@@ -158,7 +157,7 @@ pub fn destroy(mp: ?*kern.MutexRef) callconv(.c) c_int {
 }
 
 pub fn cleanup(task: kern.TaskRef) callconv(.c) void {
-    const TL = ffi.IntrusiveList(kern.Task, ffi.List, "mutexes");
+    const TL = IntrusiveList(kern.Task, List, "mutexes");
     const head = TL.node(task);
     while (!head.isEmpty()) {
         const n = head.first();
@@ -185,7 +184,7 @@ pub fn lock(mp: ?*kern.MutexRef) callconv(.c) c_int {
             km.*.priority = kutil.cur_thread().*.priority;
             km.*.locks = 1;
             km.*.holder = kutil.cur_thread();
-            ffi.IntrusiveList(kern.Thread, ffi.List, "mutexes").node(kutil.cur_thread()).insertAfter(&km.*.link);
+            IntrusiveList(kern.Thread, List, "mutexes").node(kutil.cur_thread()).insertAfter(&km.*.link);
             deadlock.record_lock(m, hal.LOCK_TYPE_MUTEX);
         } else {
             deadlock.mutex_wait(m, kutil.cur_thread());
@@ -203,7 +202,7 @@ pub fn lock(mp: ?*kern.MutexRef) callconv(.c) c_int {
                 return kern.Errno.EINTR;
             }
             km.*.locks = 1;
-            ffi.IntrusiveList(kern.Thread, ffi.List, "mutexes").node(kutil.cur_thread()).insertAfter(&km.*.link);
+            IntrusiveList(kern.Thread, List, "mutexes").node(kutil.cur_thread()).insertAfter(&km.*.link);
             deadlock.record_lock(m, hal.LOCK_TYPE_MUTEX);
         }
     }
@@ -230,7 +229,7 @@ pub fn tryLock(mp: ?*kern.MutexRef) callconv(.c) c_int {
         } else {
             km.*.locks = 1;
             km.*.holder = kutil.cur_thread();
-            ffi.IntrusiveList(kern.Thread, ffi.List, "mutexes").node(kutil.cur_thread()).insertAfter(&km.*.link);
+            IntrusiveList(kern.Thread, List, "mutexes").node(kutil.cur_thread()).insertAfter(&km.*.link);
             deadlock.record_lock(m, hal.LOCK_TYPE_MUTEX);
         }
     }
@@ -255,7 +254,7 @@ pub fn unlock(mp: ?*kern.MutexRef) callconv(.c) c_int {
     km.*.locks -= 1;
     if (km.*.locks == 0) {
         deadlock.record_unlock(m);
-        ffi.IntrusiveList(sync.Mutex, ffi.List, "link").node(km).remove();
+        IntrusiveList(sync.Mutex, List, "link").node(km).remove();
         prio_uninherit(kutil.cur_thread());
 
         km.*.holder = sched.wakeone(&km.*.event);
@@ -269,13 +268,13 @@ pub fn unlock(mp: ?*kern.MutexRef) callconv(.c) c_int {
 }
 
 pub fn cancel(t: kern.ThreadRef) callconv(.c) void {
-    const TL = ffi.IntrusiveList(kern.Thread, ffi.List, "mutexes");
+    const TL = IntrusiveList(kern.Thread, List, "mutexes");
     const head = TL.node(t);
     while (!head.isEmpty()) {
         const n = head.first();
         const m = n.entry(sync.Mutex, "link");
         m.*.locks = 0;
-        ffi.IntrusiveList(sync.Mutex, ffi.List, "link").node(m).remove();
+        IntrusiveList(sync.Mutex, List, "link").node(m).remove();
 
         const holder = sched.wakeone(&m.*.event);
         if (holder) |h| {
