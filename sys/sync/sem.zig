@@ -76,26 +76,21 @@ pub fn init(sp: ?*c.sem_t, value: c_uint) callconv(.c) c_int {
     }
 
     sched.lock();
+    defer sched.unlock();
     if (s != null and valid(s)) {
         const ks: *sync.Sem = @ptrCast(s);
         if (ks.*.owner != self) {
-            sched.unlock();
             return kern.Errno.EINVAL;
         }
         if (!ks.*.event.sleepq.isEmpty()) {
-            sched.unlock();
             return kern.Errno.EBUSY;
         }
         ks.*.value = value;
     } else {
-        const mem = kmem.alloc(@sizeOf(sync.Sem)) orelse {
-            sched.unlock();
-            return kern.Errno.ENOSPC;
-        };
+        const mem = kmem.alloc(@sizeOf(sync.Sem)) orelse return kern.Errno.ENOSPC;
         s = @ptrCast(@alignCast(mem));
+        errdefer kmem.free(s);
         if (hal.copyout(@as(?*const anyopaque, @ptrCast(&s)), @as(?*anyopaque, @ptrCast(sp)), @sizeOf(c.sem_t)) != 0) {
-            kmem.free(s);
-            sched.unlock();
             return kern.Errno.EFAULT;
         }
         const ks: *sync.Sem = @ptrCast(s);
@@ -109,7 +104,6 @@ pub fn init(sp: ?*c.sem_t, value: c_uint) callconv(.c) c_int {
         ks.*.next = sem_list;
         sem_list = ks;
     }
-    sched.unlock();
     return 0;
 }
 
@@ -117,17 +111,15 @@ pub fn destroy(sp: ?*c.sem_t) callconv(.c) c_int {
     var s: c.sem_t = undefined;
 
     sched.lock();
+    defer sched.unlock();
     if (copyin(sp, &s) != 0 or s.*.owner != kutil.cur_task()) {
-        sched.unlock();
         return kern.Errno.EINVAL;
     }
     const ks: *sync.Sem = @ptrCast(s);
     if (!ks.*.event.sleepq.isEmpty() or ks.*.value == 0) {
-        sched.unlock();
         return kern.Errno.EBUSY;
     }
     release(s);
-    sched.unlock();
     return 0;
 }
 
@@ -136,8 +128,8 @@ pub fn wait(sp: ?*c.sem_t, timeout: c_ulong) callconv(.c) c_int {
     var error_code: c_int = 0;
 
     sched.lock();
+    defer sched.unlock();
     if (copyin(sp, &s) != 0) {
-        sched.unlock();
         return kern.Errno.EINVAL;
     }
     reference(s);
@@ -161,7 +153,6 @@ pub fn wait(sp: ?*c.sem_t, timeout: c_ulong) callconv(.c) c_int {
     }
 
     release(s);
-    sched.unlock();
     return error_code;
 }
 
@@ -169,16 +160,14 @@ pub fn tryWait(sp: ?*c.sem_t) callconv(.c) c_int {
     var s: c.sem_t = undefined;
 
     sched.lock();
+    defer sched.unlock();
     if (copyin(sp, &s) != 0) {
-        sched.unlock();
         return kern.Errno.EINVAL;
     }
     if (s.*.value == 0) {
-        sched.unlock();
         return kern.Errno.EAGAIN;
     }
     s.*.value -= 1;
-    sched.unlock();
     return 0;
 }
 
@@ -186,12 +175,11 @@ pub fn post(sp: ?*c.sem_t) callconv(.c) c_int {
     var s: c.sem_t = undefined;
 
     sched.lock();
+    defer sched.unlock();
     if (copyin(sp, &s) != 0) {
-        sched.unlock();
         return kern.Errno.EINVAL;
     }
     if (s.*.value >= sync.MAXSEMVAL) {
-        sched.unlock();
         return kern.Errno.ERANGE;
     }
     const ks: *sync.Sem = @ptrCast(s);
@@ -200,19 +188,17 @@ pub fn post(sp: ?*c.sem_t) callconv(.c) c_int {
         _ = sched.wakeone(&ks.*.event);
     }
 
-    sched.unlock();
     return 0;
 }
 
 pub fn postKernel(s: c.sem_t) callconv(.c) c_int {
     sched.lock();
+    defer sched.unlock();
     if (!valid(s)) {
-        sched.unlock();
         return kern.Errno.EINVAL;
     }
     const ks: *sync.Sem = @ptrCast(s);
     if (ks.*.value >= sync.MAXSEMVAL) {
-        sched.unlock();
         return kern.Errno.ERANGE;
     }
     ks.*.value += 1;
@@ -220,7 +206,6 @@ pub fn postKernel(s: c.sem_t) callconv(.c) c_int {
         _ = sched.wakeone(&ks.*.event);
     }
 
-    sched.unlock();
     return 0;
 }
 
@@ -228,15 +213,13 @@ pub fn getValue(sp: ?*c.sem_t, value: ?*c_uint) callconv(.c) c_int {
     var s: c.sem_t = undefined;
 
     sched.lock();
+    defer sched.unlock();
     if (copyin(sp, &s) != 0) {
-        sched.unlock();
         return kern.Errno.EINVAL;
     }
     if (hal.copyout(@as(?*const anyopaque, @ptrCast(&s.*.value)), @as(?*anyopaque, @ptrCast(value)), @sizeOf(@TypeOf(s.*.value))) != 0) {
-        sched.unlock();
         return kern.Errno.EFAULT;
     }
-    sched.unlock();
     return 0;
 }
 

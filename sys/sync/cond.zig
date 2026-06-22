@@ -60,19 +60,19 @@ pub fn init(cp: ?*c.cond_t) callconv(.c) c_int {
 
     const mem = kmem.alloc(@sizeOf(sync.Cond)) orelse return kern.Errno.ENOMEM;
     const m: c.cond_t = @ptrCast(@alignCast(mem));
+    errdefer kmem.free(m);
 
     c.event_init(&m.*.event, "condvar");
     m.*.owner = self;
 
     if (hal.copyout(@as(?*const anyopaque, @ptrCast(&m)), @as(?*anyopaque, @ptrCast(cp)), @sizeOf(c.cond_t)) != 0) {
-        kmem.free(m);
         return kern.Errno.EFAULT;
     }
 
     sched.lock();
+    defer sched.unlock();
     @as(*ffi.List, @ptrCast(&self.*.conds)).insertAfter(@as(*ffi.List, @ptrCast(&m.*.task_link)));
     self.*.nsyncs += 1;
-    sched.unlock();
     return 0;
 }
 
@@ -85,21 +85,18 @@ fn deallocate(m: c.cond_t) void {
 pub fn destroy(cp: ?*c.cond_t) callconv(.c) c_int {
     var m: c.cond_t = undefined;
     sched.lock();
+    defer sched.unlock();
     if (hal.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t)) != 0) {
-        sched.unlock();
         return kern.Errno.EFAULT;
     }
     if (valid(m) == 0) {
-        sched.unlock();
         return kern.Errno.EINVAL;
     }
     const km: *sync.Cond = @ptrCast(m);
     if (!km.*.event.sleepq.isEmpty()) {
-        sched.unlock();
         return kern.Errno.EBUSY;
     }
     deallocate(m);
-    sched.unlock();
     return 0;
 }
 
@@ -161,13 +158,12 @@ pub fn signal(cp: ?*c.cond_t) callconv(.c) c_int {
     var m: c.cond_t = undefined;
 
     sched.lock();
+    defer sched.unlock();
     if (hal.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t)) != 0) {
-        sched.unlock();
         return kern.Errno.EINVAL;
     }
     const km: *sync.Cond = @ptrCast(m);
     _ = sched.wakeone(&km.*.event);
-    sched.unlock();
     return 0;
 }
 
@@ -175,13 +171,12 @@ pub fn broadcast(cp: ?*c.cond_t) callconv(.c) c_int {
     var m: c.cond_t = undefined;
 
     sched.lock();
+    defer sched.unlock();
     if (hal.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.cond_t)) != 0) {
-        sched.unlock();
         return kern.Errno.EINVAL;
     }
     const km: *sync.Cond = @ptrCast(m);
     sched.wakeup(&km.*.event);
-    sched.unlock();
     return 0;
 }
 

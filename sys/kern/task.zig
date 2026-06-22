@@ -107,30 +107,25 @@ pub fn create(parent: kern.TaskRef, vm_option: c_int, childp: ?*kern.TaskRef) ca
     if (ntasks >= hal.MAXTASKS) return kern.Errno.EAGAIN;
 
     sched.lock();
+    defer sched.unlock();
     if (valid(parent) == 0) {
-        sched.unlock();
         return kern.Errno.ESRCH;
     }
 
     if ((kutil.cur_task().*.flags & kern.TF_SYSTEM) == 0) {
         if (access(parent) == 0) {
-            sched.unlock();
             return kern.Errno.EPERM;
         }
 
         task = null;
         if (hal.copyout(@as(?*const anyopaque, @ptrCast(&task)), @as(?*anyopaque, @ptrCast(childp)), @sizeOf(kern.TaskRef)) != 0) {
-            sched.unlock();
             return kern.Errno.EFAULT;
         }
     }
 
-    const mem = kmem.alloc(@sizeOf(kern.Task));
-    if (mem == null) {
-        sched.unlock();
-        return kern.Errno.ENOMEM;
-    }
+    const mem = kmem.alloc(@sizeOf(kern.Task)) orelse return kern.Errno.ENOMEM;
     task = @ptrCast(@alignCast(mem));
+    errdefer kmem.free(mem);
     @memset(@as([*]u8, @ptrCast(task))[0..@sizeOf(kern.Task)], 0);
 
     switch (vm_option) {
@@ -148,8 +143,6 @@ pub fn create(parent: kern.TaskRef, vm_option: c_int, childp: ?*kern.TaskRef) ca
     }
 
     if (map == null) {
-        kmem.free(task);
-        sched.unlock();
         return kern.Errno.ENOMEM;
     }
 
@@ -173,18 +166,16 @@ pub fn create(parent: kern.TaskRef, vm_option: c_int, childp: ?*kern.TaskRef) ca
         _ = hal.copyout(@as(?*const anyopaque, @ptrCast(&task)), @as(?*anyopaque, @ptrCast(childp)), @sizeOf(kern.TaskRef));
     }
 
-    sched.unlock();
     return 0;
 }
 
 pub fn terminate(task: kern.TaskRef) callconv(.c) c_int {
     sched.lock();
+    defer sched.unlock();
     if (valid(task) == 0) {
-        sched.unlock();
         return kern.Errno.ESRCH;
     }
     if (access(task) == 0) {
-        sched.unlock();
         return kern.Errno.EPERM;
     }
 
@@ -216,7 +207,6 @@ pub fn terminate(task: kern.TaskRef) callconv(.c) c_int {
     task.?.*.map = null;
     kmem.free(task);
     ntasks -= 1;
-    sched.unlock();
     return 0;
 }
 
@@ -226,12 +216,11 @@ pub fn self() callconv(.c) kern.TaskRef {
 
 pub fn @"suspend"(task: kern.TaskRef) callconv(.c) c_int {
     sched.lock();
+    defer sched.unlock();
     if (valid(task) == 0) {
-        sched.unlock();
         return kern.Errno.ESRCH;
     }
     if (access(task) == 0) {
-        sched.unlock();
         return kern.Errno.EPERM;
     }
 
@@ -243,7 +232,6 @@ pub fn @"suspend"(task: kern.TaskRef) callconv(.c) c_int {
             _ = thread.@"suspend"(t);
         }
     }
-    sched.unlock();
     return 0;
 }
 
@@ -251,16 +239,14 @@ pub fn @"resume"(task: kern.TaskRef) callconv(.c) c_int {
     if (task == kutil.cur_task()) return kern.Errno.EINVAL;
 
     sched.lock();
+    defer sched.unlock();
     if (valid(task) == 0) {
-        sched.unlock();
         return kern.Errno.ESRCH;
     }
     if (access(task) == 0) {
-        sched.unlock();
         return kern.Errno.EPERM;
     }
     if (task.?.*.suscnt == 0) {
-        sched.unlock();
         return kern.Errno.EINVAL;
     }
 
@@ -272,7 +258,6 @@ pub fn @"resume"(task: kern.TaskRef) callconv(.c) c_int {
             _ = thread.@"resume"(t);
         }
     }
-    sched.unlock();
     return 0;
 }
 
@@ -280,12 +265,11 @@ pub fn setname(task: kern.TaskRef, name: [*:0]const u8) callconv(.c) c_int {
     var str: [hal.MAXTASKNAME]u8 = undefined;
 
     sched.lock();
+    defer sched.unlock();
     if (valid(task) == 0) {
-        sched.unlock();
         return kern.Errno.ESRCH;
     }
     if (access(task) == 0) {
-        sched.unlock();
         return kern.Errno.EPERM;
     }
 
@@ -294,12 +278,10 @@ pub fn setname(task: kern.TaskRef, name: [*:0]const u8) callconv(.c) c_int {
     } else {
         const err = hal.copyinstr(@as(?*const anyopaque, @ptrCast(name)), @as(?*anyopaque, @ptrCast(&str)), hal.MAXTASKNAME);
         if (err != 0) {
-            sched.unlock();
             return err;
         }
         _ = lib.strlcpy(@ptrCast(&task.?.*.name), @ptrCast(&str), hal.MAXTASKNAME);
     }
-    sched.unlock();
     return 0;
 }
 
@@ -307,16 +289,14 @@ pub fn setcap(task: kern.TaskRef, cap: c.cap_t) callconv(.c) c_int {
     if (capable(kern.CAP_SETPCAP) == 0) return kern.Errno.EPERM;
 
     sched.lock();
+    defer sched.unlock();
     if (valid(task) == 0) {
-        sched.unlock();
         return kern.Errno.ESRCH;
     }
     if (access(task) == 0) {
-        sched.unlock();
         return kern.Errno.EPERM;
     }
     task.?.*.capability = cap;
-    sched.unlock();
     return 0;
 }
 
@@ -324,8 +304,8 @@ pub fn chkcap(task: kern.TaskRef, cap: c.cap_t) callconv(.c) c_int {
     var err: c_int = 0;
 
     sched.lock();
+    defer sched.unlock();
     if (valid(task) == 0) {
-        sched.unlock();
         return kern.Errno.ESRCH;
     }
     if ((task.?.*.capability & cap) == 0) {
@@ -334,7 +314,6 @@ pub fn chkcap(task: kern.TaskRef, cap: c.cap_t) callconv(.c) c_int {
         }
         err = kern.Errno.EPERM;
     }
-    sched.unlock();
     return err;
 }
 
@@ -343,6 +322,7 @@ pub fn info(task_info_ptr: ?*hal.TaskInfo) callconv(.c) c_int {
     var i: c.u_long = 0;
 
     sched.lock();
+    defer sched.unlock();
     var n = list_first(&task_list);
     while (true) : (n = list_next_node(n)) {
         if (i == target) {
@@ -356,13 +336,11 @@ pub fn info(task_info_ptr: ?*hal.TaskInfo) callconv(.c) c_int {
             task_info_ptr.?.*.nthreads = task.*.nthreads;
             task_info_ptr.?.*.active = if (task == kutil.cur_task()) @as(c_int, 1) else @as(c_int, 0);
             _ = lib.strlcpy(@ptrCast(&task_info_ptr.?.*.taskname), @ptrCast(&task.*.name), hal.MAXTASKNAME);
-            sched.unlock();
             return 0;
         }
         i += 1;
         if (n == @as(*hal.List, @ptrCast(&task_list))) break;
     }
-    sched.unlock();
     return kern.Errno.ESRCH;
 }
 

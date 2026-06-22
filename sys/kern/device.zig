@@ -34,11 +34,11 @@ fn create(drv: ?*hal.Driver, name: [*c]const u8, flags: c_int) callconv(.c) ?*ke
     var priv: ?*anyopaque = null;
 
     sched.lock();
+    defer sched.unlock();
 
     // Check the length of the name.
     len = lib.strnlen(name, hal.MAXDEVNAME);
     if (len == 0 or len >= hal.MAXDEVNAME) {
-        sched.unlock();
         return null;
     }
 
@@ -48,18 +48,11 @@ fn create(drv: ?*hal.Driver, name: [*c]const u8, flags: c_int) callconv(.c) ?*ke
     }
 
     // Allocate a device structure.
-    const dev: ?*kern.Device = @ptrCast(@alignCast(kmem.alloc(@sizeOf(kern.Device))));
-    if (dev == null) {
-        lib.panic("create");
-    }
-    const dev_ptr = dev.?;
+    const dev_ptr: *kern.Device = @ptrCast(@alignCast(kmem.alloc(@sizeOf(kern.Device)) orelse @panic("create")));
 
     // Allocate driver private data if needed.
     if (drv != null and drv.?.devsz != 0) {
-        priv = kmem.alloc(drv.?.devsz);
-        if (priv == null) {
-            lib.panic("devsz");
-        }
+        priv = kmem.alloc(drv.?.devsz) orelse @panic("devsz");
         _ = lib.memset(priv, 0, drv.?.devsz);
     }
 
@@ -72,7 +65,6 @@ fn create(drv: ?*hal.Driver, name: [*c]const u8, flags: c_int) callconv(.c) ?*ke
     dev_ptr.next = device_list;
     device_list = dev_ptr;
 
-    sched.unlock();
     return dev_ptr;
 }
 
@@ -80,13 +72,12 @@ fn create(drv: ?*hal.Driver, name: [*c]const u8, flags: c_int) callconv(.c) ?*ke
 /// Returns 0 on success, ENODEV on failure.
 fn destroy(dev: ?*kern.Device) callconv(.c) c_int {
     sched.lock();
+    defer sched.unlock();
     if (valid(dev) == 0) {
-        sched.unlock();
         return kern.Errno.ENODEV;
     }
     dev.?.active = 0;
     release(dev);
-    sched.unlock();
     return 0;
 }
 
@@ -120,26 +111,24 @@ fn valid(dev: ?*kern.Device) callconv(.c) c_int {
 /// Returns 0 on success, ENODEV or EPERM on failure.
 fn reference(dev: ?*kern.Device) callconv(.c) c_int {
     sched.lock();
+    defer sched.unlock();
     if (valid(dev) == 0) {
-        sched.unlock();
         return kern.Errno.ENODEV;
     }
     if (task.capable(kern.CAP_RAWIO) == 0) {
-        sched.unlock();
         return kern.Errno.EPERM;
     }
     dev.?.refcnt += 1;
-    sched.unlock();
     return 0;
 }
 
 /// release – decrement the reference count; free when it reaches zero.
 fn release(dev: ?*kern.Device) callconv(.c) void {
     sched.lock();
+    defer sched.unlock();
     const dev_ptr = dev.?;
     dev_ptr.refcnt -= 1;
     if (dev_ptr.refcnt > 0) {
-        sched.unlock();
         return;
     }
 
@@ -153,7 +142,6 @@ fn release(dev: ?*kern.Device) callconv(.c) void {
         tmp = @ptrCast(&curr.next);
     }
     kmem.free(dev_ptr);
-    sched.unlock();
 }
 
 /// privateFn – return device's private data.
@@ -165,14 +153,13 @@ fn privateFn(dev: ?*kern.Device) callconv(.c) ?*anyopaque {
 /// control – devctl from another device driver (internal).
 fn control(dev: ?*kern.Device, cmd: c_ulong, arg: ?*anyopaque) callconv(.c) c_int {
     sched.lock();
+    defer sched.unlock();
     const drv: ?*hal.Driver = if (dev) |d| d.driver else null;
     const ops: ?*c.struct_devops = if (drv) |dr| dr.devops else null;
     if (ops == null or ops.?.devctl == null) {
-        sched.unlock();
         return kern.Errno.EINVAL;
     }
     const err: c_int = ops.?.devctl.?(@ptrCast(dev), cmd, arg);
-    sched.unlock();
     return err;
 }
 
@@ -181,6 +168,7 @@ fn broadcast(cmd: c_ulong, arg: ?*anyopaque, force: c_int) callconv(.c) c_int {
     var retval: c_int = 0;
 
     sched.lock();
+    defer sched.unlock();
 
     var dev = device_list;
     while (dev) |d| : (dev = @ptrCast(d.next)) {
@@ -199,7 +187,6 @@ fn broadcast(cmd: c_ulong, arg: ?*anyopaque, force: c_int) callconv(.c) c_int {
             }
         }
     }
-    sched.unlock();
     return retval;
 }
 
@@ -479,6 +466,7 @@ pub fn info(dev_info: ?*hal.DeviceInfo) callconv(.c) c_int {
     var err: c_int = kern.Errno.ESRCH;
 
     sched.lock();
+    defer sched.unlock();
     var dev = device_list;
     while (dev) |d| : (dev = @ptrCast(d.next)) {
         if (i == target) {
@@ -491,7 +479,6 @@ pub fn info(dev_info: ?*hal.DeviceInfo) callconv(.c) c_int {
         }
         i += 1;
     }
-    sched.unlock();
     return err;
 }
 

@@ -71,6 +71,7 @@ fn block_find(size: usize) ?*block_hdr {
 // Exported FFI functions
 pub fn alloc(size: usize) callconv(.c) ?*anyopaque {
     sched.lock();
+    defer sched.unlock();
 
     const total_size = alloc_size(size + BLKHDR_SIZE);
     if (total_size > MAX_ALLOC_SIZE) {
@@ -90,7 +91,6 @@ pub fn alloc(size: usize) callconv(.c) ?*anyopaque {
 
         const pa = page.alloc(@intCast(pg_size));
         if (pa == 0) {
-            sched.unlock();
             return null;
         }
         pg = @ptrCast(@alignCast(kutil.ptokv(pa).?));
@@ -121,7 +121,6 @@ pub fn alloc(size: usize) callconv(.c) ?*anyopaque {
     pg.*.nallocs += 1;
     const p: ?*anyopaque = @ptrFromInt(@intFromPtr(active_blk) + BLKHDR_SIZE);
 
-    sched.unlock();
     return p;
 }
 
@@ -131,6 +130,7 @@ pub fn free(ptr: ?*anyopaque) callconv(.c) void {
     }
 
     sched.lock();
+    defer sched.unlock();
 
     const blk: *block_hdr = @ptrCast(@alignCast(@as(*block_hdr, @ptrFromInt(@intFromPtr(ptr) - BLKHDR_SIZE))));
     if (blk.*.magic != BLOCK_MAGIC) {
@@ -166,8 +166,6 @@ pub fn free(ptr: ?*anyopaque) callconv(.c) void {
             page.free(kutil.kvtop(pg), @intCast(hal.PAGE_SIZE));
         }
     }
-
-    sched.unlock();
 }
 
 pub fn map(addr: ?*anyopaque, size: usize) callconv(.c) ?*anyopaque {

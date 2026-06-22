@@ -237,31 +237,25 @@ pub fn periodic(t: kern.ThreadRef, start: c_ulong, period: c_ulong) callconv(.c)
         return kern.Errno.EINVAL;
 
     sched.lock();
+    defer sched.unlock();
     if (thread.valid(t) == 0) {
-        sched.unlock();
         return kern.Errno.ESRCH;
     }
     const thread_ptr: ?*kern.Thread = t;
     const cur_thread: ?*kern.Thread = kutil.get_curthread();
     if (thread_ptr.?.task != cur_thread.?.task) {
-        sched.unlock();
         return kern.Errno.EPERM;
     }
 
     var tmr: ?*hal.Timer = thread_ptr.?.periodic;
     if (start == 0) {
         if (tmr == null or tmr.?.state != TM_ACTIVE) {
-            sched.unlock();
             return kern.Errno.EINVAL;
         }
         stop(tmr);
     } else {
         if (tmr == null) {
-            const alloc: ?*anyopaque = kmem.alloc(@sizeOf(hal.Timer));
-            if (alloc == null) {
-                sched.unlock();
-                return kern.Errno.ENOMEM;
-            }
+            const alloc: ?*anyopaque = kmem.alloc(@sizeOf(hal.Timer)) orelse return kern.Errno.ENOMEM;
             tmr = @ptrCast(@alignCast(alloc));
             _ = lib.memset(tmr, 0, @sizeOf(hal.Timer));
             event_init(&tmr.?.event, "periodic");
@@ -274,7 +268,6 @@ pub fn periodic(t: kern.ThreadRef, start: c_ulong, period: c_ulong) callconv(.c)
         timerAdd(tmr.?, timer.mstohz(start));
         timer_lock.unlock_irq(s);
     }
-    sched.unlock();
     return 0;
 }
 

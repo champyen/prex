@@ -42,11 +42,11 @@ pub fn attach(vector: c_int, pri: c_int, shared: c_int, isr: ?*const fn (?*anyop
     std.debug.assert(isr != null);
 
     sched.lock();
-    const irq_mem = kmem.alloc(@sizeOf(kern.IRQ));
-    if (irq_mem == null) {
-        @panic("irq_attach");
-    }
+    defer sched.unlock();
+
+    const irq_mem = kmem.alloc(@sizeOf(kern.IRQ)) orelse @panic("irq_attach");
     const irq: *kern.IRQ = @ptrCast(@alignCast(irq_mem));
+    errdefer kmem.free(irq);
 
     _ = lib.memset(irq, 0, @sizeOf(kern.IRQ));
     irq.vector = vector;
@@ -56,10 +56,7 @@ pub fn attach(vector: c_int, pri: c_int, shared: c_int, isr: ?*const fn (?*anyop
     irq.data = data;
 
     if (ist != IST_NONE) {
-        irq.thread = thread.kcreate(irq_thread, irq, ISTPRI(pri));
-        if (irq.thread == null) {
-            @panic("irq_attach");
-        }
+        irq.thread = thread.kcreate(irq_thread, irq, ISTPRI(pri)) orelse @panic("irq_attach");
         c.event_init(@as(?*anyopaque, @ptrCast(&irq.istevt)), "interrupt");
     }
     irq_table[@intCast(vector)] = irq;
@@ -67,7 +64,6 @@ pub fn attach(vector: c_int, pri: c_int, shared: c_int, isr: ?*const fn (?*anyop
     hal.interrupt_setup(vector, mode);
     hal.interrupt_unmask(vector, pri);
 
-    sched.unlock();
     return irq;
 }
 

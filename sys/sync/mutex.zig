@@ -110,20 +110,21 @@ pub fn init(mp: ?*c.mutex_t) callconv(.c) c_int {
 
     const mem = kmem.alloc(@sizeOf(sync.Mutex)) orelse return kern.Errno.ENOMEM;
     const m: c.mutex_t = @ptrCast(@alignCast(mem));
+    errdefer kmem.free(m);
+
     c.event_init(&m.*.event, "mutex");
     m.*.owner = self;
     m.*.holder = null;
     m.*.priority = hal.MINPRI;
 
     if (hal.copyout(@as(?*const anyopaque, @ptrCast(&m)), @as(?*anyopaque, @ptrCast(mp)), @sizeOf(c.mutex_t)) != 0) {
-        kmem.free(m);
         return kern.Errno.EFAULT;
     }
 
     sched.lock();
+    defer sched.unlock();
     @as(*ffi.List, @ptrCast(&self.*.mutexes)).insertAfter(@as(*ffi.List, @ptrCast(&m.*.task_link)));
     self.*.nsyncs += 1;
-    sched.unlock();
     return 0;
 }
 
@@ -136,21 +137,18 @@ fn deallocate(m: c.mutex_t) void {
 pub fn destroy(mp: ?*c.mutex_t) callconv(.c) c_int {
     var m: c.mutex_t = undefined;
     sched.lock();
+    defer sched.unlock();
     if (hal.copyin(@as(?*const anyopaque, @ptrCast(mp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(c.mutex_t)) != 0) {
-        sched.unlock();
         return kern.Errno.EFAULT;
     }
     if (valid(m) == 0) {
-        sched.unlock();
         return kern.Errno.EINVAL;
     }
     const km: *sync.Mutex = @ptrCast(m);
     if (km.*.holder != null or !km.*.event.sleepq.isEmpty()) {
-        sched.unlock();
         return kern.Errno.EBUSY;
     }
     deallocate(m);
-    sched.unlock();
     return 0;
 }
 
@@ -166,9 +164,9 @@ pub fn lock(mp: ?*c.mutex_t) callconv(.c) c_int {
     var m: c.mutex_t = undefined;
 
     sched.lock();
+    defer sched.unlock();
     const error_code = copyin(mp, &m);
     if (error_code != 0) {
-        sched.unlock();
         return error_code;
     }
 
@@ -189,14 +187,12 @@ pub fn lock(mp: ?*c.mutex_t) callconv(.c) c_int {
             if (inherit_err != 0) {
                 deadlock.mutex_stop_wait(kutil.cur_thread());
                 kutil.cur_thread().*.mutex_waiting = null;
-                sched.unlock();
                 return inherit_err;
             }
             const rc = sched.tsleep(&km.*.event, 0);
             deadlock.mutex_stop_wait(kutil.cur_thread());
             kutil.cur_thread().*.mutex_waiting = null;
             if (rc == kern.SLP_INTR) {
-                sched.unlock();
                 return kern.Errno.EINTR;
             }
             km.*.locks = 1;
@@ -204,7 +200,6 @@ pub fn lock(mp: ?*c.mutex_t) callconv(.c) c_int {
             deadlock.record_lock(m, hal.LOCK_TYPE_MUTEX);
         }
     }
-    sched.unlock();
     return 0;
 }
 
@@ -212,9 +207,9 @@ pub fn tryLock(mp: ?*c.mutex_t) callconv(.c) c_int {
     var m: c.mutex_t = undefined;
 
     sched.lock();
+    defer sched.unlock();
     const error_code = copyin(mp, &m);
     if (error_code != 0) {
-        sched.unlock();
         return error_code;
     }
 
@@ -232,7 +227,6 @@ pub fn tryLock(mp: ?*c.mutex_t) callconv(.c) c_int {
             deadlock.record_lock(m, hal.LOCK_TYPE_MUTEX);
         }
     }
-    sched.unlock();
     return err;
 }
 
@@ -240,14 +234,13 @@ pub fn unlock(mp: ?*c.mutex_t) callconv(.c) c_int {
     var m: c.mutex_t = undefined;
 
     sched.lock();
+    defer sched.unlock();
     const error_code = copyin(mp, &m);
     if (error_code != 0) {
-        sched.unlock();
         return error_code;
     }
 
     if (m.*.holder != kutil.cur_thread() or m.*.locks <= 0) {
-        sched.unlock();
         return kern.Errno.EPERM;
     }
 
@@ -265,7 +258,6 @@ pub fn unlock(mp: ?*c.mutex_t) callconv(.c) c_int {
 
         km.*.priority = if (km.*.holder) |holder| holder.*.priority else hal.MINPRI;
     }
-    sched.unlock();
     return 0;
 }
 

@@ -42,6 +42,7 @@ pub fn setup(handler: ?*const fn (c_int) callconv(.c) void) callconv(.c) c_int {
     }
 
     sched.lock();
+    defer sched.unlock();
     if (self.handler != EXC_DFL and handler == EXC_DFL) {
         var n = list_first(&self.threads);
         while (n != null and n.? != @as(?*hal.List, @ptrCast(&self.threads))) {
@@ -57,7 +58,6 @@ pub fn setup(handler: ?*const fn (c_int) callconv(.c) void) callconv(.c) c_int {
         }
     }
     self.handler = handler;
-    sched.unlock();
     return 0;
 }
 
@@ -65,16 +65,14 @@ pub fn raise(t: kern.TaskRef, excno: c_int) callconv(.c) c_int {
     var error_code: c_int = undefined;
 
     sched.lock();
+    defer sched.unlock();
     if (task.valid(t) == 0) {
-        sched.unlock();
         return kern.Errno.ESRCH;
     }
     if (t != @as(?*kern.Task, @ptrCast(kutil.get_curtask())) and task.capable(kern.CAP_KILL) == 0) {
-        sched.unlock();
         return kern.Errno.EPERM;
     }
     error_code = post(t, excno);
-    sched.unlock();
     return error_code;
 }
 
@@ -83,13 +81,12 @@ pub fn post(task_arg: kern.TaskRef, excno: c_int) callconv(.c) c_int {
     var found: c_int = 0;
 
     sched.lock();
+    defer sched.unlock();
     if (task_arg.*.flags & kern.TF_SYSTEM != 0) {
-        sched.unlock();
         return kern.Errno.EPERM;
     }
 
     if (task_arg.*.handler == EXC_DFL or task_arg.*.nthreads == 0 or excno < 0 or excno >= hal.NEXC) {
-        sched.unlock();
         return kern.Errno.EINVAL;
     }
 
@@ -117,7 +114,6 @@ pub fn post(task_arg: kern.TaskRef, excno: c_int) callconv(.c) c_int {
 
     sched.unsleep(t.?, kern.SLP_INTR);
 
-    sched.unlock();
     return 0;
 }
 
@@ -173,6 +169,7 @@ pub fn deliver() callconv(.c) void {
     var excno: c_int = undefined;
 
     sched.lock();
+    defer sched.unlock();
 
     s = hal.splhigh();
     bitmap = kutil.get_curthread().?.excbits;
@@ -197,7 +194,6 @@ pub fn deliver() callconv(.c) void {
         kutil.get_curthread().?.excbits &= ~(@as(u32, 1) << @intCast(excno));
         _ = hal.splx(s);
     }
-    sched.unlock();
 }
 
 pub fn @"return"() callconv(.c) void {

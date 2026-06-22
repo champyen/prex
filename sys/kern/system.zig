@@ -51,6 +51,7 @@ pub fn sysinfo(sysinfo_type: c_int, buf: ?*anyopaque) callconv(.c) c_int {
     var error_val: c_int = 0;
 
     sched.lock();
+    defer sched.unlock();
 
     switch (sysinfo_type) {
         hal.INFO_KERNEL => {
@@ -83,7 +84,6 @@ pub fn sysinfo(sysinfo_type: c_int, buf: ?*anyopaque) callconv(.c) c_int {
         },
     }
 
-    sched.unlock();
     return error_val;
 }
 
@@ -96,6 +96,7 @@ pub fn sysInfo(sysinfo_type: c_int, buf: ?*anyopaque) callconv(.c) c_int {
         return kern.Errno.EFAULT;
 
     sched.lock();
+    defer sched.unlock();
 
     switch (sysinfo_type) {
         hal.INFO_KERNEL => {
@@ -123,7 +124,6 @@ pub fn sysInfo(sysinfo_type: c_int, buf: ?*anyopaque) callconv(.c) c_int {
             bufsz = @sizeOf(hal.IrqInfo);
         },
         else => {
-            sched.unlock();
             return kern.Errno.EINVAL;
         },
     }
@@ -136,7 +136,6 @@ pub fn sysInfo(sysinfo_type: c_int, buf: ?*anyopaque) callconv(.c) c_int {
         }
     }
 
-    sched.unlock();
     return error_val;
 }
 

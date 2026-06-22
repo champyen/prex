@@ -243,21 +243,18 @@ pub fn allocate(tsk: ?*kern.Task, addr: [*c]?*anyopaque, size: usize, anywhere: 
     var uaddr: ?*anyopaque = undefined;
 
     sched.lock();
+    defer sched.unlock();
 
     if (task.valid(tsk) == 0) {
-        sched.unlock();
         return kern.Errno.ESRCH;
     }
     if (tsk != kutil.cur_task() and task.capable(kern.CAP_EXTMEM) == 0) {
-        sched.unlock();
         return kern.Errno.EPERM;
     }
     if (hal.copyin(@ptrCast(addr), @ptrCast(&uaddr), @sizeOf(?*anyopaque)) != 0) {
-        sched.unlock();
         return kern.Errno.EFAULT;
     }
     if (anywhere == 0 and !kutil.user_area(uaddr)) {
-        sched.unlock();
         return kern.Errno.EACCES;
     }
 
@@ -267,7 +264,6 @@ pub fn allocate(tsk: ?*kern.Task, addr: [*c]?*anyopaque, size: usize, anywhere: 
             error_val = kern.Errno.EFAULT;
         }
     }
-    sched.unlock();
     return error_val;
 }
 
@@ -275,22 +271,19 @@ pub fn free(tsk: ?*kern.Task, addr: ?*anyopaque) callconv(.c) c_int {
     var error_val: c_int = undefined;
 
     sched.lock();
+    defer sched.unlock();
     if (task.valid(tsk) == 0) {
-        sched.unlock();
         return kern.Errno.ESRCH;
     }
     if (tsk != kutil.cur_task() and task.capable(kern.CAP_EXTMEM) == 0) {
-        sched.unlock();
         return kern.Errno.EPERM;
     }
     if (!kutil.user_area(addr)) {
-        sched.unlock();
         return kern.Errno.EFAULT;
     }
 
     error_val = do_free(@ptrCast(@alignCast(tsk.?.map.?)), addr);
 
-    sched.unlock();
     return error_val;
 }
 
@@ -298,26 +291,22 @@ pub fn attribute(tsk: ?*kern.Task, addr: ?*anyopaque, attr: c_int) callconv(.c) 
     var error_val: c_int = undefined;
 
     sched.lock();
+    defer sched.unlock();
     if (attr == 0 or attr & ~(kern.PROT_READ | kern.PROT_WRITE) != 0) {
-        sched.unlock();
         return kern.Errno.EINVAL;
     }
     if (task.valid(tsk) == 0) {
-        sched.unlock();
         return kern.Errno.ESRCH;
     }
     if (tsk != kutil.cur_task() and task.capable(kern.CAP_EXTMEM) == 0) {
-        sched.unlock();
         return kern.Errno.EPERM;
     }
     if (!kutil.user_area(addr)) {
-        sched.unlock();
         return kern.Errno.EFAULT;
     }
 
     error_val = do_attribute(@ptrCast(@alignCast(tsk.?.map.?)), addr, attr);
 
-    sched.unlock();
     return error_val;
 }
 
@@ -325,26 +314,22 @@ pub fn map(target: ?*kern.Task, addr: ?*anyopaque, size: usize, alloc: [*c]?*any
     var error_val: c_int = undefined;
 
     sched.lock();
+    defer sched.unlock();
     if (task.valid(target) == 0) {
-        sched.unlock();
         return kern.Errno.ESRCH;
     }
     if (target == kutil.cur_task()) {
-        sched.unlock();
         return kern.Errno.EINVAL;
     }
     if (task.capable(kern.CAP_EXTMEM) == 0) {
-        sched.unlock();
         return kern.Errno.EPERM;
     }
     if (!kutil.user_area(addr)) {
-        sched.unlock();
         return kern.Errno.EFAULT;
     }
 
     error_val = do_map(@ptrCast(@alignCast(target.?.map.?)), addr, size, alloc);
 
-    sched.unlock();
     return error_val;
 }
 
@@ -369,6 +354,7 @@ pub fn terminate(vm_map: ?*mem.VmMap) callconv(.c) void {
     m.refcnt -= 1;
 
     sched.lock();
+    defer sched.unlock();
     var seg: *mem.Segment = &m.head;
     while (true) {
         if (seg.flags != mem.SEG_FREE) {
@@ -383,7 +369,6 @@ pub fn terminate(vm_map: ?*mem.VmMap) callconv(.c) void {
     }
 
     kmem.free(m);
-    sched.unlock();
 }
 
 pub fn dup(org_map: ?*mem.VmMap) callconv(.c) c.vm_map_t {
@@ -457,8 +442,8 @@ pub fn info(vminfo: *hal.VmInfo) callconv(.c) c_int {
     const tsk: ?*kern.Task = vminfo.task;
 
     sched.lock();
+    defer sched.unlock();
     if (task.valid(tsk) == 0) {
-        sched.unlock();
         return kern.Errno.ESRCH;
     }
     const map_ptr = tsk.?.map orelse return kern.Errno.ESRCH;
@@ -472,14 +457,12 @@ pub fn info(vminfo: *hal.VmInfo) callconv(.c) c_int {
             vminfo.size = seg.size;
             vminfo.flags = seg.flags;
             vminfo.phys = seg.phys;
-            sched.unlock();
             return 0;
         }
         i += 1;
         seg = seg.next;
         if (seg == &vm_map.head) break;
     }
-    sched.unlock();
     return kern.Errno.ESRCH;
 }
 
