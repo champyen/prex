@@ -47,7 +47,7 @@ pub fn setup(handler: ?*const fn (c_int) callconv(.c) void) callconv(.c) c_int {
         var n = list_first(&self.threads);
         while (n != null and n.? != @as(?*hal.List, @ptrCast(&self.threads))) {
             const s = hal.splhigh();
-            const t: *kern.Thread = @fieldParentPtr("task_link", n.?);
+            const t: *kern.Thread = ffi.IntrusiveList(kern.Thread, hal.List, "task_link").parent(n.?);
             t.excbits = 0;
             _ = hal.splx(s);
 
@@ -92,7 +92,7 @@ pub fn post(task_arg: kern.TaskRef, excno: c_int) callconv(.c) c_int {
 
     var n = list_first(&task_arg.*.threads);
     while (n != null and n.? != @as(?*hal.List, @ptrCast(&task_arg.*.threads))) {
-        const tmp: *kern.Thread = @fieldParentPtr("task_link", n.?);
+        const tmp: *kern.Thread = ffi.IntrusiveList(kern.Thread, hal.List, "task_link").parent(n.?);
         if (tmp.slpevt == @as(?*hal.Event, @alignCast(@ptrCast(&exception_event)))) {
             t = tmp;
             found = 1;
@@ -103,7 +103,7 @@ pub fn post(task_arg: kern.TaskRef, excno: c_int) callconv(.c) c_int {
 
     if (found == 0) {
         if (!list_empty(&task_arg.*.threads)) {
-            const first: *kern.Thread = @fieldParentPtr("task_link", list_first(&task_arg.*.threads).?);
+            const first: *kern.Thread = ffi.IntrusiveList(kern.Thread, hal.List, "task_link").parent(list_first(&task_arg.*.threads).?);
             t = first;
         }
     }

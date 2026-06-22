@@ -171,6 +171,7 @@ pub const sem = struct {
 };
 
 pub const Queue = @import("lib/queue.zig").Queue;
+pub const IntrusiveQueue = @import("lib/queue.zig").IntrusiveQueue;
 
 pub const lib = struct {
     pub const memcpy = c.memcpy;
@@ -186,6 +187,7 @@ pub const lib = struct {
 
 pub const kutil = @import("lib/kutil.zig");
 pub const List = @import("lib/list.zig").List;
+pub const IntrusiveList = @import("lib/list.zig").IntrusiveList;
 
 pub const hal = struct {
     pub const machine_startup = c.machine_startup;

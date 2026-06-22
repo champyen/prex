@@ -199,7 +199,7 @@ pub fn valid(t: kern.ThreadRef) callconv(.c) c_int {
     const head = &thread_list;
     var n: *hal.List = @ptrCast(head.next);
     while (n != head) : (n = @ptrCast(n.next)) {
-        const tmp: *kern.Thread = @fieldParentPtr("link", n);
+        const tmp: *kern.Thread = ffi.IntrusiveList(kern.Thread, hal.List, "link").parent(n);
         if (tmp == t) return 1;
     }
     return 0;
@@ -338,7 +338,7 @@ pub fn info(tinfo: ?*hal.ThreadInfo) callconv(.c) c_int {
     var n: *hal.List = @ptrCast(thread_list.prev);
     while (n != &thread_list) {
         if (i == target) {
-            const t: *kern.Thread = @fieldParentPtr("link", n);
+            const t: *kern.Thread = ffi.IntrusiveList(kern.Thread, hal.List, "link").parent(n);
             tinfo.?.cookie = i;
             tinfo.?.id = t;
             tinfo.?.state = t.state;

@@ -71,7 +71,7 @@ inline fn time_before(a: c_ulong, b: c_ulong) bool {
 
 inline fn timerNext(head: *hal.List) *hal.Timer {
     const n: *hal.List = @ptrCast(head.next.?);
-    return @fieldParentPtr("link", n);
+    return ffi.IntrusiveList(hal.Timer, hal.List, "link").parent(n);
 }
 
 // ---------------------------------------------------------------------------

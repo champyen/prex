@@ -23,9 +23,11 @@ inline fn is_mutex_initializer(m: c.mutex_t) bool {
 
 fn valid(m: c.mutex_t) c_int {
     const km: *sync.Mutex = @ptrCast(m);
-    const head = &kutil.cur_task().*.mutexes;
-    var n = @as(*ffi.List, @ptrCast(head)).first();
-    while (n != @as(*ffi.List, @ptrCast(head))) : (n = n.nextNode()) {
+    const TL = ffi.IntrusiveList(kern.Task, ffi.List, "mutexes");
+    const self = kutil.cur_task();
+    const head = TL.node(self);
+    var n = head.first();
+    while (n != head) : (n = n.nextNode()) {
         const tmp = n.entry(sync.Mutex, "task_link");
         if (tmp == km) {
             return 1;
@@ -90,7 +92,8 @@ fn prio_uninherit(t: kern.ThreadRef) void {
     }
 
     var maxpri = t.*.basepri;
-    const head = @as(*ffi.List, @ptrCast(&t.*.mutexes));
+    const ML = ffi.IntrusiveList(kern.Thread, ffi.List, "mutexes");
+    const head = ML.node(t);
     var n = head.first();
     while (n != head) : (n = n.nextNode()) {
         const m = n.entry(sync.Mutex, "link");
@@ -123,14 +126,16 @@ pub fn init(mp: ?*c.mutex_t) callconv(.c) c_int {
 
     sched.lock();
     defer sched.unlock();
-    @as(*ffi.List, @ptrCast(&self.*.mutexes)).insertAfter(@as(*ffi.List, @ptrCast(&m.*.task_link)));
+    const TL = ffi.IntrusiveList(kern.Task, ffi.List, "mutexes");
+    const ML = ffi.IntrusiveList(sync.Mutex, ffi.List, "task_link");
+    TL.node(self).insertAfter(ML.node(m.?));
     self.*.nsyncs += 1;
     return 0;
 }
 
 fn deallocate(m: c.mutex_t) void {
     m.*.owner.*.nsyncs -= 1;
-    @as(*ffi.List, @ptrCast(&m.*.task_link)).remove();
+    ffi.IntrusiveList(sync.Mutex, ffi.List, "task_link").node(m.?).remove();
     kmem.free(m);
 }
 
@@ -153,8 +158,10 @@ pub fn destroy(mp: ?*c.mutex_t) callconv(.c) c_int {
 }
 
 pub fn cleanup(task: kern.TaskRef) callconv(.c) void {
-    while (!@as(*ffi.List, @ptrCast(&task.*.mutexes)).isEmpty()) {
-        const n = @as(*ffi.List, @ptrCast(&task.*.mutexes)).first();
+    const TL = ffi.IntrusiveList(kern.Task, ffi.List, "mutexes");
+    const head = TL.node(task);
+    while (!head.isEmpty()) {
+        const n = head.first();
         const m = n.entry(sync.Mutex, "task_link");
         deallocate(@ptrCast(m));
     }
@@ -178,7 +185,7 @@ pub fn lock(mp: ?*c.mutex_t) callconv(.c) c_int {
             km.*.priority = kutil.cur_thread().*.priority;
             km.*.locks = 1;
             km.*.holder = kutil.cur_thread();
-            @as(*ffi.List, @ptrCast(&kutil.cur_thread().*.mutexes)).insertAfter(&km.*.link);
+            ffi.IntrusiveList(kern.Thread, ffi.List, "mutexes").node(kutil.cur_thread()).insertAfter(&km.*.link);
             deadlock.record_lock(m, hal.LOCK_TYPE_MUTEX);
         } else {
             deadlock.mutex_wait(m, kutil.cur_thread());
@@ -196,7 +203,7 @@ pub fn lock(mp: ?*c.mutex_t) callconv(.c) c_int {
                 return kern.Errno.EINTR;
             }
             km.*.locks = 1;
-            @as(*ffi.List, @ptrCast(&kutil.cur_thread().*.mutexes)).insertAfter(&km.*.link);
+            ffi.IntrusiveList(kern.Thread, ffi.List, "mutexes").node(kutil.cur_thread()).insertAfter(&km.*.link);
             deadlock.record_lock(m, hal.LOCK_TYPE_MUTEX);
         }
     }
@@ -223,7 +230,7 @@ pub fn tryLock(mp: ?*c.mutex_t) callconv(.c) c_int {
         } else {
             km.*.locks = 1;
             km.*.holder = kutil.cur_thread();
-            @as(*ffi.List, @ptrCast(&kutil.cur_thread().*.mutexes)).insertAfter(&km.*.link);
+            ffi.IntrusiveList(kern.Thread, ffi.List, "mutexes").node(kutil.cur_thread()).insertAfter(&km.*.link);
             deadlock.record_lock(m, hal.LOCK_TYPE_MUTEX);
         }
     }
@@ -248,7 +255,7 @@ pub fn unlock(mp: ?*c.mutex_t) callconv(.c) c_int {
     km.*.locks -= 1;
     if (km.*.locks == 0) {
         deadlock.record_unlock(m);
-        @as(*ffi.List, @ptrCast(&km.*.link)).remove();
+        ffi.IntrusiveList(sync.Mutex, ffi.List, "link").node(km).remove();
         prio_uninherit(kutil.cur_thread());
 
         km.*.holder = sched.wakeone(&km.*.event);
@@ -262,18 +269,19 @@ pub fn unlock(mp: ?*c.mutex_t) callconv(.c) c_int {
 }
 
 pub fn cancel(t: kern.ThreadRef) callconv(.c) void {
-    const head = @as(*ffi.List, @ptrCast(&t.*.mutexes));
+    const TL = ffi.IntrusiveList(kern.Thread, ffi.List, "mutexes");
+    const head = TL.node(t);
     while (!head.isEmpty()) {
         const n = head.first();
         const m = n.entry(sync.Mutex, "link");
         m.*.locks = 0;
-        @as(*ffi.List, @ptrCast(&m.*.link)).remove();
+        ffi.IntrusiveList(sync.Mutex, ffi.List, "link").node(m).remove();
 
         const holder = sched.wakeone(&m.*.event);
         if (holder) |h| {
             h.*.mutex_waiting = null;
             m.*.locks = 1;
-            @as(*ffi.List, @ptrCast(&h.*.mutexes)).insertAfter(&m.*.link);
+            TL.node(h).insertAfter(&m.*.link);
         }
         m.*.holder = holder;
     }

@@ -17,10 +17,10 @@ const thread = ffi.thread;
 
 var object_list: ffi.List = .{};
 
-fn find(name: [*:0]const u8) ?*c.struct_object {
+fn find(name: [*:0]const u8) ?*ffi.hal.Object {
     var n = object_list.first();
     while (n != &object_list) {
-        const obj = n.entry(c.struct_object, "link");
+        const obj = n.entry(ffi.hal.Object, "link");
         if (lib.strncmp(&obj.name, name, hal.MAXOBJNAME) == 0) {
             return obj;
         }
@@ -29,12 +29,12 @@ fn find(name: [*:0]const u8) ?*c.struct_object {
     return null;
 }
 
-fn deallocate(obj: *c.struct_object) void {
+fn deallocate(obj: *ffi.hal.Object) void {
     msg.abort(obj);
     const owner = @as(*kern.Task, @ptrCast(obj.owner));
     owner.nobjects -|= 1;
-    @as(*ffi.List, @ptrCast(&obj.task_link)).remove();
-    @as(*ffi.List, @ptrCast(&obj.link)).remove();
+    ffi.IntrusiveList(ffi.hal.Object, ffi.List, "task_link").node(obj).remove();
+    ffi.IntrusiveList(ffi.hal.Object, ffi.List, "link").node(obj).remove();
     kmem.free(obj);
 }
 
@@ -73,8 +73,8 @@ pub fn create(name: ?[*:0]const u8, objp: ?*c.object_t) callconv(.c) c_int {
         return kern.Errno.EEXIST;
     }
 
-    const mem = kmem.alloc(@sizeOf(c.struct_object)) orelse return kern.Errno.ENOMEM;
-    const obj: ?*c.struct_object = @ptrCast(@alignCast(mem));
+    const mem = kmem.alloc(@sizeOf(ffi.hal.Object)) orelse return kern.Errno.ENOMEM;
+    const obj: ?*ffi.hal.Object = @ptrCast(@alignCast(mem));
     errdefer kmem.free(mem);
 
     if (name != null) {
@@ -82,11 +82,11 @@ pub fn create(name: ?[*:0]const u8, objp: ?*c.object_t) callconv(.c) c_int {
     }
 
     obj.?.owner = cur;
-    @as(*ffi.Queue, @ptrCast(&obj.?.sendq)).init();
-    @as(*ffi.Queue, @ptrCast(&obj.?.recvq)).init();
-    @as(*ffi.List, @ptrCast(&cur.objects)).insertAfter(@as(*ffi.List, @ptrCast(&obj.?.task_link)));
+    ffi.IntrusiveQueue(ffi.hal.Object, ffi.Queue, "sendq").node(obj.?).init();
+    ffi.IntrusiveQueue(ffi.hal.Object, ffi.Queue, "recvq").node(obj.?).init();
+    ffi.IntrusiveList(kern.Task, ffi.List, "objects").node(cur).insertAfter(ffi.IntrusiveList(ffi.hal.Object, ffi.List, "task_link").node(obj.?));
     cur.nobjects += 1;
-    object_list.insertAfter(@as(*ffi.List, @ptrCast(&obj.?.link)));
+    object_list.insertAfter(ffi.IntrusiveList(ffi.hal.Object, ffi.List, "link").node(obj.?));
 
     zig_memory_barrier();
 
@@ -121,7 +121,7 @@ pub fn lookup(name: [*:0]const u8, objp: ?*c.object_t) callconv(.c) c_int {
 pub fn valid(obj: c.object_t) callconv(.c) c_int {
     var n = object_list.first();
     while (n != &object_list) {
-        const tmp = n.entry(c.struct_object, "link");
+        const tmp = n.entry(ffi.hal.Object, "link");
         if (tmp == obj) {
             return 1;
         }
@@ -136,7 +136,7 @@ pub fn destroy(obj: c.object_t) callconv(.c) c_int {
     if (valid(obj) == 0) {
         return kern.Errno.EINVAL;
     }
-    const target_obj = @as(*c.struct_object, @ptrCast(obj));
+    const target_obj = @as(*ffi.hal.Object, @ptrCast(obj));
     if (@intFromPtr(target_obj.owner) != @intFromPtr(kutil.get_curtask())) {
         return kern.Errno.EACCES;
     }
@@ -146,8 +146,9 @@ pub fn destroy(obj: c.object_t) callconv(.c) c_int {
 
 pub fn cleanup(tsk: kern.TaskRef) callconv(.c) void {
     const t = @as(*kern.Task, @ptrCast(tsk));
-    while (!@as(*ffi.List, @ptrCast(&t.objects)).isEmpty()) {
-        const obj = @as(*ffi.List, @ptrCast(&t.objects)).first().entry(c.struct_object, "task_link");
+    const head = ffi.IntrusiveList(kern.Task, ffi.List, "objects").node(t);
+    while (!head.isEmpty()) {
+        const obj = head.first().entry(ffi.hal.Object, "task_link");
         deallocate(obj);
     }
 }

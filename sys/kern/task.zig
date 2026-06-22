@@ -57,7 +57,7 @@ inline fn list_next_node(node: *hal.List) *hal.List {
 fn valid(task: kern.TaskRef) callconv(.c) c_int {
     var n = list_first(&task_list);
     while (n != @as(*hal.List, @ptrCast(&task_list))) : (n = list_next_node(n)) {
-        const tmp = @as(*kern.Task, @fieldParentPtr("link", n));
+        const tmp = ffi.IntrusiveList(kern.Task, hal.List, "link").parent(n);
         if (tmp == task) {
             return 1;
         }
@@ -192,7 +192,7 @@ pub fn terminate(task: kern.TaskRef) callconv(.c) c_int {
         var n = list_first(&task.?.*.threads);
         while (n != @as(*hal.List, @ptrCast(&task.?.*.threads))) {
             const next_node = list_next_node(n);
-            const t = @as(*kern.Thread, @fieldParentPtr("task_link", n));
+            const t = ffi.IntrusiveList(kern.Thread, hal.List, "task_link").parent(n);
             if (t != kutil.cur_thread()) {
                 thread.destroy(t);
             }
@@ -228,7 +228,7 @@ pub fn @"suspend"(task: kern.TaskRef) callconv(.c) c_int {
     if (task.?.*.suscnt == 1) {
         var n = list_first(&task.?.*.threads);
         while (n != @as(*hal.List, @ptrCast(&task.?.*.threads))) : (n = list_next_node(n)) {
-            const t = @as(*kern.Thread, @fieldParentPtr("task_link", n));
+            const t = ffi.IntrusiveList(kern.Thread, hal.List, "task_link").parent(n);
             _ = thread.@"suspend"(t);
         }
     }
@@ -254,7 +254,7 @@ pub fn @"resume"(task: kern.TaskRef) callconv(.c) c_int {
     if (task.?.*.suscnt == 0) {
         var n = list_first(&task.?.*.threads);
         while (n != @as(*hal.List, @ptrCast(&task.?.*.threads))) : (n = list_next_node(n)) {
-            const t = @as(*kern.Thread, @fieldParentPtr("task_link", n));
+            const t = ffi.IntrusiveList(kern.Thread, hal.List, "task_link").parent(n);
             _ = thread.@"resume"(t);
         }
     }
@@ -326,7 +326,7 @@ pub fn info(task_info_ptr: ?*hal.TaskInfo) callconv(.c) c_int {
     var n = list_first(&task_list);
     while (true) : (n = list_next_node(n)) {
         if (i == target) {
-            const task = @as(*kern.Task, @fieldParentPtr("link", n));
+            const task = ffi.IntrusiveList(kern.Task, hal.List, "link").parent(n);
             task_info_ptr.?.*.cookie = i + 1;
             task_info_ptr.?.*.id = task;
             task_info_ptr.?.*.flags = task.*.flags;

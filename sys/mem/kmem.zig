@@ -62,7 +62,7 @@ fn block_find(size: usize) ?*block_hdr {
     while (i < NR_BLOCK_LIST) : (i += 1) {
         if (!free_blocks[i].isEmpty()) {
             const n = free_blocks[i].first();
-            return @fieldParentPtr("link", n);
+            return ffi.IntrusiveList(block_hdr, ffi.List, "link").parent(n);
         }
     }
     return null;

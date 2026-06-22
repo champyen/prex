@@ -20,9 +20,11 @@ inline fn is_cond_initializer(m: c.cond_t) bool {
 
 fn valid(m: c.cond_t) c_int {
     const km: *sync.Cond = @ptrCast(m);
-    const head = &kutil.cur_task().*.conds;
-    var n = @as(*ffi.List, @ptrCast(head)).first();
-    while (n != @as(*ffi.List, @ptrCast(head))) : (n = n.nextNode()) {
+    const CL = ffi.IntrusiveList(kern.Task, ffi.List, "conds");
+    const self = kutil.cur_task();
+    const head = CL.node(self);
+    var n = head.first();
+    while (n != head) : (n = n.nextNode()) {
         const tmp = n.entry(sync.Cond, "task_link");
         if (tmp == km) {
             return 1;
@@ -71,14 +73,16 @@ pub fn init(cp: ?*c.cond_t) callconv(.c) c_int {
 
     sched.lock();
     defer sched.unlock();
-    @as(*ffi.List, @ptrCast(&self.*.conds)).insertAfter(@as(*ffi.List, @ptrCast(&m.*.task_link)));
+    const TL = ffi.IntrusiveList(kern.Task, ffi.List, "conds");
+    const ML = ffi.IntrusiveList(sync.Cond, ffi.List, "task_link");
+    TL.node(self).insertAfter(ML.node(m));
     self.*.nsyncs += 1;
     return 0;
 }
 
 fn deallocate(m: c.cond_t) void {
     m.*.owner.*.nsyncs -= 1;
-    @as(*ffi.List, @ptrCast(&m.*.task_link)).remove();
+    ffi.IntrusiveList(sync.Cond, ffi.List, "task_link").node(m).remove();
     kmem.free(m);
 }
 
@@ -101,8 +105,10 @@ pub fn destroy(cp: ?*c.cond_t) callconv(.c) c_int {
 }
 
 pub fn cleanup(task: kern.TaskRef) callconv(.c) void {
-    while (!@as(*ffi.List, @ptrCast(&task.*.conds)).isEmpty()) {
-        const n = @as(*ffi.List, @ptrCast(&task.*.conds)).first();
+    const TL = ffi.IntrusiveList(kern.Task, ffi.List, "conds");
+    const head = TL.node(task);
+    while (!head.isEmpty()) {
+        const n = head.first();
         const m = n.entry(sync.Cond, "task_link");
         deallocate(@ptrCast(m));
     }

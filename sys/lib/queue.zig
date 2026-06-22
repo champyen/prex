@@ -100,3 +100,30 @@ comptime {
         @export(&c_export.queue_remove, .{ .name = "queue_remove", .linkage = .strong });
     }
 }
+
+/// Comptime-validated type-safe helpers over a parent type T with a
+/// field `field_name` of type Node (e.g. `c.struct_queue`).
+pub fn IntrusiveQueue(comptime T: type, comptime Node: type, comptime field_name: []const u8) type {
+    return struct {
+        comptime {
+            if (!@hasField(T, field_name))
+                @compileError("IntrusiveQueue: type " ++ @typeName(T) ++ " has no field '" ++ field_name ++ "'");
+        }
+
+        /// Get the embedded node pointer from a parent T (or any pointer
+        /// to a T), cast to *Node.
+        /// Replaces: `@as(*ffi.Queue, @ptrCast(&parent.*.field_name))`
+        pub inline fn node(p: anytype) *Node {
+            const offset = @offsetOf(T, field_name);
+            const addr: usize = @intFromPtr(p);
+            return @ptrFromInt(addr + offset);
+        }
+
+        /// Walk back from a queue node pointer to the parent struct.
+        /// Replaces: `@fieldParentPtr("field_name", node)`
+        pub inline fn parent(n: *Node) *T {
+            return @fieldParentPtr(field_name, n);
+        }
+    };
+}
+

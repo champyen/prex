@@ -31,7 +31,7 @@ fn runq_getbest() c_int {
 }
 
 fn runq_enqueue(t: kern.ThreadRef) void {
-    runq[@intCast(t.*.priority)].enqueue(@as(*ffi.Queue, @ptrCast(&t.*.sched_link)));
+    runq[@intCast(t.*.priority)].enqueue(ffi.IntrusiveQueue(kern.Thread, ffi.Queue, "sched_link").node(t));
     if (t.*.priority < maxpri) {
         maxpri = t.*.priority;
         if (kutil.get_curthread()) |ct| {
@@ -41,7 +41,7 @@ fn runq_enqueue(t: kern.ThreadRef) void {
 }
 
 fn runq_insert(t: kern.ThreadRef) void {
-    runq[@intCast(t.*.priority)].insert(@as(*ffi.Queue, @ptrCast(&t.*.sched_link)));
+    runq[@intCast(t.*.priority)].insert(ffi.IntrusiveQueue(kern.Thread, ffi.Queue, "sched_link").node(t));
     if (t.*.priority < maxpri) {
         maxpri = t.*.priority;
     }
@@ -90,7 +90,7 @@ fn wakeq_flush() callconv(.c) void {
 }
 
 fn setrun(t: kern.ThreadRef) callconv(.c) void {
-    wakeq.enqueue(@as(*ffi.Queue, @ptrCast(&t.*.sched_link)));
+    wakeq.enqueue(ffi.IntrusiveQueue(kern.Thread, ffi.Queue, "sched_link").node(t));
     timer.stop(&t.*.timeout);
 }
 
@@ -146,7 +146,7 @@ fn tsleep(evt: *hal.Event, msec: c_ulong) callconv(.c) c_int {
 
     curthread().*.slpevt = @as([*c]hal.Event, @ptrCast(e));
     curthread().*.state |= @as(c_int, kern.TS_SLEEP);
-    e.*.sleepq.enqueue(@as(*ffi.Queue, @ptrCast(&curthread().*.sched_link)));
+    e.*.sleepq.enqueue(ffi.IntrusiveQueue(kern.Thread, ffi.Queue, "sched_link").node(curthread()));
 
     if (msec != 0) {
         timer.callout(&curthread().*.timeout, @intCast(msec), sleep_timeout, curthread());
@@ -362,7 +362,7 @@ fn dpc(dpc_ptr: *c.struct_dpc, fn_ptr: ?*const fn (?*anyopaque) callconv(.c) voi
     dpc_ptr.*.func = fn_ptr;
     dpc_ptr.*.arg = arg;
     if (dpc_ptr.*.state != hal.DPC_PENDING) {
-        dpcq.enqueue(@as(*ffi.Queue, @ptrCast(&dpc_ptr.*.link)));
+        dpcq.enqueue(ffi.IntrusiveQueue(hal.Dpc, ffi.Queue, "link").node(dpc_ptr));
     }
     dpc_ptr.*.state = hal.DPC_PENDING;
     hal.splx(s);
