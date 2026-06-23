@@ -21,3 +21,15 @@ conf/drvtab.h
 *~
 .#*
 .DS_Store
+sys/prex
+# Build artifacts
+*.o
+*.elf
+*.bin
+*.img
+*.d
+*.lst
+.zig-cache/
+*.map
+*.sym
+*.lst
