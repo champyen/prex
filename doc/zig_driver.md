@@ -142,3 +142,11 @@ Zig is extremely strict about alignment, especially on RISC-V.
 1.  Update `Makefile.inc` with `$(call select_src,...)`.
 2.  Build: `LC_ALL=C make`.
 3.  Verify: Use `./verify_all.sh <target> [variant]` for automated multi-arch testing.
+
+---
+
+## See Also
+
+*   [Zig Kernel Development Guide](zig_kernel.md) — kernel-side FFI, single-translation-unit model
+*   [Zig Application Development Guide](zig_app.md) — user-space `prex`/`posix` libraries
+*   [Build Guide](build.md) — toolchain, configuration

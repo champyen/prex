@@ -14,7 +14,17 @@ Prex+ uses a tiered volume strategy to balance system boot time, image size, and
 ├── mk/                 # Build system rules and volume imaging logic
 ├── sdk/                # Generated SDK (Populated during build)
 ├── sys/                # Microkernel source (Kern, Mem, Sync, IPC)
+│   ├── c.zig           # Single @cImport root for the kernel
+│   ├── ffi.zig         # Namespaced FFI aliases (ffi.hal, ffi.kern, ffi.sync, …)
+│   ├── kutil.zig       # Kernel utilities (page math, addr conversion)
+│   ├── kern/           # Kernel core (main.zig is the single Zig root)
+│   ├── ipc/            # Inter-process communication
+│   ├── sync/           # Mutex/Cond/Sem
+│   ├── mem/            # Memory management (vm / vm_nommu / page / kmem)
+│   └── lib/            # C runtime + Zig intrinsic data structures
+│                       # (C and .zig files coexist; select_kernel_src picks one)
 └── usr/                # User-mode source
+    ├── zig/            # Zig wrapper libraries (prex.zig, posix.zig)
     ├── posix/          # Standalone POSIX tools and cmdbox sources
     │   └── cmdbox/     # "Slim Core" essential utilities (sh, ls, cat, etc.)
     ├── server/         # System servers (fs, proc, exec, network, etc.)
@@ -23,6 +33,8 @@ Prex+ uses a tiered volume strategy to balance system boot time, image size, and
     ├── lib/            # User libraries (libc, libsa, etc.)
     └── arch/           # User-mode architecture specific code
 ```
+
+C and Zig are peer languages throughout the tree — the build system auto-selects `.zig` or `.c` per source. See [Zig Kernel Development Guide](zig_kernel.md), [Zig Driver Development Guide](zig_driver.md), and [Zig Application Development Guide](zig_app.md).
 
 ## Tiered Volume Strategy
 

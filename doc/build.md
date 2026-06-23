@@ -27,6 +27,7 @@ The following tools are required to build Prex+.
 - GCC 4.8 or later (~10.0)
 - GNU Binutils 2.14 or later
 - GNU Make
+- **Zig 0.16.0 or later** (required for the default Zig kernel, Zig drivers, and Zig user-space apps; see [Zig Kernel Development Guide](zig_kernel.md), [Zig Driver Development Guide](zig_driver.md), and [Zig Application Development Guide](zig_app.md))
 
 Now, GCC, Clang, or other compilers can be used for the build.
 

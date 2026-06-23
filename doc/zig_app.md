@@ -171,3 +171,11 @@ If you need a specialized allocator (e.g., an arena or a pool), add it to the re
 
 ### Error Mapping
 If a new C API introduces unique error codes, update the `toCError` function in `prex.zig` or implement a similar mapping in `posix.zig` to maintain consistency between Zig errors and POSIX/Kernel status codes.
+
+---
+
+## See Also
+
+*   [Zig Kernel Development Guide](zig_kernel.md) — kernel-side FFI, single-translation-unit model, intrusive data structures
+*   [Zig Driver Development Guide](zig_driver.md) — `dki.zig` API, static interface pattern, interrupt handling
+*   [Build Guide](build.md) — toolchain, configuration

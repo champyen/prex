@@ -1,4 +1,17 @@
 
+Version 2604 (Prex+ 2604 release):
+
+ - New: Added support for Raspberry Pi Zero W (ARM1176JZF-S) and improved the Integrator/CP support.
+ - New: Implemented interrupt-driven BCM2835 SD Host (SDHC) and DMA drivers for the Raspberry Pi.
+ - New: Implemented a completely new FATFS file system from scratch, along with a new SDMMC stack driver with support for multi-sector reads.
+ - New: Unified configuration scripts (--enable-mmu) and target configurations.
+ - Fix: Fixed compilation against modern GCC (GCC 15), resolving stack boundary and strict PIC/PIE issues.
+ - Fix: Resolved critical bootldr size limitations on x86-pc.
+ - Fix: Fixed ELF relocation logic for driver modules (drv.ko).
+ - Fix: Fixed memory overlapping/page fault panics in the exec server's ELF loader.
+ - Fix: Addressed capability denials (CAP_SYSFILES) ensuring seamless startup of the shell (cmdbox) and init scripts.
+ - Fix: Ensured reliable diagnostic serial output across targets, especially for running without VGA in QEMU.
+
 Version 0.9.0:
 
  - New: Ported ARM PrimeCell PL181 SD/MMC controller driver.

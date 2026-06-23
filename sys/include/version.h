@@ -1,4 +1,4 @@
 
 #define MAJORVERSION 26
-#define MINORVERSION 05
+#define MINORVERSION 06
 #define PATCHLEVEL dev

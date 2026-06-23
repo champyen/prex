@@ -86,19 +86,22 @@ Figure 2. Kernel Directory Structure
 
 ### Naming Convention
 
-The name of "group/object" in figure 1 is mapped to "directory/file" in the Prex+ source tree. For example, the thread related functions are located in "kern/thread.c", and the functions for semaphore are placed in "sync/sem.c".
+The name of "group/object" in figure 1 is mapped to "directory/file" in the Prex+ source tree. For example, the thread related functions are located in "kern/thread.{c,zig}", and the functions for semaphore are placed in "sync/sem.{c,zig}".
+
+The kernel can be built from either C sources or Zig sources — the build system auto-selects via `select_kernel_src` (see [Build Guide](build.md)). When `CONFIG_ZIG_KRNL=y` (default), the kernel core is a single Zig translation unit rooted at `kern/main.zig`; see [Zig Kernel Development Guide](zig_kernel.md) for details.
 
 ```
+/kern/main.{c,zig}     (the single Zig root when CONFIG_ZIG_KRNL=y)
 /kern/debug.c
-/kern/device.c
-/kern/exception.c
-/kern/irq.c
-/kern/sched.c
-/kern/system.c
-/kern/task.c
-/kern/thread.c
-/kern/timer.c
-/mem/kmem.c
+/kern/device.{c,zig}
+/kern/exception.{c,zig}
+/kern/irq.{c,zig}
+/kern/sched.{c,zig}
+/kern/system.{c,zig}
+/kern/task.{c,zig}
+/kern/thread.{c,zig}
+/kern/timer.{c,zig}
+/mem/kmem.{c,zig}
 ...
 ```
 
