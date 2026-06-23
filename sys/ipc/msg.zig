@@ -2,8 +2,7 @@ const std = @import("std");
 
 const c = @import("c").c;
 const ffi = @import("ffi");
-const IntrusiveQueue = ffi.IntrusiveQueue;
-const Queue = ffi.Queue;
+const lib = ffi.lib;
 const hal = ffi.hal;
 const kern = ffi.kern;
 const kmem = ffi.kmem;
@@ -17,7 +16,7 @@ var ipc_event: sync.Event = undefined;
 
 
 
-fn dequeue(head: *Queue) ?*kern.Thread {
+fn dequeue(head: *lib.Queue) ?*kern.Thread {
     var q = head.first();
     var top = q.entry(kern.Thread, "ipc_link");
 
@@ -28,7 +27,7 @@ fn dequeue(head: *Queue) ?*kern.Thread {
         }
         q = q.nextNode();
     }
-    IntrusiveQueue(kern.Thread, Queue, "ipc_link").node(top).remove();
+    lib.IntrusiveQueue(kern.Thread, lib.Queue, "ipc_link").node(top).remove();
     return top;
 }
 
@@ -58,16 +57,16 @@ pub fn send(obj: kern.ObjectRef, msg: ?*anyopaque, size: usize) callconv(.c) c_i
     const hdr: *hal.MsgHeader = @ptrCast(@alignCast(kmsg));
     hdr.task = kutil.get_curtask();
 
-    if (!IntrusiveQueue(hal.Object, Queue, "recvq").node(obj.?).isEmpty()) {
-        const t = dequeue(IntrusiveQueue(hal.Object, Queue, "recvq").node(obj.?));
+    if (!lib.IntrusiveQueue(hal.Object, lib.Queue, "recvq").node(obj.?).isEmpty()) {
+        const t = dequeue(lib.IntrusiveQueue(hal.Object, lib.Queue, "recvq").node(obj.?));
         sched.unsleep(t, 0);
     }
 
     kutil.get_curthread().?.sendobj = obj;
-    IntrusiveQueue(hal.Object, Queue, "sendq").node(obj.?).enqueue(IntrusiveQueue(hal.Thread, Queue, "ipc_link").node(kutil.get_curthread().?));
+    lib.IntrusiveQueue(hal.Object, lib.Queue, "sendq").node(obj.?).enqueue(lib.IntrusiveQueue(hal.Thread, lib.Queue, "ipc_link").node(kutil.get_curthread().?));
     const rc = sched.tsleep(&ipc_event, 0);
     if (rc == kern.SLP_INTR) {
-        IntrusiveQueue(hal.Thread, Queue, "ipc_link").node(kutil.get_curthread().?).remove();
+        lib.IntrusiveQueue(hal.Thread, lib.Queue, "ipc_link").node(kutil.get_curthread().?).remove();
     }
     kutil.get_curthread().?.sendobj = null;
 
@@ -109,8 +108,8 @@ pub fn receive(obj: kern.ObjectRef, msg: ?*anyopaque, size: usize) callconv(.c) 
     }
     kutil.get_curthread().?.recvobj = obj;
 
-    while (IntrusiveQueue(hal.Object, Queue, "sendq").node(obj.?).isEmpty()) {
-        IntrusiveQueue(hal.Object, Queue, "recvq").node(obj.?).enqueue(IntrusiveQueue(hal.Thread, Queue, "ipc_link").node(kutil.get_curthread().?));
+    while (lib.IntrusiveQueue(hal.Object, lib.Queue, "sendq").node(obj.?).isEmpty()) {
+        lib.IntrusiveQueue(hal.Object, lib.Queue, "recvq").node(obj.?).enqueue(lib.IntrusiveQueue(hal.Thread, lib.Queue, "ipc_link").node(kutil.get_curthread().?));
         rc = sched.tsleep(&ipc_event, 0);
         if (rc != 0) {
             switch (rc) {
@@ -118,7 +117,7 @@ pub fn receive(obj: kern.ObjectRef, msg: ?*anyopaque, size: usize) callconv(.c) 
                     err_code = kern.Errno.EINVAL;
                 },
                 kern.SLP_INTR => {
-                    IntrusiveQueue(hal.Thread, Queue, "ipc_link").node(kutil.get_curthread().?).remove();
+                    lib.IntrusiveQueue(hal.Thread, lib.Queue, "ipc_link").node(kutil.get_curthread().?).remove();
                     err_code = kern.Errno.EINTR;
                 },
                 else => {
@@ -130,12 +129,12 @@ pub fn receive(obj: kern.ObjectRef, msg: ?*anyopaque, size: usize) callconv(.c) 
         }
     }
 
-    const t = dequeue(IntrusiveQueue(hal.Object, Queue, "sendq").node(obj.?));
+    const t = dequeue(lib.IntrusiveQueue(hal.Object, lib.Queue, "sendq").node(obj.?));
 
     const len: usize = if (size < t.?.msgsize) size else t.?.msgsize;
     if (len > 0) {
         if (hal.copyout(t.?.msgaddr, msg, len) != 0) {
-            IntrusiveQueue(hal.Object, Queue, "sendq").node(obj.?).enqueue(IntrusiveQueue(hal.Thread, Queue, "ipc_link").node(t.?));
+            lib.IntrusiveQueue(hal.Object, lib.Queue, "sendq").node(obj.?).enqueue(lib.IntrusiveQueue(hal.Thread, lib.Queue, "ipc_link").node(t.?));
             kutil.get_curthread().?.recvobj = null;
             return kern.Errno.EFAULT;
         }
@@ -190,7 +189,7 @@ pub fn cancel(t: ?*kern.Thread) callconv(.c) void {
             const receiver: ?*kern.Thread = @ptrCast(t.?.receiver);
             receiver.?.sender = null;
         } else {
-            IntrusiveQueue(hal.Thread, Queue, "ipc_link").node(t.?).remove();
+            lib.IntrusiveQueue(hal.Thread, lib.Queue, "ipc_link").node(t.?).remove();
         }
     }
     if (t.?.recvobj != null) {
@@ -199,7 +198,7 @@ pub fn cancel(t: ?*kern.Thread) callconv(.c) void {
             sched.unsleep(sender, kern.SLP_BREAK);
             sender.?.receiver = null;
         } else {
-            IntrusiveQueue(hal.Thread, Queue, "ipc_link").node(t.?).remove();
+            lib.IntrusiveQueue(hal.Thread, lib.Queue, "ipc_link").node(t.?).remove();
         }
     }
 }
@@ -208,14 +207,14 @@ pub fn abort(obj: kern.ObjectRef) callconv(.c) void {
     sched.lock();
     defer sched.unlock();
 
-    while (!IntrusiveQueue(hal.Object, Queue, "sendq").node(obj.?).isEmpty()) {
-        const q = IntrusiveQueue(hal.Object, Queue, "sendq").node(obj.?).dequeue().?;
+    while (!lib.IntrusiveQueue(hal.Object, lib.Queue, "sendq").node(obj.?).isEmpty()) {
+        const q = lib.IntrusiveQueue(hal.Object, lib.Queue, "sendq").node(obj.?).dequeue().?;
         const t = q.entry(kern.Thread, "ipc_link");
         sched.unsleep(t, kern.SLP_INVAL);
     }
 
-    while (!IntrusiveQueue(hal.Object, Queue, "recvq").node(obj.?).isEmpty()) {
-        const q = IntrusiveQueue(hal.Object, Queue, "recvq").node(obj.?).dequeue().?;
+    while (!lib.IntrusiveQueue(hal.Object, lib.Queue, "recvq").node(obj.?).isEmpty()) {
+        const q = lib.IntrusiveQueue(hal.Object, lib.Queue, "recvq").node(obj.?).dequeue().?;
         const t = q.entry(kern.Thread, "ipc_link");
         sched.unsleep(t, kern.SLP_INVAL);
     }

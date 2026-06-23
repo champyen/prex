@@ -54,7 +54,7 @@ pub fn IntrusiveList(comptime T: type, comptime Node: type, comptime field_name:
 
         /// Get the embedded node pointer from a parent T (or any pointer
         /// to a T), cast to *Node.
-        /// Replaces: `@as(*ffi.List, @ptrCast(&parent.*.field_name))`
+        /// Replaces: `@as(*ffi.lib.List, @ptrCast(&parent.*.field_name))`
         pub inline fn node(p: anytype) *Node {
             const offset = @offsetOf(T, field_name);
             const addr: usize = @intFromPtr(p);

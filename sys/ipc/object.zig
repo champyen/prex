@@ -4,10 +4,6 @@ const c = @import("c").c;
 extern fn zig_memory_barrier() callconv(.c) void;
 
 const ffi = @import("ffi");
-const IntrusiveList = ffi.IntrusiveList;
-const IntrusiveQueue = ffi.IntrusiveQueue;
-const List = ffi.List;
-const Queue = ffi.Queue;
 const hal = ffi.hal;
 const kern = ffi.kern;
 const kmem = ffi.kmem;
@@ -16,7 +12,7 @@ const lib = ffi.lib;
 const msg = ffi.msg;
 const sched = ffi.sched;
 const task = ffi.task;
-var object_list: List = .{};
+var object_list: lib.List = .{};
 
 fn find(name: [*:0]const u8) ?*hal.Object {
     var n = object_list.first();
@@ -34,8 +30,8 @@ fn deallocate(obj: *hal.Object) void {
     msg.abort(obj);
     const owner = @as(*kern.Task, @ptrCast(obj.owner));
     owner.nobjects -|= 1;
-    IntrusiveList(hal.Object, List, "task_link").node(obj).remove();
-    IntrusiveList(hal.Object, List, "link").node(obj).remove();
+    lib.IntrusiveList(hal.Object, lib.List, "task_link").node(obj).remove();
+    lib.IntrusiveList(hal.Object, lib.List, "link").node(obj).remove();
     kmem.free(obj);
 }
 
@@ -83,11 +79,11 @@ pub fn create(name: ?[*:0]const u8, objp: ?*kern.ObjectRef) callconv(.c) c_int {
     }
 
     obj.?.owner = cur;
-    IntrusiveQueue(hal.Object, Queue, "sendq").node(obj.?).init();
-    IntrusiveQueue(hal.Object, Queue, "recvq").node(obj.?).init();
-    IntrusiveList(kern.Task, List, "objects").node(cur).insertAfter(IntrusiveList(hal.Object, List, "task_link").node(obj.?));
+    lib.IntrusiveQueue(hal.Object, lib.Queue, "sendq").node(obj.?).init();
+    lib.IntrusiveQueue(hal.Object, lib.Queue, "recvq").node(obj.?).init();
+    lib.IntrusiveList(kern.Task, lib.List, "objects").node(cur).insertAfter(lib.IntrusiveList(hal.Object, lib.List, "task_link").node(obj.?));
     cur.nobjects += 1;
-    object_list.insertAfter(IntrusiveList(hal.Object, List, "link").node(obj.?));
+    object_list.insertAfter(lib.IntrusiveList(hal.Object, lib.List, "link").node(obj.?));
 
     zig_memory_barrier();
 
@@ -147,7 +143,7 @@ pub fn destroy(obj: kern.ObjectRef) callconv(.c) c_int {
 
 pub fn cleanup(tsk: kern.TaskRef) callconv(.c) void {
     const t = @as(*kern.Task, @ptrCast(tsk));
-    const head = IntrusiveList(kern.Task, List, "objects").node(t);
+    const head = lib.IntrusiveList(kern.Task, lib.List, "objects").node(t);
     while (!head.isEmpty()) {
         const obj = head.first().entry(hal.Object, "task_link");
         deallocate(obj);

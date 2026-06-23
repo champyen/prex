@@ -4,7 +4,6 @@ const builtin = @import("builtin");
 const c = @import("c").c;
 
 const ffi = @import("ffi");
-const IntrusiveList = ffi.IntrusiveList;
 const deadlock = ffi.deadlock;
 const exception = ffi.exception;
 const hal = ffi.hal;
@@ -71,7 +70,7 @@ inline fn time_before(a: c_ulong, b: c_ulong) bool {
 
 inline fn timerNext(head: *hal.List) *hal.Timer {
     const n: *hal.List = @ptrCast(head.next.?);
-    return IntrusiveList(hal.Timer, hal.List, "link").parent(n);
+    return lib.IntrusiveList(hal.Timer, hal.List, "link").parent(n);
 }
 
 // ---------------------------------------------------------------------------

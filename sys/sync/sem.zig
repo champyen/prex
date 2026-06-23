@@ -6,8 +6,7 @@ const c = @import("c").c;
 var sem_list: ?*sync.Sem = null;
 
 const ffi = @import("ffi");
-const IntrusiveList = ffi.IntrusiveList;
-const List = ffi.List;
+const lib = ffi.lib;
 const deadlock = ffi.deadlock;
 const hal = ffi.hal;
 const kern = ffi.kern;
@@ -37,7 +36,7 @@ fn release(s: kern.SemRef) void {
     if (ks.*.refcnt > 0) {
         return;
     }
-    IntrusiveList(sync.Sem, List, "task_link").node(ks).remove();
+    lib.IntrusiveList(sync.Sem, lib.List, "task_link").node(ks).remove();
     ks.*.owner.*.nsyncs -= 1;
 
     var sp: *?*sync.Sem = &sem_list;
@@ -98,8 +97,8 @@ pub fn init(sp: ?*kern.SemRef, value: c_uint) callconv(.c) c_int {
         ks.*.refcnt = 1;
         ks.*.value = value;
 
-        const TL = IntrusiveList(kern.Task, List, "sems");
-        const ML = IntrusiveList(sync.Sem, List, "task_link");
+        const TL = lib.IntrusiveList(kern.Task, lib.List, "sems");
+        const ML = lib.IntrusiveList(sync.Sem, lib.List, "task_link");
         TL.node(self).insertAfter(ML.node(ks));
         self.*.nsyncs += 1;
         ks.*.next = sem_list;
@@ -225,7 +224,7 @@ pub fn getValue(sp: ?*kern.SemRef, value: ?*c_uint) callconv(.c) c_int {
 }
 
 pub fn cleanup(task: kern.TaskRef) callconv(.c) void {
-    const TL = IntrusiveList(kern.Task, List, "sems");
+    const TL = lib.IntrusiveList(kern.Task, lib.List, "sems");
     const head = TL.node(task);
     var n = head.first();
     while (n != head) {

@@ -4,8 +4,7 @@ const builtin = @import("builtin");
 const c = @import("c").c;
 
 const ffi = @import("ffi");
-const IntrusiveQueue = ffi.IntrusiveQueue;
-const Queue = ffi.Queue;
+const lib = ffi.lib;
 const hal = ffi.hal;
 const kern = ffi.kern;
 const kutil = ffi.kutil;
@@ -16,9 +15,9 @@ const timer = ffi.timer;
 const vm = ffi.vm;
 
 pub var kernel_lock: hal.Spinlock = .{ .value = 0 };
-var runq: [hal.NPRI]Queue = undefined;
-var wakeq: Queue = undefined;
-var dpcq: Queue = undefined;
+var runq: [hal.NPRI]lib.Queue = undefined;
+var wakeq: lib.Queue = undefined;
+var dpcq: lib.Queue = undefined;
 var dpc_event: sync.Event = undefined;
 var maxpri: c_int = hal.PRI_IDLE;
 
@@ -33,7 +32,7 @@ fn runq_getbest() c_int {
 }
 
 fn runq_enqueue(t: kern.ThreadRef) void {
-    runq[@intCast(t.*.priority)].enqueue(IntrusiveQueue(kern.Thread, Queue, "sched_link").node(t));
+    runq[@intCast(t.*.priority)].enqueue(lib.IntrusiveQueue(kern.Thread, lib.Queue, "sched_link").node(t));
     if (t.*.priority < maxpri) {
         maxpri = t.*.priority;
         if (kutil.get_curthread()) |ct| {
@@ -43,7 +42,7 @@ fn runq_enqueue(t: kern.ThreadRef) void {
 }
 
 fn runq_insert(t: kern.ThreadRef) void {
-    runq[@intCast(t.*.priority)].insert(IntrusiveQueue(kern.Thread, Queue, "sched_link").node(t));
+    runq[@intCast(t.*.priority)].insert(lib.IntrusiveQueue(kern.Thread, lib.Queue, "sched_link").node(t));
     if (t.*.priority < maxpri) {
         maxpri = t.*.priority;
     }
@@ -62,7 +61,7 @@ fn runq_dequeue() kern.ThreadRef {
 }
 
 fn runq_remove(t: kern.ThreadRef) void {
-    t.*.sched_link.remove();
+    lib.IntrusiveQueue(kern.Thread, lib.Queue, "sched_link").node(t).remove();
     maxpri = runq_getbest();
 }
 
@@ -92,7 +91,7 @@ pub fn wakeq_flush() callconv(.c) void {
 }
 
 pub fn setrun(t: kern.ThreadRef) callconv(.c) void {
-    wakeq.enqueue(IntrusiveQueue(kern.Thread, Queue, "sched_link").node(t));
+    wakeq.enqueue(lib.IntrusiveQueue(kern.Thread, lib.Queue, "sched_link").node(t));
     timer.stop(&t.*.timeout);
 }
 
@@ -148,7 +147,7 @@ pub fn tsleep(evt: *hal.Event, msec: c_ulong) callconv(.c) c_int {
 
     curthread().*.slpevt = @as([*c]hal.Event, @ptrCast(e));
     curthread().*.state |= @as(c_int, kern.TS_SLEEP);
-    e.*.sleepq.enqueue(IntrusiveQueue(kern.Thread, Queue, "sched_link").node(curthread()));
+    e.*.sleepq.enqueue(lib.IntrusiveQueue(kern.Thread, lib.Queue, "sched_link").node(curthread()));
 
     if (msec != 0) {
         timer.callout(&curthread().*.timeout, @intCast(msec), sleep_timeout, curthread());
@@ -181,7 +180,7 @@ pub fn wakeone(evt: *hal.Event) callconv(.c) kern.ThreadRef {
     lock();
     const s = hal.splhigh();
     var result: kern.ThreadRef = null;
-    const head: *Queue = @ptrCast(&e.*.sleepq);
+    const head: *lib.Queue = @ptrCast(&e.*.sleepq);
     if (!head.isEmpty()) {
         var q = head.first();
         var top = q.entry(kern.Thread, "sched_link");
@@ -192,7 +191,7 @@ pub fn wakeone(evt: *hal.Event) callconv(.c) kern.ThreadRef {
             }
             q = q.nextNode();
         }
-        top.*.sched_link.remove();
+        lib.IntrusiveQueue(kern.Thread, lib.Queue, "sched_link").node(top).remove();
         top.*.slpret = 0;
         setrun(top);
         result = top;
@@ -206,7 +205,7 @@ pub fn unsleep(t: kern.ThreadRef, result: c_int) callconv(.c) void {
     lock();
     if (t.*.state & kern.TS_SLEEP != 0) {
         const s = hal.splhigh();
-        t.*.sched_link.remove();
+        lib.IntrusiveQueue(kern.Thread, lib.Queue, "sched_link").node(t).remove();
         t.*.slpret = result;
         setrun(t);
         hal.splx(s);
@@ -273,7 +272,7 @@ pub fn stop(t: kern.ThreadRef) callconv(.c) void {
         if (t.*.state == kern.TS_RUN) {
             runq_remove(t);
         } else if (t.*.state & kern.TS_SLEEP != 0) {
-            t.*.sched_link.remove();
+            lib.IntrusiveQueue(kern.Thread, lib.Queue, "sched_link").node(t).remove();
         }
     }
     timer.stop(&t.*.timeout);
@@ -364,7 +363,7 @@ pub fn dpc(dpc_ptr: *hal.Dpc, fn_ptr: ?*const fn (?*anyopaque) callconv(.c) void
     dpc_ptr.*.func = fn_ptr;
     dpc_ptr.*.arg = arg;
     if (dpc_ptr.*.state != hal.DPC_PENDING) {
-        dpcq.enqueue(IntrusiveQueue(hal.Dpc, Queue, "link").node(dpc_ptr));
+        dpcq.enqueue(lib.IntrusiveQueue(hal.Dpc, lib.Queue, "link").node(dpc_ptr));
     }
     dpc_ptr.*.state = hal.DPC_PENDING;
     hal.splx(s);

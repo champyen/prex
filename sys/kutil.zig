@@ -1,6 +1,6 @@
 const std = @import("std");
 const c = @import("c").c;
-const ffi = @import("../ffi.zig");
+const ffi = @import("ffi.zig");
 const smp = ffi.smp;
 const thread = ffi.thread;
 const kern = ffi.kern;
@@ -72,4 +72,4 @@ pub inline fn toReg(val: anytype) kern.Register {
     return @intCast(@as(isize, @bitCast(u)));
 }
 
-pub const list = @import("list.zig");
+pub const list = @import("lib/list.zig");

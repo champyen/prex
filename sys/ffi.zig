@@ -229,9 +229,6 @@ pub const sem = struct {
     pub const cleanup = c.sem_cleanup;
 };
 
-pub const Queue = @import("lib/queue.zig").Queue;
-pub const IntrusiveQueue = @import("lib/queue.zig").IntrusiveQueue;
-
 pub const lib = struct {
     pub const memcpy = c.memcpy;
     pub const memset = c.memset;
@@ -242,11 +239,14 @@ pub const lib = struct {
     pub const strncmp = c.strncmp;
     pub const printf = c.printf;
     pub const panic = c.panic;
+
+    pub const Queue = @import("lib/queue.zig").Queue;
+    pub const IntrusiveQueue = @import("lib/queue.zig").IntrusiveQueue;
+    pub const List = @import("lib/list.zig").List;
+    pub const IntrusiveList = @import("lib/list.zig").IntrusiveList;
 };
 
-pub const kutil = @import("lib/kutil.zig");
-pub const List = @import("lib/list.zig").List;
-pub const IntrusiveList = @import("lib/list.zig").IntrusiveList;
+pub const kutil = @import("kutil.zig");
 
 pub const hal = struct {
     pub const machine_startup = c.machine_startup;
@@ -456,7 +456,7 @@ pub const hal = struct {
 
 pub const sync = struct {
     pub const Event = extern struct {
-        sleepq: Queue,
+        sleepq: lib.Queue,
         name: [*:0]const u8,
 
         pub fn init(self: *Event, name: [*:0]const u8) void {
@@ -475,10 +475,10 @@ pub const sync = struct {
     pub const event_init = c.event_init;
 
     pub const Mutex = extern struct {
-        task_link: List,
+        task_link: lib.List,
         owner: kern.TaskRef,
         event: Event,
-        link: List,
+        link: lib.List,
         holder: kern.ThreadRef,
         priority: c_int,
         locks: c_int,
@@ -493,14 +493,14 @@ pub const sync = struct {
     };
 
     pub const Cond = extern struct {
-        task_link: List,
+        task_link: lib.List,
         owner: kern.TaskRef,
         event: Event,
     };
 
     pub const Sem = extern struct {
         next: ?*Sem,
-        task_link: List,
+        task_link: lib.List,
         owner: kern.TaskRef,
         event: Event,
         value: kern.Uint,

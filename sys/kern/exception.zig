@@ -3,7 +3,7 @@ const std = @import("std");
 const c = @import("c").c;
 
 const ffi = @import("ffi");
-const IntrusiveList = ffi.IntrusiveList;
+const lib = ffi.lib;
 const hal = ffi.hal;
 const kern = ffi.kern;
 const kutil = ffi.kutil;
@@ -45,7 +45,7 @@ pub fn setup(handler: ?*const fn (c_int) callconv(.c) void) callconv(.c) c_int {
         var n = list_first(&self.threads);
         while (n != null and n.? != @as(?*hal.List, @ptrCast(&self.threads))) {
             const s = hal.splhigh();
-            const t: *kern.Thread = IntrusiveList(kern.Thread, hal.List, "task_link").parent(n.?);
+            const t: *kern.Thread = lib.IntrusiveList(kern.Thread, hal.List, "task_link").parent(n.?);
             t.excbits = 0;
             _ = hal.splx(s);
 
@@ -90,7 +90,7 @@ pub fn post(task_arg: kern.TaskRef, excno: c_int) callconv(.c) c_int {
 
     var n = list_first(&task_arg.*.threads);
     while (n != null and n.? != @as(?*hal.List, @ptrCast(&task_arg.*.threads))) {
-        const tmp: *kern.Thread = IntrusiveList(kern.Thread, hal.List, "task_link").parent(n.?);
+        const tmp: *kern.Thread = lib.IntrusiveList(kern.Thread, hal.List, "task_link").parent(n.?);
         if (tmp.slpevt == @as(?*hal.Event, @alignCast(@ptrCast(&exception_event)))) {
             t = tmp;
             found = 1;
@@ -101,7 +101,7 @@ pub fn post(task_arg: kern.TaskRef, excno: c_int) callconv(.c) c_int {
 
     if (found == 0) {
         if (!list_empty(&task_arg.*.threads)) {
-            const first: *kern.Thread = IntrusiveList(kern.Thread, hal.List, "task_link").parent(list_first(&task_arg.*.threads).?);
+            const first: *kern.Thread = lib.IntrusiveList(kern.Thread, hal.List, "task_link").parent(list_first(&task_arg.*.threads).?);
             t = first;
         }
     }
