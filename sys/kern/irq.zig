@@ -127,13 +127,3 @@ pub fn init() callconv(.c) void {
     hal.interrupt_init();
     _ = hal.spl0();
 }
-
-comptime {
-    if (@import("root") == @This()) {
-        @export(&attach, .{ .name = "irq_attach", .linkage = .strong });
-        @export(&detach, .{ .name = "irq_detach", .linkage = .strong });
-        @export(&handler, .{ .name = "irq_handler", .linkage = .strong });
-        @export(&info, .{ .name = "irq_info", .linkage = .strong });
-        @export(&init, .{ .name = "irq_init", .linkage = .strong });
-    }
-}

@@ -181,12 +181,3 @@ pub fn init() callconv(.c) void {
         list.init();
     }
 }
-
-comptime {
-    if (@import("root") == @This()) {
-        @export(&alloc, .{ .name = "kmem_alloc", .linkage = .strong });
-        @export(&free, .{ .name = "kmem_free", .linkage = .strong });
-        @export(&map, .{ .name = "kmem_map", .linkage = .strong });
-        @export(&init, .{ .name = "kmem_init", .linkage = .strong });
-    }
-}

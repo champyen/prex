@@ -79,7 +79,7 @@ fn curthread() *kern.Thread {
     return kutil.get_curthread().?;
 }
 
-fn wakeq_flush() callconv(.c) void {
+pub fn wakeq_flush() callconv(.c) void {
     while (!wakeq.isEmpty()) {
         const q = wakeq.dequeue().?;
         const t = q.entry(kern.Thread, "sched_link");
@@ -91,17 +91,17 @@ fn wakeq_flush() callconv(.c) void {
     }
 }
 
-fn setrun(t: kern.ThreadRef) callconv(.c) void {
+pub fn setrun(t: kern.ThreadRef) callconv(.c) void {
     wakeq.enqueue(IntrusiveQueue(kern.Thread, Queue, "sched_link").node(t));
     timer.stop(&t.*.timeout);
 }
 
-fn sleep_timeout(arg: ?*anyopaque) callconv(.c) void {
+pub fn sleep_timeout(arg: ?*anyopaque) callconv(.c) void {
     const t: kern.ThreadRef = @ptrCast(@alignCast(arg));
     unsleep(t, kern.SLP_TIMEOUT);
 }
 
-fn swtch() callconv(.c) void {
+pub fn swtch() callconv(.c) void {
     const prev = curthread();
     if (prev.*.state == kern.TS_RUN and prev.*.priority < hal.PRI_IDLE) {
         if (prev.*.priority > maxpri) {
@@ -141,7 +141,7 @@ fn swtch() callconv(.c) void {
     }
 }
 
-fn tsleep(evt: *hal.Event, msec: c_ulong) callconv(.c) c_int {
+pub fn tsleep(evt: *hal.Event, msec: c_ulong) callconv(.c) c_int {
     const e: *sync.Event = @ptrCast(evt);
     lock();
     const s = hal.splhigh();
@@ -162,7 +162,7 @@ fn tsleep(evt: *hal.Event, msec: c_ulong) callconv(.c) c_int {
     return curthread().*.slpret;
 }
 
-fn wakeup(evt: *hal.Event) callconv(.c) void {
+pub fn wakeup(evt: *hal.Event) callconv(.c) void {
     const e: *sync.Event = @ptrCast(evt);
     lock();
     const s = hal.splhigh();
@@ -176,7 +176,7 @@ fn wakeup(evt: *hal.Event) callconv(.c) void {
     unlock();
 }
 
-fn wakeone(evt: *hal.Event) callconv(.c) kern.ThreadRef {
+pub fn wakeone(evt: *hal.Event) callconv(.c) kern.ThreadRef {
     const e: *sync.Event = @ptrCast(evt);
     lock();
     const s = hal.splhigh();
@@ -202,7 +202,7 @@ fn wakeone(evt: *hal.Event) callconv(.c) kern.ThreadRef {
     return result;
 }
 
-fn unsleep(t: kern.ThreadRef, result: c_int) callconv(.c) void {
+pub fn unsleep(t: kern.ThreadRef, result: c_int) callconv(.c) void {
     lock();
     if (t.*.state & kern.TS_SLEEP != 0) {
         const s = hal.splhigh();
@@ -214,7 +214,7 @@ fn unsleep(t: kern.ThreadRef, result: c_int) callconv(.c) void {
     unlock();
 }
 
-fn yield() callconv(.c) void {
+pub fn yield() callconv(.c) void {
     lock();
     if (!runq[@intCast(curthread().*.priority)].isEmpty()) {
         curthread().*.resched = 1;
@@ -222,7 +222,7 @@ fn yield() callconv(.c) void {
     unlock();
 }
 
-fn @"suspend"(t: kern.ThreadRef) callconv(.c) void {
+pub fn @"suspend"(t: kern.ThreadRef) callconv(.c) void {
     if (t.*.state == kern.TS_RUN) {
         if (t == curthread()) {
             curthread().*.resched = 1;
@@ -233,7 +233,7 @@ fn @"suspend"(t: kern.ThreadRef) callconv(.c) void {
     t.*.state |= @as(c_int, kern.TS_SUSP);
 }
 
-fn @"resume"(t: kern.ThreadRef) callconv(.c) void {
+pub fn @"resume"(t: kern.ThreadRef) callconv(.c) void {
     if (t.*.state & kern.TS_SUSP != 0) {
         t.*.state &= ~@as(c_int, kern.TS_SUSP);
         if (t.*.state == kern.TS_RUN) {
@@ -242,7 +242,7 @@ fn @"resume"(t: kern.ThreadRef) callconv(.c) void {
     }
 }
 
-fn tick() callconv(.c) void {
+pub fn tick() callconv(.c) void {
     if (curthread().*.state != kern.TS_EXIT) {
         curthread().*.time += 1;
         if (curthread().*.policy == kern.SCHED_RR) {
@@ -255,7 +255,7 @@ fn tick() callconv(.c) void {
     }
 }
 
-fn start(t: kern.ThreadRef, pri: c_int, policy: c_int) callconv(.c) void {
+pub fn start(t: kern.ThreadRef, pri: c_int, policy: c_int) callconv(.c) void {
     t.*.state = kern.TS_RUN | @as(c_int, kern.TS_SUSP);
     t.*.policy = policy;
     t.*.priority = pri;
@@ -265,7 +265,7 @@ fn start(t: kern.ThreadRef, pri: c_int, policy: c_int) callconv(.c) void {
     }
 }
 
-fn stop(t: kern.ThreadRef) callconv(.c) void {
+pub fn stop(t: kern.ThreadRef) callconv(.c) void {
     if (t == curthread()) {
         curthread().*.locks = 1;
         curthread().*.resched = 1;
@@ -280,7 +280,7 @@ fn stop(t: kern.ThreadRef) callconv(.c) void {
     t.*.state = kern.TS_EXIT;
 }
 
-fn lock() callconv(.c) void {
+pub fn lock() callconv(.c) void {
     const s = hal.splhigh();
     if (curthread().*.locks == 0) {
         if (comptime @hasDecl(c, "CONFIG_SMP")) {
@@ -291,7 +291,7 @@ fn lock() callconv(.c) void {
     hal.splx(s);
 }
 
-fn unlock() callconv(.c) void {
+pub fn unlock() callconv(.c) void {
     var s = hal.splhigh();
     if (curthread().*.locks == 1) {
         wakeq_flush();
@@ -311,17 +311,17 @@ fn unlock() callconv(.c) void {
     hal.splx(s);
 }
 
-fn bklUnlock() callconv(.c) void {
+pub fn bklUnlock() callconv(.c) void {
     if (comptime @hasDecl(c, "CONFIG_SMP")) {
         kernel_lock.unlock();
     }
 }
 
-fn getpri(t: kern.ThreadRef) callconv(.c) c_int {
+pub fn getpri(t: kern.ThreadRef) callconv(.c) c_int {
     return t.*.priority;
 }
 
-fn setpri(t: kern.ThreadRef, basepri: c_int, pri: c_int) callconv(.c) void {
+pub fn setpri(t: kern.ThreadRef, basepri: c_int, pri: c_int) callconv(.c) void {
     t.*.basepri = basepri;
     if (t == curthread()) {
         t.*.priority = pri;
@@ -340,11 +340,11 @@ fn setpri(t: kern.ThreadRef, basepri: c_int, pri: c_int) callconv(.c) void {
     }
 }
 
-fn getpolicy(t: kern.ThreadRef) callconv(.c) c_int {
+pub fn getpolicy(t: kern.ThreadRef) callconv(.c) c_int {
     return t.*.policy;
 }
 
-fn setpolicy(t: kern.ThreadRef, policy: c_int) callconv(.c) c_int {
+pub fn setpolicy(t: kern.ThreadRef, policy: c_int) callconv(.c) c_int {
     var err: c_int = 0;
     switch (policy) {
         kern.SCHED_RR, kern.SCHED_FIFO => {
@@ -358,7 +358,7 @@ fn setpolicy(t: kern.ThreadRef, policy: c_int) callconv(.c) c_int {
     return err;
 }
 
-fn dpc(dpc_ptr: *hal.Dpc, fn_ptr: ?*const fn (?*anyopaque) callconv(.c) void, arg: ?*anyopaque) callconv(.c) void {
+pub fn dpc(dpc_ptr: *hal.Dpc, fn_ptr: ?*const fn (?*anyopaque) callconv(.c) void, arg: ?*anyopaque) callconv(.c) void {
     lock();
     const s = hal.splhigh();
     dpc_ptr.*.func = fn_ptr;
@@ -372,7 +372,7 @@ fn dpc(dpc_ptr: *hal.Dpc, fn_ptr: ?*const fn (?*anyopaque) callconv(.c) void, ar
     unlock();
 }
 
-fn dpc_thread(dummy: ?*anyopaque) callconv(.c) void {
+pub fn dpc_thread(dummy: ?*anyopaque) callconv(.c) void {
     _ = dummy;
     _ = hal.splhigh();
     while (true) {
@@ -390,7 +390,7 @@ fn dpc_thread(dummy: ?*anyopaque) callconv(.c) void {
     }
 }
 
-fn init() callconv(.c) void {
+pub fn init() callconv(.c) void {
     {
         var i: c_int = 0;
         while (i < hal.NPRI) : (i += 1) {
@@ -413,34 +413,5 @@ fn init() callconv(.c) void {
     const t = thread.kcreate(dpc_thread, null, hal.PRI_DPC);
     if (t == null) {
         @panic("sched_init");
-    }
-}
-
-comptime {
-    if (@import("root") == @This()) {
-        @export(&sleep_timeout, .{ .name = "sleep_timeout", .linkage = .strong });
-        @export(&dpc_thread, .{ .name = "dpc_thread", .linkage = .strong });
-        @export(&wakeq_flush, .{ .name = "wakeq_flush", .linkage = .strong });
-        @export(&setrun, .{ .name = "sched_setrun", .linkage = .strong });
-        @export(&swtch, .{ .name = "sched_swtch", .linkage = .strong });
-        @export(&tsleep, .{ .name = "sched_tsleep", .linkage = .strong });
-        @export(&wakeup, .{ .name = "sched_wakeup", .linkage = .strong });
-        @export(&wakeone, .{ .name = "sched_wakeone", .linkage = .strong });
-        @export(&unsleep, .{ .name = "sched_unsleep", .linkage = .strong });
-        @export(&yield, .{ .name = "sched_yield", .linkage = .strong });
-        @export(&@"suspend", .{ .name = "sched_suspend", .linkage = .strong });
-        @export(&@"resume", .{ .name = "sched_resume", .linkage = .strong });
-        @export(&tick, .{ .name = "sched_tick", .linkage = .strong });
-        @export(&start, .{ .name = "sched_start", .linkage = .strong });
-        @export(&stop, .{ .name = "sched_stop", .linkage = .strong });
-        @export(&lock, .{ .name = "sched_lock", .linkage = .strong });
-        @export(&unlock, .{ .name = "sched_unlock", .linkage = .strong });
-        @export(&bklUnlock, .{ .name = "sched_bkl_unlock", .linkage = .strong });
-        @export(&getpri, .{ .name = "sched_getpri", .linkage = .strong });
-        @export(&setpri, .{ .name = "sched_setpri", .linkage = .strong });
-        @export(&getpolicy, .{ .name = "sched_getpolicy", .linkage = .strong });
-        @export(&setpolicy, .{ .name = "sched_setpolicy", .linkage = .strong });
-        @export(&dpc, .{ .name = "sched_dpc", .linkage = .strong });
-        @export(&init, .{ .name = "sched_init", .linkage = .strong });
     }
 }

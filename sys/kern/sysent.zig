@@ -103,7 +103,7 @@ const sysent: [NSYSCALL]SysEnt = .{
     SysEnt.init("device_scatter_write", 4, c.device_scatter_write),
 };
 
-fn syscall_handler_std(a1: kern.Register, a2: kern.Register, a3: kern.Register, a4: kern.Register, id: kern.Register) callconv(.c) kern.Register {
+pub fn syscall_handler_std(a1: kern.Register, a2: kern.Register, a3: kern.Register, a4: kern.Register, id: kern.Register) callconv(.c) kern.Register {
     var retval: kern.Register = kern.Errno.EINVAL;
 
     if (comptime builtin.mode == .Debug) {
@@ -121,7 +121,7 @@ fn syscall_handler_std(a1: kern.Register, a2: kern.Register, a3: kern.Register, 
     return retval;
 }
 
-fn syscall_handler_armv8m(regs: *hal.CpuRegs, id: kern.Register) callconv(.c) kern.Register {
+pub fn syscall_handler_armv8m(regs: *hal.CpuRegs, id: kern.Register) callconv(.c) kern.Register {
     var retval: kern.Register = kern.Errno.EINVAL;
 
     if (kutil.get_curthread()) |cur| {
@@ -181,10 +181,3 @@ fn strace_return(retval: kern.Register, id: kern.Register) void {
     }
 }
 
-comptime {
-    if (@hasDecl(c, "CONFIG_ARMV8M")) {
-        @export(&syscall_handler_armv8m, .{ .name = "syscall_handler", .linkage = .strong });
-    } else {
-        @export(&syscall_handler_std, .{ .name = "syscall_handler", .linkage = .strong });
-    }
-}

@@ -368,28 +368,6 @@ pub fn init() callconv(.c) void {
 // ---------------------------------------------------------------------------
 // Comptime exports – public API functions with strong C linkage
 // ---------------------------------------------------------------------------
-comptime {
-    if (@import("root") == @This()) {
-        @export(&stop, .{ .name = "timer_stop", .linkage = .strong });
-        @export(&callout, .{ .name = "timer_callout", .linkage = .strong });
-        @export(&delay, .{ .name = "timer_delay", .linkage = .strong });
-        @export(&sleep, .{ .name = "timer_sleep", .linkage = .strong });
-        @export(&alarm, .{ .name = "timer_alarm", .linkage = .strong });
-        @export(&periodic, .{ .name = "timer_periodic", .linkage = .strong });
-        @export(&waitperiod, .{ .name = "timer_waitperiod", .linkage = .strong });
-        @export(&cancel, .{ .name = "timer_cancel", .linkage = .strong });
-        @export(&handler, .{ .name = "timer_handler", .linkage = .strong });
-        @export(&ticks, .{ .name = "timer_ticks", .linkage = .strong });
-        @export(&info, .{ .name = "timer_info", .linkage = .strong });
-        @export(&init, .{ .name = "timer_init", .linkage = .strong });
-
-        if (@hasDecl(c, "CONFIG_SMP")) {
-            @export(&__broken_spinlock_lock, .{ .name = "__broken_spinlock_lock", .linkage = .strong });
-            @export(&__broken_spinlock_unlock, .{ .name = "__broken_spinlock_unlock", .linkage = .strong });
-        }
-    }
-}
-
 pub fn __broken_spinlock_lock(lock: ?*volatile c.spinlock_t) callconv(.c) void {
     if (comptime !@hasDecl(c, "CONFIG_SMP")) return;
     const l: *volatile i32 = @ptrCast(@alignCast(lock.?));

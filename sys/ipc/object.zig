@@ -157,14 +157,3 @@ pub fn cleanup(tsk: kern.TaskRef) callconv(.c) void {
 pub fn init() callconv(.c) void {
     object_list.init();
 }
-
-comptime {
-    if (@import("root") == @This()) {
-        @export(&create, .{ .name = "object_create", .linkage = .strong });
-        @export(&lookup, .{ .name = "object_lookup", .linkage = .strong });
-        @export(&valid, .{ .name = "object_valid", .linkage = .strong });
-        @export(&destroy, .{ .name = "object_destroy", .linkage = .strong });
-        @export(&cleanup, .{ .name = "object_cleanup", .linkage = .strong });
-        @export(&init, .{ .name = "object_init", .linkage = .strong });
-    }
-}

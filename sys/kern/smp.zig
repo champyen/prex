@@ -155,18 +155,3 @@ pub fn hal_get_cpu_control() callconv(.c) ?*hal.CpuControl {
     }
     return null;
 }
-
-comptime {
-    if (@import("root") == @This()) {
-        @export(&cpu_table, .{ .name = "cpu_table", .linkage = .strong });
-        @export(&ap_boot_stacks, .{ .name = "ap_boot_stacks", .linkage = .strong });
-        @export(&initEarly, .{ .name = "smp_init_early", .linkage = .strong });
-        @export(&hal_set_cpu_control, .{ .name = "hal_set_cpu_control", .linkage = .strong });
-        @export(&hal_get_cpu_control, .{ .name = "hal_get_cpu_control", .linkage = .strong });
-        if (@hasDecl(c, "CONFIG_SMP")) {
-            @export(&startAps, .{ .name = "smp_start_aps", .linkage = .strong });
-            @export(&activate, .{ .name = "smp_activate", .linkage = .strong });
-            @export(&apBoot, .{ .name = "smp_ap_boot", .linkage = .strong });
-        }
-    }
-}

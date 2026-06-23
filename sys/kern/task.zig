@@ -20,7 +20,7 @@ const vm = ffi.vm;
 var task_list: hal.List = undefined;
 var ntasks: c_int = 0;
 
-var kernel_task: kern.Task = std.mem.zeroes(kern.Task);
+pub var kernel_task: kern.Task = std.mem.zeroes(kern.Task);
 
 
 
@@ -53,7 +53,7 @@ inline fn list_next_node(node: *hal.List) *hal.List {
     return @ptrCast(node.next.?);
 }
 
-fn valid(task: kern.TaskRef) callconv(.c) c_int {
+pub fn valid(task: kern.TaskRef) callconv(.c) c_int {
     var n = list_first(&task_list);
     while (n != @as(*hal.List, @ptrCast(&task_list))) : (n = list_next_node(n)) {
         const tmp = ffi.IntrusiveList(kern.Task, hal.List, "link").parent(n);
@@ -64,7 +64,7 @@ fn valid(task: kern.TaskRef) callconv(.c) c_int {
     return 0;
 }
 
-fn access(task: kern.TaskRef) callconv(.c) c_int {
+pub fn access(task: kern.TaskRef) callconv(.c) c_int {
     if ((task.?.*.flags & kern.TF_SYSTEM) != 0) {
         return 0;
     } else {
@@ -75,7 +75,7 @@ fn access(task: kern.TaskRef) callconv(.c) c_int {
     return 0;
 }
 
-fn capable(cap: kern.Cap) callconv(.c) c_int {
+pub fn capable(cap: kern.Cap) callconv(.c) c_int {
     var capable_val: c_int = 1;
 
     if ((kutil.cur_task().*.capability & cap) == 0) {
@@ -403,24 +403,4 @@ pub fn init() callconv(.c) void {
 
     list_insert_fn(&task_list, &kernel_task.link);
     ntasks = 1;
-}
-
-comptime {
-    if (@import("root") == @This()) {
-        @export(&kernel_task, .{ .name = "kernel_task", .linkage = .strong });
-        @export(&create, .{ .name = "task_create", .linkage = .strong });
-        @export(&terminate, .{ .name = "task_terminate", .linkage = .strong });
-        @export(&self, .{ .name = "task_self", .linkage = .strong });
-        @export(&@"suspend", .{ .name = "task_suspend", .linkage = .strong });
-        @export(&@"resume", .{ .name = "task_resume", .linkage = .strong });
-        @export(&setname, .{ .name = "task_setname", .linkage = .strong });
-        @export(&setcap, .{ .name = "task_setcap", .linkage = .strong });
-        @export(&chkcap, .{ .name = "task_chkcap", .linkage = .strong });
-        @export(&capable, .{ .name = "task_capable", .linkage = .strong });
-        @export(&valid, .{ .name = "task_valid", .linkage = .strong });
-        @export(&access, .{ .name = "task_access", .linkage = .strong });
-        @export(&info, .{ .name = "task_info", .linkage = .strong });
-        @export(&bootstrap, .{ .name = "task_bootstrap", .linkage = .strong });
-        @export(&init, .{ .name = "task_init", .linkage = .strong });
-    }
 }

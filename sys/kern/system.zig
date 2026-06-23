@@ -217,14 +217,3 @@ pub fn sysNosys() callconv(.c) c_int {
 }
 
 // Comptime exports – public API functions with strong C linkage
-comptime {
-    if (@import("root") == @This()) {
-        @export(&sysinfo, .{ .name = "sysinfo", .linkage = .strong });
-        @export(&sysInfo, .{ .name = "sys_info", .linkage = .strong });
-        @export(&sysLog, .{ .name = "sys_log", .linkage = .strong });
-        @export(&sysDebug, .{ .name = "sys_debug", .linkage = .strong });
-        @export(&sysPanic, .{ .name = "sys_panic", .linkage = .strong });
-        @export(&sysTime, .{ .name = "sys_time", .linkage = .strong });
-        @export(&sysNosys, .{ .name = "sys_nosys", .linkage = .strong });
-    }
-}

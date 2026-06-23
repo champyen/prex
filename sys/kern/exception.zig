@@ -204,17 +204,3 @@ pub fn init() callconv(.c) void {
     @as(*usize, @ptrCast(&EXC_DFL)).* = @as(usize, @bitCast(@as(isize, -1)));
     sync.event_init(@as(?*anyopaque, @ptrCast(&exception_event)), "exception");
 }
-
-
-comptime {
-    if (@import("root") == @This()) {
-        @export(&setup, .{ .name = "exception_setup", .linkage = .strong });
-        @export(&raise, .{ .name = "exception_raise", .linkage = .strong });
-        @export(&post, .{ .name = "exception_post", .linkage = .strong });
-        @export(&wait, .{ .name = "exception_wait", .linkage = .strong });
-        @export(&mark, .{ .name = "exception_mark", .linkage = .strong });
-        @export(&deliver, .{ .name = "exception_deliver", .linkage = .strong });
-        @export(&@"return", .{ .name = "exception_return", .linkage = .strong });
-        @export(&init, .{ .name = "exception_init", .linkage = .strong });
-    }
-}

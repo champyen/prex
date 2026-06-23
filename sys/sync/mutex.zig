@@ -291,16 +291,3 @@ pub fn setpri(t: kern.ThreadRef, pri: c_int) callconv(.c) void {
         _ = prio_inherit(t);
     }
 }
-
-comptime {
-    if (@import("root") == @This()) {
-        @export(&init, .{ .name = "mutex_init", .linkage = .strong });
-        @export(&destroy, .{ .name = "mutex_destroy", .linkage = .strong });
-        @export(&cleanup, .{ .name = "mutex_cleanup", .linkage = .strong });
-        @export(&lock, .{ .name = "mutex_lock", .linkage = .strong });
-        @export(&tryLock, .{ .name = "mutex_trylock", .linkage = .strong });
-        @export(&unlock, .{ .name = "mutex_unlock", .linkage = .strong });
-        @export(&cancel, .{ .name = "mutex_cancel", .linkage = .strong });
-        @export(&setpri, .{ .name = "mutex_setpri", .linkage = .strong });
-    }
-}

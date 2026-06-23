@@ -613,21 +613,3 @@ pub fn init() callconv(.c) void {
     seg_init(&kernel_map.head);
     kern.kernel_task.map = @ptrCast(&kernel_map);
 }
-
-comptime {
-    if (@import("root") == @This()) {
-        @export(&create, .{ .name = "vm_create", .linkage = .strong });
-        @export(&allocate, .{ .name = "vm_allocate", .linkage = .strong });
-        @export(&free, .{ .name = "vm_free", .linkage = .strong });
-        @export(&attribute, .{ .name = "vm_attribute", .linkage = .strong });
-        @export(&map, .{ .name = "vm_map", .linkage = .strong });
-        @export(&terminate, .{ .name = "vm_terminate", .linkage = .strong });
-        @export(&dup, .{ .name = "vm_dup", .linkage = .strong });
-        @export(&@"switch", .{ .name = "vm_switch", .linkage = .strong });
-        @export(&reference, .{ .name = "vm_reference", .linkage = .strong });
-        @export(&load, .{ .name = "vm_load", .linkage = .strong });
-        @export(&translate, .{ .name = "vm_translate", .linkage = .strong });
-        @export(&info, .{ .name = "vm_info", .linkage = .strong });
-        @export(&init, .{ .name = "vm_init", .linkage = .strong });
-    }
-}

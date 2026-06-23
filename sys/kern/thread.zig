@@ -413,31 +413,3 @@ pub fn init() callconv(.c) void {
     list_insert(&kern.kernel_task.threads, &idle_thread.task_link);
     kern.kernel_task.nthreads = 1;
 }
-
-
-comptime {
-    if (@import("root") == @This()) {
-        @export(&idle_thread, .{ .name = "idle_thread", .linkage = .strong });
-        if (!@hasDecl(c, "CONFIG_SMP")) {
-            @export(&curthread, .{ .name = "curthread", .linkage = .strong });
-            @export(&irq_nesting, .{ .name = "irq_nesting", .linkage = .strong });
-            @export(&curspl, .{ .name = "curspl", .linkage = .strong });
-        }
-        @export(&create, .{ .name = "thread_create", .linkage = .strong });
-        @export(&terminate, .{ .name = "thread_terminate", .linkage = .strong });
-        @export(&destroy, .{ .name = "thread_destroy", .linkage = .strong });
-        @export(&setup, .{ .name = "thread_setup", .linkage = .strong });
-        @export(&self, .{ .name = "thread_self", .linkage = .strong });
-        @export(&valid, .{ .name = "thread_valid", .linkage = .strong });
-        @export(&yield, .{ .name = "thread_yield", .linkage = .strong });
-        @export(&@"suspend", .{ .name = "thread_suspend", .linkage = .strong });
-        @export(&@"resume", .{ .name = "thread_resume", .linkage = .strong });
-        @export(&schedparam, .{ .name = "thread_schedparam", .linkage = .strong });
-        @export(&idle, .{ .name = "thread_idle", .linkage = .strong });
-        @export(&info, .{ .name = "thread_info", .linkage = .strong });
-        @export(&createKernel, .{ .name = "kthread_create", .linkage = .strong });
-        @export(&terminateKernel, .{ .name = "kthread_terminate", .linkage = .strong });
-        @export(&createIdle, .{ .name = "thread_create_idle", .linkage = .strong });
-        @export(&init, .{ .name = "thread_init", .linkage = .strong });
-    }
-}

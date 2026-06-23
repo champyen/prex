@@ -591,16 +591,3 @@ const dkient = [40]dkifn_t{
 // ---------------------------------------------------------------------------
 // Comptime exports – public API functions with strong C linkage
 // ---------------------------------------------------------------------------
-comptime {
-    if (@import("root") == @This()) {
-        @export(&open, .{ .name = "device_open", .linkage = .strong });
-        @export(&close, .{ .name = "device_close", .linkage = .strong });
-        @export(&read, .{ .name = "device_read", .linkage = .strong });
-        @export(&write, .{ .name = "device_write", .linkage = .strong });
-        @export(&gatherRead, .{ .name = "device_gather_read", .linkage = .strong });
-        @export(&scatterWrite, .{ .name = "device_scatter_write", .linkage = .strong });
-        @export(&ioctl, .{ .name = "device_ioctl", .linkage = .strong });
-        @export(&info, .{ .name = "device_info", .linkage = .strong });
-        @export(&init, .{ .name = "device_init", .linkage = .strong });
-    }
-}

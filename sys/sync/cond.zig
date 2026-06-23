@@ -184,14 +184,3 @@ pub fn broadcast(cp: ?*kern.CondRef) callconv(.c) c_int {
     sched.wakeup(&km.*.event);
     return 0;
 }
-
-comptime {
-    if (@import("root") == @This()) {
-        @export(&init, .{ .name = "cond_init", .linkage = .strong });
-        @export(&destroy, .{ .name = "cond_destroy", .linkage = .strong });
-        @export(&cleanup, .{ .name = "cond_cleanup", .linkage = .strong });
-        @export(&wait, .{ .name = "cond_wait", .linkage = .strong });
-        @export(&signal, .{ .name = "cond_signal", .linkage = .strong });
-        @export(&broadcast, .{ .name = "cond_broadcast", .linkage = .strong });
-    }
-}

@@ -235,16 +235,3 @@ pub fn cleanup(task: kern.TaskRef) callconv(.c) void {
         n = next;
     }
 }
-
-comptime {
-    if (@import("root") == @This()) {
-        @export(&init, .{ .name = "sem_init", .linkage = .strong });
-        @export(&destroy, .{ .name = "sem_destroy", .linkage = .strong });
-        @export(&wait, .{ .name = "sem_wait", .linkage = .strong });
-        @export(&tryWait, .{ .name = "sem_trywait", .linkage = .strong });
-        @export(&post, .{ .name = "sem_post", .linkage = .strong });
-        @export(&postKernel, .{ .name = "ksem_post", .linkage = .strong });
-        @export(&getValue, .{ .name = "sem_getvalue", .linkage = .strong });
-        @export(&cleanup, .{ .name = "sem_cleanup", .linkage = .strong });
-    }
-}

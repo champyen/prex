@@ -224,14 +224,3 @@ pub fn abort(obj: kern.ObjectRef) callconv(.c) void {
 pub fn init() callconv(.c) void {
     sync.event_init(@as(?*anyopaque, @ptrCast(&ipc_event)), "ipc");
 }
-
-comptime {
-    if (@import("root") == @This()) {
-        @export(&send, .{ .name = "msg_send", .linkage = .strong });
-        @export(&receive, .{ .name = "msg_receive", .linkage = .strong });
-        @export(&reply, .{ .name = "msg_reply", .linkage = .strong });
-        @export(&cancel, .{ .name = "msg_cancel", .linkage = .strong });
-        @export(&abort, .{ .name = "msg_abort", .linkage = .strong });
-        @export(&init, .{ .name = "msg_init", .linkage = .strong });
-    }
-}

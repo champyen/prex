@@ -14,22 +14,6 @@ _KERNEL_:=	1
 DEFS+=		KERNEL
 
 SRCS+=		$(call select_kernel_src,kern/main) \
-		$(call select_kernel_src,kern/sched) \
-		$(call select_kernel_src,kern/task) \
-		$(call select_kernel_src,kern/thread) \
-		$(call select_kernel_src,kern/timer) \
-		$(call select_kernel_src,kern/sysent) \
-		$(call select_kernel_src,kern/irq) \
-		$(call select_kernel_src,kern/device) \
-		$(call select_kernel_src,kern/exception) \
-		$(call select_kernel_src,kern/system) \
-		$(call select_kernel_src,mem/kmem) \
-		$(call select_kernel_src,mem/page) \
-		$(call select_kernel_src,ipc/msg) \
-		$(call select_kernel_src,ipc/object) \
-		$(call select_kernel_src,sync/cond) \
-		$(call select_kernel_src,sync/mutex) \
-		$(call select_kernel_src,sync/sem) \
 		$(call select_kernel_src,lib/queue) \
 		$(call select_kernel_src,lib/string) \
 		lib/vsprintf.c \
@@ -40,25 +24,10 @@ SRCS+=		lib/zig_runtime.zig \
 		kern/system_helper.c
 endif
 
-ifeq ($(ARCH),riscv)
-ifeq ($(CONFIG_ZIG_KRNL),y)
-SRCS+=		$(call select_kernel_src,kern/smp)
-else
-SRCS+=		kern/smp.c
-endif
-else ifeq ($(CONFIG_SMP),y)
-ifeq ($(CONFIG_ZIG_KRNL),y)
-SRCS+=		$(call select_kernel_src,kern/smp)
-else
-SRCS+=		kern/smp.c
-endif
-endif
-
-ifeq ($(CONFIG_MMU),y)
-SRCS+=		$(call select_kernel_src,mem/vm)
-else
-SRCS+=		$(call select_kernel_src,mem/vm_nommu)
-endif
+# Note: all kernel .zig modules (kern/{sched,task,thread,...}, ipc/*, sync/*,
+# mem/{kmem,page,vm*}) are now imported by sys/kern/main.zig and compiled
+# as a single translation unit. They no longer appear individually in
+# SRCS - main.zig is the only root for the kernel core.
 
 ifeq ($(DEBUG),1)
 SRCS+=		kern/debug.c

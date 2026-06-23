@@ -285,12 +285,3 @@ pub fn init() callconv(.c) void {
     }
     used_size = 0;
 }
-comptime {
-    if (@import("root") == @This()) {
-        @export(&alloc, .{ .name = "page_alloc", .linkage = .strong });
-        @export(&free, .{ .name = "page_free", .linkage = .strong });
-        @export(&reserve, .{ .name = "page_reserve", .linkage = .strong });
-        @export(&info, .{ .name = "page_info", .linkage = .strong });
-        @export(&init, .{ .name = "page_init", .linkage = .strong });
-    }
-}
