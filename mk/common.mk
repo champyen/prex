@@ -76,7 +76,11 @@ endif
 
 # Determine if Zig compilation is enabled for the current component
 ENABLE_ZIG := n
-ifeq ($(_KRNL_),1)
+ifeq ($(_BOOT_),1)
+  ifeq ($(CONFIG_ZIG_BOOT),y)
+    ENABLE_ZIG := y
+  endif
+else ifeq ($(_KRNL_),1)
   ifeq ($(CONFIG_ZIG_KRNL),y)
     ENABLE_ZIG := y
   endif

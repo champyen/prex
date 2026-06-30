@@ -8,6 +8,7 @@ TARGET:=	bootldr
 #DISASM:= 	bootldr.lst
 #SYMBOL:=	bootldr.sym
 
+_BOOT_:=		1
 _KERNEL_:=	1
 DEFS+=		KERNEL
 

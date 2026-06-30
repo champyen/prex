@@ -53,6 +53,10 @@ int main(void)
 {
     entry_t entry;
 
+    /* Initialize bootinfo pointer (provided by common/bootinfo.zig in the
+     * Zig bootloader port). Must run before the memset below. */
+    __boot_bootinfo_init();
+
     memset(bootinfo, 0, BOOTINFOSZ);
 
     /*

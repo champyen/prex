@@ -54,6 +54,11 @@
 
 extern struct bootinfo* const bootinfo;
 
+/* From common/bootinfo.zig (Zig bootloader port). Initializes the bootinfo
+ * pointer to point at the SYSPAGE BSS area. Must be called before any C
+ * code that dereferences bootinfo. */
+extern void __boot_bootinfo_init(void);
+
 __BEGIN_DECLS
 void panic(const char*);
 void dump_bootinfo(void);

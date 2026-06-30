@@ -88,4 +88,11 @@ else
   select_kernel_src = $(1).c
 endif
 
+# Automatically select the Zig version of a bootloader source file if available and enabled
+ifeq ($(CONFIG_ZIG_BOOT),y)
+  pick_zig_boot_src = $(if $(wildcard $(SRCDIR)/bsp/boot/$(1).zig),$(1).zig,$(1).c)
+else
+  pick_zig_boot_src = $(1).c
+endif
+
 endif # !_OWN_MK_

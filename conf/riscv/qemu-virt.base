@@ -23,7 +23,7 @@ options         CACHE
 memory      RAM_SIZE        0x10000000  # DRAM Size (256MB)
 memory      LOADER_TEXT     0x80010000  # Start of boot loader (after 64KB syspage)
 memory      KERNEL_TEXT     0x80200000  # Start of kernel
-memory      BOOTIMG_BASE    0x80014000  # Location of boot image (LOADER_TEXT + 16KB)
+memory      BOOTIMG_BASE    0x80018000  # Location of boot image (LOADER_TEXT + 32KB)
 
 #
 # Tunable parameters
@@ -58,6 +58,7 @@ options         CMDBOX          # Core utilities
 options         ZIG_DRV         # Zig driver support
 options         ZIG_USR         # Zig user-space support
 options         ZIG_KRNL        # Zig kernel core support
+options         ZIG_BOOT        # Zig bootloader support
 options         DEBUG           # Debugging options
 
 #

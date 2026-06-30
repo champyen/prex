@@ -10,7 +10,11 @@ ifeq ($(ARCH),arm)
 
   # Enable Thumb mode dynamically depending on active component and configuration
   ifeq ($(CONFIG_THUMB),y)
-    ifeq ($(_DRV_),1)
+    ifeq ($(_BOOT_),1)
+      ifeq ($(CONFIG_BOOT_THUMB),y)
+        ZIG_TARGET := thumb-freestanding-eabi
+      endif
+    else ifeq ($(_DRV_),1)
       ifeq ($(CONFIG_DRV_THUMB),y)
         ZIG_TARGET := thumb-freestanding-eabi
       endif
@@ -61,7 +65,19 @@ ZIGFLAGS+=	-target $(ZIG_TARGET) $(ZIG_OPT) -fno-stack-check -fno-unwind-tables 
 		$(addprefix -I,$(INCSDIR)) $(DEFINES)
 
 # Add driver-specific, kernel-specific, or user-space modules
-ifeq ($(_KRNL_),1)
+ifeq ($(_BOOT_),1)
+  # Bootloader: each domain .zig is a separate compilation unit. They share
+  # the bsp/boot/zig/c.zig hub via --dep c and the bsp/boot/zig/ffi.zig
+  # typed namespace via --dep ffi. The c and ffi module mappings are
+  # appended to every module declaration so that ffi.zig itself can also
+  # @import("c") (mirrors sys/ffi.zig's pattern).
+  COMMON_BOOT_MODS = -Mc=$(SRCDIR)/bsp/boot/zig/c.zig $(ZIGFLAGS) \
+    --dep c -Mffi=$(SRCDIR)/bsp/boot/zig/ffi.zig $(ZIGFLAGS)
+
+  ZIG_MODULES = --dep c --dep ffi \
+    -Mroot=$< $(ZIGFLAGS) \
+    $(COMMON_BOOT_MODS)
+else ifeq ($(_KRNL_),1)
   # Choose vm module based on CONFIG_MMU
   ifeq ($(CONFIG_MMU),y)
     VM_MODULE = -Mvm_mod=$(SRCDIR)/sys/mem/vm.zig
