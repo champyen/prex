@@ -74,6 +74,8 @@ size_t strlcpy(char*, const char*, size_t);
 size_t strnlen(const char*, size_t);
 void* memcpy(void*, const void*, size_t);
 void* memset(void*, int, size_t);
+/* jump_entry.c */
+void _jump_to_kernel(unsigned long entry_ptr);
 __END_DECLS
 
 #include <elf_reloc.h>
