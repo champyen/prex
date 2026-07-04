@@ -10,7 +10,7 @@ TARGET:=	bootldr
 
 _BOOT_:=		1
 _KERNEL_:=	1
-DEFS+=		KERNEL
+DEFS+=		KERNEL DEBUG_ELF
 
 ifeq ($(CONFIG_BOOT_THUMB),y)
 CFLAGS+=	-mthumb -mthumb-interwork

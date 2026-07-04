@@ -85,7 +85,12 @@ fn load_module(hdr: *ffi.ar.@"struct", m: *ffi.mem.Module) c_int {
 
     // Load ELF image (skip archive header)
     const img_ptr: [*]u8 = @ptrFromInt(@intFromPtr(hdr) + @sizeOf(ffi.ar.@"struct"));
-    if (elf.api.load_elf(img_ptr, m) != 0) {
+    const r = elf.api.load_elf(img_ptr, m);
+    if (cfg.DEBUG) {
+        const name_z2: [*c]const u8 = @ptrCast(&m.*.name);
+        boot.printf("ZLE %s r=%d\n", name_z2, r);
+    }
+    if (r != 0) {
         return -1;
     }
 

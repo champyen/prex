@@ -68,17 +68,28 @@ pub export fn main() callconv(.c) c_int {
         boot.printf("Prex+ Boot Loader\n");
     }
 
+    // DEBUG: track progress
+    if (cfg.DEBUG) boot.printf("M1\n");
+
     // 5. Do platform dependent initialization.
     boot.startup();
+
+    if (cfg.DEBUG) boot.printf("M2\n");
 
     // 6. Show splash screen.
     boot.splash();
 
+    if (cfg.DEBUG) boot.printf("M3\n");
+
     // 7. Load OS modules to appropriate locations.
     boot.load_os();
 
+    if (cfg.DEBUG) boot.printf("M4\n");
+
     // 8. Dump boot information.
     boot.dump_bootinfo(@ptrCast(@constCast(boot.bootinfo)));
+
+    if (cfg.DEBUG) boot.printf("M5\n");
 
     // 9. Launch kernel via C helper (Zig 0.16 has a function-pointer
     //    call codegen bug for all archs; see common/jump_entry.c).
