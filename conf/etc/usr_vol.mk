@@ -7,6 +7,7 @@ USR_BIN_FILES+= $(SRCDIR)/usr/posix/ifconfig/ifconfig
 USR_BIN_FILES+= $(SRCDIR)/usr/posix/make/make
 USR_BIN_FILES+= $(SRCDIR)/usr/posix/tetris/tetris
 USR_BIN_FILES+= $(SRCDIR)/usr/posix/tinycc/tcc
+USR_BIN_FILES+= $(SRCDIR)/usr/test/multiplex_demo/multiplex_demo
 
 # SDK 
 SDK_ROOT= $(SRCDIR)/sdk

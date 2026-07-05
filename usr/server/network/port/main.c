@@ -33,6 +33,8 @@
 #include "lwip/dhcp.h"
 #include "lwip/dns.h"
 #include "lwip/netdb.h"
+#include "lwip/api.h"
+#include "lwip/priv/sockets_priv.h"
 
 #include <sys/prex.h>
 #include <sys/list.h>
@@ -56,20 +58,35 @@ struct net_poll_listener {
 };
 static struct list poll_listeners = LIST_INIT(poll_listeners);
 
-extern void (*prex_socket_event_hook)(int s, int has_recvevent, int has_sendevent, int has_errevent);
+static netconn_callback original_callbacks[MEMP_NUM_NETCONN];
 
-static void my_socket_event_hook(int s, int has_recvevent, int has_sendevent, int has_errevent) {
-    list_t n;
-    struct net_poll_listener *pl;
-    for (n = list_first(&poll_listeners); n != &poll_listeners; n = list_next(n)) {
-        pl = list_entry(n, struct net_poll_listener, link);
-        if (pl->fd == s) {
-            int signal = 0;
-            if (has_recvevent && (pl->events & POLLIN)) signal = 1;
-            if (has_sendevent && (pl->events & POLLOUT)) signal = 1;
-            if (has_errevent && (pl->events & POLLERR)) signal = 1;
-            if (signal) {
-                sem_post(&pl->sem);
+static void my_netconn_callback(struct netconn *conn, enum netconn_evt evt, u16_t len) {
+    int s = conn->callback_arg.socket;
+    if (s >= LWIP_SOCKET_OFFSET && s < LWIP_SOCKET_OFFSET + MEMP_NUM_NETCONN) {
+        netconn_callback orig = original_callbacks[s - LWIP_SOCKET_OFFSET];
+        if (orig) {
+            orig(conn, evt, len);
+        }
+    }
+
+    struct lwip_sock *sock = lwip_socket_dbg_get_socket(s);
+    if (sock) {
+        int has_recvevent = sock->rcvevent > 0;
+        int has_sendevent = sock->sendevent != 0;
+        int has_errevent = sock->errevent != 0;
+
+        list_t n;
+        struct net_poll_listener *pl;
+        for (n = list_first(&poll_listeners); n != &poll_listeners; n = list_next(n)) {
+            pl = list_entry(n, struct net_poll_listener, link);
+            if (pl->fd == s) {
+                int signal = 0;
+                if (has_recvevent && (pl->events & POLLIN)) signal = 1;
+                if (has_sendevent && (pl->events & POLLOUT)) signal = 1;
+                if (has_errevent && (pl->events & POLLERR)) signal = 1;
+                if (signal) {
+                    sem_post(&pl->sem);
+                }
             }
         }
     }
@@ -119,7 +136,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    prex_socket_event_hook = my_socket_event_hook;
+    // Intercept socket callbacks dynamically inside NET_SOCKET
 
     if (sys_sem_new(&init_sem, 0) != ERR_OK) return 1;
     tcpip_init(tcpip_init_done, &init_sem);
@@ -149,6 +166,13 @@ int main(int argc, char **argv) {
         case NET_SOCKET:
             m.socket = lwip_socket(m.domain, m.type, m.protocol);
             m.hdr.status = (m.socket < 0) ? errno : 0;
+            if (m.socket >= 0) {
+                struct lwip_sock *sock = lwip_socket_dbg_get_socket(m.socket);
+                if (sock && sock->conn) {
+                    original_callbacks[m.socket - LWIP_SOCKET_OFFSET] = sock->conn->callback;
+                    sock->conn->callback = my_netconn_callback;
+                }
+            }
             break;
         case NET_BIND:
             m.hdr.status = lwip_bind(m.socket, &m.addr, m.addrlen);
@@ -179,6 +203,9 @@ int main(int argc, char **argv) {
             if (m.hdr.status < 0) m.hdr.status = errno;
             break;
         case NET_CLOSE:
+            if (m.socket >= LWIP_SOCKET_OFFSET && m.socket < LWIP_SOCKET_OFFSET + MEMP_NUM_NETCONN) {
+                original_callbacks[m.socket - LWIP_SOCKET_OFFSET] = NULL;
+            }
             m.hdr.status = lwip_close(m.socket);
             if (m.hdr.status < 0) m.hdr.status = errno;
             break;
