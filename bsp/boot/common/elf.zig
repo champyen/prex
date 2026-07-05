@@ -43,14 +43,13 @@ const std = @import("std");
 const builtin = @import("builtin");
 
 const ffi = @import("ffi");
-const c = @import("c").c;
 const elf = ffi.elf;
 const elf_t = ffi.elf.types;
 const mem = ffi.mem;
 
 const is_arm: bool = builtin.cpu.arch == .arm or builtin.cpu.arch == .thumb;
 const is_riscv: bool = builtin.cpu.arch == .riscv32 or builtin.cpu.arch == .riscv64;
-const is_armv8m: bool = is_arm and @hasDecl(c, "CONFIG_ARMV8M");
+const is_armv8m: bool = ffi.mem.is_armv8m;
 
 // Mirror of #define SHF_VALID.
 const SHF_VALID = elf_t.SHF_ALLOC | elf_t.SHF_EXECINSTR | elf_t.SHF_WRITE | elf_t.SHF_LINK_ORDER;
@@ -166,8 +165,8 @@ inline fn setLoadBase(v: ffi.paddr_t) void {
 //
 // Usage:
 //     ELFDBG("\nelf_load\n");
-//     ELFDBG("kernel base={x}\n", .{value});
-//     ELFDBG("page {d} pa={x}\n", .{i, page_pa});
+//     ELFDBG("kernel base=%lx\n", .{value});
+//     ELFDBG("page %d pa=%lx\n", .{i, page_pa});
 // ============================================================================
 
 /// `ELFDBG(format, args)` is the Zig analogue of C's ELFDBG(format).
@@ -186,9 +185,15 @@ inline fn setLoadBase(v: ffi.paddr_t) void {
 /// undefined, so the disabled path has zero runtime cost, matching
 /// the C semantics of `ELFDBG`. Future Zig 0.16 fixes may let us
 /// replace this stub with a comptime-folded implementation.
-inline fn ELFDBG(comptime format: [*:0]const u8, args: anytype) void {
+inline fn ELFDBG(comptime format: [*c]const u8, args: anytype) void {
     if (ffi.cfg.DEBUG_ELF) {
-        ffi.print(format, args);
+        @call(.auto, ffi.boot.printf, .{format} ++ args);
+    }
+}
+
+inline fn DPRINTF(comptime format: [*c]const u8, args: anytype) void {
+    if (ffi.cfg.DEBUG) {
+        @call(.auto, ffi.boot.printf, .{format} ++ args);
     }
 }
 
@@ -208,34 +213,43 @@ comptime {
     }
 }
 
-pub export fn load_elf(img: [*]u8, m: [*]mem.Module) callconv(.c) c_int {
-    const ehdr: [*]elf_t.Ehdr = @ptrCast(@alignCast(img));
+pub export fn load_elf(img_ptr: [*]u8, img_size: usize, m: *mem.Module) callconv(.c) c_int {
+    const img = img_ptr[0..img_size];
+    if (img.len < @sizeOf(elf_t.Ehdr)) {
+        ELFDBG("Invalid ELF size\n", .{});
+        return -1;
+    }
+    const ehdr = @as(*const elf_t.Ehdr, @ptrCast(@alignCast(&img[0])));
 
     ELFDBG("\nelf_load\n", .{});
 
     // ----- ELF magic check -----
-    if (ehdr[0].e_ident[elf_t.EI_MAG0] != elf_t.ELFMAG0 or
-        ehdr[0].e_ident[elf_t.EI_MAG1] != elf_t.ELFMAG1 or
-        ehdr[0].e_ident[elf_t.EI_MAG2] != elf_t.ELFMAG2 or
-        ehdr[0].e_ident[elf_t.EI_MAG3] != elf_t.ELFMAG3)
+    if (ehdr.e_ident[elf_t.EI_MAG0] != elf_t.ELFMAG0 or
+        ehdr.e_ident[elf_t.EI_MAG1] != elf_t.ELFMAG1 or
+        ehdr.e_ident[elf_t.EI_MAG2] != elf_t.ELFMAG2 or
+        ehdr.e_ident[elf_t.EI_MAG3] != elf_t.ELFMAG3)
     {
         ELFDBG("Invalid ELF image\n", .{});
         return -1;
     }
 
     if (is_armv8m) {
-        current_img = img;
-        current_module = m;
+        current_img = img_ptr;
+        current_module = @ptrCast(m);
     }
 
     // ----- Initialize load_base on the first image (kernel) -----
     if (nr_img == 0) {
         if (is_riscv) {
             // RISC-V: walk program headers to find first PT_LOAD's p_vaddr.
-            const phdr: [*]elf_t.Phdr = @ptrCast(@alignCast(@as([*]u8, @ptrCast(ehdr)) + ehdr[0].e_phoff));
+            const ph_offset = ehdr.e_phoff;
+            const ph_count = ehdr.e_phnum;
+            const ph_size = @sizeOf(elf_t.Phdr) * ph_count;
+            if (ph_offset + ph_size > img.len) return -1;
+            const phdr = @as([*]const elf_t.Phdr, @ptrCast(@alignCast(&img[ph_offset])));
             var found: bool = false;
             var i: c_int = 0;
-            while (i < @as(c_int, @intCast(ehdr[0].e_phnum))) : (i += 1) {
+            while (i < @as(c_int, @intCast(ph_count))) : (i += 1) {
                 if (phdr[@intCast(i)].p_type == elf_t.PT_LOAD) {
                     const ph = &phdr[@intCast(i)];
                     setLoadBase(ph.p_vaddr); // kvtop(ph.p_vaddr) — KERNOFFSET=0 for RISC-V
@@ -249,34 +263,28 @@ pub export fn load_elf(img: [*]u8, m: [*]mem.Module) callconv(.c) c_int {
         } else {
             // Default (x86, ARM Cortex-A): compute load_base as the physical
             // address of the first segment (= kvtop of its virtual address).
-            // The C code does:
-            //   phdr = (Elf32_Phdr*)((paddr_t)ehdr + ehdr->e_ehsize);
-            //   load_base = (paddr_t)kvtop(phdr->p_vaddr);
-            // which is the physical address of the segment in RAM.
-            const phdr: [*]elf_t.Phdr = @ptrCast(@alignCast(@as([*]u8, @ptrCast(ehdr)) + ehdr[0].e_ehsize));
+            const ph_offset = ehdr.e_ehsize;
+            const ph_size = @sizeOf(elf_t.Phdr);
+            if (ph_offset + ph_size > img.len) return -1;
+            const phdr = @as(*const elf_t.Phdr, @ptrCast(@alignCast(&img[ph_offset])));
             // kvtop = p_vaddr - KERNOFFSET
-            const phys: elf_t.Addr = phdr[0].p_vaddr -% @as(elf_t.Addr, @intCast(ffi.cfg.KERNOFFSET));
+            const phys: elf_t.Addr = phdr.p_vaddr -% @as(elf_t.Addr, @intCast(ffi.cfg.KERNOFFSET));
             setLoadBase(phys);
         }
         if (getLoadBase() == 0) {
+            DPRINTF("Invalid load address\n", .{});
             return -1;
         }
         load_start = getLoadBase();
-        if (ffi.cfg.DEBUG_ELF) {
-            ffi.printStr("base=");
-            ffi.printHex(@intCast(getLoadBase()));
-            ffi.printStr("\n");
-        }
+        ELFDBG("kernel base=%lx\n", .{getLoadBase()});
+    } else if (nr_img == 1) {
+        ELFDBG("driver base=%lx\n", .{getLoadBase()});
     } else {
-        if (ffi.cfg.DEBUG_ELF) {
-            ffi.printStr("base=");
-            ffi.printHex(@intCast(getLoadBase()));
-            ffi.printStr("\n");
-        }
+        ELFDBG("task base=%lx\n", .{getLoadBase()});
     }
 
     // ----- Dispatch on ELF type -----
-    const result: c_int = switch (ehdr[0].e_type) {
+    const result: c_int = switch (ehdr.e_type) {
         elf_t.ET_EXEC => loadExecutable(img, m),
         elf_t.ET_REL => blk: {
             if (is_armv8m) {
@@ -303,23 +311,24 @@ pub export fn load_elf(img: [*]u8, m: [*]mem.Module) callconv(.c) c_int {
 // loadExecutable — the kernel case (ET_EXEC).
 // ============================================================================
 
-fn loadExecutable(img: [*]u8, m: [*]mem.Module) c_int {
-    const ehdr: [*]elf_t.Ehdr = @ptrCast(@alignCast(img));
+fn loadExecutable(img: []const u8, m: *mem.Module) c_int {
+    const ehdr = @as(*const elf_t.Ehdr, @ptrCast(@alignCast(&img[0])));
     const phys_base: ffi.paddr_t = getLoadBase();
 
-    // RISC-V uses e_phoff for program header offset; others use e_ehsize.
-    var phdr: [*]elf_t.Phdr = if (is_riscv)
-        @ptrCast(@alignCast(@as([*]u8, @ptrCast(ehdr)) + ehdr[0].e_phoff))
-    else
-        @ptrCast(@alignCast(@as([*]u8, @ptrCast(ehdr)) + ehdr[0].e_ehsize));
-    m[0].phys = getLoadBase();
+    const ph_offset = if (is_riscv) ehdr.e_phoff else ehdr.e_ehsize;
+    const ph_count = ehdr.e_phnum;
+    const ph_size = @sizeOf(elf_t.Phdr) * ph_count;
+    if (ph_offset + ph_size > img.len) return -1;
+    var phdr = @as([*]const elf_t.Phdr, @ptrCast(@alignCast(&img[ph_offset])));
+    m.phys = getLoadBase();
+    DPRINTF("phys addr=%lx\n", .{phys_base});
 
     // ARMv8-M only: pre-scan to find loc_text_vma / loc_data_vma
     var loc_text_vma: elf_t.Addr = 0;
     var loc_data_vma: elf_t.Addr = 0;
     if (is_armv8m) {
         var j: c_int = 0;
-        while (j < @as(c_int, @intCast(ehdr[0].e_phnum))) : (j += 1) {
+        while (j < @as(c_int, @intCast(ph_count))) : (j += 1) {
             const ph = &phdr[@intCast(j)];
             if (ph.p_type == elf_t.PT_LOAD) {
                 if ((ph.p_flags & elf_t.PF_W) == 0) {
@@ -329,81 +338,76 @@ fn loadExecutable(img: [*]u8, m: [*]mem.Module) c_int {
                 }
             }
         }
-        // Reset phdr (the pre-scan consumed the iteration).
-        phdr = if (is_riscv)
-            @ptrCast(@alignCast(@as([*]u8, @ptrCast(ehdr)) + ehdr[0].e_phoff))
-        else
-            @ptrCast(@alignCast(@as([*]u8, @ptrCast(ehdr)) + ehdr[0].e_ehsize));
     }
 
-    m[0].text = 0;
-    m[0].data = 0;
+    m.text = 0;
+    m.data = 0;
 
     var i: c_int = 0;
-    while (i < @as(c_int, @intCast(ehdr[0].e_phnum))) : (i += 1) {
+    while (i < @as(c_int, @intCast(ph_count))) : (i += 1) {
         const ph = &phdr[@intCast(i)];
         if (ph.p_type == elf_t.PT_LOAD) {
 
             if (is_armv8m) {
                 if ((ph.p_flags & elf_t.PF_W) == 0) {
                     // Text / RO data: XIP from flash, no copy.
-                    if (m[0].text == 0) {
-                        m[0].text = @intCast(@intFromPtr(img) + ph.p_offset);
-                        m[0].textsz = @intCast(ph.p_memsz);
+                    if (m.text == 0) {
+                        m.text = @intCast(@intFromPtr(&img[0]) + ph.p_offset);
+                        m.textsz = @intCast(ph.p_memsz);
                     } else {
-                        m[0].textsz = @intCast((ph.p_vaddr + ph.p_memsz) - m[0].text);
+                        m.textsz = @intCast((ph.p_vaddr + ph.p_memsz) - m.text);
                     }
                 } else {
                     // Data & BSS: relocated to SRAM.
-                    if (m[0].data == 0) {
+                    if (m.data == 0) {
                         const data_vaddr: elf_t.Addr = if (nr_img == 0) ph.p_vaddr else getLoadBase();
-                        m[0].data = data_vaddr;
+                        m.data = data_vaddr;
                     }
-                    m[0].datasz = @intCast((ph.p_vaddr + ph.p_filesz) - loc_data_vma);
-                    m[0].bsssz = @intCast(((ph.p_vaddr + ph.p_memsz) - loc_data_vma) - m[0].datasz);
+                    m.datasz = @intCast((ph.p_vaddr + ph.p_filesz) - loc_data_vma);
+                    m.bsssz = @intCast(((ph.p_vaddr + ph.p_memsz) - loc_data_vma) - m.datasz);
                     if (ph.p_filesz > 0) {
-                        const dptr: [*]u8 = @ptrFromInt(m[0].data + (ph.p_vaddr - loc_data_vma));
-                        const sptr: [*]const u8 = img + ph.p_offset;
+                        const dptr: [*]u8 = @ptrFromInt(m.data + (ph.p_vaddr - loc_data_vma));
+                        if (ph.p_offset + ph.p_filesz > img.len) return -1;
+                        const sptr: [*]const u8 = img[ph.p_offset..].ptr;
                         _ = ffi.boot.memcpy(@ptrCast(dptr), @ptrCast(sptr), ph.p_filesz);
                     }
                     if (ph.p_memsz > ph.p_filesz) {
-                        const dptr: [*]u8 = @ptrFromInt(m[0].data + (ph.p_vaddr - loc_data_vma) + ph.p_filesz);
-_ = ffi.boot.memset(@ptrCast(dptr), 0, ph.p_memsz - ph.p_filesz);
+                        const dptr: [*]u8 = @ptrFromInt(m.data + (ph.p_vaddr - loc_data_vma) + ph.p_filesz);
+                        _ = ffi.boot.memset(@ptrCast(dptr), 0, ph.p_memsz - ph.p_filesz);
                     }
                     // Round up to next page.
-                    setLoadBase(ff.mem.round_page(m[0].data + (ph.p_vaddr - loc_data_vma) + ph.p_memsz));
+                    setLoadBase(ff.mem.round_page(m.data + (ph.p_vaddr - loc_data_vma) + ph.p_memsz));
                 }
             } else {
                 // Default (x86, ARM Cortex-A): copy segments to phys_base.
-                // For ET_EXEC, p_vaddr is already the link-time virtual address.
-                // Use it directly for m->text/m->data. The physical copy destination
-                // is phys_base + (p_vaddr - m->text) for text, etc.
                 if ((ph.p_flags & elf_t.PF_W) == 0) {
-                    if (m[0].text == 0) {
-                        m[0].text = ph.p_vaddr;
-                        m[0].textsz = @intCast(ph.p_memsz);
+                    if (m.text == 0) {
+                        m.text = ph.p_vaddr;
+                        m.textsz = @intCast(ph.p_memsz);
                     } else {
-                        m[0].textsz = @intCast((ph.p_vaddr + ph.p_memsz) - m[0].text);
+                        m.textsz = @intCast((ph.p_vaddr + ph.p_memsz) - m.text);
                     }
                     if (ph.p_filesz > 0) {
-                        const dptr: [*]u8 = @ptrFromInt(phys_base + (ph.p_vaddr - m[0].text));
-                        const sptr: [*]const u8 = img + ph.p_offset;
+                        const dptr: [*]u8 = @ptrFromInt(phys_base + (ph.p_vaddr - m.text));
+                        if (ph.p_offset + ph.p_filesz > img.len) return -1;
+                        const sptr: [*]const u8 = img[ph.p_offset..].ptr;
                         _ = ffi.boot.memcpy(@ptrCast(dptr), @ptrCast(sptr), ph.p_filesz);
                     }
                 } else {
-                    if (m[0].data == 0) {
-                        m[0].data = ph.p_vaddr;
-                        setLoadBase(phys_base + (m[0].data - m[0].text));
+                    if (m.data == 0) {
+                        m.data = ph.p_vaddr;
+                        setLoadBase(phys_base + (m.data - m.text));
                     }
-                    m[0].datasz = @intCast((ph.p_vaddr + ph.p_filesz) - m[0].data);
-                    m[0].bsssz = @intCast(((ph.p_vaddr + ph.p_memsz) - m[0].data) - m[0].datasz);
+                    m.datasz = @intCast((ph.p_vaddr + ph.p_filesz) - m.data);
+                    m.bsssz = @intCast(((ph.p_vaddr + ph.p_memsz) - m.data) - m.datasz);
                     if (ph.p_filesz > 0) {
-                        const dptr: [*]u8 = @ptrFromInt(getLoadBase() + (ph.p_vaddr - m[0].data));
-                        const sptr: [*]const u8 = img + ph.p_offset;
+                        const dptr: [*]u8 = @ptrFromInt(getLoadBase() + (ph.p_vaddr - m.data));
+                        if (ph.p_offset + ph.p_filesz > img.len) return -1;
+                        const sptr: [*]const u8 = img[ph.p_offset..].ptr;
                         _ = ffi.boot.memcpy(@ptrCast(dptr), @ptrCast(sptr), ph.p_filesz);
                     }
                     if (ph.p_memsz > ph.p_filesz) {
-                        const dptr: [*]u8 = @ptrFromInt(getLoadBase() + (ph.p_vaddr - m[0].data) + ph.p_filesz);
+                        const dptr: [*]u8 = @ptrFromInt(getLoadBase() + (ph.p_vaddr - m.data) + ph.p_filesz);
                         _ = ffi.boot.memset(@ptrCast(dptr), 0, ph.p_memsz - ph.p_filesz);
                     }
                 }
@@ -411,70 +415,71 @@ _ = ffi.boot.memset(@ptrCast(dptr), 0, ph.p_memsz - ph.p_filesz);
         } else if (is_arm and !is_armv8m) {
             // ARM Cortex-A: capture PT_ARM_EXIDX for unwind tables.
             if (ph.p_type == elf_t.PT_ARM_EXIDX) {
-                m[0].exidx_start = ph.p_vaddr;
-                m[0].exidx_size = ph.p_memsz;
+                m.exidx_start = ph.p_vaddr;
+                m.exidx_size = ph.p_memsz;
             }
         }
     }
 
     // Update load_base (non-ARMv8-M path).
     if (!is_armv8m) {
-        if (m[0].data != 0) {
-            setLoadBase(phys_base + (m[0].data - m[0].text) + m[0].datasz + m[0].bsssz);
+        if (m.data != 0) {
+            setLoadBase(phys_base + (m.data - m.text) + m.datasz + m.bsssz);
         } else {
-            setLoadBase(phys_base + m[0].textsz);
+            setLoadBase(phys_base + m.textsz);
         }
     }
     setLoadBase(ff.mem.round_page(getLoadBase()));
-    m[0].size = @intCast(getLoadBase() - m[0].phys);
-    m[0].entry = if (is_armv8m) m[0].text + (ehdr[0].e_entry - loc_text_vma) else ehdr[0].e_entry;
-    if (ffi.cfg.DEBUG_ELF) {
-        ffi.printStr("module size=");
-        ffi.printHex(@intCast(m[0].size));
-        ffi.printStr(" entry=");
-        ffi.printHex(@intCast(m[0].entry));
-        ffi.printStr("\n");
-    }
+    m.size = @intCast(getLoadBase() - m.phys);
+    m.entry = if (is_armv8m) m.text + (ehdr.e_entry - loc_text_vma) else ehdr.e_entry;
+    ELFDBG("module size=%x entry=%lx\n", .{ m.size, m.entry });
 
-    if (m[0].size == 0) {
-        // panic("Module size is 0!");
-        return -1;
+    if (m.size == 0) {
+        ffi.boot.panic("Module size is 0!");
     }
 
     // ARMv8-M: walk section headers to populate sect_addr[] and find .got.
     if (is_armv8m) {
-    const shdr: [*]elf_t.Shdr = @ptrCast(@alignCast(@as([*]u8, @ptrCast(ehdr)) + ehdr[0].e_shoff));
-    const shstrtab: [*]const u8 = @ptrCast(@alignCast(@as([*]u8, @ptrCast(ehdr)) + shdr[ehdr[0].e_shstrndx].sh_offset));
-    // shstrtab is used by ARMv8-M ".got" lookup and (formerly) ELFDBG traces.
-    // Our ELFDBG traces were removed; the array is still needed for `.got` lookup.
+        const sh_offset = ehdr.e_shoff;
+        const sh_count = ehdr.e_shnum;
+        const sh_size = @sizeOf(elf_t.Shdr) * sh_count;
+        if (sh_offset + sh_size > img.len) return -1;
+        const shdr = @as([*]const elf_t.Shdr, @ptrCast(@alignCast(&img[sh_offset])));
+
+        const strtab_sh = &shdr[ehdr.e_shstrndx];
+        if (strtab_sh.sh_offset + strtab_sh.sh_size > img.len) return -1;
+        const shstrtab = @as([*]const u8, @ptrCast(@alignCast(&img[strtab_sh.sh_offset])));
+
         strshndx = 0;
         var k: c_int = 0;
-        while (k < @as(c_int, @intCast(ehdr[0].e_shnum))) : (k += 1) {
+        while (k < @as(c_int, @intCast(sh_count))) : (k += 1) {
             sect_addr[@intCast(k)] = undefined;
             if ((shdr[@intCast(k)].sh_flags & elf_t.SHF_ALLOC) != 0) {
                 if ((shdr[@intCast(k)].sh_flags & elf_t.SHF_WRITE) == 0) {
-                    sect_addr[@intCast(k)] = img + shdr[@intCast(k)].sh_offset;
+                    if (shdr[@intCast(k)].sh_offset + shdr[@intCast(k)].sh_size > img.len) return -1;
+                    sect_addr[@intCast(k)] = @constCast(img[shdr[@intCast(k)].sh_offset..].ptr);
                 } else {
-                    sect_addr[@intCast(k)] = @ptrFromInt(m[0].data + (shdr[@intCast(k)].sh_addr - loc_data_vma));
+                    sect_addr[@intCast(k)] = @ptrFromInt(m.data + (shdr[@intCast(k)].sh_addr - loc_data_vma));
                 }
             } else if (shdr[@intCast(k)].sh_type == elf_t.SHT_SYMTAB or
                        shdr[@intCast(k)].sh_type == elf_t.SHT_STRTAB)
             {
-                sect_addr[@intCast(k)] = img + shdr[@intCast(k)].sh_offset;
+                if (shdr[@intCast(k)].sh_offset + shdr[@intCast(k)].sh_size > img.len) return -1;
+                sect_addr[@intCast(k)] = @constCast(img[shdr[@intCast(k)].sh_offset..].ptr);
                 if (shdr[@intCast(k)].sh_type == elf_t.SHT_SYMTAB) {
                     strshndx = @intCast(shdr[@intCast(k)].sh_link);
                 }
             }
         }
         // Populate relocation globals.
-        elf_type = ehdr[0].e_type;
+        elf_type = ehdr.e_type;
         text_vma = loc_text_vma;
         data_vma = loc_data_vma;
-        text_runtime = @intCast(m[0].text);
-        data_runtime = @intCast(m[0].data);
+        text_runtime = @intCast(m.text);
+        data_runtime = @intCast(m.data);
         sram_got_base = 0;
         var g: c_int = 0;
-        while (g < @as(c_int, @intCast(ehdr[0].e_shnum))) : (g += 1) {
+        while (g < @as(c_int, @intCast(sh_count))) : (g += 1) {
             if (shdr[@intCast(g)].sh_type == elf_t.SHT_PROGBITS and
                 strCmp(shstrtab + shdr[@intCast(g)].sh_name, ".got") == 0)
             {
@@ -482,16 +487,16 @@ _ = ffi.boot.memset(@ptrCast(dptr), 0, ph.p_memsz - ph.p_filesz);
                 break;
             }
         }
-        m[0].got_base = sram_got_base;
+        m.got_base = sram_got_base;
 
         // Apply relocations.
         var r: c_int = 0;
-        while (r < @as(c_int, @intCast(ehdr[0].e_shnum))) : (r += 1) {
+        while (r < @as(c_int, @intCast(sh_count))) : (r += 1) {
             if (shdr[@intCast(r)].sh_type == elf_t.SHT_REL or
                 shdr[@intCast(r)].sh_type == elf_t.SHT_RELA)
             {
-                if (relocateSection(img, @ptrCast(&shdr[@intCast(r)])) != 0) {
-                    _ = m[0].name[0]; // placeholder
+                if (relocateSection(img, @ptrCast(@constCast(&shdr[@intCast(r)]))) != 0) {
+                    DPRINTF("Relocation error: module=%s\n", .{@as([*c]const u8, @ptrCast(&m.name))});
                     return -1;
                 }
             }
@@ -504,19 +509,20 @@ _ = ffi.boot.memset(@ptrCast(dptr), 0, ph.p_memsz - ph.p_filesz);
 // loadRelocatableRiscV — RISC-V variant of loadRelocatable
 // ============================================================================
 
-fn loadRelocatableRiscV(img: [*]u8, m: [*]mem.Module) c_int {
-    const ehdr: [*]elf_t.Ehdr = @ptrCast(@alignCast(img));
-    m[0].phys = getLoadBase();
+fn loadRelocatableRiscV(img: []const u8, m: *mem.Module) c_int {
+    const ehdr = @as(*const elf_t.Ehdr, @ptrCast(@alignCast(&img[0])));
+    m.phys = getLoadBase();
     strshndx = 0;
 
-    const shdr: [*]elf_t.Shdr = @ptrCast(@alignCast(@as([*]u8, @ptrCast(ehdr)) + ehdr[0].e_shoff));
-    // shstrtab is only used in the ARMv8-M carve-out below (and the
-    // (formerly ELFDBG traces were here; stripped for the inline-if
-    // pattern, but `shstrtab` is still needed for the RISC-V path).
+    const sh_offset = ehdr.e_shoff;
+    const sh_count = ehdr.e_shnum;
+    const sh_size = @sizeOf(elf_t.Shdr) * sh_count;
+    if (sh_offset + sh_size > img.len) return -1;
+    const shdr = @as([*]const elf_t.Shdr, @ptrCast(@alignCast(&img[sh_offset])));
 
     // Zero sect_addr for this module (matches C code initialization).
     var zi: c_int = 0;
-    while (zi < @as(c_int, @intCast(ehdr[0].e_shnum))) : (zi += 1) {
+    while (zi < @as(c_int, @intCast(sh_count))) : (zi += 1) {
         sect_addr[@intCast(zi)] = undefined;
     }
 
@@ -524,7 +530,7 @@ fn loadRelocatableRiscV(img: [*]u8, m: [*]mem.Module) c_int {
     var first_text_off: elf_t.Addr = 0;
     var bss_base: ffi.paddr_t = 0;
     var i: c_int = 0;
-    while (i < @as(c_int, @intCast(ehdr[0].e_shnum))) : (i += 1) {
+    while (i < @as(c_int, @intCast(sh_count))) : (i += 1) {
         sect_addr[@intCast(i)] = undefined;
         const sh = &shdr[@intCast(i)];
         if ((sh.sh_flags & elf_t.SHF_ALLOC) != 0) {
@@ -537,55 +543,57 @@ fn loadRelocatableRiscV(img: [*]u8, m: [*]mem.Module) c_int {
                 if ((sh.sh_flags & elf_t.SHF_EXECINSTR) != 0) {
                     if (first_text_vma == 0xffffffff) {
                         first_text_vma = sh.sh_addr;
-                        first_text_off = sect_base - m[0].phys;
+                        first_text_off = sect_base - m.phys;
                     }
                 } else if ((sh.sh_flags & elf_t.SHF_WRITE) == 0) {
                     // Rodata
                     if (first_text_vma == 0xffffffff) {
                         first_text_vma = sh.sh_addr;
-                        first_text_off = sect_base - m[0].phys;
+                        first_text_off = sect_base - m.phys;
                     }
                 } else {
-                    if (m[0].data == 0) {
-                        m[0].data = sect_base; // ptokv(sect_base) — KERNOFFSET=0
+                    if (m.data == 0) {
+                        m.data = sect_base; // ptokv(sect_base) — KERNOFFSET=0
                     }
                 }
-_ = ffi.boot.memcpy(
+                if (sh.sh_offset + sh.sh_size > img.len) return -1;
+                _ = ffi.boot.memcpy(
                     @ptrCast(@as([*]u8, @ptrFromInt(sect_base))),
-                    @ptrCast(img + sh.sh_offset),
+                    @ptrCast(&img[sh.sh_offset]),
                     sh.sh_size,
                 );
             } else if (sh.sh_type == elf_t.SHT_NOBITS) {
                 bss_base = sect_base;
-                m[0].bsssz = sh.sh_size;
-_ = ffi.boot.memset(@ptrCast(@as([*]u8, @ptrFromInt(sect_base))), 0, sh.sh_size);
+                m.bsssz = sh.sh_size;
+                _ = ffi.boot.memset(@ptrCast(@as([*]u8, @ptrFromInt(sect_base))), 0, sh.sh_size);
             }
             sect_addr[@intCast(i)] = @ptrFromInt(sect_base);
             setLoadBase(getLoadBase() + sh.sh_size);
         } else if (sh.sh_type == elf_t.SHT_SYMTAB or sh.sh_type == elf_t.SHT_STRTAB or
                    sh.sh_type == elf_t.SHT_REL or sh.sh_type == elf_t.SHT_RELA)
         {
-            sect_addr[@intCast(i)] = img + sh.sh_offset;
+            if (sh.sh_offset + sh.sh_size > img.len) return -1;
+            sect_addr[@intCast(i)] = @constCast(img[sh.sh_offset..].ptr);
             if (sh.sh_type == elf_t.SHT_SYMTAB) {
                 strshndx = @intCast(sh.sh_link);
             }
         }
     }
-    m[0].text = ffi.addr.ptokv(m[0].phys + first_text_off); // ptokv(m->phys + first_text_off)
-    m[0].textsz = m[0].data - m[0].text;
-    m[0].datasz = @as(usize, @intCast(ffi.addr.ptokv(bss_base))) - m[0].data;
+    m.text = ffi.addr.ptokv(m.phys + first_text_off); // ptokv(m->phys + first_text_off)
+    m.textsz = m.data - m.text;
+    m.datasz = @as(usize, @intCast(ffi.addr.ptokv(bss_base))) - m.data;
 
     setLoadBase(ff.mem.round_page(getLoadBase()));
-    m[0].size = @intCast(getLoadBase() - m[0].phys);
-    m[0].entry = m[0].text + (ehdr[0].e_entry - first_text_vma);
+    m.size = @intCast(getLoadBase() - m.phys);
+    m.entry = m.text + (ehdr.e_entry - first_text_vma);
 
     // Apply relocations.
     var r: c_int = 0;
-    while (r < @as(c_int, @intCast(ehdr[0].e_shnum))) : (r += 1) {
+    while (r < @as(c_int, @intCast(sh_count))) : (r += 1) {
         if (shdr[@intCast(r)].sh_type == elf_t.SHT_REL or
             shdr[@intCast(r)].sh_type == elf_t.SHT_RELA)
         {
-            if (relocateSection(img, @ptrCast(&shdr[@intCast(r)])) != 0) {
+            if (relocateSection(img, &shdr[@intCast(r)]) != 0) {
                 return -1;
             }
         }
@@ -597,18 +605,23 @@ _ = ffi.boot.memset(@ptrCast(@as([*]u8, @ptrFromInt(sect_base))), 0, sh.sh_size)
 
 // ============================================================================
 // loadRelocatableArmv8m — ARMv8-M variant of loadRelocatable
-// Mirrors the C version's #ifdef CONFIG_ARMV8M load_relocatable() function.
-// Uses sram_load_base as the load address (via #define load_base sram_load_base).
-// Handles section alignment and all SHF_ALLOC sections.
 // ============================================================================
 
-fn loadRelocatableArmv8m(img: [*]u8, m: [*]mem.Module) c_int {
-    const ehdr: [*]elf_t.Ehdr = @ptrCast(@alignCast(img));
+fn loadRelocatableArmv8m(img: []const u8, m: *mem.Module) c_int {
+    const ehdr = @as(*const elf_t.Ehdr, @ptrCast(@alignCast(&img[0])));
     strshndx = 0;
-    m[0].phys = getLoadBase();
+    m.phys = getLoadBase();
 
-    const shdr: [*]elf_t.Shdr = @ptrCast(@alignCast(@as([*]u8, @ptrCast(ehdr)) + ehdr[0].e_shoff));
-    const shstrtab: [*]const u8 = @ptrCast(@alignCast(@as([*]u8, @ptrCast(ehdr)) + shdr[ehdr[0].e_shstrndx].sh_offset));
+    const sh_offset = ehdr.e_shoff;
+    const sh_count = ehdr.e_shnum;
+    const sh_size = @sizeOf(elf_t.Shdr) * sh_count;
+    if (sh_offset + sh_size > img.len) return -1;
+    const shdr = @as([*]const elf_t.Shdr, @ptrCast(@alignCast(&img[sh_offset])));
+
+    const strtab_sh = &shdr[ehdr.e_shstrndx];
+    if (strtab_sh.sh_offset + strtab_sh.sh_size > img.len) return -1;
+    const shstrtab = @as([*]const u8, @ptrCast(@alignCast(&img[strtab_sh.sh_offset])));
+
     var bss_base: ffi.paddr_t = 0;
     var first_text_vma: elf_t.Addr = 0xffffffff;
     var first_text_off: elf_t.Addr = 0;
@@ -617,7 +630,7 @@ fn loadRelocatableArmv8m(img: [*]u8, m: [*]mem.Module) c_int {
     const init_load_base: ffi.paddr_t = getLoadBase();
 
     var i: c_int = 0;
-    while (i < @as(c_int, @intCast(ehdr[0].e_shnum))) : (i += 1) {
+    while (i < @as(c_int, @intCast(sh_count))) : (i += 1) {
         const sh = &shdr[@intCast(i)];
         sect_addr[@intCast(i)] = undefined;
         if ((sh.sh_flags & elf_t.SHF_ALLOC) != 0) {
@@ -635,30 +648,28 @@ fn loadRelocatableArmv8m(img: [*]u8, m: [*]mem.Module) c_int {
                 if ((sh.sh_flags & elf_t.SHF_EXECINSTR) != 0) {
                     if (first_text_vma == 0xffffffff) {
                         first_text_vma = sh.sh_addr;
-                        // C version: text = ptokv(load_base) = ptokv(init_load_base)
-                        // phys = init_load_base, so first_text_off = 0
                         first_text_off = 0;
                     }
                 } else if ((sh.sh_flags & elf_t.SHF_WRITE) == 0) {
-                    // Rodata: also treated as text for first_text_vma
+                    // Rodata
                     if (first_text_vma == 0xffffffff) {
                         first_text_vma = sh.sh_addr;
                         first_text_off = 0;
                     }
                 } else {
-                    if (m[0].data == 0) {
-                        // C version: data = ptokv(load_base + shdr->sh_addr) = ptokv(sect_base)
-                        m[0].data = @intCast(ffi.addr.ptokv(sect_base));
+                    if (m.data == 0) {
+                        m.data = @intCast(ffi.addr.ptokv(sect_base));
                     }
                 }
+                if (sh.sh_offset + sh.sh_size > img.len) return -1;
                 _ = ffi.boot.memcpy(
                     @ptrCast(@as([*]u8, @ptrFromInt(sect_base))),
-                    @ptrCast(img + sh.sh_offset),
+                    @ptrCast(&img[sh.sh_offset]),
                     sh.sh_size,
                 );
             } else if (sh.sh_type == elf_t.SHT_NOBITS) {
                 bss_base = sect_base;
-                m[0].bsssz = sh.sh_size;
+                m.bsssz = sh.sh_size;
                 _ = ffi.boot.memset(
                     @ptrCast(@as([*]u8, @ptrFromInt(bss_base))),
                     0,
@@ -673,32 +684,32 @@ fn loadRelocatableArmv8m(img: [*]u8, m: [*]mem.Module) c_int {
                    sh.sh_type == elf_t.SHT_REL or
                    sh.sh_type == elf_t.SHT_RELA)
         {
-            sect_addr[@intCast(i)] = img + sh.sh_offset;
+            if (sh.sh_offset + sh.sh_size > img.len) return -1;
+            sect_addr[@intCast(i)] = @constCast(img[sh.sh_offset..].ptr);
             if (sh.sh_type == elf_t.SHT_SYMTAB) {
                 strshndx = @intCast(sh.sh_link);
             }
         }
     }
-    m[0].text = @intCast(ffi.addr.ptokv(m[0].phys + first_text_off));
-    m[0].textsz = m[0].data - m[0].text;
-    m[0].datasz = @as(usize, @intCast(ffi.addr.ptokv(bss_base))) - @as(usize, @intCast(m[0].data));
+    m.text = @intCast(ffi.addr.ptokv(m.phys + first_text_off));
+    m.textsz = m.data - m.text;
+    m.datasz = @as(usize, @intCast(ffi.addr.ptokv(bss_base))) - @as(usize, @intCast(m.data));
 
     // C version: load_base = round_page(bss_base + bsssz)
-    setLoadBase(ff.mem.round_page(bss_base + m[0].bsssz));
-    m[0].size = @intCast(getLoadBase() - m[0].phys);
-    // C version: entry = ptokv(e_entry + m->phys) — e_entry already includes Thumb bit
-    m[0].entry = @intCast(ffi.addr.ptokv(ehdr[0].e_entry + m[0].phys));
+    setLoadBase(ff.mem.round_page(bss_base + m.bsssz));
+    m.size = @intCast(getLoadBase() - m.phys);
+    m.entry = @intCast(ffi.addr.ptokv(ehdr.e_entry + m.phys));
 
     // ARMv8-M: populate relocation globals for helper
-    elf_type = ehdr[0].e_type;
+    elf_type = ehdr.e_type;
     text_vma = 0;
     data_vma = 0;
-    text_runtime = @intCast(m[0].text);
-    data_runtime = @intCast(m[0].data);
+    text_runtime = @intCast(m.text);
+    data_runtime = @intCast(m.data);
     sram_got_base = 0;
     {
         var g: c_int = 0;
-        while (g < @as(c_int, @intCast(ehdr[0].e_shnum))) : (g += 1) {
+        while (g < @as(c_int, @intCast(sh_count))) : (g += 1) {
             if (shdr[@intCast(g)].sh_type == elf_t.SHT_PROGBITS and
                 strCmp(shstrtab + shdr[@intCast(g)].sh_name, ".got") == 0)
             {
@@ -707,19 +718,20 @@ fn loadRelocatableArmv8m(img: [*]u8, m: [*]mem.Module) c_int {
             }
         }
     }
-    m[0].got_base = sram_got_base;
+    m.got_base = sram_got_base;
 
 
     // Process relocation
     {
         var r: c_int = 0;
-        while (r < @as(c_int, @intCast(ehdr[0].e_shnum))) : (r += 1) {
+        while (r < @as(c_int, @intCast(sh_count))) : (r += 1) {
             if (shdr[@intCast(r)].sh_type == elf_t.SHT_REL or
                 shdr[@intCast(r)].sh_type == elf_t.SHT_RELA)
             {
-                if (relocateSection(img, @ptrCast(&shdr[@intCast(r)])) != 0) {
-                    return -1;
-                }
+            if (relocateSection(img, &shdr[@intCast(r)]) != 0) {
+                DPRINTF("Relocation error: module=%s\n", .{@as([*c]const u8, @ptrCast(&m.name))});
+                return -1;
+            }
             }
         }
     }
@@ -731,21 +743,27 @@ fn loadRelocatableArmv8m(img: [*]u8, m: [*]mem.Module) c_int {
 // loadRelocatableDefault — x86 / ARM Cortex-A variant of loadRelocatable
 // ============================================================================
 
-fn loadRelocatableDefault(img: [*]u8, m: [*]mem.Module) c_int {
-    const ehdr: [*]elf_t.Ehdr = @ptrCast(@alignCast(img));
+fn loadRelocatableDefault(img: []const u8, m: *mem.Module) c_int {
+    const ehdr = @as(*const elf_t.Ehdr, @ptrCast(@alignCast(&img[0])));
     strshndx = 0;
-    m[0].phys = getLoadBase();
+    m.phys = getLoadBase();
+    DPRINTF("phys addr=%lx\n", .{getLoadBase()});
 
-    const shdr: [*]elf_t.Shdr = @ptrCast(@alignCast(@as([*]u8, @ptrCast(ehdr)) + ehdr[0].e_shoff));
-    const shstrtab: [*]const u8 = @ptrCast(@alignCast(@as([*]u8, @ptrCast(ehdr)) + shdr[ehdr[0].e_shstrndx].sh_offset));
+    const sh_offset = ehdr.e_shoff;
+    const sh_count = ehdr.e_shnum;
+    const sh_size = @sizeOf(elf_t.Shdr) * sh_count;
+    if (sh_offset + sh_size > img.len) return -1;
+    const shdr = @as([*]const elf_t.Shdr, @ptrCast(@alignCast(&img[sh_offset])));
+
+    const strtab_sh = &shdr[ehdr.e_shstrndx];
+    if (strtab_sh.sh_offset + strtab_sh.sh_size > img.len) return -1;
+    const shstrtab = @as([*]const u8, @ptrCast(@alignCast(&img[strtab_sh.sh_offset])));
+
     var bss_base: ffi.paddr_t = 0;
     var first_text_vma: elf_t.Addr = 0xffffffff;
 
-
-
-
     var i: c_int = 0;
-    while (i < @as(c_int, @intCast(ehdr[0].e_shnum))) : (i += 1) {
+    while (i < @as(c_int, @intCast(sh_count))) : (i += 1) {
         sect_addr[@intCast(i)] = undefined;
         const sh = &shdr[@intCast(i)];
 
@@ -764,8 +782,8 @@ fn loadRelocatableDefault(img: [*]u8, m: [*]mem.Module) c_int {
 
             // ARM exidx handling: capture in all four cases that may match.
             if (is_arm and sh.sh_type == elf_t.SHT_ARM_EXIDX) {
-                m[0].exidx_start = ffi.addr.ptokv(getLoadBase() + sh.sh_addr);
-                m[0].exidx_size = sh.sh_size;
+                m.exidx_start = ffi.addr.ptokv(getLoadBase() + sh.sh_addr);
+                m.exidx_size = sh.sh_size;
             }
 
             if (section_class == 0) {
@@ -780,9 +798,9 @@ fn loadRelocatableDefault(img: [*]u8, m: [*]mem.Module) c_int {
                 if (first_text_vma == 0xffffffff) {
                     first_text_vma = sh.sh_addr;
                 }
-                m[0].text = ffi.addr.ptokv(getLoadBase());
-            } else if (section_class == 2 and m[0].data == 0) {
-                m[0].data = ffi.addr.ptokv(getLoadBase() + sh.sh_addr);
+                m.text = ffi.addr.ptokv(getLoadBase());
+            } else if (section_class == 2 and m.data == 0) {
+                m.data = ffi.addr.ptokv(getLoadBase() + sh.sh_addr);
             } else if (section_class == 3) {
                 // Rodata is treated as text for first_text_vma tracking.
                 if (first_text_vma == 0xffffffff) {
@@ -791,46 +809,49 @@ fn loadRelocatableDefault(img: [*]u8, m: [*]mem.Module) c_int {
             }
 
             const sect_base = getLoadBase() + sh.sh_addr;
+            if (sh.sh_offset + sh.sh_size > img.len) return -1;
             _ = ffi.boot.memcpy(
                 @ptrCast(@as([*]u8, @ptrFromInt(sect_base))),
-                @ptrCast(img + sh.sh_offset),
+                @ptrCast(&img[sh.sh_offset]),
                 sh.sh_size,
             );
             sect_addr[@intCast(i)] = @ptrFromInt(sect_base);
         } else if (sh.sh_type == elf_t.SHT_NOBITS) {
-            m[0].bsssz = sh.sh_size;
+            m.bsssz = sh.sh_size;
             const sect_base = getLoadBase() + sh.sh_addr;
             bss_base = sect_base;
             _ = ffi.boot.memset(@ptrCast(@as([*]u8, @ptrFromInt(bss_base))), 0, sh.sh_size);
             sect_addr[@intCast(i)] = @ptrFromInt(sect_base);
         } else if (sh.sh_type == elf_t.SHT_SYMTAB) {
-            sect_addr[@intCast(i)] = img + sh.sh_offset;
+            if (sh.sh_offset + sh.sh_size > img.len) return -1;
+            sect_addr[@intCast(i)] = @constCast(img[sh.sh_offset..].ptr);
             if (strshndx != 0) {
-                return -1; // panic("Multiple symtab found!");
+                ffi.boot.panic("Multiple symtab found!");
             }
             strshndx = @intCast(sh.sh_link);
         } else if (sh.sh_type == elf_t.SHT_STRTAB) {
-            sect_addr[@intCast(i)] = img + sh.sh_offset;
+            if (sh.sh_offset + sh.sh_size > img.len) return -1;
+            sect_addr[@intCast(i)] = @constCast(img[sh.sh_offset..].ptr);
         }
     }
-    m[0].textsz = m[0].data - m[0].text;
-    m[0].datasz = @as(usize, @intCast(ffi.addr.ptokv(bss_base))) - m[0].data;
+    m.textsz = m.data - m.text;
+    m.datasz = @as(usize, @intCast(ffi.addr.ptokv(bss_base))) - m.data;
 
-    setLoadBase(bss_base + m[0].bsssz);
+    setLoadBase(bss_base + m.bsssz);
     setLoadBase(ff.mem.round_page(getLoadBase()));
-    m[0].size = @intCast(getLoadBase() - ffi.addr.kvtop(m[0].text)); // load_base - kvtop(m->text)
-    m[0].entry = m[0].text + (ehdr[0].e_entry - first_text_vma); // virtual entry point
+    m.size = @intCast(getLoadBase() - ffi.addr.kvtop(m.text)); // load_base - kvtop(m->text)
+    m.entry = m.text + (ehdr.e_entry - first_text_vma); // virtual entry point
 
     // ARMv8-M: populate relocation globals + process relocs.
     if (is_armv8m) {
-        elf_type = ehdr[0].e_type;
+        elf_type = ehdr.e_type;
         text_vma = 0;
         data_vma = 0;
-        text_runtime = @intCast(m[0].text);
-        data_runtime = @intCast(m[0].data);
+        text_runtime = @intCast(m.text);
+        data_runtime = @intCast(m.data);
         sram_got_base = 0;
         var g: c_int = 0;
-        while (g < @as(c_int, @intCast(ehdr[0].e_shnum))) : (g += 1) {
+        while (g < @as(c_int, @intCast(sh_count))) : (g += 1) {
             if (shdr[@intCast(g)].sh_type == elf_t.SHT_PROGBITS and
                 strCmp(shstrtab + shdr[@intCast(g)].sh_name, ".got") == 0)
             {
@@ -838,17 +859,17 @@ fn loadRelocatableDefault(img: [*]u8, m: [*]mem.Module) c_int {
                 break;
             }
         }
-        m[0].got_base = sram_got_base;
+        m.got_base = sram_got_base;
     }
 
 
     // Apply relocations.
     var r: c_int = 0;
-    while (r < @as(c_int, @intCast(ehdr[0].e_shnum))) : (r += 1) {
+    while (r < @as(c_int, @intCast(sh_count))) : (r += 1) {
         if (shdr[@intCast(r)].sh_type == elf_t.SHT_REL or
             shdr[@intCast(r)].sh_type == elf_t.SHT_RELA)
         {
-            if (relocateSection(img, @ptrCast(&shdr[@intCast(r)])) != 0) {
+            if (relocateSection(img, &shdr[@intCast(r)]) != 0) {
                 return -1;
             }
         }
@@ -860,20 +881,18 @@ fn loadRelocatableDefault(img: [*]u8, m: [*]mem.Module) c_int {
 // relocateSection — dispatches to REL or RELA handlers.
 // ============================================================================
 
-fn relocateSection(img: [*]u8, shdr: [*]elf_t.Shdr) c_int {
-
-
-
-    if (shdr[0].sh_entsize == 0) {
+fn relocateSection(img: []const u8, shdr: *const elf_t.Shdr) c_int {
+    ELFDBG("relocate_section\n", .{});
+    if (shdr.sh_entsize == 0) {
         return 0;
     }
 
-    const target_sect: [*]u8 = sect_addr[shdr[0].sh_info];
+    const target_sect: [*]u8 = sect_addr[shdr.sh_info];
     if (@intFromPtr(target_sect) == 0) {
         return 0; // Skip unloaded target section.
     }
 
-    const symtab: [*]elf_t.Sym = @ptrCast(@alignCast(@as([*]u8, @ptrCast(sect_addr[shdr[0].sh_link]))));
+    const symtab: [*]elf_t.Sym = @ptrCast(@alignCast(@as([*]u8, @ptrCast(sect_addr[shdr.sh_link]))));
     if (@intFromPtr(symtab) == 0) {
         return -1;
     }
@@ -883,13 +902,24 @@ fn relocateSection(img: [*]u8, shdr: [*]elf_t.Shdr) c_int {
     }
     const strtab: [*]u8 = sect_addr[@as(usize, @intCast(strshndx))];
     if (@intFromPtr(strtab) == 0) return -1;
+    ELFDBG("strtab=%lx\n", .{@as(c_ulong, @intCast(@intFromPtr(strtab)))});
 
 
-    const nr_reloc: c_int = @intCast(@as(usize, @intCast(shdr[0].sh_size)) / @as(usize, @intCast(shdr[0].sh_entsize)));
+    const nr_reloc: c_int = @intCast(@as(usize, @intCast(shdr.sh_size)) / @as(usize, @intCast(shdr.sh_entsize)));
 
-    return switch (shdr[0].sh_type) {
-        elf_t.SHT_REL => relocateSectionRel(symtab, @ptrCast(@alignCast(@as([*]u8, @ptrCast(img)) + shdr[0].sh_offset)), target_sect, nr_reloc),
-        elf_t.SHT_RELA => relocateSectionRela(symtab, @ptrCast(@alignCast(@as([*]u8, @ptrCast(img)) + shdr[0].sh_offset)), target_sect, nr_reloc),
+    return switch (shdr.sh_type) {
+        elf_t.SHT_REL => blk: {
+            const offset = shdr.sh_offset;
+            const size = shdr.sh_size;
+            if (offset + size > img.len) return -1;
+            break :blk relocateSectionRel(symtab, @ptrCast(@alignCast(@constCast(img[offset..].ptr))), target_sect, nr_reloc);
+        },
+        elf_t.SHT_RELA => blk: {
+            const offset = shdr.sh_offset;
+            const size = shdr.sh_size;
+            if (offset + size > img.len) return -1;
+            break :blk relocateSectionRela(symtab, @ptrCast(@alignCast(@constCast(img[offset..].ptr))), target_sect, nr_reloc);
+        },
         else => -1,
     };
 }
@@ -911,17 +941,17 @@ fn relocateSectionRel(
         const sym: [*]const elf_t.Sym = @ptrCast(&sym_table[r.r_info >> 8]);
         if (sym[0].st_shndx != elf_t.STN_UNDEF) {
             const sym_val = computeSymVal(sym[0], r.r_offset, target_sect);
-            const rc = elf.api.relocate_rel(@ptrCast(@constCast(&r)), sym_val, target_sect);
+            const rc = relocate_rel_api(@ptrCast(@constCast(&r)), sym_val, target_sect);
             if (rc != 0) {
                 return -1;
             }
         } else if ((r.r_info >> 8) == elf_t.STN_UNDEF) {
-            // Symbol index 0 = STN_UNDEF. Pass sym->st_value (typically 0)
-            // as the symbol value. C side will process the reloc type.
-            if (elf.api.relocate_rel(@ptrCast(@constCast(&r)), sym[0].st_value, target_sect) != 0) return -1;
+            if (relocate_rel_api(@ptrCast(@constCast(&r)), sym[0].st_value, target_sect) != 0) return -1;
         } else if ((sym[0].st_info >> 4) != elf_t.STB_WEAK) {
+            DPRINTF("Undefined symbol for rel[%x] sym=%lx\n", .{ i, @as(c_ulong, @intCast(@intFromPtr(sym))) });
             return -1;
         } else {
+            DPRINTF("Undefined weak symbol for rel[%x]\n", .{i});
         }
     }
     return 0;
@@ -939,15 +969,26 @@ fn relocateSectionRela(
         const sym: [*]const elf_t.Sym = @ptrCast(&sym_table[r.r_info >> 8]);
         if (sym[0].st_shndx != elf_t.STN_UNDEF) {
             const sym_val = computeSymVal(sym[0], r.r_offset, target_sect);
-            if (elf.api.relocate_rela(@ptrCast(@constCast(&r)), sym_val, target_sect) != 0) return -1;
+            if (relocate_rela_api(@ptrCast(@constCast(&r)), sym_val, target_sect) != 0) return -1;
         } else if ((r.r_info >> 8) == elf_t.STN_UNDEF) {
-            if (elf.api.relocate_rela(@ptrCast(@constCast(&r)), sym[0].st_value, target_sect) != 0) return -1;
+            if (relocate_rela_api(@ptrCast(@constCast(&r)), sym[0].st_value, target_sect) != 0) return -1;
         } else if ((sym[0].st_info >> 4) != elf_t.STB_WEAK) {
+            DPRINTF("Undefined symbol for rela[%x] sym=%lx\n", .{ i, @as(c_ulong, @intCast(@intFromPtr(sym))) });
             return -1;
         } else {
+            DPRINTF("Undefined weak symbol for rela[%x]\n", .{i});
         }
     }
     return 0;
+}
+
+// Relocation helper wrappers to dispatch to elf.api.relocate_*
+inline fn relocate_rel_api(rel: *elf_t.Rel, sym_val: elf_t.Addr, target_sect: [*]u8) c_int {
+    return elf.api.relocate_rel(rel, sym_val, target_sect);
+}
+
+inline fn relocate_rela_api(rela: *elf_t.Rela, sym_val: elf_t.Addr, target_sect: [*]u8) c_int {
+    return elf.api.relocate_rela(rela, sym_val, target_sect);
 }
 
 // Compute the symbol value based on arch-specific layout rules.

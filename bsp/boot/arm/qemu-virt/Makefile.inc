@@ -1,4 +1,9 @@
 
-SRCS+=		arm/arch/head.S \
-		$(call pick_zig_boot_src,arm/qemu-virt/startup) \
-		$(call pick_zig_boot_src,arm/qemu-virt/debug)
+SRCS+=		arm/arch/head.S
+
+ifeq ($(CONFIG_ZIG_BOOT),y)
+# Startup/debug are built as part of zig/main.zig
+else
+SRCS+=		arm/qemu-virt/startup.c \
+		arm/qemu-virt/debug.c
+endif

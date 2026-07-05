@@ -1,5 +1,10 @@
 
-SRCS:=  arm/arch/head.S \
-		$(call pick_zig_boot_src,arm/raspi0/startup) \
-		$(call pick_zig_boot_src,arm/raspi0/debug)
+SRCS:=		arm/arch/head.S
+
+ifeq ($(CONFIG_ZIG_BOOT),y)
+# Startup/debug are built as part of zig/main.zig
+else
+SRCS+=		arm/raspi0/startup.c \
+		arm/raspi0/debug.c
+endif
 

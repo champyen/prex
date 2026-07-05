@@ -28,8 +28,15 @@
 // Replaces bsp/boot/riscv/arch/elf_reloc.c.
 
 const ffi = @import("ffi");
+const cfg = ffi.cfg;
 const elf_t = ffi.elf.types;
-const c = @import("c").c;
+const riscv = ffi.elf.riscv;
+
+inline fn DPRINTF(comptime format: [*c]const u8, args: anytype) void {
+    if (cfg.DEBUG) {
+        @call(.auto, ffi.boot.printf, .{format} ++ args);
+    }
+}
 
 // A small LUT to store the calculated offset of HI20 relocations,
 // so they can be retrieved by the following LO12 relocations.
@@ -68,50 +75,50 @@ pub export fn relocate_rela(
     const r_type = rel_type_cast(rela.r_info & 0xff);
 
     switch (r_type) {
-        c.R_RISCV_NONE, c.R_RISCV_RELAX, c.R_RISCV_ALIGN => {},
+        riscv.R_RISCV_NONE, riscv.R_RISCV_RELAX, riscv.R_RISCV_ALIGN => {},
 
-        c.R_RISCV_32 => {
+        riscv.R_RISCV_32 => {
             where[0] = val;
         },
 
-        c.R_RISCV_HI20 => {
+        riscv.R_RISCV_HI20 => {
             const offset: i32 = @bitCast(val);
             const hi: u32 = @bitCast((offset + 0x800) >> 12);
             where[0] = (where[0] & 0x00000fff) | (hi << 12);
         },
 
-        c.R_RISCV_LO12_I => {
+        riscv.R_RISCV_LO12_I => {
             const offset: i32 = @bitCast(val);
             const lo: u32 = @bitCast(offset & 0xfff);
             where[0] = (where[0] & 0x000fffff) | (lo << 20);
         },
 
-        c.R_RISCV_LO12_S => {
+        riscv.R_RISCV_LO12_S => {
             const offset: i32 = @bitCast(val);
             const lo: u32 = @bitCast(offset & 0xfff);
             where[0] = (where[0] & 0x01fff07f) | ((lo & 0xfe0) << 20) | ((lo & 0x01f) << 7);
         },
 
-        c.R_RISCV_PCREL_HI20 => {
+        riscv.R_RISCV_PCREL_HI20 => {
             const offset: i32 = @bitCast(val - @intFromPtr(where));
             const hi: u32 = @bitCast((offset + 0x800) >> 12);
             where[0] = (where[0] & 0x00000fff) | (hi << 12);
             add_hi20(@intFromPtr(where), offset);
         },
 
-        c.R_RISCV_PCREL_LO12_I => {
+        riscv.R_RISCV_PCREL_LO12_I => {
             const offset = find_hi20(sym_val);
             const lo: u32 = @bitCast(offset & 0xfff);
             where[0] = (where[0] & 0x000fffff) | (lo << 20);
         },
 
-        c.R_RISCV_PCREL_LO12_S => {
+        riscv.R_RISCV_PCREL_LO12_S => {
             const offset = find_hi20(sym_val);
             const lo: u32 = @bitCast(offset & 0xfff);
             where[0] = (where[0] & 0x01fff07f) | ((lo & 0xfe0) << 20) | ((lo & 0x01f) << 7);
         },
 
-        c.R_RISCV_CALL, c.R_RISCV_CALL_PLT => {
+        riscv.R_RISCV_CALL, riscv.R_RISCV_CALL_PLT => {
             const offset: i32 = @bitCast(val - @intFromPtr(where));
             const hi: u32 = @bitCast((offset + 0x800) >> 12);
             const lo: u32 = @bitCast(offset & 0xfff);
@@ -122,7 +129,7 @@ pub export fn relocate_rela(
             jalr_ptr.* = (jalr_ptr.* & 0x000fffff) | (lo << 20);
         },
 
-        c.R_RISCV_BRANCH => {
+        riscv.R_RISCV_BRANCH => {
             const offset: i32 = @bitCast(val - @intFromPtr(where));
             where[0] = (where[0] & 0x01fff07f) |
                 ((@as(u32, @bitCast((offset >> 12) & 0x01))) << 31) |
@@ -131,7 +138,7 @@ pub export fn relocate_rela(
                 ((@as(u32, @bitCast((offset >> 11) & 0x01))) << 7);
         },
 
-        c.R_RISCV_JAL => {
+        riscv.R_RISCV_JAL => {
             const offset: i32 = @bitCast(val - @intFromPtr(where));
             where[0] = (where[0] & 0x0000007f) |
                 ((@as(u32, @bitCast((offset >> 20) & 0x01))) << 31) |
@@ -140,53 +147,54 @@ pub export fn relocate_rela(
                 ((@as(u32, @bitCast((offset >> 12) & 0xff))) << 12);
         },
 
-        c.R_RISCV_ADD32 => {
+        riscv.R_RISCV_ADD32 => {
             where[0] += val;
         },
 
-        c.R_RISCV_SUB32 => {
+        riscv.R_RISCV_SUB32 => {
             where[0] -= val;
         },
 
-        c.R_RISCV_32_PCREL => {
+        riscv.R_RISCV_32_PCREL => {
             where[0] = val - @intFromPtr(where);
         },
 
-        c.R_RISCV_SUB8 => {
+        riscv.R_RISCV_SUB8 => {
             const ptr: *u8 = @ptrCast(where);
             ptr.* = @bitCast(@as(i8, @bitCast(ptr.*)) - @as(i8, @intCast(val)));
         },
 
-        c.R_RISCV_SUB16 => {
+        riscv.R_RISCV_SUB16 => {
             const ptr: *align(1) u16 = @ptrCast(where);
             ptr.* = @bitCast(@as(i16, @bitCast(ptr.*)) - @as(i16, @intCast(val)));
         },
 
-        c.R_RISCV_SUB6 => {
+        riscv.R_RISCV_SUB6 => {
             const ptr: *u8 = @ptrCast(where);
             ptr.* = (ptr.* & 0xc0) | @as(u8, @bitCast((@as(i8, @bitCast(ptr.* & 0x3f)) - @as(i8, @intCast(val & 0x3f))) & 0x3f));
         },
 
-        c.R_RISCV_SET6 => {
+        riscv.R_RISCV_SET6 => {
             const ptr: *u8 = @ptrCast(where);
             ptr.* = (ptr.* & 0xc0) | @as(u8, @intCast(val & 0x3f));
         },
 
-        c.R_RISCV_SET8 => {
+        riscv.R_RISCV_SET8 => {
             const ptr: *u8 = @ptrCast(where);
             ptr.* = @intCast(val);
         },
 
-        c.R_RISCV_SET16 => {
+        riscv.R_RISCV_SET16 => {
             const ptr: *align(1) u16 = @ptrCast(where);
             ptr.* = @intCast(val);
         },
 
-        c.R_RISCV_SET32 => {
+        riscv.R_RISCV_SET32 => {
             where[0] = val;
         },
 
         else => {
+            DPRINTF("RISCV-BOOT: Unknown reloc type %d at %lx sym_val=%lx\n", .{ @as(c_int, @intCast(r_type)), @as(c_ulong, @intCast(@intFromPtr(where))), @as(c_ulong, @intCast(sym_val)) });
             return -1;
         },
     }

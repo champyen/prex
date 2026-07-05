@@ -30,7 +30,6 @@
 const ffi = @import("ffi");
 const elf_t = ffi.elf.types;
 const arm = ffi.elf.arm;
-const c = @import("c").c;
 
 // ARMv8-M relocation globals (defined in bsp/boot/common/elf.c under CONFIG_ARMV8M).
 extern var current_symtab: [*]elf_t.Sym;
@@ -49,7 +48,7 @@ pub export fn relocate_rel(
     target_sect: [*]u8,
 ) callconv(.c) c_int {
     const r_type: u32 = @intCast(rel.r_info & 0xff);
-    const is_v8m: bool = @hasDecl(c, "CONFIG_ARMV8M");
+    const is_v8m: bool = ffi.mem.is_armv8m;
 
     const where: [*]align(1) elf_t.Addr = if (is_v8m) blk: {
         if (elf_type == elf_t.ET_EXEC) {
@@ -216,6 +215,7 @@ pub export fn relocate_rel(
         },
 
         else => {
+            ffi.print("relocation fail: type={d}\n", .{r_type});
             return -1;
         },
     }
@@ -227,6 +227,7 @@ pub export fn relocate_rela(
     _: elf_t.Addr,
     _: [*]u8,
 ) callconv(.c) c_int {
+    ffi.boot.panic("invalid relocation type");
     return -1;
 }
 

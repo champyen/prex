@@ -68,17 +68,21 @@ endif
 ZIGFLAGS+=	-target $(ZIG_TARGET) $(ZIG_OPT) -fno-stack-check -fno-unwind-tables $(ZIG_PIC_FLAGS) --cache-dir $(SRCDIR)/.zig-cache \
 		$(addprefix -I,$(INCSDIR)) $(DEFINES)
 
-# Add driver-specific, kernel-specific, or user-space modules
 ifeq ($(_BOOT_),1)
-  # Bootloader: each domain .zig is a separate compilation unit. They share
-  # the bsp/boot/zig/c.zig hub via --dep c and the bsp/boot/zig/ffi.zig
-  # typed namespace via --dep ffi. The c and ffi module mappings are
-  # appended to every module declaration so that ffi.zig itself can also
-  # @import("c") (mirrors sys/ffi.zig's pattern).
+  # Platform-specific paths: check if they exist next to the C versions, otherwise fallback to dummy files.
+  ZIG_STARTUP_PATH := $(if $(wildcard $(SRCDIR)/bsp/boot/$(ARCH)/$(PLATFORM)/startup.zig),$(SRCDIR)/bsp/boot/$(ARCH)/$(PLATFORM)/startup.zig,$(SRCDIR)/bsp/boot/zig/dummy_startup.zig)
+  ZIG_DEBUG_PATH   := $(if $(wildcard $(SRCDIR)/bsp/boot/$(ARCH)/$(PLATFORM)/debug.zig),$(SRCDIR)/bsp/boot/$(ARCH)/$(PLATFORM)/debug.zig,$(SRCDIR)/bsp/boot/zig/dummy_debug.zig)
+  ZIG_RELOC_PATH   := $(if $(wildcard $(SRCDIR)/bsp/boot/$(ARCH)/arch/elf_reloc.zig),$(SRCDIR)/bsp/boot/$(ARCH)/arch/elf_reloc.zig,$(SRCDIR)/bsp/boot/zig/dummy_reloc.zig)
+
   COMMON_BOOT_MODS = -Mc=$(SRCDIR)/bsp/boot/zig/c.zig $(ZIGFLAGS) \
-    --dep c -Mffi=$(SRCDIR)/bsp/boot/zig/ffi.zig $(ZIGFLAGS)
+    --dep c -Mffi=$(SRCDIR)/bsp/boot/zig/ffi.zig $(ZIGFLAGS) \
+    --dep machine_startup --dep machine_debug --dep machine_reloc \
+    --dep c --dep ffi -Mmachine_startup=$(ZIG_STARTUP_PATH) $(ZIGFLAGS) \
+    --dep c --dep ffi -Mmachine_debug=$(ZIG_DEBUG_PATH) $(ZIGFLAGS) \
+    --dep c --dep ffi -Mmachine_reloc=$(ZIG_RELOC_PATH) $(ZIGFLAGS)
 
   ZIG_MODULES = --dep c --dep ffi \
+    --dep machine_startup --dep machine_debug --dep machine_reloc \
     -Mroot=$< $(ZIGFLAGS) \
     $(COMMON_BOOT_MODS)
 else ifeq ($(_KRNL_),1)

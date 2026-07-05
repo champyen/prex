@@ -30,7 +30,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const ffi = @import("ffi");
-const c = @import("c").c;
 const ar = ffi.ar;
 const boot_mem = ffi.mem;
 const boot = ffi.boot;
@@ -38,11 +37,11 @@ const cfg = ffi.cfg;
 const elf = ffi.elf;
 
 const is_riscv: bool = builtin.cpu.arch == .riscv32 or builtin.cpu.arch == .riscv64;
-const is_armv8m: bool = (builtin.cpu.arch == .arm or builtin.cpu.arch == .thumb) and @hasDecl(c, "CONFIG_ARMV8M");
+const is_armv8m: bool = ffi.mem.is_armv8m;
 
-inline fn DPRINTF(comptime format: [*:0]const u8, args: anytype) void {
+inline fn DPRINTF(comptime format: [*c]const u8, args: anytype) void {
     if (cfg.DEBUG) {
-        ffi.print(format, args);
+        @call(.auto, ffi.boot.printf, .{format} ++ args);
     }
 }
 
@@ -76,6 +75,7 @@ fn load_module(hdr: *ffi.ar.@"struct", m: *ffi.mem.Module) c_int {
 
     // Check archive header magic
     if (std.mem.eql(u8, &ar_hdr.ar_fmag, ar.constants.ARFMAG) == false) {
+        DPRINTF("Invalid image %s\n", .{@as([*c]const u8, @ptrCast(&ar_hdr.*.ar_name))});
         return -1;
     }
 
@@ -91,10 +91,11 @@ fn load_module(hdr: *ffi.ar.@"struct", m: *ffi.mem.Module) c_int {
 
     // Load ELF image (skip archive header)
     const img_ptr: [*]u8 = @ptrFromInt(@intFromPtr(hdr) + @sizeOf(ffi.ar.@"struct"));
-    const r = elf.api.load_elf(img_ptr, m);
-    DPRINTF("ZLE {s} r={d}\n", .{ @as([*c]const u8, @ptrCast(&m.*.name)), r });
+    const img_size = parseArSize(&hdr.*.ar_size);
+    DPRINTF("loading: hdr=%lx module=%lx name=%s\n", .{ @as(c_ulong, @intCast(@intFromPtr(hdr))), @as(c_ulong, @intCast(@intFromPtr(m))), @as([*c]const u8, @ptrCast(&m.*.name)) });
+    const r = elf.api.load_elf(img_ptr, img_size, m);
     if (r != 0) {
-        return -1;
+        boot.panic("Load error");
     }
 
     // Track minimum data address for ARMv8-M reserved region
@@ -134,6 +135,7 @@ fn setup_bootdisk(hdr: *ffi.ar.@"struct") void {
     const ar_hdr: *ffi.ar.@"struct" = hdr;
 
     if (std.mem.eql(u8, &ar_hdr.ar_fmag, ar.constants.ARFMAG) == false) {
+        DPRINTF("Invalid bootdisk image\n", .{});
         return;
     }
 
@@ -141,6 +143,7 @@ fn setup_bootdisk(hdr: *ffi.ar.@"struct") void {
     const size_aligned = (size + 1) & ~@as(usize, 1); // even alignment
 
     if (size_aligned == 0) {
+        DPRINTF("Size of bootdisk is zero\n", .{});
         return;
     }
 
@@ -158,6 +161,7 @@ fn setup_bootdisk(hdr: *ffi.ar.@"struct") void {
         bi.*.ram[ram_idx].type = ffi.mem.MT_BOOTDISK;
         bi.*.nr_rams += 1;
     }
+    DPRINTF("bootdisk base=%lx size=%lx\n", .{ bi.*.bootdisk.base, bi.*.bootdisk.size });
 }
 
 // ARMv8-M: _bss_end is provided by linker script

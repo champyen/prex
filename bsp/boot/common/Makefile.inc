@@ -11,12 +11,17 @@
 # bootloader is built entirely from C, runtime.zig is a no-op file (no
 # exports) and adds no symbols.
 
-SRCS+=		$(call pick_zig_boot_src,common/main) \
-		$(call pick_zig_boot_src,common/bootinfo) \
-		$(call pick_zig_boot_src,common/load) \
-		$(call pick_zig_boot_src,common/elf) \
-		$(call pick_zig_boot_src,common/splash) \
-		$(call pick_zig_boot_src,common/string) \
-		$(call pick_zig_boot_src,common/printf) \
-		common/jump_entry.c \
-		zig/runtime.zig
+ifeq ($(CONFIG_ZIG_BOOT),y)
+SRCS+=		zig_main.zig \
+		common/printf.c \
+		common/jump_entry.c
+else
+SRCS+=		common/main.c \
+		common/bootinfo.c \
+		common/load.c \
+		common/elf.c \
+		common/splash.c \
+		common/string.c \
+		common/printf.c \
+		common/jump_entry.c
+endif

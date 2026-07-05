@@ -30,9 +30,7 @@
 //   - bootinfo: pointer to the bootinfo structure in the SYSPAGE area
 //     (initialized to kvtop(BOOTINFO) before main()).
 //   - dump_bootinfo: DEBUG-only function that prints the bootinfo contents.
-
 const ffi = @import("ffi");
-const c = @import("c").c;
 
 // bootinfo: pointer to the bootinfo structure in the SYSPAGE BSS.
 // This must live in BSS so it can be initialized at startup. It is exported
@@ -69,40 +67,25 @@ comptime {
 
 fn dumpBootinfo() callconv(.c) void {
     const bi: [*]const ffi.mem.BootInfo = bootinfo;
-
-    ffi.printStr("[Boot information]\n");
-    ffi.printStr("nr_rams=");
-    ffi.printDec(@intCast(bi[0].nr_rams));
-    ffi.printStr("\n");
-
     var i: c_int = 0;
+
+    @call(.auto, ffi.boot.printf, .{"[Boot information]\n"});
+    @call(.auto, ffi.boot.printf, .{"nr_rams=%d\n", bi[0].nr_rams});
+
     while (i < bi[0].nr_rams) : (i += 1) {
         const idx: usize = @intCast(i);
         const ram_entry = &bi[0].ram[idx];
         if (ram_entry.type != 0) {
-            ffi.printStr("ram[");
-            ffi.printDec(@intCast(idx));
-            ffi.printStr("]:  base=");
-            ffi.printHex(@intCast(ram_entry.base));
-            ffi.printStr(" size=");
-            ffi.printHex(@intCast(ram_entry.size));
-            ffi.printStr(" type=");
             const t = ram_entry.type;
-            if (t >= 0 and t < 5) {
-                ffi.printStr(memtype[@intCast(t)]);
-            }
-            ffi.printStr("\n");
+            const type_str: [*c]const u8 = if (t >= 0 and t < 5) memtype[@intCast(t)] else "";
+            @call(.auto, ffi.boot.printf, .{"ram[%d]:  base=%lx size=%x type=%s\n", i, ram_entry.base, ram_entry.size, type_str});
         }
     }
 
-    ffi.printStr("bootdisk: base=");
-    ffi.printHex(@intCast(bi[0].bootdisk.base));
-    ffi.printStr(" size=");
-    ffi.printHex(@intCast(bi[0].bootdisk.size));
-    ffi.printStr("\n");
+    @call(.auto, ffi.boot.printf, .{"bootdisk: base=%lx size=%x\n", bi[0].bootdisk.base, bi[0].bootdisk.size});
+    @call(.auto, ffi.boot.printf, .{"entry    phys     size     text     data     textsz   datasz   bsssz    module\n"});
 
-    ffi.printStr("entry    phys     size     text     data     textsz   datasz   bsssz    module\n");
-    ffi.printStr("-------- -------- -------- -------- -------- -------- -------- -------- ------\n");
+    @call(.auto, ffi.boot.printf, .{"-------- -------- -------- -------- -------- -------- -------- -------- ------\n"});
     printModule(&bi[0].kernel);
     printModule(&bi[0].driver);
 
@@ -117,27 +100,5 @@ fn dumpBootinfo() callconv(.c) void {
 fn dumpBootinfoNoop() callconv(.c) void {}
 
 fn printModule(m: *const ffi.mem.Module) void {
-    ffi.printHex(@as(u32, @intCast(m.entry)));
-    ffi.printStr(" ");
-    ffi.printHex(@as(u32, @intCast(m.phys)));
-    ffi.printStr(" ");
-    ffi.printHex(@as(u32, @intCast(m.size)));
-    ffi.printStr(" ");
-    ffi.printHex(@as(u32, @intCast(m.text)));
-    ffi.printStr(" ");
-    ffi.printHex(@as(u32, @intCast(m.data)));
-    ffi.printStr(" ");
-    ffi.printHex(@as(u32, @intCast(m.textsz)));
-    ffi.printStr(" ");
-    ffi.printHex(@as(u32, @intCast(m.datasz)));
-    ffi.printStr(" ");
-    ffi.printHex(@as(u32, @intCast(m.bsssz)));
-    ffi.printStr(" ");
-
-    const name: [*:0]const u8 = @ptrCast(&m.name);
-    var i: usize = 0;
-    while (i < 16 and name[i] != 0) : (i += 1) {
-        c.debug_putc(@intCast(name[i]));
-    }
-    ffi.printStr("\n");
+    @call(.auto, ffi.boot.printf, .{"%lx %lx %x %lx %lx %x %x %x %s\n", m.entry, m.phys, m.size, m.text, m.data, m.textsz, m.datasz, m.bsssz, @as([*c]const u8, @ptrCast(&m.name))});
 }

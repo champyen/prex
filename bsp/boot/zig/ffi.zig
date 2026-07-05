@@ -66,56 +66,30 @@ pub const vsize_t = c.vsize_t;
 // external surface, called from head.S and from the linker.
 // ============================================================================
 pub const boot = struct {
-    // Function-pointer type aliases (interfaces) — domain code uses these
-    // as the canonical signature when declaring @export bindings.
-    pub const MainFn = *const fn () callconv(.c) c_int;
-    pub const PanicFn = *const fn ([*c]const u8) callconv(.c) noreturn;
-    pub const VoidFn = *const fn () callconv(.c) void;
-    pub const DebugPutcFn = *const fn (c_int) callconv(.c) void;
+    pub extern fn main() callconv(.c) c_int;
+    pub extern fn panic(msg: [*c]const u8) callconv(.c) noreturn;
+    pub extern fn startup() callconv(.c) void;
+    pub extern fn debug_init() callconv(.c) void;
+    pub extern fn debug_putc(c_val: c_int) callconv(.c) void;
+    pub extern fn splash() callconv(.c) void;
+    pub extern fn load_os() callconv(.c) void;
+    pub extern fn dump_bootinfo(bi: ?*mem.BootInfo) callconv(.c) void;
+    pub extern fn __boot_bootinfo_init() callconv(.c) void;
+    pub const boot_bootinfo_init = __boot_bootinfo_init;
+    pub extern fn printf(fmt: [*c]const u8, ...) callconv(.c) void;
 
-    // Function pointers resolved from the linker-resolved c.* names. The
-    // actual bodies live in common/main.zig, <platform>/startup.zig, etc.
-    // (currently C, will be replaced as each Stage lands).
-    pub const main: MainFn = @ptrCast(&c.main);
-    pub const panic: PanicFn = @ptrCast(&c.panic);
-    pub const startup: VoidFn = @ptrCast(&c.startup);
-    pub const debug_init: VoidFn = @ptrCast(&c.debug_init);
-    pub const debug_putc: DebugPutcFn = @ptrCast(&c.debug_putc);
-    pub const splash: VoidFn = @ptrCast(&c.splash);
-    pub const load_os: VoidFn = @ptrCast(&c.load_os);
-    pub const dump_bootinfo: mem.BootInfoDumper = @ptrCast(&c.dump_bootinfo);
-    pub const boot_bootinfo_init: VoidFn = @ptrCast(&c.__boot_bootinfo_init);
-    // printf: optional C-ABI variadic. Exposed as a generic function pointer
-    // since Zig 0.16 cannot reproduce the varargs ABI in callconv(.c).
-    // Only call when DEBUG is enabled (see boot.h).
-    pub const printf: *const fn ([*c]const u8, ...) callconv(.c) void = @ptrCast(&c.printf);
-
-    // BSS-extern state (declared in load.zig with pub var for Zig compatibility).
-    // The load module exports load_base, load_start, nr_img.
-    // bootinfo is initialized at runtime by main.c (Zig's bootinfo.zig),
-    // matching the C logic: bootinfo = (struct bootinfo*)(BOOTINFO - KERNOFFSET).
-    // For Zig we use @ptrCast with kvtop applied.
     pub var bootinfo: *mem.BootInfo = @ptrCast(@as(*mem.BootInfo, @ptrFromInt(cfg.BOOTINFO -% cfg.KERNOFFSET)));
-    pub const load_base: *paddr_t = @constCast(@ptrCast(&c.load_base));
-    pub const load_start: *paddr_t = @constCast(@ptrCast(&c.load_start));
-    pub const nr_img: *c_int = @constCast(@ptrCast(&c.nr_img));
+    pub extern var load_base: paddr_t;
+    pub extern var load_start: paddr_t;
+    pub extern var nr_img: c_int;
 
-    // ----- libc-equivalents (Stage 2) -----
-    // Function-pointer type aliases:
-    pub const MemcpyFn = *const fn (?*anyopaque, ?*const anyopaque, c_ulong) callconv(.c) ?*anyopaque;
-    pub const MemsetFn = *const fn (?*anyopaque, c_int, c_ulong) callconv(.c) ?*anyopaque;
-    pub const StrncmpFn = *const fn ([*c]const u8, [*c]const u8, c_ulong) callconv(.c) c_int;
-    pub const StrlcpyFn = *const fn ([*c]u8, [*c]const u8, c_ulong) callconv(.c) c_ulong;
-    pub const AtolFn = *const fn ([*c]const u8) callconv(.c) c_long;
-
-    // Function pointers (initially resolved to C, replaced by Zig as
-    // common/string.zig self-exports land).
-    pub const memcpy: MemcpyFn = @ptrCast(&c.memcpy);
-    pub const memset: MemsetFn = @ptrCast(&c.memset);
-    pub const strncmp: StrncmpFn = @ptrCast(&c.strncmp);
-    pub const strlcpy: StrlcpyFn = @ptrCast(&c.strlcpy);
-    pub const atol: AtolFn = @ptrCast(&c.atol);
-    pub const jump_to_kernel: *const fn (usize) callconv(.c) void = @constCast(@ptrCast(&c._jump_to_kernel));
+    pub extern fn memcpy(dest: ?*anyopaque, src: ?*const anyopaque, n: c_ulong) callconv(.c) ?*anyopaque;
+    pub extern fn memset(dest: ?*anyopaque, c_val: c_int, n: c_ulong) callconv(.c) ?*anyopaque;
+    pub extern fn strncmp(s1: [*c]const u8, s2: [*c]const u8, n: c_ulong) callconv(.c) c_int;
+    pub extern fn strlcpy(dst: [*c]u8, src: [*c]const u8, siz: c_ulong) callconv(.c) c_ulong;
+    pub extern fn atol(s: [*c]const u8) callconv(.c) c_long;
+    pub extern fn _jump_to_kernel(entry: usize) callconv(.c) void;
+    pub const jump_to_kernel = _jump_to_kernel;
 };
 
 // ============================================================================
@@ -225,9 +199,25 @@ pub const elf = struct {
         pub const R_RISCV_BRANCH = if (@hasDecl(c, "R_RISCV_BRANCH")) c.R_RISCV_BRANCH else 16;
         pub const R_RISCV_JAL = if (@hasDecl(c, "R_RISCV_JAL")) c.R_RISCV_JAL else 17;
         pub const R_RISCV_CALL = if (@hasDecl(c, "R_RISCV_CALL")) c.R_RISCV_CALL else 18;
-        pub const R_RISCV_HI20 = if (@hasDecl(c, "R_RISCV_HI20")) c.R_RISCV_HI20 else 20;
-        pub const R_RISCV_LO12_I = if (@hasDecl(c, "R_RISCV_LO12_I")) c.R_RISCV_LO12_I else 21;
+        pub const R_RISCV_HI20 = if (@hasDecl(c, "R_RISCV_HI20")) c.R_RISCV_HI20 else 26;
+        pub const R_RISCV_LO12_I = if (@hasDecl(c, "R_RISCV_LO12_I")) c.R_RISCV_LO12_I else 27;
         pub const R_RISCV_PCREL_HI20 = if (@hasDecl(c, "R_RISCV_PCREL_HI20")) c.R_RISCV_PCREL_HI20 else 23;
+        pub const R_RISCV_RELAX = 51;
+        pub const R_RISCV_ALIGN = 43;
+        pub const R_RISCV_LO12_S = 28;
+        pub const R_RISCV_PCREL_LO12_I = 24;
+        pub const R_RISCV_PCREL_LO12_S = 25;
+        pub const R_RISCV_CALL_PLT = 19;
+        pub const R_RISCV_ADD32 = 35;
+        pub const R_RISCV_SUB32 = 39;
+        pub const R_RISCV_32_PCREL = 57;
+        pub const R_RISCV_SUB8 = 37;
+        pub const R_RISCV_SUB16 = 38;
+        pub const R_RISCV_SUB6 = 52;
+        pub const R_RISCV_SET6 = 53;
+        pub const R_RISCV_SET8 = 54;
+        pub const R_RISCV_SET16 = 55;
+        pub const R_RISCV_SET32 = 56;
     };
 
     // API functions. The function-pointer type aliases use `mem.Module` /
@@ -235,17 +225,9 @@ pub const elf = struct {
     // touches `c.*` directly (per zig_boot_plan.md §4a "no raw c.* in
     // domain code" rule).
     pub const api = struct {
-        /// load_elf(img: [*]u8, module: *Module) -> c_int
-        pub const LoadElfFn = *const fn ([*c]u8, *mem.Module) callconv(.c) c_int;
-        pub const load_elf: LoadElfFn = @ptrCast(&c.load_elf);
-
-        /// relocate_rel(rel: *Rel, sym_val: Addr, target_sect: [*]u8) -> c_int
-        pub const RelocateRelFn = *const fn ([*c]elf.types.Rel, elf.types.Addr, [*c]u8) callconv(.c) c_int;
-        pub const relocate_rel: RelocateRelFn = @ptrCast(&c.relocate_rel);
-
-        /// relocate_rela(rela: *Rela, sym_val: Addr, target_sect: [*]u8) -> c_int
-        pub const RelocateRelaFn = *const fn ([*c]elf.types.Rela, elf.types.Addr, [*c]u8) callconv(.c) c_int;
-        pub const relocate_rela: RelocateRelaFn = @ptrCast(&c.relocate_rela);
+        pub extern fn load_elf(img: [*]u8, size: usize, module: *mem.Module) callconv(.c) c_int;
+        pub extern fn relocate_rel(rel: *elf.types.Rel, sym_val: elf.types.Addr, target_sect: [*]u8) callconv(.c) c_int;
+        pub extern fn relocate_rela(rela: *elf.types.Rela, sym_val: elf.types.Addr, target_sect: [*]u8) callconv(.c) c_int;
     };
 };
 
