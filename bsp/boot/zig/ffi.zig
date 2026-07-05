@@ -202,6 +202,7 @@ pub const elf = struct {
     pub const arm = struct {
         pub const R_ARM_NONE = c.R_ARM_NONE;
         pub const R_ARM_ABS32 = c.R_ARM_ABS32;
+        pub const R_ARM_REL32 = c.R_ARM_REL32;
         pub const R_ARM_PC24 = c.R_ARM_PC24;
         pub const R_ARM_CALL = c.R_ARM_CALL;
         pub const R_ARM_JUMP24 = c.R_ARM_JUMP24;
@@ -213,6 +214,7 @@ pub const elf = struct {
         pub const R_ARM_THM_MOVW_ABS_NC = c.R_ARM_THM_MOVW_ABS_NC;
         pub const R_ARM_THM_MOVT_ABS = c.R_ARM_THM_MOVT_ABS;
         pub const R_ARM_V4BX = c.R_ARM_V4BX;
+        pub const R_ARM_PREL31 = 42; // R_ARM_PREL31 = 42 per ARM ELF spec
         pub const SHT_ARM_EXIDX = if (@hasDecl(c, "SHT_ARM_EXIDX")) c.SHT_ARM_EXIDX else 0x70000003;
     };
     pub const riscv = struct {

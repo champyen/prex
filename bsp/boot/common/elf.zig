@@ -567,7 +567,7 @@ _ = ffi.boot.memset(@ptrCast(@as([*]u8, @ptrFromInt(sect_base))), 0, sh.sh_size)
     }
     m[0].text = ffi.addr.ptokv(m[0].phys + first_text_off); // ptokv(m->phys + first_text_off)
     m[0].textsz = m[0].data - m[0].text;
-    m[0].datasz = @as(usize, @intCast(bss_base)) - m[0].data;
+    m[0].datasz = @as(usize, @intCast(ffi.addr.ptokv(bss_base))) - m[0].data;
 
     setLoadBase(ff.mem.round_page(getLoadBase()));
     m[0].size = @intCast(getLoadBase() - m[0].phys);
@@ -686,7 +686,7 @@ fn loadRelocatableArmv8m(img: [*]u8, m: [*]mem.Module) c_int {
     }
     m[0].text = @intCast(ffi.addr.ptokv(m[0].phys + first_text_off));
     m[0].textsz = m[0].data - m[0].text;
-    m[0].datasz = @as(usize, @intCast(bss_base)) - @as(usize, @intCast(m[0].data));
+    m[0].datasz = @as(usize, @intCast(ffi.addr.ptokv(bss_base))) - @as(usize, @intCast(m[0].data));
 
     // C version: load_base = round_page(bss_base + bsssz)
     setLoadBase(ff.mem.round_page(bss_base + m[0].bsssz));
@@ -819,7 +819,7 @@ fn loadRelocatableDefault(img: [*]u8, m: [*]mem.Module) c_int {
         }
     }
     m[0].textsz = m[0].data - m[0].text;
-    m[0].datasz = @as(usize, @intCast(bss_base)) - m[0].data;
+    m[0].datasz = @as(usize, @intCast(ffi.addr.ptokv(bss_base))) - m[0].data;
 
     setLoadBase(bss_base + m[0].bsssz);
     setLoadBase(ff.mem.round_page(getLoadBase()));
