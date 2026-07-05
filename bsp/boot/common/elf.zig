@@ -186,14 +186,9 @@ inline fn setLoadBase(v: ffi.paddr_t) void {
 /// undefined, so the disabled path has zero runtime cost, matching
 /// the C semantics of `ELFDBG`. Future Zig 0.16 fixes may let us
 /// replace this stub with a comptime-folded implementation.
-inline fn ELFDBG(_: []const u8, _: anytype) void {}
-
-comptime {
-    if (is_armv8m) {
-        // NOTE: function declared inside a comptime block is a compile-time
-        // artifact; Zig still emits the function in the .o file because
-        // it's referenced from the runtime code path.
-        _ = &strCmp;
+inline fn ELFDBG(comptime format: [*:0]const u8, args: anytype) void {
+    if (ffi.cfg.DEBUG_ELF) {
+        ffi.print(format, args);
     }
 }
 
@@ -207,15 +202,16 @@ fn strCmp(s1: [*]const u8, s2: [*]const u8) c_int {
     return @intCast(p1[0] -% p2[0]);
 }
 
-
-// ============================================================================
-// load_elf — public C-ABI entry point
-// ============================================================================
+comptime {
+    if (is_armv8m) {
+        _ = &strCmp;
+    }
+}
 
 pub export fn load_elf(img: [*]u8, m: [*]mem.Module) callconv(.c) c_int {
     const ehdr: [*]elf_t.Ehdr = @ptrCast(@alignCast(img));
 
-    if (ffi.cfg.DEBUG_ELF) ffi.boot.printf("\nelf_load\n");
+    ELFDBG("\nelf_load\n", .{});
 
     // ----- ELF magic check -----
     if (ehdr[0].e_ident[elf_t.EI_MAG0] != elf_t.ELFMAG0 or
@@ -223,7 +219,7 @@ pub export fn load_elf(img: [*]u8, m: [*]mem.Module) callconv(.c) c_int {
         ehdr[0].e_ident[elf_t.EI_MAG2] != elf_t.ELFMAG2 or
         ehdr[0].e_ident[elf_t.EI_MAG3] != elf_t.ELFMAG3)
     {
-        if (ffi.cfg.DEBUG_ELF) ffi.boot.printf("Invalid ELF image\n");
+        ELFDBG("Invalid ELF image\n", .{});
         return -1;
     }
 
@@ -266,11 +262,17 @@ pub export fn load_elf(img: [*]u8, m: [*]mem.Module) callconv(.c) c_int {
             return -1;
         }
         load_start = getLoadBase();
-        ELFDBG("kernel base={x}\n", .{getLoadBase()});
-    } else if (nr_img == 1) {
-        ELFDBG("driver base={x}\n", .{getLoadBase()});
+        if (ffi.cfg.DEBUG_ELF) {
+            ffi.printStr("base=");
+            ffi.printHex(@intCast(getLoadBase()));
+            ffi.printStr("\n");
+        }
     } else {
-        ELFDBG("task base={x}\n", .{getLoadBase()});
+        if (ffi.cfg.DEBUG_ELF) {
+            ffi.printStr("base=");
+            ffi.printHex(@intCast(getLoadBase()));
+            ffi.printStr("\n");
+        }
     }
 
     // ----- Dispatch on ELF type -----
@@ -286,7 +288,7 @@ pub export fn load_elf(img: [*]u8, m: [*]mem.Module) callconv(.c) c_int {
             }
         },
         else => blk: {
-            if (ffi.cfg.DEBUG_ELF) ffi.boot.printf("Unsupported file type\n");
+            ELFDBG("Unsupported file type\n", .{});
             break :blk -1;
         },
     };
@@ -304,7 +306,7 @@ pub export fn load_elf(img: [*]u8, m: [*]mem.Module) callconv(.c) c_int {
 fn loadExecutable(img: [*]u8, m: [*]mem.Module) c_int {
     const ehdr: [*]elf_t.Ehdr = @ptrCast(@alignCast(img));
     const phys_base: ffi.paddr_t = getLoadBase();
-    ELFDBG("phys addr={x}\n", .{phys_base});
+
     // RISC-V uses e_phoff for program header offset; others use e_ehsize.
     var phdr: [*]elf_t.Phdr = if (is_riscv)
         @ptrCast(@alignCast(@as([*]u8, @ptrCast(ehdr)) + ehdr[0].e_phoff))
@@ -341,9 +343,7 @@ fn loadExecutable(img: [*]u8, m: [*]mem.Module) c_int {
     while (i < @as(c_int, @intCast(ehdr[0].e_phnum))) : (i += 1) {
         const ph = &phdr[@intCast(i)];
         if (ph.p_type == elf_t.PT_LOAD) {
-                ELFDBG("p_flags={x}\n", .{@as(c_uint, ph.p_flags)});
-                ELFDBG("p_align={x}\n", .{@as(c_uint, ph.p_align)});
-                ELFDBG("p_paddr={x}\n", .{@as(c_uint, ph.p_paddr)});
+
             if (is_armv8m) {
                 if ((ph.p_flags & elf_t.PF_W) == 0) {
                     // Text / RO data: XIP from flash, no copy.
@@ -428,7 +428,13 @@ _ = ffi.boot.memset(@ptrCast(dptr), 0, ph.p_memsz - ph.p_filesz);
     setLoadBase(ff.mem.round_page(getLoadBase()));
     m[0].size = @intCast(getLoadBase() - m[0].phys);
     m[0].entry = if (is_armv8m) m[0].text + (ehdr[0].e_entry - loc_text_vma) else ehdr[0].e_entry;
-    ELFDBG("module size={x} entry={x}\n", .{m[0].size, m[0].entry});
+    if (ffi.cfg.DEBUG_ELF) {
+        ffi.printStr("module size=");
+        ffi.printHex(@intCast(m[0].size));
+        ffi.printStr(" entry=");
+        ffi.printHex(@intCast(m[0].entry));
+        ffi.printStr("\n");
+    }
 
     if (m[0].size == 0) {
         // panic("Module size is 0!");
@@ -610,19 +616,10 @@ fn loadRelocatableArmv8m(img: [*]u8, m: [*]mem.Module) c_int {
     // Save the initial load_base (like C version does)
     const init_load_base: ffi.paddr_t = getLoadBase();
 
-    ELFDBG("phys addr={x}\n", .{init_load_base});
-
     var i: c_int = 0;
     while (i < @as(c_int, @intCast(ehdr[0].e_shnum))) : (i += 1) {
         const sh = &shdr[@intCast(i)];
         sect_addr[@intCast(i)] = undefined;
-            // Cast to cstring for std.fmt's {s} format. The underlying
-            // buffer is null-terminated, so this is safe.
-            const dbg_name: [*c]const u8 = @ptrCast(shstrtab + sh.sh_name);
-            ELFDBG("sh_addr={x} name={s}\n", .{sh.sh_addr, dbg_name});
-            ELFDBG("sh_size={x}\n", .{sh.sh_size});
-            ELFDBG("sh_offset={x}\n", .{sh.sh_offset});
-            ELFDBG("sh_flags={x}\n", .{sh.sh_flags});
         if ((sh.sh_flags & elf_t.SHF_ALLOC) != 0) {
             // Section alignment (match C: align load_base locally, don't persist)
             const align_val: elf_t.Addr = sh.sh_addralign;
@@ -632,9 +629,7 @@ fn loadRelocatableArmv8m(img: [*]u8, m: [*]mem.Module) c_int {
                 init_load_base;
             // ARMv8-M: section physical address = init_load_base + sh.sh_addr (matches C's load_base + sh.sh_addr)
             const sect_base: elf_t.Addr = init_load_base + sh.sh_addr;
-                ELFDBG("BEFORE: section {d} sh_addr={x} load_base={x}\n", .{i, sh.sh_addr, getLoadBase()});
-                ELFDBG("ALIGNED: section {d} aligned={x}\n", .{i, aligned});
-                ELFDBG("SECT_BASE: section {d} sect_base={x}\n", .{i, sect_base});
+            _ = aligned;
 
             if (sh.sh_type == elf_t.SHT_PROGBITS) {
                 if ((sh.sh_flags & elf_t.SHF_EXECINSTR) != 0) {
@@ -672,7 +667,7 @@ fn loadRelocatableArmv8m(img: [*]u8, m: [*]mem.Module) c_int {
             }
             sect_addr[@intCast(i)] = @ptrFromInt(sect_base);
             // C version does NOT advance load_base between sections
-                ELFDBG("AFTER: section {d} load_base={x}\n", .{i, getLoadBase()});
+
         } else if (sh.sh_type == elf_t.SHT_SYMTAB or
                    sh.sh_type == elf_t.SHT_STRTAB or
                    sh.sh_type == elf_t.SHT_REL or
@@ -713,8 +708,7 @@ fn loadRelocatableArmv8m(img: [*]u8, m: [*]mem.Module) c_int {
         }
     }
     m[0].got_base = sram_got_base;
-        ELFDBG("module load_base={x} text={x}\n", .{getLoadBase(), m[0].text});
-        ELFDBG("module size={x} entry={x}\n", .{m[0].size, m[0].entry});
+
 
     // Process relocation
     {
@@ -747,13 +741,14 @@ fn loadRelocatableDefault(img: [*]u8, m: [*]mem.Module) c_int {
     var bss_base: ffi.paddr_t = 0;
     var first_text_vma: elf_t.Addr = 0xffffffff;
 
-    const _p = m[0].phys;
-    ELFDBG("phys addr={x}\n", .{_p});
+
+
 
     var i: c_int = 0;
     while (i < @as(c_int, @intCast(ehdr[0].e_shnum))) : (i += 1) {
         sect_addr[@intCast(i)] = undefined;
         const sh = &shdr[@intCast(i)];
+
         const is_progbits = sh.sh_type == elf_t.SHT_PROGBITS or
             (is_arm and sh.sh_type == elf_t.SHT_ARM_EXIDX);
 
@@ -846,6 +841,7 @@ fn loadRelocatableDefault(img: [*]u8, m: [*]mem.Module) c_int {
         m[0].got_base = sram_got_base;
     }
 
+
     // Apply relocations.
     var r: c_int = 0;
     while (r < @as(c_int, @intCast(ehdr[0].e_shnum))) : (r += 1) {
@@ -866,7 +862,7 @@ fn loadRelocatableDefault(img: [*]u8, m: [*]mem.Module) c_int {
 
 fn relocateSection(img: [*]u8, shdr: [*]elf_t.Shdr) c_int {
 
-    if (ffi.cfg.DEBUG_ELF) ffi.boot.printf("relocate_section\n");
+
 
     if (shdr[0].sh_entsize == 0) {
         return 0;
@@ -887,13 +883,13 @@ fn relocateSection(img: [*]u8, shdr: [*]elf_t.Shdr) c_int {
     }
     const strtab: [*]u8 = sect_addr[@as(usize, @intCast(strshndx))];
     if (@intFromPtr(strtab) == 0) return -1;
-    ELFDBG("strtab={x}\n", .{@intFromPtr(strtab)});
+
 
     const nr_reloc: c_int = @intCast(@as(usize, @intCast(shdr[0].sh_size)) / @as(usize, @intCast(shdr[0].sh_entsize)));
 
     return switch (shdr[0].sh_type) {
-        elf_t.SHT_REL => relocateSectionRel(symtab, @ptrCast(@alignCast(@as([*]u8, @ptrCast(img)) + shdr[0].sh_offset)), target_sect, nr_reloc, strtab),
-        elf_t.SHT_RELA => relocateSectionRela(symtab, @ptrCast(@alignCast(@as([*]u8, @ptrCast(img)) + shdr[0].sh_offset)), target_sect, nr_reloc, strtab),
+        elf_t.SHT_REL => relocateSectionRel(symtab, @ptrCast(@alignCast(@as([*]u8, @ptrCast(img)) + shdr[0].sh_offset)), target_sect, nr_reloc),
+        elf_t.SHT_RELA => relocateSectionRela(symtab, @ptrCast(@alignCast(@as([*]u8, @ptrCast(img)) + shdr[0].sh_offset)), target_sect, nr_reloc),
         else => -1,
     };
 }
@@ -908,14 +904,11 @@ fn relocateSectionRel(
     rel: [*]elf_t.Rel,
     target_sect: [*]u8,
     nr_reloc: c_int,
-    strtab: [*]u8,
 ) c_int {
     var i: c_int = 0;
     while (i < nr_reloc) : (i += 1) {
         const r: elf_t.Rel = rel[@intCast(i)];
         const sym: [*]const elf_t.Sym = @ptrCast(&sym_table[r.r_info >> 8]);
-        const sym_name: [*c]const u8 = @ptrCast(strtab + sym[0].st_name);
-        ELFDBG("{s}\n", .{sym_name});
         if (sym[0].st_shndx != elf_t.STN_UNDEF) {
             const sym_val = computeSymVal(sym[0], r.r_offset, target_sect);
             const rc = elf.api.relocate_rel(@ptrCast(@constCast(&r)), sym_val, target_sect);
@@ -939,14 +932,11 @@ fn relocateSectionRela(
     rela: [*]elf_t.Rela,
     target_sect: [*]u8,
     nr_reloc: c_int,
-    strtab: [*]u8,
 ) c_int {
     var i: c_int = 0;
     while (i < nr_reloc) : (i += 1) {
         const r: elf_t.Rela = rela[@intCast(i)];
         const sym: [*]const elf_t.Sym = @ptrCast(&sym_table[r.r_info >> 8]);
-        const sym_name: [*c]const u8 = @ptrCast(strtab + sym[0].st_name);
-        ELFDBG("{s}\n", .{sym_name});
         if (sym[0].st_shndx != elf_t.STN_UNDEF) {
             const sym_val = computeSymVal(sym[0], r.r_offset, target_sect);
             if (elf.api.relocate_rela(@ptrCast(@constCast(&r)), sym_val, target_sect) != 0) return -1;

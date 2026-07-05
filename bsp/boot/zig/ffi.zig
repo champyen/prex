@@ -458,3 +458,113 @@ pub const addr = struct {
         return va - cfg.KERNOFFSET;
     }
 };
+
+// ============================================================================
+// print — type-safe string formatting utilizing std.fmt.format
+// ============================================================================
+const std = @import("std");
+
+pub noinline fn printStr(ptr: [*]const u8) void {
+    var idx: usize = 0;
+    while (ptr[idx] != 0) : (idx += 1) {
+        c.debug_putc(@intCast(ptr[idx]));
+    }
+}
+
+pub noinline fn printHex(u: u32) void {
+    const digits = "0123456789abcdef";
+    var i: usize = 0;
+    while (i < 8) : (i += 1) {
+        const shift: u5 = @intCast((7 - i) * 4);
+        const digit_val = (u >> shift) & 0xf;
+        c.debug_putc(@intCast(digits[digit_val]));
+    }
+}
+
+pub noinline fn printDec(val: u32) void {
+    const digits = "0123456789";
+    var u: u32 = val;
+    if (u == 0) {
+        c.debug_putc('0');
+        return;
+    }
+    var buf: [10]u8 = undefined;
+    var idx: usize = 0;
+    while (u > 0) {
+        buf[idx] = digits[u % 10];
+        idx += 1;
+        u /= 10;
+    }
+    while (idx > 0) {
+        idx -= 1;
+        c.debug_putc(@intCast(buf[idx]));
+    }
+}
+
+noinline fn printVal(val: anytype) void {
+    const T = @TypeOf(val);
+    if (@typeInfo(T) == .pointer) {
+        printStr(@ptrCast(val));
+    } else {
+        printDec(@bitCast(@as(i32, @intCast(val))));
+    }
+}
+
+pub noinline fn print(format: [*c]const u8, args: anytype) void {
+    const ArgsType = @TypeOf(args);
+    const args_type_info = @typeInfo(ArgsType);
+    const fields = args_type_info.@"struct".fields;
+
+    var arg_idx: usize = 0;
+    var i: usize = 0;
+    while (format[i] != 0) {
+        if (format[i] == '{') {
+            if (format[i + 1] == '}') {
+                inline for (fields, 0..) |field, f_idx| {
+                    if (f_idx == arg_idx) {
+                        const val = @field(args, field.name);
+                        printVal(val);
+                    }
+                }
+                arg_idx += 1;
+                i += 2;
+                continue;
+            } else if (format[i + 2] == '}') {
+                const spec = format[i + 1];
+                inline for (fields, 0..) |field, f_idx| {
+                    if (f_idx == arg_idx) {
+                        const val = @field(args, field.name);
+                        const T = @TypeOf(val);
+                        if (spec == 'x') {
+                            const u: u32 = if (@typeInfo(T) == .pointer) @intCast(@intFromPtr(val)) else @bitCast(@as(i32, @intCast(val)));
+                            printHex(u);
+                        } else if (spec == 'd') {
+                            if (@typeInfo(T) == .pointer) {
+                                printHex(@intCast(@intFromPtr(val)));
+                            } else {
+                                printDec(@bitCast(@as(i32, @intCast(val))));
+                            }
+                        } else if (spec == 's') {
+                            if (@typeInfo(T) == .pointer) {
+                                printStr(@ptrCast(val));
+                            } else {
+                                printDec(@bitCast(@as(i32, @intCast(val))));
+                            }
+                        }
+                    }
+                }
+                arg_idx += 1;
+                i += 3;
+                continue;
+            }
+        }
+        
+        const byte = format[i];
+        if (byte == '\n') {
+            c.debug_putc('\r');
+        }
+        c.debug_putc(@intCast(byte));
+        i += 1;
+    }
+}
+

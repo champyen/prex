@@ -40,6 +40,12 @@ const elf = ffi.elf;
 const is_riscv: bool = builtin.cpu.arch == .riscv32 or builtin.cpu.arch == .riscv64;
 const is_armv8m: bool = (builtin.cpu.arch == .arm or builtin.cpu.arch == .thumb) and @hasDecl(c, "CONFIG_ARMV8M");
 
+inline fn DPRINTF(comptime format: [*:0]const u8, args: anytype) void {
+    if (cfg.DEBUG) {
+        ffi.print(format, args);
+    }
+}
+
 // ============================================================================
 // Static state (BSS/externs — exported with C linkage)
 // ============================================================================
@@ -86,10 +92,7 @@ fn load_module(hdr: *ffi.ar.@"struct", m: *ffi.mem.Module) c_int {
     // Load ELF image (skip archive header)
     const img_ptr: [*]u8 = @ptrFromInt(@intFromPtr(hdr) + @sizeOf(ffi.ar.@"struct"));
     const r = elf.api.load_elf(img_ptr, m);
-    if (cfg.DEBUG) {
-        const name_z2: [*c]const u8 = @ptrCast(&m.*.name);
-        boot.printf("ZLE %s r=%d\n", name_z2, r);
-    }
+    DPRINTF("ZLE {s} r={d}\n", .{ @as([*c]const u8, @ptrCast(&m.*.name)), r });
     if (r != 0) {
         return -1;
     }

@@ -30,6 +30,7 @@
 const ffi = @import("ffi");
 const c = @import("c").c;
 
+const std = @import("std");
 const boot = ffi.boot;
 const mem = ffi.mem;
 const cfg = ffi.cfg;
@@ -51,6 +52,12 @@ fn zeroBootinfo() void {
 /// - Loader BSS section is filled with 0.
 /// - Loader stack is configured.
 /// - All interrupts are disabled.
+inline fn DPRINTF(comptime format: [*:0]const u8, args: anytype) void {
+    if (cfg.DEBUG) {
+        ffi.print(format, args);
+    }
+}
+
 pub export fn main() callconv(.c) c_int {
     // 1. Initialize the C-side `bootinfo` global pointer (used by
     //    startup.c and any C code in the bootloader). This is provided
@@ -64,32 +71,30 @@ pub export fn main() callconv(.c) c_int {
     boot.debug_init();
 
     // 4. Print banner via DPRINTF (printf when DEBUG is defined).
-    if (cfg.DEBUG) {
-        boot.printf("Prex+ Boot Loader\n");
-    }
+    DPRINTF("Prex+ Boot Loader\n", .{});
 
     // DEBUG: track progress
-    if (cfg.DEBUG) boot.printf("M1\n");
+    DPRINTF("M1\n", .{});
 
     // 5. Do platform dependent initialization.
     boot.startup();
 
-    if (cfg.DEBUG) boot.printf("M2\n");
+    DPRINTF("M2\n", .{});
 
     // 6. Show splash screen.
     boot.splash();
 
-    if (cfg.DEBUG) boot.printf("M3\n");
+    DPRINTF("M3\n", .{});
 
     // 7. Load OS modules to appropriate locations.
     boot.load_os();
 
-    if (cfg.DEBUG) boot.printf("M4\n");
+    DPRINTF("M4\n", .{});
 
     // 8. Dump boot information.
     boot.dump_bootinfo(@ptrCast(@constCast(boot.bootinfo)));
 
-    if (cfg.DEBUG) boot.printf("M5\n");
+    DPRINTF("M5\n", .{});
 
     // 9. Launch kernel via C helper (Zig 0.16 has a function-pointer
     //    call codegen bug for all archs; see common/jump_entry.c).
@@ -107,11 +112,7 @@ pub export fn main() callconv(.c) c_int {
 /// Zig-side name avoids the type-check conflict, while @export gives it
 /// the correct C-linkage name.
 fn bootPanic(msg: [*c]const u8) callconv(.c) noreturn {
-    // We can't use printf() here (variadic in callconv(.c) not supported).
-    // The original C version calls DPRINTF which expands to printf when
-    // DEBUG is defined, or nothing when DEBUG is not defined. We just
-    // loop forever.
-    _ = msg;
+    DPRINTF("\nPANIC: {s}\n", .{msg});
     while (true) {}
 }
 

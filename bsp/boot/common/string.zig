@@ -141,3 +141,13 @@ pub export fn memset(dest: ?*anyopaque, ch: c_int, count: c_ulong) callconv(.c) 
     }
     return dest;
 }
+
+// ============================================================================
+// strlen — return length of string (uses volatile to prevent recursion)
+// ============================================================================
+pub export fn strlen(str: [*c]const u8) callconv(.c) c_ulong {
+    const s: [*]const volatile u8 = @ptrCast(str);
+    var i: usize = 0;
+    while (s[i] != 0) : (i += 1) {}
+    return i;
+}
