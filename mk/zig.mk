@@ -51,7 +51,11 @@ endif
 ifeq ($(CONFIG_SIZE_OPT),y)
 ZIG_OPT:=	-O ReleaseSmall
 else
+ifeq ($(_BOOT_),1)
+ZIG_OPT:=	-O ReleaseSmall
+else
 ZIG_OPT:=	-O ReleaseSafe
+endif
 endif
 
 # PIC/PIE Configuration: Default to no-PIC for better Prex loader compatibility,
