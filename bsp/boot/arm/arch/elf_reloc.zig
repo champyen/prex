@@ -27,31 +27,33 @@
 // bsp/boot/arm/arch/elf_reloc.zig — ARM Cortex-A ELF relocation engine.
 // Replaces bsp/boot/arm/arch/elf_reloc.c (MMU + ARMv8-M paths).
 
-const ffi = @import("ffi");
-const elf_t = ffi.elf.types;
-const arm = ffi.elf.arm;
+const elf = @import("ffi").elf;
+const mem = @import("ffi").mem;
+const boot = @import("ffi").boot;
+const cfg = @import("ffi").cfg;
+const print = @import("ffi").print;
 
 // ARMv8-M relocation globals (defined in bsp/boot/common/elf.c under CONFIG_ARMV8M).
-extern var current_symtab: [*]elf_t.Sym;
-extern var sram_got_base: elf_t.Addr;
-extern var text_vma: elf_t.Addr;
-extern var data_vma: elf_t.Addr;
-extern var text_runtime: elf_t.Addr;
-extern var data_runtime: elf_t.Addr;
-extern var elf_type: elf_t.Half;
+extern var current_symtab: [*]elf.types.Sym;
+extern var sram_got_base: elf.types.Addr;
+extern var text_vma: elf.types.Addr;
+extern var data_vma: elf.types.Addr;
+extern var text_runtime: elf.types.Addr;
+extern var data_runtime: elf.types.Addr;
+extern var elf_type: elf.types.Half;
 
 const R_ARM_GOT_BREL: u32 = 26;
 
 pub export fn relocate_rel(
-    rel: *elf_t.Rel,
-    sym_val: elf_t.Addr,
+    rel: *elf.types.Rel,
+    sym_val: elf.types.Addr,
     target_sect: [*]u8,
 ) callconv(.c) c_int {
     const r_type: u32 = @intCast(rel.r_info & 0xff);
-    const is_v8m: bool = ffi.mem.is_armv8m;
+    const is_v8m: bool = mem.is_armv8m;
 
-    const where: [*]align(1) elf_t.Addr = if (is_v8m) blk: {
-        if (elf_type == elf_t.ET_EXEC) {
+    const where: [*]align(1) elf.types.Addr = if (is_v8m) blk: {
+        if (elf_type == elf.types.ET_EXEC) {
             if (rel.r_offset < data_vma) {
                 const addr: u32 = text_runtime + (rel.r_offset - text_vma);
                 break :blk @ptrCast(@as(*anyopaque, @ptrFromInt(addr)));
@@ -64,14 +66,14 @@ pub export fn relocate_rel(
         }
     } else @ptrCast(target_sect + rel.r_offset);
 
-    const adj_sym_val: elf_t.Addr = if (is_v8m and elf_type == elf_t.ET_EXEC) blk: {
-        const sym: *elf_t.Sym = &current_symtab[rel.r_info >> 8];
+    const adj_sym_val: elf.types.Addr = if (is_v8m and elf_type == elf.types.ET_EXEC) blk: {
+        const sym: *elf.types.Sym = &current_symtab[rel.r_info >> 8];
         break :blk sym_val - sym.st_value;
     } else sym_val;
 
     if (is_v8m and r_type == R_ARM_GOT_BREL) {
-        const got_offset: elf_t.Addr = where[0];
-        const got_entry: [*]align(1) elf_t.Addr = @ptrCast(@as(*anyopaque, @ptrFromInt(sram_got_base + got_offset)));
+        const got_offset: elf.types.Addr = where[0];
+        const got_entry: [*]align(1) elf.types.Addr = @ptrCast(@as(*anyopaque, @ptrFromInt(sram_got_base + got_offset)));
         got_entry[0] = ptokv(sym_val);
         return 0;
     }
@@ -86,22 +88,22 @@ pub export fn relocate_rel(
     }
 
     switch (r_type) {
-        arm.R_ARM_NONE => {},
+        elf.arm.R_ARM_NONE => {},
 
-        arm.R_ARM_ABS32 => {
+        elf.arm.R_ARM_ABS32 => {
             where[0] += ptokv(adj_sym_val);
         },
 
-        arm.R_ARM_REL32 => {},
+        elf.arm.R_ARM_REL32 => {},
 
-        arm.R_ARM_MOVW_ABS_NC => {
+        elf.arm.R_ARM_MOVW_ABS_NC => {
             var addend: u32 = where[0];
             addend = ((addend & 0xf0000) >> 4) | (addend & 0xfff);
             const tmp: u32 = ptokv(adj_sym_val) + addend;
             where[0] = (where[0] & 0xfff0f000) | ((tmp & 0xf000) << 4) | (tmp & 0xfff);
         },
 
-        arm.R_ARM_MOVT_ABS => {
+        elf.arm.R_ARM_MOVT_ABS => {
             var addend: u32 = where[0];
             addend = ((addend & 0xf0000) >> 4) | (addend & 0xfff);
             var tmp: u32 = ptokv(adj_sym_val) + addend;
@@ -109,35 +111,35 @@ pub export fn relocate_rel(
             where[0] = (where[0] & 0xfff0f000) | ((tmp & 0xf000) << 4) | (tmp & 0xfff);
         },
 
-        arm.R_ARM_THM_MOVW_ABS_NC, arm.R_ARM_THM_MOVT_ABS => {
+        elf.arm.R_ARM_THM_MOVW_ABS_NC, elf.arm.R_ARM_THM_MOVT_ABS => {
             const upper_insn: u16 = @intCast(where[0] & 0xffff);
             const lower_insn: u16 = @intCast((where[0] >> 16) & 0xffff);
 
             const addend: u32 = ((upper_insn & 0x000f) << 12) |
-                ((upper_insn & 0x0400) << 1) |
-                ((lower_insn & 0x7000) >> 4) |
-                (lower_insn & 0x00ff);
+                 ((upper_insn & 0x0400) << 1) |
+                 ((lower_insn & 0x7000) >> 4) |
+                 (lower_insn & 0x00ff);
 
             var tmp: u32 = ptokv(adj_sym_val) + addend;
-            if (r_type == arm.R_ARM_THM_MOVT_ABS) {
+            if (r_type == elf.arm.R_ARM_THM_MOVT_ABS) {
                 tmp >>= 16;
             }
 
             const new_upper: u16 = @intCast(
                 (upper_insn & 0xfbf0) |
-                    ((tmp & 0xf000) >> 12) |
-                    ((tmp & 0x0800) >> 1),
+                     ((tmp & 0xf000) >> 12) |
+                     ((tmp & 0x0800) >> 1),
             );
             const new_lower: u16 = @intCast(
                 (lower_insn & 0x8f00) |
-                    ((tmp & 0x0700) << 4) |
-                    (tmp & 0x00ff),
+                     ((tmp & 0x0700) << 4) |
+                     (tmp & 0x00ff),
             );
-            where[0] = @as(elf_t.Addr, @intCast(new_upper)) |
-                (@as(elf_t.Addr, @intCast(new_lower)) << 16);
+            where[0] = @as(elf.types.Addr, @intCast(new_upper)) |
+                (@as(elf.types.Addr, @intCast(new_lower)) << 16);
         },
 
-        arm.R_ARM_THM_CALL, arm.R_ARM_THM_JUMP24 => {
+        elf.arm.R_ARM_THM_CALL, elf.arm.R_ARM_THM_JUMP24 => {
             const w: [*]u16 = @ptrCast(@alignCast(where));
             const upper: u32 = w[0];
             const lower: u32 = w[1];
@@ -195,7 +197,7 @@ pub export fn relocate_rel(
             }
         },
 
-        arm.R_ARM_PC24, arm.R_ARM_PLT32, arm.R_ARM_CALL, arm.R_ARM_JUMP24 => {
+        elf.arm.R_ARM_PC24, elf.arm.R_ARM_PLT32, elf.arm.R_ARM_CALL, elf.arm.R_ARM_JUMP24 => {
             var addend: u32 = where[0] & 0x00ffffff;
             if ((addend & 0x00800000) != 0) {
                 addend |= 0xff000000;
@@ -204,9 +206,9 @@ pub export fn relocate_rel(
             where[0] = (where[0] & 0xff000000) | ((tmp >> 2) & 0x00ffffff);
         },
 
-        arm.R_ARM_V4BX => {},
+        elf.arm.R_ARM_V4BX => {},
 
-        arm.R_ARM_PREL31 => {
+        elf.arm.R_ARM_PREL31 => {
             const addend: i32 = (@as(i32, @bitCast(where[0])) << 1) >> 1;
             const val: u32 = (
                 ptokv(sym_val) + @as(u32, @intCast(addend)) - @intFromPtr(where)
@@ -215,7 +217,7 @@ pub export fn relocate_rel(
         },
 
         else => {
-            ffi.print("relocation fail: type={d}\n", .{r_type});
+            print("relocation fail: type={d}\n", .{r_type});
             return -1;
         },
     }
@@ -223,11 +225,11 @@ pub export fn relocate_rel(
 }
 
 pub export fn relocate_rela(
-    _: [*]elf_t.Rela,
-    _: elf_t.Addr,
+    _: [*]elf.types.Rela,
+    _: elf.types.Addr,
     _: [*]u8,
 ) callconv(.c) c_int {
-    ffi.boot.panic("invalid relocation type");
+    boot.panic("invalid relocation type");
     return -1;
 }
 
@@ -235,4 +237,4 @@ inline fn ptokv(pa: u32) u32 {
     return pa + KERNOFFSET;
 }
 
-pub const KERNOFFSET: u32 = ffi.cfg.KERNOFFSET;
+pub const KERNOFFSET: u32 = cfg.KERNOFFSET;
