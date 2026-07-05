@@ -432,6 +432,8 @@ pub const cfg = struct {
     pub const CONFIG_SYSPAGE_BASE: usize = @intCast(c.CONFIG_SYSPAGE_BASE);
     pub const CONFIG_SYSPAGE_PHY_BASE: usize = @intCast(c.CONFIG_SYSPAGE_PHY_BASE);
     pub const CONFIG_RAM_SIZE: usize = @intCast(c.CONFIG_RAM_SIZE);
+    pub const CONFIG_PL011_PHY_BASE: usize = if (@hasDecl(c, "CONFIG_PL011_PHY_BASE")) @intCast(c.CONFIG_PL011_PHY_BASE) else 0;
+    pub const CONFIG_PL011_CLK: u32 = if (@hasDecl(c, "CONFIG_PL011_CLK")) @intCast(c.CONFIG_PL011_CLK) else 0;
     pub const KERNOFFSET: usize = if (@hasDecl(c, "KERNOFFSET")) @intCast(c.KERNOFFSET) else 0;
     pub const KERNBASE: usize = if (@hasDecl(c, "KERNBASE")) @intCast(c.KERNBASE) else 0;
     pub const BOOTINFO: usize = @intCast(c.BOOTINFO);
@@ -439,12 +441,17 @@ pub const cfg = struct {
     pub const BOOTSTKTOP: usize = @intCast(c.BOOTSTKTOP);
     pub const BOOTSTKSZ: usize = @intCast(c.BOOTSTKSZ);
     pub const SYSPAGE: usize = @intCast(c.SYSPAGE);
+    pub const SYSPAGESZ: usize = if (@hasDecl(c, "SYSPAGESZ")) @intCast(c.SYSPAGESZ) else 0;
+    pub const CONFIG_NS16550_PHY_BASE: usize = if (@hasDecl(c, "CONFIG_NS16550_PHY_BASE")) @intCast(c.CONFIG_NS16550_PHY_BASE) else 0;
+    pub const CONFIG_NS16550_BASE: usize = if (@hasDecl(c, "CONFIG_NS16550_BASE")) @intCast(c.CONFIG_NS16550_BASE) else 0;
 
     // Compile-time feature gates exposed to domain code (Zig 0.16 does not
     // support `c.X` introspection outside of `c.zig`).
     pub const DEBUG: bool = @hasDecl(c, "DEBUG");
     pub const DEBUG_BOOTINFO: bool = @hasDecl(c, "DEBUG_BOOTINFO");
     pub const DEBUG_ELF: bool = @hasDecl(c, "DEBUG_ELF");
+    pub const CONFIG_DIAG_SERIAL: bool = @hasDecl(c, "CONFIG_DIAG_SERIAL");
+    pub const CONFIG_DIAG_BOCHS: bool = @hasDecl(c, "CONFIG_DIAG_BOCHS");
 };
 
 // ============================================================================

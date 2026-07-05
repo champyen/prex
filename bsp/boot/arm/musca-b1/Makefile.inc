@@ -1,6 +1,6 @@
 
 SRCS:=		arm/arch/armv8-m/head.S \
-		arm/musca-b1/startup.c \
-		arm/musca-b1/debug.c
+		$(call pick_zig_boot_src,arm/musca-b1/startup) \
+		$(call pick_zig_boot_src,arm/musca-b1/debug)
 
 LDSCRIPT:=	$(CURDIR)/arm/arch/armv8-m/boot.ld

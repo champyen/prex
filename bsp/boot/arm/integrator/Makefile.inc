@@ -1,5 +1,5 @@
 
 SRCS:=		arm/arch/head.S \
-		arm/integrator/startup.c \
-		arm/integrator/debug.c
+		$(call pick_zig_boot_src,arm/integrator/startup) \
+		$(call pick_zig_boot_src,arm/integrator/debug)
 

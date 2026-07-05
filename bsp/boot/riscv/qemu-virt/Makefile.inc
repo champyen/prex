@@ -3,5 +3,5 @@
 #
 
 SRCS:=		riscv/arch/head.S \
-		riscv/qemu-virt/startup.c \
-		riscv/qemu-virt/debug.c
+		$(call pick_zig_boot_src,riscv/qemu-virt/startup) \
+		$(call pick_zig_boot_src,riscv/qemu-virt/debug)
