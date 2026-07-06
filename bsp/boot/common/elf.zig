@@ -56,6 +56,17 @@ const is_armv8m: bool = mem.is_armv8m;
 // Mirror of #define SHF_VALID.
 const SHF_VALID = elf.types.SHF_ALLOC | elf.types.SHF_EXECINSTR | elf.types.SHF_WRITE | elf.types.SHF_LINK_ORDER;
 
+// Packed structs for ELF relocation/symbol info bit-field access.
+const RelInfo = packed struct(u32) {
+    type: u8,
+    sym: u24,
+};
+
+const SymInfo = packed struct(u8) {
+    type: u4,
+    bind: u4,
+};
+
 // ============================================================================
 // Static state (matches the C file's static globals)
 // ============================================================================
@@ -940,16 +951,16 @@ fn relocateSectionRel(
     var i: c_int = 0;
     while (i < nr_reloc) : (i += 1) {
         const r: elf.types.Rel = rel[@intCast(i)];
-        const sym: [*]const elf.types.Sym = @ptrCast(&sym_table[r.r_info >> 8]);
+        const sym: [*]const elf.types.Sym = @ptrCast(&sym_table[@as(RelInfo, @bitCast(r.r_info)).sym]);
         if (sym[0].st_shndx != elf.types.STN_UNDEF) {
             const sym_val = computeSymVal(sym[0], r.r_offset, target_sect);
             const rc = relocate_rel_api(@ptrCast(@constCast(&r)), sym_val, target_sect);
             if (rc != 0) {
                 return -1;
             }
-        } else if ((r.r_info >> 8) == elf.types.STN_UNDEF) {
+        } else if (@as(RelInfo, @bitCast(r.r_info)).sym == elf.types.STN_UNDEF) {
             if (relocate_rel_api(@ptrCast(@constCast(&r)), sym[0].st_value, target_sect) != 0) return -1;
-        } else if ((sym[0].st_info >> 4) != elf.types.STB_WEAK) {
+        } else if (@as(SymInfo, @bitCast(sym[0].st_info)).bind != elf.types.STB_WEAK) {
             DPRINTF("Undefined symbol for rel[%x] sym=%lx\n", .{ i, @as(c_ulong, @intCast(@intFromPtr(sym))) });
             return -1;
         } else {
@@ -968,13 +979,13 @@ fn relocateSectionRela(
     var i: c_int = 0;
     while (i < nr_reloc) : (i += 1) {
         const r: elf.types.Rela = rela[@intCast(i)];
-        const sym: [*]const elf.types.Sym = @ptrCast(&sym_table[r.r_info >> 8]);
+        const sym: [*]const elf.types.Sym = @ptrCast(&sym_table[@as(RelInfo, @bitCast(r.r_info)).sym]);
         if (sym[0].st_shndx != elf.types.STN_UNDEF) {
             const sym_val = computeSymVal(sym[0], r.r_offset, target_sect);
             if (relocate_rela_api(@ptrCast(@constCast(&r)), sym_val, target_sect) != 0) return -1;
-        } else if ((r.r_info >> 8) == elf.types.STN_UNDEF) {
+        } else if (@as(RelInfo, @bitCast(r.r_info)).sym == elf.types.STN_UNDEF) {
             if (relocate_rela_api(@ptrCast(@constCast(&r)), sym[0].st_value, target_sect) != 0) return -1;
-        } else if ((sym[0].st_info >> 4) != elf.types.STB_WEAK) {
+        } else if (@as(SymInfo, @bitCast(sym[0].st_info)).bind != elf.types.STB_WEAK) {
             DPRINTF("Undefined symbol for rela[%x] sym=%lx\n", .{ i, @as(c_ulong, @intCast(@intFromPtr(sym))) });
             return -1;
         } else {

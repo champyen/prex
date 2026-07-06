@@ -44,6 +44,103 @@ extern var elf_type: elf.types.Half;
 
 const R_ARM_GOT_BREL: u32 = 26;
 
+const RelInfo = packed struct(u32) {
+    type: u8,
+    sym: u24,
+};
+
+const Thumb2MovwUpper = packed struct(u16) {
+    imm4: u4,
+    _pad1: u6,
+    i: u1,
+    _pad2: u5,
+};
+
+const Thumb2MovwLower = packed struct(u16) {
+    imm8: u8,
+    _pad1: u4,
+    imm3: u3,
+    _pad2: u1,
+};
+
+const ArmMovwInstruction = packed struct(u32) {
+    imm12: u12,
+    rd: u4,
+    imm4: u4,
+    opcode: u12,
+};
+
+const ArmMovwImmediate = packed struct(u16) {
+    imm12: u12,
+    imm4: u4,
+};
+
+const Thumb2MovwImmediate = packed struct(u16) {
+    imm8: u8,
+    imm3: u3,
+    i: u1,
+    imm4: u4,
+};
+
+const ArmAddressParts = packed struct(u32) {
+    lo16: u16,
+    hi16: u16,
+};
+
+const Thumb2MovwInstruction = packed struct(u32) {
+    upper: Thumb2MovwUpper,
+    lower: Thumb2MovwLower,
+};
+
+const Thumb2BranchInstruction = packed struct(u32) {
+    // upper 16 bits (w[0] in inst_val)
+    imm10: u10,
+    s: u1,
+    opcode: u5,
+
+    // lower 16 bits (w[1] in inst_val)
+    imm11: u11,
+    j2: u1,
+    opcode2: u1,
+    j1: u1,
+    op: u2,
+};
+
+const Thumb2BranchOffset = packed struct(u32) {
+    _pad: u1 = 0,
+    imm11: u11,
+    imm10: u10,
+    i2: u1,
+    i1: u1,
+    s: u1,
+    sign_extension: u7,
+};
+
+const ArmBranchInstruction = packed struct(u32) {
+    imm24_val: u23,
+    imm24_sign: u1,
+    opcode: u8,
+};
+
+const ArmBranchOffset = packed struct(u32) {
+    _pad: u2 = 0,
+    imm24_val: u23,
+    imm24_sign: u1,
+    sign_extension: u6,
+};
+
+const ArmPrel31Instruction = packed struct(u32) {
+    offset_val: u30,
+    offset_sign: u1,
+    reserved: u1,
+};
+
+const ArmPrel31Offset = packed struct(u32) {
+    val: u30,
+    sign: u1,
+    sign_extension: u1,
+};
+
 pub export fn relocate_rel(
     rel: *elf.types.Rel,
     sym_val: elf.types.Addr,
@@ -67,7 +164,7 @@ pub export fn relocate_rel(
     } else @ptrCast(target_sect + rel.r_offset);
 
     const adj_sym_val: elf.types.Addr = if (is_v8m and elf_type == elf.types.ET_EXEC) blk: {
-        const sym: *elf.types.Sym = &current_symtab[rel.r_info >> 8];
+        const sym: *elf.types.Sym = &current_symtab[@as(RelInfo, @bitCast(rel.r_info)).sym];
         break :blk sym_val - sym.st_value;
     } else sym_val;
 
@@ -96,124 +193,124 @@ pub export fn relocate_rel(
 
         elf.arm.R_ARM_REL32 => {},
 
-        elf.arm.R_ARM_MOVW_ABS_NC => {
-            var addend: u32 = where[0];
-            addend = ((addend & 0xf0000) >> 4) | (addend & 0xfff);
+        elf.arm.R_ARM_MOVW_ABS_NC, elf.arm.R_ARM_MOVT_ABS => {
+            const inst: ArmMovwInstruction = @bitCast(where[0]);
+            const addend: u32 = @as(u16, @bitCast(ArmMovwImmediate{ .imm12 = inst.imm12, .imm4 = inst.imm4 }));
             const tmp: u32 = ptokv(adj_sym_val) + addend;
-            where[0] = (where[0] & 0xfff0f000) | ((tmp & 0xf000) << 4) | (tmp & 0xfff);
-        },
-
-        elf.arm.R_ARM_MOVT_ABS => {
-            var addend: u32 = where[0];
-            addend = ((addend & 0xf0000) >> 4) | (addend & 0xfff);
-            var tmp: u32 = ptokv(adj_sym_val) + addend;
-            tmp >>= 16;
-            where[0] = (where[0] & 0xfff0f000) | ((tmp & 0xf000) << 4) | (tmp & 0xfff);
+            const parts = @as(ArmAddressParts, @bitCast(tmp));
+            const target_val = if (r_type == elf.arm.R_ARM_MOVT_ABS) parts.hi16 else parts.lo16;
+            const new_imm = @as(ArmMovwImmediate, @bitCast(@as(u16, @intCast(target_val))));
+            var new_inst = inst;
+            new_inst.imm12 = new_imm.imm12;
+            new_inst.imm4 = new_imm.imm4;
+            where[0] = @bitCast(new_inst);
         },
 
         elf.arm.R_ARM_THM_MOVW_ABS_NC, elf.arm.R_ARM_THM_MOVT_ABS => {
-            const upper_insn: u16 = @intCast(where[0] & 0xffff);
-            const lower_insn: u16 = @intCast((where[0] >> 16) & 0xffff);
-
-            const addend: u32 = ((upper_insn & 0x000f) << 12) |
-                 ((upper_insn & 0x0400) << 1) |
-                 ((lower_insn & 0x7000) >> 4) |
-                 (lower_insn & 0x00ff);
-
-            var tmp: u32 = ptokv(adj_sym_val) + addend;
-            if (r_type == elf.arm.R_ARM_THM_MOVT_ABS) {
-                tmp >>= 16;
-            }
-
-            const new_upper: u16 = @intCast(
-                (upper_insn & 0xfbf0) |
-                     ((tmp & 0xf000) >> 12) |
-                     ((tmp & 0x0800) >> 1),
-            );
-            const new_lower: u16 = @intCast(
-                (lower_insn & 0x8f00) |
-                     ((tmp & 0x0700) << 4) |
-                     (tmp & 0x00ff),
-            );
-            where[0] = @as(elf.types.Addr, @intCast(new_upper)) |
-                (@as(elf.types.Addr, @intCast(new_lower)) << 16);
+            const inst = @as(Thumb2MovwInstruction, @bitCast(where[0]));
+            const addend: u32 = @as(u16, @bitCast(Thumb2MovwImmediate{
+                .imm8 = inst.lower.imm8,
+                .imm3 = inst.lower.imm3,
+                .i = inst.upper.i,
+                .imm4 = inst.upper.imm4,
+            }));
+            const tmp: u32 = ptokv(adj_sym_val) + addend;
+            const parts = @as(ArmAddressParts, @bitCast(tmp));
+            const target_val = if (r_type == elf.arm.R_ARM_THM_MOVT_ABS) parts.hi16 else parts.lo16;
+            const new_imm = @as(Thumb2MovwImmediate, @bitCast(@as(u16, @intCast(target_val))));
+            var new_inst = inst;
+            new_inst.upper.imm4 = new_imm.imm4;
+            new_inst.upper.i = new_imm.i;
+            new_inst.lower.imm8 = new_imm.imm8;
+            new_inst.lower.imm3 = new_imm.imm3;
+            where[0] = @bitCast(new_inst);
         },
 
         elf.arm.R_ARM_THM_CALL, elf.arm.R_ARM_THM_JUMP24 => {
-            const w: [*]u16 = @ptrCast(@alignCast(where));
-            const upper: u32 = w[0];
-            const lower: u32 = w[1];
-            const upper_s: u32 = (upper >> 10) & 1;
-            const j1: u32 = (lower >> 13) & 1;
-            const j2: u32 = (lower >> 11) & 1;
-            const i1_bit: u32 = if ((j1 ^ upper_s) != 0) 0 else 1;
-            const i2_bit: u32 = if ((j2 ^ upper_s) != 0) 0 else 1;
+            const inst: Thumb2BranchInstruction = @bitCast(where[0]);
 
-            var addend: u32 = (upper_s << 31 >> 7) |
-                (i1_bit << 23) |
-                (i2_bit << 22) |
-                ((upper & 0x3ff) << 12) |
-                ((lower & 0x7ff) << 1);
-            if ((addend & 0x01000000) != 0) {
-                addend |= 0xfe000000;
-            }
+            const i1_bit: u1 = if (inst.j1 == inst.s) 1 else 0;
+            const i2_bit: u1 = if (inst.j2 == inst.s) 1 else 0;
+
+            const offset_struct = Thumb2BranchOffset{
+                .imm11 = inst.imm11,
+                .imm10 = inst.imm10,
+                .i2 = i2_bit,
+                .i1 = i1_bit,
+                .s = inst.s,
+                .sign_extension = if (inst.s == 1) @as(u7, 0x7f) else @as(u7, 0),
+            };
+            const addend: i32 = @bitCast(offset_struct);
 
             if ((sym_val & 1) != 0) {
                 const tmp: i32 = @bitCast(
                     @as(u32, @bitCast(sym_val)) -
                         @as(u32, @intCast(@intFromPtr(where))) +
-                        addend,
+                        @as(u32, @bitCast(addend)),
                 );
-                const s: u32 = (@as(u32, @bitCast(tmp)) >> 24) & 1;
-                const bi1: u32 = (@as(u32, @bitCast(tmp)) >> 23) & 1;
-                const bi2: u32 = (@as(u32, @bitCast(tmp)) >> 22) & 1;
-                const bj1: u32 = if (bi1 ^ s != 0) 0 else 1;
-                const bj2: u32 = if (bi2 ^ s != 0) 0 else 1;
-                w[0] = @intCast(
-                    (upper & 0xf800) | (s << 10) | ((@as(u32, @bitCast(tmp)) >> 12) & 0x3ff),
-                );
-                w[1] = @intCast(
-                    (lower & 0xd000) | (bj1 << 13) | (1 << 12) | (bj2 << 11) |
-                        ((@as(u32, @bitCast(tmp)) >> 1) & 0x7ff),
-                );
+                const new_offset = @as(Thumb2BranchOffset, @bitCast(tmp));
+                var new_inst = inst;
+                new_inst.imm10 = new_offset.imm10;
+                new_inst.imm11 = new_offset.imm11;
+                new_inst.s = new_offset.s;
+                new_inst.j1 = if (new_offset.i1 == new_offset.s) 1 else 0;
+                new_inst.j2 = if (new_offset.i2 == new_offset.s) 1 else 0;
+                where[0] = @bitCast(new_inst);
             } else {
                 const tmp: i32 = @bitCast(
                     @as(u32, @bitCast(sym_val & ~@as(u32, 3))) -
                         @as(u32, @intCast(@intFromPtr(where) & ~@as(usize, 3))) +
-                        addend,
+                        @as(u32, @bitCast(addend)),
                 );
-                const s: u32 = (@as(u32, @bitCast(tmp)) >> 24) & 1;
-                const bi1: u32 = (@as(u32, @bitCast(tmp)) >> 23) & 1;
-                const bi2: u32 = (@as(u32, @bitCast(tmp)) >> 22) & 1;
-                const bj1: u32 = if (bi1 ^ s != 0) 0 else 1;
-                const bj2: u32 = if (bi2 ^ s != 0) 0 else 1;
-                w[0] = @intCast(
-                    (upper & 0xf800) | (s << 10) | ((@as(u32, @bitCast(tmp)) >> 12) & 0x3ff),
-                );
-                w[1] = @intCast(
-                    (lower & 0xd000) | (bj1 << 13) | (0 << 12) | (bj2 << 11) |
-                        ((@as(u32, @bitCast(tmp)) >> 1) & 0x7ff),
-                );
+                const new_offset = @as(Thumb2BranchOffset, @bitCast(tmp));
+                var new_inst = inst;
+                new_inst.imm10 = new_offset.imm10;
+                new_inst.imm11 = new_offset.imm11;
+                new_inst.s = new_offset.s;
+                new_inst.j1 = if (new_offset.i1 == new_offset.s) 1 else 0;
+                new_inst.j2 = if (new_offset.i2 == new_offset.s) 1 else 0;
+                where[0] = @bitCast(new_inst);
             }
         },
 
         elf.arm.R_ARM_PC24, elf.arm.R_ARM_PLT32, elf.arm.R_ARM_CALL, elf.arm.R_ARM_JUMP24 => {
-            var addend: u32 = where[0] & 0x00ffffff;
-            if ((addend & 0x00800000) != 0) {
-                addend |= 0xff000000;
-            }
-            const tmp: u32 = sym_val - @intFromPtr(where) + (addend << 2);
-            where[0] = (where[0] & 0xff000000) | ((tmp >> 2) & 0x00ffffff);
+            const inst: ArmBranchInstruction = @bitCast(where[0]);
+            const offset_struct = ArmBranchOffset{
+                .imm24_val = inst.imm24_val,
+                .imm24_sign = inst.imm24_sign,
+                .sign_extension = if (inst.imm24_sign == 1) @as(u6, 0x3f) else @as(u6, 0),
+            };
+            const addend: i32 = @bitCast(offset_struct);
+
+            const tmp: i32 = @bitCast(
+                @as(u32, @bitCast(sym_val)) - @as(u32, @intCast(@intFromPtr(where))) + @as(u32, @bitCast(addend)),
+            );
+            
+            const new_offset = @as(ArmBranchOffset, @bitCast(tmp));
+            var new_inst = inst;
+            new_inst.imm24_val = new_offset.imm24_val;
+            new_inst.imm24_sign = new_offset.imm24_sign;
+            where[0] = @bitCast(new_inst);
         },
 
         elf.arm.R_ARM_V4BX => {},
 
         elf.arm.R_ARM_PREL31 => {
-            const addend: i32 = (@as(i32, @bitCast(where[0])) << 1) >> 1;
-            const val: u32 = (
-                ptokv(sym_val) + @as(u32, @intCast(addend)) - @intFromPtr(where)
-            ) & 0x7fffffff;
-            where[0] = (where[0] & 0x80000000) | val;
+            const inst: ArmPrel31Instruction = @bitCast(where[0]);
+            const offset_struct = ArmPrel31Offset{
+                .val = inst.offset_val,
+                .sign = inst.offset_sign,
+                .sign_extension = inst.offset_sign,
+            };
+            const addend: i32 = @bitCast(offset_struct);
+
+            const val: u32 = ptokv(sym_val) + @as(u32, @bitCast(addend)) - @intFromPtr(where);
+            
+            const new_offset = @as(ArmPrel31Offset, @bitCast(val));
+            var new_inst = inst;
+            new_inst.offset_val = new_offset.val;
+            new_inst.offset_sign = new_offset.sign;
+            where[0] = @bitCast(new_inst);
         },
 
         else => {

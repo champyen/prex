@@ -37,6 +37,49 @@ inline fn DPRINTF(comptime format: [*c]const u8, args: anytype) void {
     }
 }
 
+const RelInfo = packed struct(u32) {
+    type: u8,
+    sym: u24,
+};
+
+const RiscvBranchInstruction = packed struct(u32) {
+    opcode: u7,
+    imm11: u1,
+    imm4_1: u4,
+    funct3: u3,
+    rs1: u5,
+    rs2: u5,
+    imm10_5: u6,
+    imm12: u1,
+};
+
+const RiscvJalInstruction = packed struct(u32) {
+    opcode: u7,
+    rd: u5,
+    imm19_12: u8,
+    imm11: u1,
+    imm10_1: u10,
+    imm20: u1,
+};
+
+const RiscvBranchOffset = packed struct(u32) {
+    _pad: u1 = 0,
+    imm4_1: u4,
+    imm10_5: u6,
+    imm11: u1,
+    imm12: u1,
+    sign_extension: u19,
+};
+
+const RiscvJalOffset = packed struct(u32) {
+    _pad: u1 = 0,
+    imm10_1: u10,
+    imm11: u1,
+    imm19_12: u8,
+    imm20: u1,
+    sign_extension: u11,
+};
+
 // A small LUT to store the calculated offset of HI20 relocations,
 // so they can be retrieved by the following LO12 relocations.
 const MAX_HI20 = 256;
@@ -64,6 +107,39 @@ fn find_hi20(addr: elf.types.Addr) i32 {
     return 0;
 }
 
+const RiscvAddressOffset = packed struct(u32) {
+    lo12: i12,
+    hi20: i20,
+};
+
+const RiscvUTypeInstruction = packed struct(u32) {
+    opcode: u7,
+    rd: u5,
+    imm20: u20,
+};
+
+const RiscvITypeInstruction = packed struct(u32) {
+    opcode: u7,
+    rd: u5,
+    funct3: u3,
+    rs1: u5,
+    imm12: i12,
+};
+
+const RiscvSTypeInstruction = packed struct(u32) {
+    opcode: u7,
+    imm4_0: u5,
+    funct3: u3,
+    rs1: u5,
+    rs2: u5,
+    imm11_5: u7,
+};
+
+const RiscvSTypeOffset = packed struct(i12) {
+    imm4_0: u5,
+    imm11_5: u7,
+};
+
 pub export fn relocate_rela(
     rela: *elf.types.Rela,
     sym_val: elf.types.Addr,
@@ -71,7 +147,7 @@ pub export fn relocate_rela(
 ) callconv(.c) c_int {
     const where: [*]align(1) elf.types.Addr = @ptrCast(target_sect + rela.r_offset);
     const val: elf.types.Addr = sym_val + @as(elf.types.Addr, @bitCast(rela.r_addend));
-    const r_type = rel_type_cast(rela.r_info & 0xff);
+    const r_type = @as(RelInfo, @bitCast(rela.r_info)).type;
 
     switch (r_type) {
         elf.riscv.R_RISCV_NONE, elf.riscv.R_RISCV_RELAX, elf.riscv.R_RISCV_ALIGN => {},
@@ -82,68 +158,109 @@ pub export fn relocate_rela(
 
         elf.riscv.R_RISCV_HI20 => {
             const offset: i32 = @bitCast(val);
-            const hi: u32 = @bitCast((offset + 0x800) >> 12);
-            where[0] = (where[0] & 0x00000fff) | (hi << 12);
+            const off = @as(RiscvAddressOffset, @bitCast(offset));
+            const hi_val: i20 = if (off.lo12 < 0) off.hi20 + 1 else off.hi20;
+            
+            const inst: RiscvUTypeInstruction = @bitCast(where[0]);
+            var new_inst = inst;
+            new_inst.imm20 = @bitCast(hi_val);
+            where[0] = @bitCast(new_inst);
         },
 
         elf.riscv.R_RISCV_LO12_I => {
             const offset: i32 = @bitCast(val);
-            const lo: u32 = @bitCast(offset & 0xfff);
-            where[0] = (where[0] & 0x000fffff) | (lo << 20);
+            const off = @as(RiscvAddressOffset, @bitCast(offset));
+            
+            const inst: RiscvITypeInstruction = @bitCast(where[0]);
+            var new_inst = inst;
+            new_inst.imm12 = @bitCast(off.lo12);
+            where[0] = @bitCast(new_inst);
         },
 
         elf.riscv.R_RISCV_LO12_S => {
             const offset: i32 = @bitCast(val);
-            const lo: u32 = @bitCast(offset & 0xfff);
-            where[0] = (where[0] & 0x01fff07f) | ((lo & 0xfe0) << 20) | ((lo & 0x01f) << 7);
+            const off = @as(RiscvAddressOffset, @bitCast(offset));
+            const s_off = @as(RiscvSTypeOffset, @bitCast(off.lo12));
+            
+            const inst: RiscvSTypeInstruction = @bitCast(where[0]);
+            var new_inst = inst;
+            new_inst.imm4_0 = s_off.imm4_0;
+            new_inst.imm11_5 = s_off.imm11_5;
+            where[0] = @bitCast(new_inst);
         },
 
         elf.riscv.R_RISCV_PCREL_HI20 => {
             const offset: i32 = @bitCast(val - @intFromPtr(where));
-            const hi: u32 = @bitCast((offset + 0x800) >> 12);
-            where[0] = (where[0] & 0x00000fff) | (hi << 12);
+            const off = @as(RiscvAddressOffset, @bitCast(offset));
+            const hi_val: i20 = if (off.lo12 < 0) off.hi20 + 1 else off.hi20;
+            
+            const inst: RiscvUTypeInstruction = @bitCast(where[0]);
+            var new_inst = inst;
+            new_inst.imm20 = @bitCast(hi_val);
+            where[0] = @bitCast(new_inst);
             add_hi20(@intFromPtr(where), offset);
         },
 
         elf.riscv.R_RISCV_PCREL_LO12_I => {
             const offset = find_hi20(sym_val);
-            const lo: u32 = @bitCast(offset & 0xfff);
-            where[0] = (where[0] & 0x000fffff) | (lo << 20);
+            const off = @as(RiscvAddressOffset, @bitCast(offset));
+            
+            const inst: RiscvITypeInstruction = @bitCast(where[0]);
+            var new_inst = inst;
+            new_inst.imm12 = @bitCast(off.lo12);
+            where[0] = @bitCast(new_inst);
         },
 
         elf.riscv.R_RISCV_PCREL_LO12_S => {
             const offset = find_hi20(sym_val);
-            const lo: u32 = @bitCast(offset & 0xfff);
-            where[0] = (where[0] & 0x01fff07f) | ((lo & 0xfe0) << 20) | ((lo & 0x01f) << 7);
+            const off = @as(RiscvAddressOffset, @bitCast(offset));
+            const s_off = @as(RiscvSTypeOffset, @bitCast(off.lo12));
+            
+            const inst: RiscvSTypeInstruction = @bitCast(where[0]);
+            var new_inst = inst;
+            new_inst.imm4_0 = s_off.imm4_0;
+            new_inst.imm11_5 = s_off.imm11_5;
+            where[0] = @bitCast(new_inst);
         },
 
         elf.riscv.R_RISCV_CALL, elf.riscv.R_RISCV_CALL_PLT => {
             const offset: i32 = @bitCast(val - @intFromPtr(where));
-            const hi: u32 = @bitCast((offset + 0x800) >> 12);
-            const lo: u32 = @bitCast(offset & 0xfff);
+            const off = @as(RiscvAddressOffset, @bitCast(offset));
+            const hi_val: i20 = if (off.lo12 < 0) off.hi20 + 1 else off.hi20;
+            
             // Patch auipc
-            where[0] = (where[0] & 0x00000fff) | (hi << 12);
+            const auipc_inst: RiscvUTypeInstruction = @bitCast(where[0]);
+            var new_auipc = auipc_inst;
+            new_auipc.imm20 = @bitCast(hi_val);
+            where[0] = @bitCast(new_auipc);
+            
             // Patch jalr
-            const jalr_ptr: *align(1) elf.types.Addr = @ptrCast(&where[1]);
-            jalr_ptr.* = (jalr_ptr.* & 0x000fffff) | (lo << 20);
+            const jalr_inst: RiscvITypeInstruction = @bitCast(where[1]);
+            var new_jalr = jalr_inst;
+            new_jalr.imm12 = @bitCast(off.lo12);
+            where[1] = @bitCast(new_jalr);
         },
 
         elf.riscv.R_RISCV_BRANCH => {
             const offset: i32 = @bitCast(val - @intFromPtr(where));
-            where[0] = (where[0] & 0x01fff07f) |
-                ((@as(u32, @bitCast((offset >> 12) & 0x01))) << 31) |
-                ((@as(u32, @bitCast((offset >> 5) & 0x3f))) << 25) |
-                ((@as(u32, @bitCast((offset >> 1) & 0x0f))) << 8) |
-                ((@as(u32, @bitCast((offset >> 11) & 0x01))) << 7);
+            const off_struct = @as(RiscvBranchOffset, @bitCast(offset));
+            var inst = @as(RiscvBranchInstruction, @bitCast(where[0]));
+            inst.imm12 = off_struct.imm12;
+            inst.imm10_5 = off_struct.imm10_5;
+            inst.imm4_1 = off_struct.imm4_1;
+            inst.imm11 = off_struct.imm11;
+            where[0] = @bitCast(inst);
         },
 
         elf.riscv.R_RISCV_JAL => {
             const offset: i32 = @bitCast(val - @intFromPtr(where));
-            where[0] = (where[0] & 0x0000007f) |
-                ((@as(u32, @bitCast((offset >> 20) & 0x01))) << 31) |
-                ((@as(u32, @bitCast((offset >> 1) & 0x3ff))) << 21) |
-                ((@as(u32, @bitCast((offset >> 11) & 0x01))) << 20) |
-                ((@as(u32, @bitCast((offset >> 12) & 0xff))) << 12);
+            const off_struct = @as(RiscvJalOffset, @bitCast(offset));
+            var inst = @as(RiscvJalInstruction, @bitCast(where[0]));
+            inst.imm20 = off_struct.imm20;
+            inst.imm10_1 = off_struct.imm10_1;
+            inst.imm11 = off_struct.imm11;
+            inst.imm19_12 = off_struct.imm19_12;
+            where[0] = @bitCast(inst);
         },
 
         elf.riscv.R_RISCV_ADD32 => {
@@ -208,6 +325,3 @@ pub export fn relocate_rel(
     return -1;
 }
 
-inline fn rel_type_cast(val: u64) u32 {
-    return @intCast(val);
-}
