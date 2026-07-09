@@ -165,9 +165,8 @@ fn setup_bootdisk(hdr: *ffi.ar.@"struct") void {
 }
 
 // ARMv8-M: _bss_end is provided by linker script
-// Use extern var for the label address; the value is the end-of-bss address
-// but reading the var gives the VALUE (0 after BSS zeroing), so we take its address
-pub extern var _bss_end: usize;
+// Use @extern inside the is_armv8m branch so the symbol reference is only
+// emitted for ARMv8-M targets (not for Cortex-A which lacks the symbol).
 
 // ============================================================================
 // load_os — public C-ABI entry point
@@ -185,9 +184,9 @@ pub export fn load_os() callconv(.c) void {
 
     if (is_armv8m) {
         // ARMv8-M: sram_load_base/start from _bss_end
-        // _bss_end is a linker label; reading the Zig extern var gives the VALUE (0 after BSS zeroing).
-        // We must take the ADDRESS of the var (&_bss_end) to get the label's actual address.
-        sram_load_start = ffi.mem.round_page(ffi.addr.kvtop(@intFromPtr(&_bss_end)));
+        // _bss_end is a linker label; @extern resolves it to a pointer
+        const bss_end = @extern(*usize, .{ .name = "_bss_end" });
+        sram_load_start = ffi.mem.round_page(ffi.addr.kvtop(@intFromPtr(bss_end)));
         sram_load_base = sram_load_start;
     }
 

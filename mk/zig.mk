@@ -9,23 +9,25 @@ ifeq ($(ARCH),arm)
   ZIG_TARGET := arm-freestanding-eabi
 
   # Enable Thumb mode dynamically depending on active component and configuration
+  # Note: keep arm-freestanding-eabi target (A-profile) even for Thumb code;
+  # use +thumb CPU feature instead, since thumb-freestanding-eabi is M-profile.
   ifeq ($(CONFIG_THUMB),y)
     ifeq ($(_BOOT_),1)
       ifeq ($(CONFIG_BOOT_THUMB),y)
-        ZIG_TARGET := thumb-freestanding-eabi
+        ZIG_THUMB := y
       endif
     else ifeq ($(_DRV_),1)
       ifeq ($(CONFIG_DRV_THUMB),y)
-        ZIG_TARGET := thumb-freestanding-eabi
+        ZIG_THUMB := y
       endif
     else ifeq ($(_KRNL_),1)
       ifeq ($(CONFIG_KERNEL_THUMB),y)
-        ZIG_TARGET := thumb-freestanding-eabi
+        ZIG_THUMB := y
       endif
     else
       ifeq ($(CONFIG_USR_THUMB),y)
         # Future-proofing: Zig user-space applications
-        ZIG_TARGET := thumb-freestanding-eabi
+        ZIG_THUMB := y
       endif
     endif
   endif
@@ -34,9 +36,16 @@ ifeq ($(ARCH),arm)
   ifneq ($(filter -mcpu=%,$(CFLAGS) $(GCCFLAGS)),)
     RAW_CPU := $(firstword $(patsubst -mcpu=%,%,$(filter -mcpu=%,$(CFLAGS) $(GCCFLAGS))))
     ZIG_CPU := $(subst -,_,$(RAW_CPU))
+    ifeq ($(ZIG_THUMB),y)
+      ZIG_CPU := $(ZIG_CPU)+thumb_mode
+    endif
     # Detect mno-unaligned-access
     ifneq ($(filter -mno-unaligned-access,$(CFLAGS) $(GCCFLAGS)),)
       ZIG_CPU := $(ZIG_CPU)+strict_align
+    endif
+    # Reserve R9 for Cortex-M33 target (XIP / GOT support)
+    ifeq ($(RAW_CPU),cortex-m33)
+      ZIG_CPU := $(ZIG_CPU)+reserve_r9
     endif
     ZIGFLAGS += -mcpu $(ZIG_CPU)
   endif

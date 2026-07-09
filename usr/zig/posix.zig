@@ -27,26 +27,87 @@
 const std = @import("std");
 
 /// Prex+ POSIX Interface Wrapper for Zig
-pub const c = @cImport({
+/// Prex+ POSIX Interface Wrapper for Zig
+pub const unistd = @cImport({
     @cInclude("conf/config.h");
     @cInclude("unistd.h");
+});
+
+pub const stdlib = @cImport({
+    @cInclude("conf/config.h");
     @cInclude("stdlib.h");
+});
+
+pub const stdio = @cImport({
+    @cInclude("conf/config.h");
     @cInclude("stdio.h");
+});
+
+pub const errno = @cImport({
+    @cInclude("conf/config.h");
     @cInclude("errno.h");
+});
+
+pub const fcntl = @cImport({
+    @cInclude("conf/config.h");
     @cInclude("fcntl.h");
 });
+
+pub const string = @cImport({
+    @cInclude("conf/config.h");
+    @cInclude("string.h");
+});
+
+pub const prex = @cImport({
+    @cInclude("conf/config.h");
+    @cInclude("sys/prex.h");
+});
+
+pub const sys = struct {
+    pub const mount = @cImport({
+        @cInclude("conf/config.h");
+        @cInclude("sys/mount.h");
+    });
+    pub const syslog = @cImport({
+        @cInclude("conf/config.h");
+        @cInclude("sys/syslog.h");
+    });
+    pub const stat = @cImport({
+        @cInclude("conf/config.h");
+        @cInclude("sys/stat.h");
+    });
+};
+
+pub const ipc = struct {
+    pub const fs = @cImport({
+        @cInclude("conf/config.h");
+        @cInclude("ipc/fs.h");
+    });
+    pub const proc = @cImport({
+        @cInclude("conf/config.h");
+        @cInclude("ipc/proc.h");
+    });
+    pub const exec = @cImport({
+        @cInclude("conf/config.h");
+        @cInclude("ipc/exec.h");
+    });
+    pub const ipc = @cImport({
+        @cInclude("conf/config.h");
+        @cInclude("ipc/ipc.h");
+    });
+};
 
 /// Formatted print utility routing to standard output (via POSIX write)
 pub fn print(comptime fmt: []const u8, args: anytype) void {
     if (args.len == 0) {
-        _ = c.write(1, fmt.ptr, fmt.len);
+        _ = unistd.write(1, fmt.ptr, fmt.len);
     } else {
         var buf: [512]u8 = undefined;
         if (std.fmt.bufPrint(&buf, fmt, args)) |msg| {
-            _ = c.write(1, msg.ptr, msg.len);
+            _ = unistd.write(1, msg.ptr, msg.len);
         } else |_| {
             const err_msg = "print formatting failed\n";
-            _ = c.write(1, err_msg.ptr, err_msg.len);
+            _ = unistd.write(1, err_msg.ptr, err_msg.len);
         }
     }
 }
@@ -55,12 +116,12 @@ pub fn print(comptime fmt: []const u8, args: anytype) void {
 pub fn panic(msg: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
     var buf: [512]u8 = undefined;
     if (std.fmt.bufPrint(&buf, "ZIG PANIC: {s}\n", .{msg})) |formatted| {
-        _ = c.write(2, formatted.ptr, formatted.len);
+        _ = unistd.write(2, formatted.ptr, formatted.len);
     } else |_| {
         const err_msg = "ZIG PANIC!\n";
-        _ = c.write(2, err_msg.ptr, err_msg.len);
+        _ = unistd.write(2, err_msg.ptr, err_msg.len);
     }
-    c.exit(1);
+    stdlib.exit(1);
 }
 
 /// Standard allocator wrapping malloc/free for POSIX processes
@@ -75,12 +136,12 @@ pub const allocator = std.mem.Allocator{
 };
 
 fn alloc(_: *anyopaque, len: usize, _: std.mem.Alignment, _: usize) ?[*]u8 {
-    if (c.malloc(len)) |ptr| {
+    if (stdlib.malloc(len)) |ptr| {
         return @ptrCast(ptr);
     }
     return null;
 }
 
 fn free(_: *anyopaque, buf: []u8, _: std.mem.Alignment, _: usize) void {
-    c.free(buf.ptr);
+    stdlib.free(buf.ptr);
 }
