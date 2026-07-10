@@ -226,18 +226,15 @@ pub fn open(name: [*c]const u8, mode: c_int, devp: ?*?*kern.Device) callconv(.c)
     const copy_err: c_int = hal.copyinstr(@ptrCast(name), @ptrCast(&str), hal.MAXDEVNAME);
     if (copy_err != 0) return copy_err;
 
-    sched.lock();
-    const dev: ?*kern.Device = lookup(@ptrCast(&str));
-    if (dev == null) {
-        sched.unlock();
-        return kern.Errno.ENXIO;
-    }
-    const ref_err: c_int = reference(dev);
-    if (ref_err != 0) {
-        sched.unlock();
-        return ref_err;
-    }
-    sched.unlock();
+    const dev: ?*kern.Device = dev: {
+        sched.lock();
+        defer sched.unlock();
+        const d: ?*kern.Device = lookup(@ptrCast(&str));
+        if (d == null) return kern.Errno.ENXIO;
+        const ref_err: c_int = reference(d);
+        if (ref_err != 0) return ref_err;
+        break :dev d;
+    };
 
     const drv: ?*hal.Driver = dev.?.driver;
     const ops: ?*hal.DevOps = if (drv) |d| d.devops else null;

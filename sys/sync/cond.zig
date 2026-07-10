@@ -144,37 +144,36 @@ pub fn wait(cp: ?*kern.CondRef, mp: ?*kern.MutexRef) callconv(.c) c_int {
         return kern.Errno.EINVAL;
     }
 
-    sched.lock();
-    if (is_cond_initializer(m)) {
-        const error_code = init(cp);
-        if (error_code != 0) {
-            sched.unlock();
-            return error_code;
-        }
-        _ = hal.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(kern.CondRef));
-    } else {
-        if (valid(m) == 0) {
-            sched.unlock();
-            return kern.Errno.EINVAL;
-        }
-    }
-
-    const km: *sync.Cond = @ptrCast(m);
     var err: c_int = 0;
+    {
+        sched.lock();
+        defer sched.unlock();
+        if (is_cond_initializer(m)) {
+            const error_code = init(cp);
+            if (error_code != 0) {
+                return error_code;
+            }
+            _ = hal.copyin(@as(?*const anyopaque, @ptrCast(cp)), @as(?*anyopaque, @ptrCast(&m)), @sizeOf(kern.CondRef));
+        } else {
+            if (valid(m) == 0) {
+                return kern.Errno.EINVAL;
+            }
+        }
 
-    const unlock_err = mutex.unlock(mp);
-    if (unlock_err != 0) {
-        sched.unlock();
-        return unlock_err;
-    }
+        const km: *sync.Cond = @ptrCast(m);
 
-    deadlock.sleep(@ptrCast(km), "cond");
-    const rc = sched.tsleep(&km.*.event, 0);
-    deadlock.stop_sleep();
-    if (rc == kern.SLP_INTR) {
-        err = kern.Errno.EINTR;
+        const unlock_err = mutex.unlock(mp);
+        if (unlock_err != 0) {
+            return unlock_err;
+        }
+
+        deadlock.sleep(@ptrCast(km), "cond");
+        const rc = sched.tsleep(&km.*.event, 0);
+        deadlock.stop_sleep();
+        if (rc == kern.SLP_INTR) {
+            err = kern.Errno.EINTR;
+        }
     }
-    sched.unlock();
 
     if (err == 0) {
         err = mutex.lock(mp);

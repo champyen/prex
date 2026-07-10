@@ -154,10 +154,10 @@ pub fn wait(excno: ?*c_int) callconv(.c) c_int {
     }
 
     sched.lock();
+    defer sched.unlock();
 
     rc = sched.tsleep(&exception_event, 0);
     if (rc == kern.SLP_BREAK) {
-        sched.unlock();
         return kern.Errno.EINVAL;
     }
     s = hal.splhigh();
@@ -168,7 +168,6 @@ pub fn wait(excno: ?*c_int) callconv(.c) c_int {
         }
     }
     _ = hal.splx(s);
-    sched.unlock();
 
     i = j;
     if (hal.copyout(@as(?*const anyopaque, @ptrCast(&i)), @as(?*anyopaque, @ptrCast(excno)), @sizeOf(c_int)) != 0) {

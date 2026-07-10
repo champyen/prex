@@ -214,6 +214,7 @@ pub fn sysPanic(str: [*c]const u8) callconv(.c) c_int {
     if (comptime is_debug) {
         var buf: [hal.DBGMSGSZ]u8 = undefined;
         sched.lock();
+        defer sched.unlock();
         _ = hal.copyinstr(str, &buf, hal.DBGMSGSZ - 20);
         lib.printf("User panic: %s\n", &buf);
         const cur_task = kutil.get_curtask();

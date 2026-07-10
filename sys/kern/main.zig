@@ -79,39 +79,41 @@ fn main() callconv(.c) c_int {
         smp.initEarly();
     }
 
-    sched.lock();
-    hal.diag_init();
-    _ = lib.printf("Prex+ version %s for %s (%s)\n", wrap_get_version(), wrap_get_machine(), wrap_get_build_date());
-    _ = lib.printf("Copyright (c) 2005-2009 Kohsuke Ohtani\n");
-    _ = lib.printf("Copyright (c) 2021      Champ Yen (champ.yen@gmail.com)\n");
+    {
+        sched.lock();
+        defer sched.unlock();
+        hal.diag_init();
+        _ = lib.printf("Prex+ version %s for %s (%s)\n", wrap_get_version(), wrap_get_machine(), wrap_get_build_date());
+        _ = lib.printf("Copyright (c) 2005-2009 Kohsuke Ohtani\n");
+        _ = lib.printf("Copyright (c) 2021      Champ Yen (champ.yen@gmail.com)\n");
 
-    page.init();
-    kmem.init();
+        page.init();
+        kmem.init();
 
-    hal.machine_startup();
+        hal.machine_startup();
 
-    vm.init();
-    deadlock.init();
-    task.init();
-    thread.init();
-    sched.init();
-    exception.init();
-    timer.init();
-    object.init();
-    msg.init();
+        vm.init();
+        deadlock.init();
+        task.init();
+        thread.init();
+        sched.init();
+        exception.init();
+        timer.init();
+        object.init();
+        msg.init();
 
-    irq.init();
-    hal.clock_init();
-    device.init();
+        irq.init();
+        hal.clock_init();
+        device.init();
 
-    task.bootstrap();
+        task.bootstrap();
 
-    if (@hasDecl(ffi.raw, "CONFIG_SMP")) {
-        smp.startAps();
-        smp.activate();
+        if (@hasDecl(ffi.raw, "CONFIG_SMP")) {
+            smp.startAps();
+            smp.activate();
+        }
     }
 
-    sched.unlock();
     thread.idle();
 
     return 0;

@@ -147,12 +147,14 @@ fn timerThread(dummy: ?*anyopaque) callconv(.c) void {
             list_remove(&tmr.link);
             tmr.state = TM_STOP;
             timer_lock.unlock();
-            sched.lock();
-            _ = hal.spl0();
-            const func = tmr.func.?;
-            func(tmr.arg);
-            sched.unlock();
-            _ = hal.splhigh();
+            {
+                sched.lock();
+                defer sched.unlock();
+                _ = hal.spl0();
+                const func = tmr.func.?;
+                func(tmr.arg);
+                _ = hal.splhigh();
+            }
             timer_lock.lock();
         }
         timer_lock.unlock();

@@ -127,8 +127,8 @@ pub fn lookup(name: [*:0]const u8, objp: ?*kern.ObjectRef) callconv(.c) c_int {
     str[i] = 0;
 
     sched.lock();
+    defer sched.unlock();
     const obj = find(&str);
-    sched.unlock();
 
     if (obj == null) {
         return kern.Errno.ENOENT;
