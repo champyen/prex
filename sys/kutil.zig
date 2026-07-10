@@ -25,7 +25,6 @@
 // SUCH DAMAGE.
 
 const std = @import("std");
-const c = @import("c").c;
 const ffi = @import("ffi.zig");
 const smp = ffi.smp;
 const thread = ffi.thread;
@@ -46,7 +45,7 @@ pub inline fn user_area(a: anytype) bool {
         .optional => if (a) |p| @intFromPtr(p) else 0,
         else => a,
     };
-    if (comptime @hasDecl(c, "CONFIG_MMU")) {
+    if (comptime @hasDecl(ffi.raw, "CONFIG_MMU")) {
         return val < hal.USERLIMIT;
     } else {
         return true;
@@ -67,7 +66,7 @@ pub inline fn ptokv(pa: kern.Paddr) ?*anyopaque {
 }
 
 pub inline fn get_curthread() ?*hal.Thread {
-    if (comptime @hasDecl(c, "CONFIG_SMP")) {
+    if (comptime @hasDecl(ffi.raw, "CONFIG_SMP")) {
         return @ptrCast(smp.get_cpu_control().*.active_thread);
     } else {
         return @ptrCast(thread.curthread);

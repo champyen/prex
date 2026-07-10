@@ -30,8 +30,6 @@ const hal = ffi.hal;
 const kern = ffi.kern;
 const lib = ffi.lib;
 
-const c = @import("c").c;
-
 const sched = ffi.sched;
 const kmem = ffi.kmem;
 const thread = ffi.thread;

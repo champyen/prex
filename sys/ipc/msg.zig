@@ -26,7 +26,6 @@
 
 const std = @import("std");
 
-const c = @import("c").c;
 const ffi = @import("ffi");
 const lib = ffi.lib;
 const hal = ffi.hal;

@@ -25,7 +25,12 @@
 // SUCH DAMAGE.
 
 const std = @import("std");
-const c = @import("c").c;
+const c = @cImport({
+    @cDefine("KERNEL", "1");
+    @cInclude("zig_kernel.h");
+});
+
+pub const raw = c;
 
 pub const smp = struct {
     pub extern fn smp_init_early() callconv(.c) void;

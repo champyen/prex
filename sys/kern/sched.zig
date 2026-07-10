@@ -27,8 +27,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const c = @import("c").c;
-
 const ffi = @import("ffi");
 const lib = ffi.lib;
 const hal = ffi.hal;
@@ -93,7 +91,7 @@ fn runq_remove(t: kern.ThreadRef) void {
 
 
 fn set_curthread(t: kern.ThreadRef) void {
-    if (comptime @hasDecl(c, "CONFIG_SMP")) {
+    if (comptime @hasDecl(ffi.raw, "CONFIG_SMP")) {
         smp.get_cpu_control().*.active_thread = t;
     } else {
         thread.curthread = t;
@@ -148,7 +146,7 @@ pub fn swtch() callconv(.c) void {
     }
 
     var locks: c_int = undefined;
-    if (comptime @hasDecl(c, "CONFIG_SMP")) {
+    if (comptime @hasDecl(ffi.raw, "CONFIG_SMP")) {
         locks = prev.*.locks;
         prev.*.locks = 0;
         if (locks > 0) {
@@ -158,7 +156,7 @@ pub fn swtch() callconv(.c) void {
 
     hal.context_switch(&prev.*.ctx, &next.*.ctx);
 
-    if (comptime @hasDecl(c, "CONFIG_SMP")) {
+    if (comptime @hasDecl(ffi.raw, "CONFIG_SMP")) {
         const s = hal.splhigh();
         kernel_lock.lock();
         curthread().*.locks = locks;
@@ -308,7 +306,7 @@ pub fn stop(t: kern.ThreadRef) callconv(.c) void {
 pub fn lock() callconv(.c) void {
     const s = hal.splhigh();
     if (curthread().*.locks == 0) {
-        if (comptime @hasDecl(c, "CONFIG_SMP")) {
+        if (comptime @hasDecl(ffi.raw, "CONFIG_SMP")) {
             kernel_lock.lock();
         }
     }
@@ -327,7 +325,7 @@ pub fn unlock() callconv(.c) void {
             wakeq_flush();
         }
         curthread().*.locks = 0;
-        if (comptime @hasDecl(c, "CONFIG_SMP")) {
+        if (comptime @hasDecl(ffi.raw, "CONFIG_SMP")) {
             kernel_lock.unlock();
         }
     } else {
@@ -337,7 +335,7 @@ pub fn unlock() callconv(.c) void {
 }
 
 pub fn bklUnlock() callconv(.c) void {
-    if (comptime @hasDecl(c, "CONFIG_SMP")) {
+    if (comptime @hasDecl(ffi.raw, "CONFIG_SMP")) {
         kernel_lock.unlock();
     }
 }

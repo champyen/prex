@@ -26,7 +26,6 @@
 
 const std = @import("std");
 const builtin = @import("builtin");
-const c = @import("c").c;
 
 const ffi = @import("ffi");
 const cond = ffi.cond;
@@ -103,7 +102,7 @@ const sysent: [NSYSCALL]SysEnt = .{
     SysEnt.init("device_close", 1, device.close),
     SysEnt.init("device_read", 4, device.read),
     SysEnt.init("device_write", 4, device.write),
-    SysEnt.init("device_ioctl", 3, c.device_ioctl),
+    SysEnt.init("device_ioctl", 3, ffi.raw.device_ioctl),
     SysEnt.init("mutex_init", 1, mutex.init),
     SysEnt.init("mutex_destroy", 1, mutex.destroy),
     SysEnt.init("mutex_lock", 1, mutex.lock),
@@ -125,8 +124,8 @@ const sysent: [NSYSCALL]SysEnt = .{
     SysEnt.init("sys_info", 2, system.info),
     SysEnt.init("sys_time", 1, system.time),
     SysEnt.init("sys_debug", 2, system.debug),
-    SysEnt.init("device_gather_read", 4, c.device_gather_read),
-    SysEnt.init("device_scatter_write", 4, c.device_scatter_write),
+    SysEnt.init("device_gather_read", 4, ffi.raw.device_gather_read),
+    SysEnt.init("device_scatter_write", 4, ffi.raw.device_scatter_write),
 };
 
 pub fn syscall_handler_std(a1: kern.Register, a2: kern.Register, a3: kern.Register, a4: kern.Register, id: kern.Register) callconv(.c) kern.Register {

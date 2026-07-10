@@ -39,7 +39,6 @@
 
 const std = @import("std");
 
-const c = @import("c").c;
 const ffi = @import("ffi");
 
 // Single-import the whole kernel. Each module is wired in via a
@@ -76,7 +75,7 @@ extern fn wrap_get_machine() callconv(.c) [*c]const u8;
 extern fn wrap_get_build_date() callconv(.c) [*c]const u8;
 
 fn main() callconv(.c) c_int {
-    if (@hasDecl(c, "CONFIG_SMP")) {
+    if (@hasDecl(ffi.raw, "CONFIG_SMP")) {
         smp.initEarly();
     }
 
@@ -107,7 +106,7 @@ fn main() callconv(.c) c_int {
 
     task.bootstrap();
 
-    if (@hasDecl(c, "CONFIG_SMP")) {
+    if (@hasDecl(ffi.raw, "CONFIG_SMP")) {
         smp.startAps();
         smp.activate();
     }
@@ -183,7 +182,7 @@ comptime {
     // ---- smp (vars always needed for C-side refs; fns only when SMP) ----
     @export(&smp.cpu_table, .{ .name = "cpu_table", .linkage = .strong });
     @export(&smp.ap_boot_stacks, .{ .name = "ap_boot_stacks", .linkage = .strong });
-    if (@hasDecl(c, "CONFIG_SMP")) {
+    if (@hasDecl(ffi.raw, "CONFIG_SMP")) {
         @export(&smp.initEarly, .{ .name = "smp_init_early", .linkage = .strong });
         @export(&smp.hal_set_cpu_control, .{ .name = "hal_set_cpu_control", .linkage = .strong });
         @export(&smp.hal_get_cpu_control, .{ .name = "hal_get_cpu_control", .linkage = .strong });
@@ -193,7 +192,7 @@ comptime {
     }
 
     // ---- sysent (arch-conditional syscall handler) ----
-    if (@hasDecl(c, "CONFIG_ARMV8M")) {
+    if (@hasDecl(ffi.raw, "CONFIG_ARMV8M")) {
         @export(&sysent.syscall_handler_armv8m, .{ .name = "syscall_handler", .linkage = .strong });
     } else {
         @export(&sysent.syscall_handler_std, .{ .name = "syscall_handler", .linkage = .strong });
@@ -227,7 +226,7 @@ comptime {
 
     // ---- thread ----
     @export(&thread.idle_thread, .{ .name = "idle_thread", .linkage = .strong });
-    if (!@hasDecl(c, "CONFIG_SMP")) {
+    if (!@hasDecl(ffi.raw, "CONFIG_SMP")) {
         @export(&thread.curthread, .{ .name = "curthread", .linkage = .strong });
         @export(&thread.irq_nesting, .{ .name = "irq_nesting", .linkage = .strong });
         @export(&thread.curspl, .{ .name = "curspl", .linkage = .strong });
@@ -261,7 +260,7 @@ comptime {
     @export(&timer.ticks, .{ .name = "timer_ticks", .linkage = .strong });
     @export(&timer.info, .{ .name = "timer_info", .linkage = .strong });
     @export(&timer.init, .{ .name = "timer_init", .linkage = .strong });
-    if (@hasDecl(c, "CONFIG_SMP")) {
+    if (@hasDecl(ffi.raw, "CONFIG_SMP")) {
         @export(&timer.__broken_spinlock_lock, .{ .name = "__broken_spinlock_lock", .linkage = .strong });
         @export(&timer.__broken_spinlock_unlock, .{ .name = "__broken_spinlock_unlock", .linkage = .strong });
     }

@@ -24,7 +24,6 @@
 // OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 // SUCH DAMAGE.
 
-const c = @import("c").c;
 const ffi = @import("ffi");
 const lib = ffi.lib;
 const deadlock = ffi.deadlock;

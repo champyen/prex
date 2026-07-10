@@ -32,11 +32,10 @@ const hal = ffi.hal;
 const irq = ffi.irq;
 const kern = ffi.kern;
 const thread = ffi.thread;
-const c = @import("c").c;
 
-const NCPUS = if (@hasDecl(c, "CONFIG_SMP_NCPUS")) c.CONFIG_SMP_NCPUS else 1;
+const NCPUS = if (@hasDecl(ffi.raw, "CONFIG_SMP_NCPUS")) ffi.raw.CONFIG_SMP_NCPUS else 1;
 
-const ipi_irq = if (@hasDecl(c, "IPI_IRQ")) c.IPI_IRQ else 0;
+const ipi_irq = if (@hasDecl(ffi.raw, "IPI_IRQ")) ffi.raw.IPI_IRQ else 0;
 
 const INTSTKTOP = @as(usize, @intCast(hal.INTSTKTOP));
 
@@ -135,7 +134,7 @@ pub fn apBoot() callconv(.c) void {
 
 extern fn ap_reset_entry() callconv(.c) void;
 
-extern var riscv_cpus: [c.CONFIG_SMP_NCPUS]hal.RiscVCpu;
+extern var riscv_cpus: [ffi.raw.CONFIG_SMP_NCPUS]hal.RiscVCpu;
 
 pub fn hal_set_cpu_control(cpu: ?*hal.CpuControl) callconv(.c) void {
     if (builtin.cpu.arch == .riscv32 or builtin.cpu.arch == .riscv64) {
@@ -147,7 +146,7 @@ pub fn hal_set_cpu_control(cpu: ?*hal.CpuControl) callconv(.c) void {
             riscv_cpus[@intCast(c_ptr.cpu_id)].cpu_control = c_ptr;
         }
     } else if (builtin.cpu.arch == .arm or builtin.cpu.arch == .thumb) {
-        if (@hasDecl(c, "CONFIG_ARMV8M")) {
+        if (@hasDecl(ffi.raw, "CONFIG_ARMV8M")) {
             asm volatile ("msr psplim, %[cpu]"
                 :
                 : [cpu] "r" (cpu),
@@ -169,7 +168,7 @@ pub fn hal_get_cpu_control() callconv(.c) ?*hal.CpuControl {
             : [ret] "=r" (-> ?*hal.CpuControl),
         );
     } else if (builtin.cpu.arch == .arm or builtin.cpu.arch == .thumb) {
-        if (@hasDecl(c, "CONFIG_ARMV8M")) {
+        if (@hasDecl(ffi.raw, "CONFIG_ARMV8M")) {
             return @ptrFromInt(asm volatile ("mrs %[ret], psplim"
                 : [ret] "=r" (-> usize),
             ));

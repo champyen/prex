@@ -25,7 +25,6 @@
 // SUCH DAMAGE.
 
 const std = @import("std");
-const c = @import("c").c;
 const ffi = @import("ffi");
 const hal = ffi.hal;
 const kern = ffi.kern;

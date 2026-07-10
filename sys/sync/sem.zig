@@ -27,8 +27,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const c = @import("c").c;
-
 var sem_list: ?*sync.Sem = null;
 
 const ffi = @import("ffi");

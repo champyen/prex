@@ -27,8 +27,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const c = @import("c").c;
-
 const ffi = @import("ffi");
 const hal = ffi.hal;
 const kern = ffi.kern;
@@ -139,7 +137,7 @@ pub fn create(tsk: kern.TaskRef, tp: ?*kern.ThreadRef) callconv(.c) c_int {
         return kern.Errno.ENOMEM;
     };
 
-    if (comptime @hasDecl(c, "CONFIG_ARMV8M")) {
+    if (comptime @hasDecl(ffi.raw, "CONFIG_ARMV8M")) {
         _ = lib.memset(t.*.kstack, 0, hal.KSTACKSZ);
         const parent_uregs = kutil.get_curthread().?.*.ctx.uregs;
         const child_uregs: *hal.CpuRegs = @ptrCast(@alignCast(@as(*anyopaque, @ptrFromInt(@intFromPtr(t.*.kstack) + hal.KSTACKSZ - @sizeOf(hal.CpuRegs)))));
@@ -203,7 +201,7 @@ pub fn setup(t: kern.ThreadRef, entry: ?*anyopaque, stack: ?*anyopaque, gp: ?*an
 
     const s = hal.splhigh();
     if (entry != null) {
-        if (comptime @hasDecl(c, "CONFIG_ARMV8M")) {
+        if (comptime @hasDecl(ffi.raw, "CONFIG_ARMV8M")) {
             t.*.task.*.got_base = if (gp) |p| @intFromPtr(p) else 0;
         }
         hal.context_set(&t.*.ctx, hal.CTX_UENTRY, kutil.toReg(entry));
@@ -247,7 +245,7 @@ pub fn @"suspend"(t: kern.ThreadRef) callconv(.c) c_int {
     t.*.suscnt += 1;
     if (t.*.suscnt == 1) {
         sched.@"suspend"(t);
-        if (comptime @hasDecl(c, "CONFIG_ARMV8M")) {
+        if (comptime @hasDecl(ffi.raw, "CONFIG_ARMV8M")) {
             if (t.*.ctx.uregs != null and t.*.ctx.saved_uregs_valid == 0) {
                 _ = lib.memcpy(&t.*.ctx.saved_uregs, t.*.ctx.uregs, @sizeOf(hal.CpuRegs));
                 t.*.ctx.saved_uregs_ptr = t.*.ctx.uregs;

@@ -25,7 +25,6 @@
 // SUCH DAMAGE.
 
 const std = @import("std");
-const c = @import("c").c;
 
 extern fn zig_memory_barrier() callconv(.c) void;
 

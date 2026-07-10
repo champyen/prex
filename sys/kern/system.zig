@@ -27,7 +27,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const c = @import("c").c;
 const ffi = @import("ffi");
 const device = ffi.device;
 const hal = ffi.hal;
@@ -68,7 +67,7 @@ fn init_kerninfo() void {
     kerninfo_inited = true;
 }
 
-const is_debug = @hasDecl(c, "DEBUG");
+const is_debug = @hasDecl(ffi.raw, "DEBUG");
 
 /// Get system information.
 pub fn sysinfo(sysinfo_type: c_int, buf: ?*anyopaque) callconv(.c) c_int {
@@ -199,7 +198,7 @@ pub fn sysDebug(cmd: c_int, data: ?*anyopaque) callconv(.c) c_int {
                 }
             },
             hal.DBGC_FLUSHCACHE => {
-                if (@hasDecl(c, "CONFIG_CACHE")) {
+                if (@hasDecl(ffi.raw, "CONFIG_CACHE")) {
                     hal.flush_cache();
                 }
                 error_val = 0;

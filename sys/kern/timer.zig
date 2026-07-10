@@ -27,8 +27,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const c = @import("c").c;
-
 const ffi = @import("ffi");
 const deadlock = ffi.deadlock;
 const exception = ffi.exception;
@@ -356,7 +354,7 @@ pub fn handler() callconv(.c) void {
         if (wakeup != 0)
             sched.wakeup(@ptrCast(&timer_event));
 
-        if (@hasDecl(c, "DEBUG") and @hasDecl(c, "CONFIG_KD")) {
+        if (@hasDecl(ffi.raw, "DEBUG") and @hasDecl(ffi.raw, "CONFIG_KD")) {
             deadlock.heartbeat();
             deadlock.proactive_check();
         }
@@ -393,16 +391,16 @@ pub fn init() callconv(.c) void {
 // ---------------------------------------------------------------------------
 // Comptime exports – public API functions with strong C linkage
 // ---------------------------------------------------------------------------
-pub fn __broken_spinlock_lock(lock: ?*volatile c.spinlock_t) callconv(.c) void {
-    if (comptime !@hasDecl(c, "CONFIG_SMP")) return;
+pub fn __broken_spinlock_lock(lock: ?*volatile ffi.raw.spinlock_t) callconv(.c) void {
+    if (comptime !@hasDecl(ffi.raw, "CONFIG_SMP")) return;
     const l: *volatile i32 = @ptrCast(@alignCast(lock.?));
     while (@atomicRmw(i32, l, .Xchg, 1, .seq_cst) != 0) {
         while (l.* != 0) {}
     }
 }
 
-pub fn __broken_spinlock_unlock(lock: ?*volatile c.spinlock_t) callconv(.c) void {
-    if (comptime !@hasDecl(c, "CONFIG_SMP")) return;
+pub fn __broken_spinlock_unlock(lock: ?*volatile ffi.raw.spinlock_t) callconv(.c) void {
+    if (comptime !@hasDecl(ffi.raw, "CONFIG_SMP")) return;
     const l: *volatile i32 = @ptrCast(@alignCast(lock.?));
     @atomicStore(i32, l, 0, .seq_cst);
 }

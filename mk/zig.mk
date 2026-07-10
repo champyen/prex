@@ -104,9 +104,9 @@ else ifeq ($(_KRNL_),1)
   # Main kernel: single root at sys/kern/main.zig, with other kernel
   # modules provided as additional module dependencies so they can be
   # @imported by main.zig.
-  # All modules share the same cimport root and ffi alias module.
-  COMMON_DEPS = --dep c --dep ffi
-  COMMON_MODS = -Mc=$(SRCDIR)/sys/c.zig $(ZIGFLAGS) --dep c -Mffi=$(SRCDIR)/sys/ffi.zig $(ZIGFLAGS)
+  # All modules share the same ffi alias module.
+  COMMON_DEPS = --dep ffi
+  COMMON_MODS = -Mffi=$(SRCDIR)/sys/ffi.zig $(ZIGFLAGS)
 
   ZIG_MODULES = $(COMMON_DEPS) \
     --dep device_mod --dep exception_mod --dep irq_mod \

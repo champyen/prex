@@ -25,7 +25,6 @@
 // SUCH DAMAGE.
 
 const std = @import("std");
-const c = @import("c").c;
 
 const ffi = @import("ffi");
 const hal = ffi.hal;
@@ -77,7 +76,7 @@ const BLOCK_MAGIC = 0xdead;
 const PAGE_MAGIC = 0xbeef;
 const BLKHDR_SIZE = @sizeOf(block_hdr);
 const PGHDR_SIZE = @sizeOf(page_hdr);
-const MAX_ALLOC_SIZE = if (@hasDecl(c, "CONFIG_MAX_ALLOC_SIZE")) c.CONFIG_MAX_ALLOC_SIZE else hal.PAGE_SIZE - PGHDR_SIZE;
+const MAX_ALLOC_SIZE = if (@hasDecl(ffi.raw, "CONFIG_MAX_ALLOC_SIZE")) ffi.raw.CONFIG_MAX_ALLOC_SIZE else hal.PAGE_SIZE - PGHDR_SIZE;
 const MIN_BLOCK_SIZE = BLKHDR_SIZE + 16;
 
 // Global free_blocks array

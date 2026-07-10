@@ -30,7 +30,6 @@ pub fn panic(msg: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
     lib.panic("Zig panic");
     while (true) {}
 }
-const c = @import("c").c;
 
 const ffi = @import("ffi");
 const hal = ffi.hal;
@@ -240,7 +239,7 @@ pub fn info(mem_info: *hal.MemInfo) callconv(.c) void {
     mem_info.*.total = total_size;
     mem_info.*.free = total_size - used_size;
     mem_info.*.bootdisk = bootdisk_size;
-    if (!@hasDecl(c, "CONFIG_ROMBOOT")) {
+    if (!@hasDecl(ffi.raw, "CONFIG_ROMBOOT")) {
         mem_info.*.free -= bootdisk_size;
     }
 }

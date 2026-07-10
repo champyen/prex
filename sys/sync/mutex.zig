@@ -27,8 +27,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const c = @import("c").c;
-
 const ffi = @import("ffi");
 const lib = ffi.lib;
 const deadlock = ffi.deadlock;

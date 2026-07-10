@@ -26,8 +26,6 @@
 
 const std = @import("std");
 
-const c = @import("c").c;
-
 const ffi = @import("ffi");
 const exception = ffi.exception;
 const hal = ffi.hal;
@@ -549,7 +547,7 @@ const dkient = [40]dkifn_t{
     //  7: page_free
     @ptrCast(&page.free),
     //  8: page_reserve
-    @ptrCast(&c.page_reserve),
+    @ptrCast(&ffi.raw.page_reserve),
     //  9: irq_attach
     @ptrCast(&irq.attach),
     // 10: irq_detach
@@ -599,17 +597,17 @@ const dkient = [40]dkifn_t{
     // 32: machine_powerdown
     @ptrCast(&hal.machine_powerdown),
     // 33: sysinfo
-    @ptrCast(&c.sysinfo),
+    @ptrCast(&ffi.raw.sysinfo),
     // 34: DEBUG-dependent: panic or machine_abort
-    @ptrCast(if (c.DEBUG != 0) @as(*const anyopaque, @ptrCast(&lib.panic)) else @as(*const anyopaque, @ptrCast(&hal.machine_abort))),
+    @ptrCast(if (ffi.raw.DEBUG != 0) @as(*const anyopaque, @ptrCast(&lib.panic)) else @as(*const anyopaque, @ptrCast(&hal.machine_abort))),
     // 35: DEBUG-dependent: printf or sys_nosys
-    @ptrCast(if (c.DEBUG != 0) @as(*const anyopaque, @ptrCast(&lib.printf)) else @as(*const anyopaque, @ptrCast(&c.sys_nosys))),
+    @ptrCast(if (ffi.raw.DEBUG != 0) @as(*const anyopaque, @ptrCast(&lib.printf)) else @as(*const anyopaque, @ptrCast(&ffi.raw.sys_nosys))),
     // 36: DEBUG-dependent: dbgctl or sys_nosys
-    @ptrCast(if (c.DEBUG != 0) @as(*const anyopaque, @ptrCast(&hal.dbgctl)) else @as(*const anyopaque, @ptrCast(&c.sys_nosys))),
+    @ptrCast(if (ffi.raw.DEBUG != 0) @as(*const anyopaque, @ptrCast(&hal.dbgctl)) else @as(*const anyopaque, @ptrCast(&ffi.raw.sys_nosys))),
     // 37: hal_uart_lock
-    @ptrCast(&c.hal_uart_lock),
+    @ptrCast(&ffi.raw.hal_uart_lock),
     // 38: hal_uart_unlock
-    @ptrCast(&c.hal_uart_unlock),
+    @ptrCast(&ffi.raw.hal_uart_unlock),
     // 39: ksem_post
     @ptrCast(&sem.postKernel),
 };
