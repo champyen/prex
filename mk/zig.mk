@@ -139,9 +139,15 @@ else ifeq ($(_DRV_),1)
   ZIG_MODULES = --dep dki -Mroot=$< $(ZIGFLAGS) -Mdki=$(SRCDIR)/bsp/drv/zig/dki.zig $(ZIGFLAGS)
 else
   ifeq ($(filter _STANDALONE,$(DEFS)),_STANDALONE)
-    ZIG_MODULES = --dep prex -Mroot=$< $(ZIGFLAGS) -Mprex=$(SRCDIR)/usr/zig/prex.zig $(ZIGFLAGS)
+    # Native RT task (mk/task.mk) - kernel API wrapper
+    ZIG_MODULES = --dep task -Mroot=$< $(ZIGFLAGS) -Mtask=$(SRCDIR)/usr/zig/task.zig $(ZIGFLAGS)
   else
-    ZIG_MODULES = --dep posix -Mroot=$< $(ZIGFLAGS) -Mposix=$(SRCDIR)/usr/zig/posix.zig $(ZIGFLAGS)
+    # POSIX program (mk/prog.mk) - libc + IPC + kernel syscall wrappers.
+    # Both modules are injected so callers can `task.prex.X` for kernel
+    # API types and `prog.X` for libc/IPC headers.
+    ZIG_MODULES = --dep prog --dep task -Mroot=$< $(ZIGFLAGS) \
+                  -Mprog=$(SRCDIR)/usr/zig/prog.zig $(ZIGFLAGS) \
+                  -Mtask=$(SRCDIR)/usr/zig/task.zig $(ZIGFLAGS)
   endif
 endif
 

@@ -36,22 +36,23 @@
 // 'init' process.
 
 const std = @import("std");
-const posix = @import("posix");
+const prog = @import("prog");
+const task = @import("task");
+const prex = task.prex;
 
-const unistd = posix.unistd;
-const stdlib = posix.stdlib;
-const stdio = posix.stdio;
-const errno = posix.errno;
-const fcntl = posix.fcntl;
-const string = posix.string;
-const prex = posix.prex;
-const sys = posix.sys;
-const ipc = posix.ipc;
+const unistd = prog.unistd;
+const stdlib = prog.stdlib;
+const stdio = prog.stdio;
+const errno = prog.errno;
+const fcntl = prog.fcntl;
+const string = prog.string;
+const sys = prog.sys;
+const ipc = prog.ipc;
 
 const dprintf = if (@hasDecl(std.debug, "builtin") and std.debug.builtin.optimization == .Debug)
     struct {
         fn log(comptime fmt: []const u8, args: anytype) void {
-            posix.print(fmt ++ "\n", args);
+            prog.print(fmt ++ "\n", args);
         }
     }.log
 else

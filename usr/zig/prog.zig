@@ -26,8 +26,11 @@
 
 const std = @import("std");
 
-/// Prex+ POSIX Interface Wrapper for Zig
-/// Prex+ POSIX Interface Wrapper for Zig
+/// Prex+ POSIX Program Wrapper for Zig
+///
+/// Used by everything built with `mk/prog.mk`: servers, user programs,
+/// shells, etc. Provides libc + IPC bindings; kernel syscall types live
+/// in `task.zig` under the `prex` namespace.
 pub const unistd = @cImport({
     @cInclude("conf/config.h");
     @cInclude("unistd.h");
@@ -58,9 +61,24 @@ pub const string = @cImport({
     @cInclude("string.h");
 });
 
-pub const prex = @cImport({
+pub const signal = @cImport({
     @cInclude("conf/config.h");
-    @cInclude("sys/prex.h");
+    @cInclude("signal.h");
+});
+
+pub const poll = @cImport({
+    @cInclude("conf/config.h");
+    @cInclude("sys/poll.h");
+});
+
+pub const dirent = @cImport({
+    @cInclude("conf/config.h");
+    @cInclude("dirent.h");
+});
+
+pub const capsys = @cImport({
+    @cInclude("conf/config.h");
+    @cInclude("sys/capability.h");
 });
 
 pub const sys = struct {
@@ -75,6 +93,19 @@ pub const sys = struct {
     pub const stat = @cImport({
         @cInclude("conf/config.h");
         @cInclude("sys/stat.h");
+    });
+    pub const list = @cImport({
+        @cInclude("conf/config.h");
+        @cInclude("sys/list.h");
+    });
+    pub const vnode = @cImport({
+        @cInclude("conf/config.h");
+        @cInclude("sys/vnode.h");
+        @cInclude("sys/file.h");
+    });
+    pub const buf = @cImport({
+        @cInclude("conf/config.h");
+        @cInclude("sys/buf.h");
     });
 };
 
@@ -122,6 +153,33 @@ pub fn panic(msg: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
         _ = unistd.write(2, err_msg.ptr, err_msg.len);
     }
     stdlib.exit(1);
+}
+
+/// Map Zig errors to positive POSIX errno integers shared by user-space servers
+pub fn toCError(err: anyerror) c_int {
+    return switch (err) {
+        error.PermissionDenied => errno.EACCES,
+        error.InvalidArgument => errno.EINVAL,
+        error.OutOfMemory => errno.ENOMEM,
+        error.NoEntry => errno.ENOENT,
+        error.IoError => errno.EIO,
+        error.Busy => errno.EBUSY,
+        error.Timeout => errno.ETIMEDOUT,
+        error.NotSupported => errno.ENOSYS,
+        error.NoDevice => errno.ENODEV,
+        error.FileNotFound => errno.ENOENT,
+        error.AlreadyExists => errno.EEXIST,
+        error.BadFileDescriptor => errno.EBADF,
+        error.BadSeek => errno.ESPIPE,
+        error.IsDir => errno.EISDIR,
+        error.NotDir => errno.ENOTDIR,
+        error.NoSpaceLeft => errno.ENOSPC,
+        error.NameTooLong => errno.ENAMETOOLONG,
+        error.BrokenPipe => errno.EPIPE,
+        error.ResourceLimit => errno.EAGAIN,
+        error.OperationNotPermitted => errno.EPERM,
+        else => errno.EIO,
+    };
 }
 
 /// Standard allocator wrapping malloc/free for POSIX processes

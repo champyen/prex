@@ -25,16 +25,16 @@
 // SUCH DAMAGE.
 
 const std = @import("std");
-const posix = @import("posix");
+const prog = @import("prog");
 
-pub const panic = posix.panic;
+pub const panic = prog.panic;
 
 export fn main(_: i32, _: [*][*:0]u8, _: [*][*:0]u8) callconv(.c) i32 {
-    posix.print("Hello from POSIX Zig Program!\n", .{});
-    
-    const pid = posix.unistd.getpid();
-    posix.print("My PID is: {}\n", .{pid});
+    prog.print("Hello from POSIX Zig Program!\n", .{});
 
-    posix.print("Zig POSIX program exiting...\n", .{});
+    const pid = prog.unistd.getpid();
+    prog.print("My PID is: {}\n", .{pid});
+
+    prog.print("Zig POSIX program exiting...\n", .{});
     return 0;
 }

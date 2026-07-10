@@ -26,8 +26,14 @@
 
 const std = @import("std");
 
-/// Prex+ Native Microkernel Interface (PREX) Wrapper for Zig
-pub const c = @cImport({
+/// Prex+ Native Real-Time Task Wrapper for Zig
+///
+/// Used by everything built with `mk/task.mk` (standalone RT tasks that
+/// talk to the microkernel directly). Provides kernel syscall wrappers,
+/// raw kernel types (task_t, object_t, ...), and helpers for native RT
+/// tasks. The POSIX-equivalent wrapper for programs built with
+/// `mk/prog.mk` lives in `prog.zig`.
+pub const prex = @cImport({
     @cInclude("conf/config.h");
     @cInclude("sys/prex.h");
     @cInclude("sys/errno.h");
@@ -36,32 +42,32 @@ pub const c = @cImport({
 /// Map Zig errors to positive POSIX errno integers
 pub fn toCError(err: anyerror) c_int {
     return switch (err) {
-        error.OutOfMemory => c.ENOMEM,
-        error.InvalidArgs => c.EINVAL,
-        error.IoError => c.EIO,
-        error.Fault => c.EFAULT,
-        error.NoDevice => c.ENODEV,
-        error.NoEntry => c.ENOENT,
-        error.Busy => c.EBUSY,
-        error.Timeout => c.ETIMEDOUT,
-        error.NotSupported => c.ENOSYS,
-        else => c.EIO,
+        error.OutOfMemory => prex.ENOMEM,
+        error.InvalidArgs => prex.EINVAL,
+        error.IoError => prex.EIO,
+        error.Fault => prex.EFAULT,
+        error.NoDevice => prex.ENODEV,
+        error.NoEntry => prex.ENOENT,
+        error.Busy => prex.EBUSY,
+        error.Timeout => prex.ETIMEDOUT,
+        error.NotSupported => prex.ENOSYS,
+        else => prex.EIO,
     };
 }
 
 /// Formatted print utility routing to sys_log
 pub fn print(comptime fmt: []const u8, args: anytype) void {
     if (args.len == 0) {
-        _ = c.sys_log(fmt.ptr);
+        _ = prex.sys_log(fmt.ptr);
     } else {
         var buf: [256]u8 = undefined;
         if (std.fmt.bufPrint(&buf, fmt, args)) |msg| {
             var term_buf: [257]u8 = undefined;
             @memcpy(term_buf[0..msg.len], msg);
             term_buf[msg.len] = 0;
-            _ = c.sys_log(@ptrCast(&term_buf));
+            _ = prex.sys_log(@ptrCast(&term_buf));
         } else |_| {
-            _ = c.sys_log("print formatting failed\n");
+            _ = prex.sys_log("print formatting failed\n");
         }
     }
 }
@@ -70,7 +76,7 @@ pub fn print(comptime fmt: []const u8, args: anytype) void {
 pub fn panic(msg: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
     var buf: [256]u8 = undefined;
     const formatted = std.fmt.bufPrint(&buf, "ZIG PANIC: {s}\x00", .{msg}) catch "ZIG PANIC!\x00";
-    c.sys_panic(formatted.ptr);
+    prex.sys_panic(formatted.ptr);
     while (true) {}
 }
 
@@ -88,11 +94,11 @@ pub const allocator = std.mem.Allocator{
 fn alloc(_: *anyopaque, len: usize, _: std.mem.Alignment, _: usize) ?[*]u8 {
     var addr: ?*anyopaque = null;
     // vm_allocate always returns page-aligned memory
-    const err = c.vm_allocate(c.task_self(), &addr, len, 1);
+    const err = prex.vm_allocate(prex.task_self(), &addr, len, 1);
     if (err != 0) return null;
     return @ptrCast(addr);
 }
 
 fn free(_: *anyopaque, buf: []u8, _: std.mem.Alignment, _: usize) void {
-    _ = c.vm_free(c.task_self(), buf.ptr);
+    _ = prex.vm_free(prex.task_self(), buf.ptr);
 }

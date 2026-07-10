@@ -8,10 +8,16 @@ Prex+ supports developing user-space applications in the Zig programming languag
 
 Prex+ provides two distinct personalities for Zig applications, each with a dedicated wrapper library:
 
-| Personality | Library | Type | Purpose |
+| Personality | File | Type | Purpose |
 | :--- | :--- | :--- | :--- |
-| **Native RT** | `prex` | Real-Time Task | High-priority tasks using microkernel APIs directly. No server dependencies. |
-| **POSIX** | `posix` | UNIX Process | Standard applications using POSIX syscalls (routed via system servers). |
+| **Native RT** | `usr/zig/task.zig` | Real-Time Task | High-priority tasks using microkernel APIs directly. No server dependencies. |
+| **POSIX** | `usr/zig/prog.zig` | UNIX Process | Standard applications using POSIX syscalls (routed via system servers). |
+
+The wrapper filename mirrors the Makefile personality:
+- `task.zig` → built with `mk/task.mk` (Native RT)
+- `prog.zig` → built with `mk/prog.mk` (POSIX)
+
+Servers (POSIX processes) typically import both: `prog` for libc/IPC headers (`prog.unistd`, `prog.ipc.*`) and `task.prex` for kernel syscall wrappers and raw types (`task.prex.object_t`, `task.prex.msg_send`).
 
 ---
 
@@ -40,10 +46,10 @@ Both libraries provide a consistent set of core utilities:
 *   Handles Zig runtime errors.
 *   **Native RT**: Triggers a microkernel `sys_panic`.
 *   **POSIX**: Prints the error to `stderr` and exits the process with status 1.
-*   **Usage**: You must declare `pub const panic = prex.panic;` (or `posix.panic`) in your root source file.
+*   **Usage**: You must declare `pub const panic = task.panic;` (or `prog.panic`) in your root source file.
 
-### `c`
-*   Exposes the raw C API for the selected personality (e.g., `c.task_self()`, `c.getpid()`).
+### `c` (kernel view)
+*   Exposed as `task.prex.NNN` — re-export of the raw C kernel API (e.g. `task.prex.task_self()`, `task.prex.object_create()`). Available in both personalities by importing `task.zig`.
 
 ---
 
@@ -54,20 +60,20 @@ Native tasks are built as standalone executables (`.rt`) and usually loaded at b
 **Example: `my_task.zig`**
 ```zig
 const std = @import("std");
-const prex = @import("prex");
+const task = @import("task");
 
 // Required for Zig runtime safety
-pub const panic = prex.panic;
+pub const panic = task.panic;
 
 export fn main(argc: i32, argv: [*][*:0]u8, envp: [*][*:0]u8) callconv(.c) i32 {
     _ = argc; _ = argv; _ = envp;
 
-    prex.print("Hello from Zig RT Task!\n", .{});
+    task.print("Hello from Zig RT Task!\n", .{});
 
-    // Use raw kernel API via prex.c
+    // Use raw kernel API via task.prex
     var ticks: u32 = 0;
-    _ = prex.c.sys_time(&ticks);
-    
+    _ = task.prex.sys_time(&ticks);
+
     return 0;
 }
 ```
@@ -87,18 +93,18 @@ POSIX programs are standard UNIX processes linked against `libc.a`.
 **Example: `my_prog.zig`**
 ```zig
 const std = @import("std");
-const posix = @import("posix");
+const prog = @import("prog");
 
-pub const panic = posix.panic;
+pub const panic = prog.panic;
 
 export fn main(argc: i32, argv: [*][*:0]u8, envp: [*][*:0]u8) callconv(.c) i32 {
     _ = argc; _ = argv; _ = envp;
 
-    posix.print("My Process ID is: {}\n", .{posix.c.getpid()});
-    
+    prog.print("My Process ID is: {}\n", .{prog.unistd.getpid()});
+
     // Allocate memory using the Zig allocator
-    const buf = posix.allocator.alloc(u8, 1024) catch return 1;
-    defer posix.allocator.free(buf);
+    const buf = prog.allocator.alloc(u8, 1024) catch return 1;
+    defer prog.allocator.free(buf);
 
     return 0;
 }
@@ -144,33 +150,33 @@ On noMMU targets, POSIX programs are linked as relocatable objects (`ET_REL`) if
 To support new kernel features or POSIX APIs in your Zig applications, you may need to extend the core wrapper libraries in `usr/zig/`.
 
 ### Adding C Headers
-Both `prex.zig` and `posix.zig` use `@cImport` to expose the Prex+ C interface.
-1.  Locate the `pub const c = @cImport({ ... });` block at the top of the file.
+`prog.zig` uses `@cImport` to expose the Prex+ C interface.
+1.  Locate the `pub const <NS> = @cImport({ ... });` block at the top of `usr/zig/prog.zig`.
 2.  Add the necessary header file (e.g., `@cInclude("sys/msg.h");`).
 
 ### Creating Type-Safe Wrappers
-Avoid using the raw `c` namespace in your application logic. Instead, add a Zig-friendly wrapper to the library:
+Avoid using the raw `task.prex` or `prog.*` namespaces in your application logic. Instead, add a Zig-friendly wrapper to the appropriate library:
 ```zig
-// In usr/zig/prex.zig
+// In usr/zig/prog.zig
 pub fn createTask(name: []const u8) !c.task_t {
     var task: c.task_t = 0;
     // Note: C functions expect null-terminated strings
     var buf: [16]u8 = undefined;
     @memcpy(buf[0..name.len], name);
     buf[name.len] = 0;
-    
-    const err = c.task_create(c.task_self(), &buf, &task);
+
+    const err = @import("task").prex.task_create(@import("task").prex.task_self(), &buf, &task);
     if (err != 0) return error.SystemError;
     return task;
 }
 ```
 
 ### Extending the Allocator
-If you need a specialized allocator (e.g., an arena or a pool), add it to the relevant library. 
+If you need a specialized allocator (e.g., an arena or a pool), add it to the relevant library.
 *   **Recommendation**: Always provide a `std.mem.Allocator` interface to ensure compatibility with Zig's standard library collections.
 
 ### Error Mapping
-If a new C API introduces unique error codes, update the `toCError` function in `prex.zig` or implement a similar mapping in `posix.zig` to maintain consistency between Zig errors and POSIX/Kernel status codes.
+If a new C API introduces unique error codes, update the `toCError` function in `task.zig` (kernel status codes) or implement a similar mapping in `prog.zig` (POSIX errno values) to maintain consistency between Zig errors and POSIX/Kernel status codes.
 
 ---
 
