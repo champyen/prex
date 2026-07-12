@@ -9,7 +9,8 @@ The physical and virtual memory layout for each target is defined in its respect
 *   **`SYSPAGE` for NOMMU:** The physical start of RAM (e.g., `0x00000000` for x86-pc and Raspberry Pi Zero W).
 *   **`RAM_SIZE`:** For ARM targets, this explicitly defines the total available memory, as dynamic detection isn't always available via BIOS.
 *   **`LOADER_TEXT`:** The physical load address of the Prex+ bootloader (`bootldr`). For x86-pc, this is `0x00004000`.
-*   **`BOOTIMG_BASE`:** The physical address where the OS archive payload (`tmp.a`) is placed in memory before the bootloader extracts it. For x86-pc, this is `0x00100000`.
+*   **`LOADER_SIZE`:** The maximum size of the bootloader binary. The linker script pads `bootldr` to exactly this size and asserts that it is not exceeded. For most targets this is `0x4000` (16KB); for `arm-musca-b1` it is `0x20000` (128KB, to fill the XIP flash sector).
+*   **`BOOTIMG_BASE`:** The physical address where the OS archive payload (`tmp.a`) is placed in memory before the bootloader extracts it. For targets where the boot image immediately follows the bootloader in memory, this is set to `LOADER_TEXT + LOADER_SIZE`. For x86-pc, this is `0x00100000` (the 1MB high-memory boundary; the boot sector loads the archive there via `head.S`).
 *   **`KERNEL_TEXT`:** The physical address where the bootloader relocates and loads the kernel (`prex+`). For x86-pc, this is `0x00200000`.
 *   **`SYSPAGE_BASE`:** The virtual address of the system page, which acts as the boundary between user space and kernel space.
 
@@ -34,7 +35,7 @@ The combination process is orchestrated by `Makefile` rules, primarily leveragin
     *   **Contents:** `bootldr` + `tmp.a`
     *   **Command:** `cat bsp/boot/bootldr tmp.a > prexos.bin`
 
-Because `bootldr` is exactly 8KB (padded by its linker script), the system archive (`tmp.a`) always begins at an offset of exactly 8KB (`0x2000`) into the `prexos.bin` file.
+Because `bootldr` is padded by its linker script to exactly `LOADER_SIZE` (defined in the target's `.base` file — 16KB for most targets, 128KB for `arm-musca-b1`), the system archive (`tmp.a`) always begins at an offset of `LOADER_SIZE` into the `prexos.bin` file (e.g., 16KB = `0x4000` for most targets).
 
 For x86, this `prexos.bin` file is then typically copied to a FAT12 floppy image (`floppy.img`). For ARM, it may be placed onto an SD card (e.g., as `kernel.img` for Raspberry Pi) or loaded via U-Boot.
 
@@ -52,13 +53,13 @@ For x86, this `prexos.bin` file is then typically copied to a FAT12 floppy image
 
 ### Step 2: The Bootloader (`bootldr`)
 1.  **Entry and Relocation (`head.S`):** Execution begins in the architecture's `head.S`.
-    *   **x86:** Running at `0x30000`, it first copies its own 8KB footprint down to `LOADER_TEXT` (`0x4000`) and jumps there. Then, it copies the rest of the image (the `tmp.a` archive, starting at `0x32000`) up to `BOOTIMG_BASE` (`0x00100000`) in extended memory. This limits the OS image to about 440KB to fit within conventional memory during the initial boot sector read. After relocation, it switches the CPU to 32-bit Protected Mode, and jumps to the C code entry `main()`.
+    *   **x86:** Running at `0x30000`, it first copies its own `LOADER_SIZE` footprint down to `LOADER_TEXT` (`0x4000`) and jumps there. Then, it copies the rest of the image (the `tmp.a` archive, starting at `0x30000 + LOADER_SIZE`) up to `BOOTIMG_BASE` (`0x00100000`) in extended memory. This limits the OS image to about 440KB to fit within conventional memory during the initial boot sector read. After relocation, it switches the CPU to 32-bit Protected Mode, and jumps to the C code entry `main()`.
     *   **ARM:** Enters Supervisor (SVC) mode, disables IRQ/FIQ, switches to Thumb mode (if applicable), sets up the stack, and jumps to `main()`.
-2.  **Initialization (`startup.c`, `main.c`):** The bootloader initializes the serial console for debugging, detects available physical memory, and initializes the `bootinfo` structure.
+2.  **Initialization (`startup.c`/`startup.zig`, `main.c`/`main.zig`):** The bootloader initializes the serial console for debugging, detects available physical memory, and initializes the `bootinfo` structure. When `CONFIG_ZIG_BOOT` is enabled, the bootloader's `main()`, `load_os()`, `load_elf()`, `dump_bootinfo()`, and relocation engine are written in Zig instead of C.
     *   **x86:** Memory is detected dynamically using BIOS interrupt 0x15 (e820).
     *   **ARM:** Memory is typically hardcoded using `CONFIG_SYSPAGE_PHY_BASE` and `CONFIG_RAM_SIZE` defined in the board's `.base` config file.
-3.  **Archive Extraction (`load.c`):** The bootloader locates the `tmp.a` archive in memory. On x86, it expects to find it exactly at `BOOTIMG_BASE` (`0x00100000`) where `head.S` moved it. It verifies the archive magic string (`!<arch>\n`) and begins scanning the ELF payloads.
-4.  **ELF Loading (`elf.c`):** For each ELF binary found in the archive (kernel, drivers, servers), the bootloader parses the ELF headers:
+3.  **Archive Extraction (`load.c`/`load.zig`):** The bootloader locates the `tmp.a` archive in memory. On x86, it expects to find it exactly at `BOOTIMG_BASE` (`0x00100000`) where `head.S` moved it. It verifies the archive magic string (`!<arch>\n`) and begins scanning the ELF payloads.
+4.  **ELF Loading (`elf.c`/`elf.zig`):** For each ELF binary found in the archive (kernel, drivers, servers), the bootloader parses the ELF headers:
     *   It allocates physical memory for the binary.
     *   It copies the `PT_LOAD` segments (Text, Data) into the allocated memory.
     *   It zero-fills the BSS sections.

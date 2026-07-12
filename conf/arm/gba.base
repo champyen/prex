@@ -15,6 +15,7 @@ mmu		IOMEM_BASE	    0x00000000 0x00000000	# Location of system page
 # Memory address
 #
 memory		LOADER_TEXT	0x03000000	# Start of boot loader
+memory		LOADER_SIZE	0x4000		# Boot loader size limit (16KB)
 memory		KERNEL_TEXT	0x02000000	# Start of kernel
 memory		BOOTIMG_BASE	0x08002000	# Location of boot image
 

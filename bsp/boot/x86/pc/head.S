@@ -63,7 +63,7 @@ ENTRY(boot_entry)
 	xorw	%si, %si		/* Source address cs:0 */
 	movw	%si, %es
 	movw	$0x4000, %di		/* Destination */
-	movw	$0x800, %cx		/* size 8K */
+	movw	$(CONFIG_LOADER_SIZE / 4), %cx	/* size in dwords */
 	rep	movsl
 	ljmp	$0x0000, $(reset_cs)
 reset_cs:
@@ -108,7 +108,7 @@ go_prot:
 	 * Relocate OS image.
 	 */
 	movl	$(CONFIG_BOOTIMG_BASE - KERNBASE), %edi	/* Destination */
-	movl	$0x32000, %esi		/* Source address: 0x32000 */
+	movl	$(0x30000 + CONFIG_LOADER_SIZE), %esi	/* Source address: archive after bootldr */
 	movl	$0x40000, %ecx		/* size 1MB */
 	rep	movsl
 

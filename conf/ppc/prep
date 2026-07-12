@@ -13,8 +13,9 @@ makeoptions	ASFLAGS+= -mregnames
 # Memory address
 #
 memory		LOADER_TEXT	0x00100000	# Start of boot loader
+memory		LOADER_SIZE	0x4000		# Boot loader size limit (16KB)
 memory		KERNEL_TEXT	0x00080000	# Start of kernel
-memory		BOOTIMG_BASE	0x00102000	# Location of boot image
+memory		BOOTIMG_BASE	0x00104000	# Location of boot image (LOADER_TEXT + LOADER_SIZE)
 memory		SYSPAGE_BASE	0x00000000	# Location of system page
 
 #

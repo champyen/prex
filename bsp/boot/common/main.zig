@@ -51,9 +51,9 @@ fn zeroBootinfo() void {
 /// - Loader BSS section is filled with 0.
 /// - Loader stack is configured.
 /// - All interrupts are disabled.
-inline fn DPRINTF(comptime format: [*c]const u8, args: anytype) void {
+inline fn DPRINTF(comptime format: []const u8, args: anytype) void {
     if (cfg.DEBUG) {
-        @call(.auto, ffi.boot.printf, .{format} ++ args);
+        ffi.print(format, args);
     }
 }
 
@@ -69,7 +69,7 @@ pub export fn main() callconv(.c) c_int {
     // 3. Initialize debug port.
     boot.debug_init();
 
-    // 4. Print banner via DPRINTF (printf when DEBUG is defined).
+    // 4. Print banner via DPRINTF (only when DEBUG is set).
     DPRINTF("Prex+ Boot Loader\n", .{});
 
     // 5. Do platform dependent initialization.
@@ -82,12 +82,12 @@ pub export fn main() callconv(.c) c_int {
     boot.load_os();
 
     // 8. Dump boot information.
-    boot.dump_bootinfo(@ptrCast(@constCast(boot.bootinfo)));
+    boot.dump_bootinfo(@ptrCast(boot.bootinfo));
 
     // 9. Launch kernel via C helper (Zig 0.16 has a function-pointer
     //    call codegen bug for all archs; see common/jump_entry.c).
     const entry_ptr: usize = boot.bootinfo.*.kernel.entry -% cfg.KERNOFFSET;
-    DPRINTF("Entering kernel (at 0x%lx) ...\n\n", .{@as(c_ulong, @intCast(entry_ptr))});
+    DPRINTF("Entering kernel (at 0x{x}) ...\n\n", .{entry_ptr});
     boot.jump_to_kernel(entry_ptr);
     unreachable;
 }

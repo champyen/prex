@@ -20,6 +20,7 @@ mmu	        IOMEM_BASE      0x00000000	0x00000000  # Flat mapping
 #
 memory      RAM_SIZE        0x00080000  # 512KB SRAM
 memory      LOADER_TEXT     0x10000000  # Start of boot loader in Flash (QSPI Secure)
+memory      LOADER_SIZE     0x20000     # Boot loader size limit (128KB XIP flash sector)
 memory      BOOTIMG_BASE    0x1001ffbc  # Location of boot image (LOADER_TEXT + 128KB - 68)
 memory      KERNEL_TEXT     0x10020000  # Start of kernel (runs XIP from QSPI Flash)
 memory      KERNEL_DATA     0x30004400  # Start of kernel data in SRAM

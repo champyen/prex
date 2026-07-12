@@ -10,7 +10,8 @@
 //    notice, this list of conditions and the following disclaimer.
 // 2. Redistributions in binary form must reproduce the above copyright
 //    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
+//    documentation and/or other materials provided with the documentation
+//    and/or other materials provided with the distribution.
 //
 // THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
 // ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -26,45 +27,57 @@
 
 // bsp/boot/zig/ffi.zig — typed/organized namespace for the bootloader.
 //
-// Mirrors sys/ffi.zig. Every bootloader-relevant function and constant is
-// re-exported under a per-domain sub-namespace so that domain .zig files
-// (in bsp/boot/common/ and bsp/boot/<arch>/<plat>/) write:
+// Mirrors usr/zig/prog.zig: each per-domain namespace embeds its own
+// scoped @cImport rather than routing through a separate c.zig hub.
+// Domain .zig files import only ffi.zig and write:
 //
 //     const ffi = @import("ffi");
-//     ffi.boot.panic("…");
-//     ffi.elf.arm.R_ARM_ABS32
+//     ffi.boot.printf("...");
+//     ffi.elf.types.Addr
 //     ffi.ar.constants.ARMAG
 //     ffi.mem.MT_USABLE
-//     ffi.cfg.config.CONFIG_LOADER_TEXT
+//     ffi.cfg.CONFIG_LOADER_TEXT
 //
-// and NEVER touch c.<name> directly.
-//
-// This is Stage 1: the namespaces are skeletons populated as each port
-// stage lands (see zig_boot_plan.md §4a for the full design).
+// Build-time -D flags (KERNEL, DEBUG, __arm__, __qemu_virt__, ...) propagate
+// from mk/zig.mk into every @cImport below — do NOT @cDefine them here.
 
-const c = @import("c").c;
 const builtin = @import("builtin");
+const std = @import("std");
 
 // ============================================================================
-// C-ABI types that are NOT Zig built-in primitives. These come from the
-// @cImport namespace and are re-exported here so domain code can use them
-// uniformly. Domain code should prefer the Zig built-in primitives
-// (c_char, c_short, c_ushort, c_int, c_uint, c_long, c_ulong, c_longlong,
-// c_ulonglong) directly when possible — no aliasing needed for those.
+// Shared raw @cImport used by several namespaces for C primitive types
+// (size_t, paddr_t, vaddr_t, ...). Scoped to a private name so domain code
+// accesses via ffi.paddr_t / ffi.size_t etc.
 // ============================================================================
-pub const size_t = c.size_t;
-pub const ssize_t = c.ssize_t;
-pub const intptr_t = c.intptr_t;
-pub const uintptr_t = c.uintptr_t;
-pub const paddr_t = c.paddr_t;
-pub const vaddr_t = c.vaddr_t;
-pub const psize_t = c.psize_t;
-pub const vsize_t = c.vsize_t;
+const c_types = @cImport({
+    @cInclude("stdint.h");
+    @cInclude("stddef.h");
+    @cInclude("sys/types.h");
+    @cInclude("sys/param.h");
+});
+
+pub const size_t = c_types.size_t;
+pub const ssize_t = c_types.ssize_t;
+pub const intptr_t = c_types.intptr_t;
+pub const uintptr_t = c_types.uintptr_t;
+pub const paddr_t = c_types.paddr_t;
+pub const vaddr_t = c_types.vaddr_t;
+pub const psize_t = c_types.psize_t;
+pub const vsize_t = c_types.vsize_t;
 
 // ============================================================================
-// boot.* — C-ABI entry points and BSS-extern state. These are the bootloader's
-// external surface, called from head.S and from the linker.
+// boot.* — C-ABI entry points, BSS-extern state, libc-equivalent helpers.
+// Scoped @cImport for <boot.h>, <load.h>, <machdep.h>. The libc-equivalents
+// (memcpy/memset/strncmp/strlcpy/atol) are declared as `extern fn` rather
+// than pulled from @cImport so we get the right callconv + types without
+// dragging in competing C prototypes.
 // ============================================================================
+const c_boot = @cImport({
+    @cInclude("boot.h");
+    @cInclude("load.h");
+    @cInclude("machdep.h");
+});
+
 pub const boot = struct {
     pub extern fn main() callconv(.c) c_int;
     pub extern fn panic(msg: [*c]const u8) callconv(.c) noreturn;
@@ -93,115 +106,114 @@ pub const boot = struct {
 };
 
 // ============================================================================
-// elf.* — ELF loader namespace (skeleton; populated in Stage 4a + 4b).
+// elf.* — ELF loader namespace.
+//   elf.types  : shared ELF struct aliases + format constants (from sys/elf.h)
+//   elf.x86    : x86 relocation type enum (R_386_*)
+//   elf.arm    : ARM relocation type enum (R_ARM_*)
+//   elf.riscv  : RISC-V relocation type enum (R_RISCV_*)
+//   elf.api    : extern fn load_elf, relocate_rel, relocate_rela
 // ============================================================================
+const c_elf = @cImport({
+    @cInclude("sys/elf.h");
+    @cInclude("elf_reloc.h");
+});
+
 pub const elf = struct {
-    // elf.types — shared ELF struct aliases + format constants.
     pub const types = struct {
-        pub const Ehdr = c.Elf32_Ehdr;
-        pub const Phdr = c.Elf32_Phdr;
-        pub const Shdr = c.Elf32_Shdr;
-        pub const Sym = c.Elf32_Sym;
-        pub const Rel = c.Elf32_Rel;
-        pub const Rela = c.Elf32_Rela;
-        pub const Addr = c.Elf32_Addr;
-        pub const Off = c.Elf32_Off;
-        pub const Word = c.Elf32_Word;
-        pub const Half = c.Elf32_Half;
-        pub const Sword = c.Elf32_Sword;
+        pub const Ehdr = c_elf.Elf32_Ehdr;
+        pub const Phdr = c_elf.Elf32_Phdr;
+        pub const Shdr = c_elf.Elf32_Shdr;
+        pub const Sym = c_elf.Elf32_Sym;
+        pub const Rel = c_elf.Elf32_Rel;
+        pub const Rela = c_elf.Elf32_Rela;
+        pub const Addr = c_elf.Elf32_Addr;
+        pub const Off = c_elf.Elf32_Off;
+        pub const Word = c_elf.Elf32_Word;
+        pub const Half = c_elf.Elf32_Half;
+        pub const Sword = c_elf.Elf32_Sword;
 
-        // ELF header / identification (exposed as plain u8/u16/u32 values
-        // so the constants have a concrete type at comptime; needed because
-        // elf32_e_ident is u8[EI_NIDENT] which is many-pointer-indexed).
-        pub const EI_MAG0: u8 = c.EI_MAG0;
-        pub const EI_MAG1: u8 = c.EI_MAG1;
-        pub const EI_MAG2: u8 = c.EI_MAG2;
-        pub const EI_MAG3: u8 = c.EI_MAG3;
-        pub const ELFMAG0: u8 = c.ELFMAG0;
-        pub const ELFMAG1: u8 = c.ELFMAG1;
-        pub const ELFMAG2: u8 = c.ELFMAG2;
-        pub const ELFMAG3: u8 = c.ELFMAG3;
-        pub const ELFMAG = c.ELFMAG;
-        pub const SELFMAG = c.SELFMAG;
+        pub const EI_MAG0: u8 = c_elf.EI_MAG0;
+        pub const EI_MAG1: u8 = c_elf.EI_MAG1;
+        pub const EI_MAG2: u8 = c_elf.EI_MAG2;
+        pub const EI_MAG3: u8 = c_elf.EI_MAG3;
+        pub const ELFMAG0: u8 = c_elf.ELFMAG0;
+        pub const ELFMAG1: u8 = c_elf.ELFMAG1;
+        pub const ELFMAG2: u8 = c_elf.ELFMAG2;
+        pub const ELFMAG3: u8 = c_elf.ELFMAG3;
+        pub const ELFMAG = c_elf.ELFMAG;
+        pub const SELFMAG = c_elf.SELFMAG;
 
-        // e_type
-        pub const ET_NONE: u16 = c.ET_NONE;
-        pub const ET_REL: u16 = c.ET_REL;
-        pub const ET_EXEC: u16 = c.ET_EXEC;
-        pub const ET_DYN: u16 = c.ET_DYN;
-        pub const ET_CORE: u16 = c.ET_CORE;
+        pub const ET_NONE: u16 = c_elf.ET_NONE;
+        pub const ET_REL: u16 = c_elf.ET_REL;
+        pub const ET_EXEC: u16 = c_elf.ET_EXEC;
+        pub const ET_DYN: u16 = c_elf.ET_DYN;
+        pub const ET_CORE: u16 = c_elf.ET_CORE;
 
-        // p_type
-        pub const PT_NULL: u32 = c.PT_NULL;
-        pub const PT_LOAD: u32 = c.PT_LOAD;
-        pub const PT_DYNAMIC: u32 = c.PT_DYNAMIC;
-        pub const PT_NOTE: u32 = c.PT_NOTE;
-        pub const PT_ARM_EXIDX: u32 = if (@hasDecl(c, "PT_ARM_EXIDX")) c.PT_ARM_EXIDX else 0x70000000;
+        pub const PT_NULL: u32 = c_elf.PT_NULL;
+        pub const PT_LOAD: u32 = c_elf.PT_LOAD;
+        pub const PT_DYNAMIC: u32 = c_elf.PT_DYNAMIC;
+        pub const PT_NOTE: u32 = c_elf.PT_NOTE;
+        pub const PT_ARM_EXIDX: u32 = if (@hasDecl(c_elf, "PT_ARM_EXIDX")) c_elf.PT_ARM_EXIDX else 0x70000000;
 
-        // sh_type
-        pub const SHT_NULL: u32 = c.SHT_NULL;
-        pub const SHT_PROGBITS: u32 = c.SHT_PROGBITS;
-        pub const SHT_SYMTAB: u32 = c.SHT_SYMTAB;
-        pub const SHT_STRTAB: u32 = c.SHT_STRTAB;
-        pub const SHT_RELA: u32 = c.SHT_RELA;
-        pub const SHT_REL: u32 = c.SHT_REL;
-        pub const SHT_NOBITS: u32 = c.SHT_NOBITS;
-        pub const SHT_ARM_EXIDX: u32 = if (@hasDecl(c, "SHT_ARM_EXIDX")) c.SHT_ARM_EXIDX else 0x70000003;
+        pub const SHT_NULL: u32 = c_elf.SHT_NULL;
+        pub const SHT_PROGBITS: u32 = c_elf.SHT_PROGBITS;
+        pub const SHT_SYMTAB: u32 = c_elf.SHT_SYMTAB;
+        pub const SHT_STRTAB: u32 = c_elf.SHT_STRTAB;
+        pub const SHT_RELA: u32 = c_elf.SHT_RELA;
+        pub const SHT_REL: u32 = c_elf.SHT_REL;
+        pub const SHT_NOBITS: u32 = c_elf.SHT_NOBITS;
+        pub const SHT_ARM_EXIDX: u32 = if (@hasDecl(c_elf, "SHT_ARM_EXIDX")) c_elf.SHT_ARM_EXIDX else 0x70000003;
 
-        // sh_flags
-        pub const SHF_WRITE: u32 = c.SHF_WRITE;
-        pub const SHF_ALLOC: u32 = c.SHF_ALLOC;
-        pub const SHF_EXECINSTR: u32 = c.SHF_EXECINSTR;
-        pub const SHF_LINK_ORDER: u32 = if (@hasDecl(c, "SHF_LINK_ORDER")) c.SHF_LINK_ORDER else 0x80;
+        pub const SHF_WRITE: u32 = c_elf.SHF_WRITE;
+        pub const SHF_ALLOC: u32 = c_elf.SHF_ALLOC;
+        pub const SHF_EXECINSTR: u32 = c_elf.SHF_EXECINSTR;
+        pub const SHF_LINK_ORDER: u32 = if (@hasDecl(c_elf, "SHF_LINK_ORDER")) c_elf.SHF_LINK_ORDER else 0x80;
 
-        // p_flags
-        pub const PF_X: u32 = c.PF_X;
-        pub const PF_W: u32 = c.PF_W;
-        pub const PF_R: u32 = c.PF_R;
+        pub const PF_X: u32 = c_elf.PF_X;
+        pub const PF_W: u32 = c_elf.PF_W;
+        pub const PF_R: u32 = c_elf.PF_R;
 
-        // symbol table
-        pub const STN_UNDEF: u16 = c.STN_UNDEF;
-        pub const STB_WEAK: u8 = c.STB_WEAK;
-        pub const STT_NOTYPE: u8 = c.STT_NOTYPE;
-        pub const SHN_ABS: u16 = c.SHN_ABS;
+        pub const STN_UNDEF: u16 = c_elf.STN_UNDEF;
+        pub const STB_WEAK: u8 = c_elf.STB_WEAK;
+        pub const STT_NOTYPE: u8 = c_elf.STT_NOTYPE;
+        pub const SHN_ABS: u16 = c_elf.SHN_ABS;
     };
 
-    // Per-arch relocation type enums.
     pub const x86 = struct {
-        pub const R_386_NONE = c.R_386_NONE;
-        pub const R_386_32 = c.R_386_32;
-        pub const R_386_PC32 = c.R_386_PC32;
-        pub const R_386_PLT32 = c.R_386_PLT32;
+        pub const R_386_NONE = c_elf.R_386_NONE;
+        pub const R_386_32 = c_elf.R_386_32;
+        pub const R_386_PC32 = c_elf.R_386_PC32;
+        pub const R_386_PLT32 = c_elf.R_386_PLT32;
     };
     pub const arm = struct {
-        pub const R_ARM_NONE = c.R_ARM_NONE;
-        pub const R_ARM_ABS32 = c.R_ARM_ABS32;
-        pub const R_ARM_REL32 = c.R_ARM_REL32;
-        pub const R_ARM_PC24 = c.R_ARM_PC24;
-        pub const R_ARM_CALL = c.R_ARM_CALL;
-        pub const R_ARM_JUMP24 = c.R_ARM_JUMP24;
-        pub const R_ARM_PLT32 = c.R_ARM_PLT32;
-        pub const R_ARM_MOVW_ABS_NC = c.R_ARM_MOVW_ABS_NC;
-        pub const R_ARM_MOVT_ABS = c.R_ARM_MOVT_ABS;
-        pub const R_ARM_THM_CALL = c.R_ARM_THM_CALL;
-        pub const R_ARM_THM_JUMP24 = c.R_ARM_THM_JUMP24;
-        pub const R_ARM_THM_MOVW_ABS_NC = c.R_ARM_THM_MOVW_ABS_NC;
-        pub const R_ARM_THM_MOVT_ABS = c.R_ARM_THM_MOVT_ABS;
-        pub const R_ARM_V4BX = c.R_ARM_V4BX;
-        pub const R_ARM_PREL31 = 42; // R_ARM_PREL31 = 42 per ARM ELF spec
-        pub const SHT_ARM_EXIDX = if (@hasDecl(c, "SHT_ARM_EXIDX")) c.SHT_ARM_EXIDX else 0x70000003;
+        pub const R_ARM_NONE = c_elf.R_ARM_NONE;
+        pub const R_ARM_ABS32 = c_elf.R_ARM_ABS32;
+        pub const R_ARM_REL32 = c_elf.R_ARM_REL32;
+        pub const R_ARM_PC24 = c_elf.R_ARM_PC24;
+        pub const R_ARM_CALL = c_elf.R_ARM_CALL;
+        pub const R_ARM_JUMP24 = c_elf.R_ARM_JUMP24;
+        pub const R_ARM_PLT32 = c_elf.R_ARM_PLT32;
+        pub const R_ARM_MOVW_ABS_NC = c_elf.R_ARM_MOVW_ABS_NC;
+        pub const R_ARM_MOVT_ABS = c_elf.R_ARM_MOVT_ABS;
+        pub const R_ARM_THM_CALL = c_elf.R_ARM_THM_CALL;
+        pub const R_ARM_THM_JUMP24 = c_elf.R_ARM_THM_JUMP24;
+        pub const R_ARM_THM_MOVW_ABS_NC = c_elf.R_ARM_THM_MOVW_ABS_NC;
+        pub const R_ARM_THM_MOVT_ABS = c_elf.R_ARM_THM_MOVT_ABS;
+        pub const R_ARM_V4BX = c_elf.R_ARM_V4BX;
+        pub const R_ARM_PREL31 = 42;
+        pub const SHT_ARM_EXIDX = if (@hasDecl(c_elf, "SHT_ARM_EXIDX")) c_elf.SHT_ARM_EXIDX else 0x70000003;
     };
     pub const riscv = struct {
-        pub const R_RISCV_NONE = if (@hasDecl(c, "R_RISCV_NONE")) c.R_RISCV_NONE else 0;
-        pub const R_RISCV_32 = if (@hasDecl(c, "R_RISCV_32")) c.R_RISCV_32 else 1;
-        pub const R_RISCV_64 = if (@hasDecl(c, "R_RISCV_64")) c.R_RISCV_64 else 2;
-        pub const R_RISCV_RELATIVE = if (@hasDecl(c, "R_RISCV_RELATIVE")) c.R_RISCV_RELATIVE else 3;
-        pub const R_RISCV_BRANCH = if (@hasDecl(c, "R_RISCV_BRANCH")) c.R_RISCV_BRANCH else 16;
-        pub const R_RISCV_JAL = if (@hasDecl(c, "R_RISCV_JAL")) c.R_RISCV_JAL else 17;
-        pub const R_RISCV_CALL = if (@hasDecl(c, "R_RISCV_CALL")) c.R_RISCV_CALL else 18;
-        pub const R_RISCV_HI20 = if (@hasDecl(c, "R_RISCV_HI20")) c.R_RISCV_HI20 else 26;
-        pub const R_RISCV_LO12_I = if (@hasDecl(c, "R_RISCV_LO12_I")) c.R_RISCV_LO12_I else 27;
-        pub const R_RISCV_PCREL_HI20 = if (@hasDecl(c, "R_RISCV_PCREL_HI20")) c.R_RISCV_PCREL_HI20 else 23;
+        pub const R_RISCV_NONE = if (@hasDecl(c_elf, "R_RISCV_NONE")) c_elf.R_RISCV_NONE else 0;
+        pub const R_RISCV_32 = if (@hasDecl(c_elf, "R_RISCV_32")) c_elf.R_RISCV_32 else 1;
+        pub const R_RISCV_64 = if (@hasDecl(c_elf, "R_RISCV_64")) c_elf.R_RISCV_64 else 2;
+        pub const R_RISCV_RELATIVE = if (@hasDecl(c_elf, "R_RISCV_RELATIVE")) c_elf.R_RISCV_RELATIVE else 3;
+        pub const R_RISCV_BRANCH = if (@hasDecl(c_elf, "R_RISCV_BRANCH")) c_elf.R_RISCV_BRANCH else 16;
+        pub const R_RISCV_JAL = if (@hasDecl(c_elf, "R_RISCV_JAL")) c_elf.R_RISCV_JAL else 17;
+        pub const R_RISCV_CALL = if (@hasDecl(c_elf, "R_RISCV_CALL")) c_elf.R_RISCV_CALL else 18;
+        pub const R_RISCV_HI20 = if (@hasDecl(c_elf, "R_RISCV_HI20")) c_elf.R_RISCV_HI20 else 26;
+        pub const R_RISCV_LO12_I = if (@hasDecl(c_elf, "R_RISCV_LO12_I")) c_elf.R_RISCV_LO12_I else 27;
+        pub const R_RISCV_PCREL_HI20 = if (@hasDecl(c_elf, "R_RISCV_PCREL_HI20")) c_elf.R_RISCV_PCREL_HI20 else 23;
         pub const R_RISCV_RELAX = 51;
         pub const R_RISCV_ALIGN = 43;
         pub const R_RISCV_LO12_S = 28;
@@ -220,10 +232,6 @@ pub const elf = struct {
         pub const R_RISCV_SET32 = 56;
     };
 
-    // API functions. The function-pointer type aliases use `mem.Module` /
-    // `elf.types.*` rather than the raw `c.struct_*` so domain code never
-    // touches `c.*` directly (per zig_boot_plan.md §4a "no raw c.* in
-    // domain code" rule).
     pub const api = struct {
         pub extern fn load_elf(img: [*]u8, size: usize, module: *mem.Module) callconv(.c) c_int;
         pub extern fn relocate_rel(rel: *elf.types.Rel, sym_val: elf.types.Addr, target_sect: [*]u8) callconv(.c) c_int;
@@ -234,46 +242,43 @@ pub const elf = struct {
 // ============================================================================
 // ar.* — Unix `ar` archive format namespace.
 // ============================================================================
+const c_ar = @cImport({
+    @cInclude("sys/ar.h");
+});
+
 pub const ar = struct {
     pub const constants = struct {
-        pub const ARMAG = c.ARMAG;
-        pub const SARMAG = c.SARMAG;
-        pub const ARFMAG = c.ARFMAG;
+        pub const ARMAG = c_ar.ARMAG;
+        pub const SARMAG = c_ar.SARMAG;
+        pub const ARFMAG = c_ar.ARFMAG;
     };
-    pub const @"struct" = c.struct_ar_hdr;
+    pub const @"struct" = c_ar.struct_ar_hdr;
 };
 
 // ============================================================================
 // mem.* — physical memory types, bootinfo struct aliases, page helpers.
+// Scoped @cImport for <sys/bootinfo.h> + <machine/memory.h>; the Zig-native
+// struct aliases below are laid out to match C exactly so the kernel reads
+// the same bit-for-bit layout.
 // ============================================================================
-pub const mem = struct {
-    pub const MT_USABLE = c.MT_USABLE;
-    pub const MT_MEMHOLE = c.MT_MEMHOLE;
-    pub const MT_RESERVED = c.MT_RESERVED;
-    pub const MT_BOOTDISK = c.MT_BOOTDISK;
+const c_mem = @cImport({
+    @cInclude("sys/bootinfo.h");
+    @cInclude("machine/memory.h");
+});
 
-    // C's `struct physmem` uses paddr_t (unsigned long) for base and size.
-    // On 32-bit targets, unsigned long = usize. Define our own layout
-    // instead of using c.struct_physmem to avoid cimport typedef issues.
+pub const mem = struct {
+    pub const MT_USABLE = c_mem.MT_USABLE;
+    pub const MT_MEMHOLE = c_mem.MT_MEMHOLE;
+    pub const MT_RESERVED = c_mem.MT_RESERVED;
+    pub const MT_BOOTDISK = c_mem.MT_BOOTDISK;
+
     pub const PhysMem = extern struct {
         base: usize,
         size: usize,
         type: c_int,
     };
 
-    // C's `struct module` from <sys/bootinfo.h>. Use usize for paddr_t/vaddr_t/size_t
-    // to match C's unsigned long on 32-bit targets.
-    //
-    // The struct layout must match C EXACTLY — see include/sys/bootinfo.h.
-    // For ARMv8-M the C struct has a trailing `got_base` field; if we omit
-    // it, the kernel reads subsequent modules with field offsets shifted by
-    // 4 bytes (it would read `m->text` instead of `m->entry`, causing the
-    // musca-b1 hard-fault crash).
-    //
-    // Zig handles the @hasDecl check. Since CONFIG_ARMV8M is defined via -D,
-    // @hasDecl works. The Value 'y' doesn't matter — we only need to know
-    // whether CONFIG_ARMV8M is declared.
-    pub const is_armv8m: bool = @hasDecl(c, "CONFIG_ARMV8M");
+    pub const is_armv8m: bool = @hasDecl(c_mem, "CONFIG_ARMV8M");
     pub const Module = if (is_armv8m)
         extern struct {
             name: [16]u8,
@@ -304,7 +309,13 @@ pub const mem = struct {
             exidx_size: usize,
         };
 
-    // C's `struct bootinfo` from <sys/bootinfo.h>. Define with Zig primitives.
+    pub const VidInfo = extern struct {
+        pixel_x: c_int,
+        pixel_y: c_int,
+        text_x: c_int,
+        text_y: c_int,
+    };
+
     pub const BootInfo = extern struct {
         video: VidInfo,
         ram: [8]PhysMem,
@@ -316,33 +327,15 @@ pub const mem = struct {
         tasks: [1]Module,
     };
 
-    pub const VidInfo = extern struct {
-        pixel_x: c_int,
-        pixel_y: c_int,
-        text_x: c_int,
-        text_y: c_int,
-    };
+    pub const BOOTINFOSZ = c_mem.BOOTINFOSZ;
+    pub const NMEMS = c_mem.NMEMS;
 
-    pub const BOOTINFOSZ = c.BOOTINFOSZ;
-    pub const NMEMS = c.NMEMS;
-
-    // Function-pointer type aliases
-    // Function-pointer type aliases (interfaces) for bootinfo/module ops.
-    // Domain code references these types; the actual function pointers
-    // live in `boot.*` and `elf.api.*` below.
     pub const BootInfoDumper = *const fn ([*c]BootInfo) callconv(.c) void;
     pub const ModuleOp = *const fn ([*c]Module) callconv(.c) c_int;
 
-    // PAGE_SIZE matches include/<arch>/memory.h:
-    //   - arm nommu: 1024 (1KB)
-    //   - arm mmu:   4096 (4KB)
-    //   - riscv:     4096 (always)
-    //   - x86:       4096 (always)
-    // CONFIG_MMU value (y/1) is opaque to Zig cimport, so we use a filename-
-    // style table derived from builtin.cpu.arch + the build's --mcpu flag.
     pub const page_size: usize = switch (builtin.cpu.arch) {
-        .arm => if (@hasDecl(c, "CONFIG_MMU")) 0x1000 else 0x400,
-        .thumb => if (@hasDecl(c, "CONFIG_MMU")) 0x1000 else 0x400,
+        .arm => if (@hasDecl(c_mem, "CONFIG_MMU")) 0x1000 else 0x400,
+        .thumb => if (@hasDecl(c_mem, "CONFIG_MMU")) 0x1000 else 0x400,
         else => 0x1000,
     };
     pub const PAGE_SIZE: usize = page_size;
@@ -360,27 +353,23 @@ pub const mem = struct {
 };
 
 // ============================================================================
-// video.* — display info.
+// video.* — display info (unused alias kept for backwards compatibility
+// with domain code that referenced ffi.video.*).
 // ============================================================================
 pub const video = struct {
-    pub const VidInfo = c.struct_vidinfo;
+    pub const VidInfo = c_mem.struct_vidinfo;
     pub const TEXT_X_DEFAULT: c_int = 80;
     pub const TEXT_Y_DEFAULT: c_int = 25;
 };
 
 // ============================================================================
-// arch.* — per-arch extern fn decls and helpers (populated as reloc engines land).
+// arch.* — per-arch extern fn decls and BSS-extern state.
 // ============================================================================
 pub const arch = struct {
-    // x86: assembly helpers in bsp/boot/x86/pc/head.S
     pub extern fn outb(port: c_int, val: u8) callconv(.c) void;
     pub extern fn inb(port: c_int) callconv(.c) u8;
-
-    // x86: BSS counters populated by head.S
     pub extern var lo_mem: paddr_t;
     pub extern var hi_mem: paddr_t;
-
-    // ARMv8-M: relocation helpers (defined in bsp/boot/zig/reloc/arm_reloc.zig)
     pub extern var sram_got_base: elf.types.Addr;
     pub extern var current_img: [*]u8;
     pub extern var current_module: [*]mem.Module;
@@ -390,50 +379,48 @@ pub const arch = struct {
     pub extern var data_vma: elf.types.Addr;
     pub extern var text_runtime: elf.types.Addr;
     pub extern var data_runtime: elf.types.Addr;
-
-    // ARMv8-M: load base/start for SRAM relocation (defined in bsp/boot/zig/reloc/arm_reloc.zig
-    // or bsp/boot/arm/arch/machdep.c; extern because they live in BSS)
     pub extern var sram_load_base: paddr_t;
     pub extern var sram_load_start: paddr_t;
 };
 
 // ============================================================================
-// cfg.* — compile-time configuration constants.
-//   cfg.config  : CONFIG_* from conf/config.h
-//   cfg.syspage : BOOTINFO, BOOTSTK, BOOTSTKTOP, etc.
-//   cfg.kernel  : KERNOFFSET, KERNBASE
+// cfg.* — compile-time configuration constants from <conf/config.h> and
+// <sys/param.h>. The raw @cImport is exposed as cfg.config so callers can
+// reach arbitrary CONFIG_* symbols without enumerating every one here.
 // ============================================================================
-pub const cfg = struct {
-    // CONFIG_LOADER_TEXT, CONFIG_BOOTIMG_BASE, etc. — flat aliases for
-    // domain code that needs build configuration. Only the well-known
-    // CONFIG_ and BOOTINFO/BOOTSTK symbols are enumerated; if more are
-    // needed they should be added here, not via `usingnamespace`.
-    pub const CONFIG_LOADER_TEXT: usize = @intCast(c.CONFIG_LOADER_TEXT);
-    pub const CONFIG_BOOTIMG_BASE: usize = @intCast(c.CONFIG_BOOTIMG_BASE);
-    pub const CONFIG_KERNEL_TEXT: usize = @intCast(c.CONFIG_KERNEL_TEXT);
-    pub const CONFIG_SYSPAGE_BASE: usize = @intCast(c.CONFIG_SYSPAGE_BASE);
-    pub const CONFIG_SYSPAGE_PHY_BASE: usize = @intCast(c.CONFIG_SYSPAGE_PHY_BASE);
-    pub const CONFIG_RAM_SIZE: usize = @intCast(c.CONFIG_RAM_SIZE);
-    pub const CONFIG_PL011_PHY_BASE: usize = if (@hasDecl(c, "CONFIG_PL011_PHY_BASE")) @intCast(c.CONFIG_PL011_PHY_BASE) else 0;
-    pub const CONFIG_PL011_CLK: u32 = if (@hasDecl(c, "CONFIG_PL011_CLK")) @intCast(c.CONFIG_PL011_CLK) else 0;
-    pub const KERNOFFSET: usize = if (@hasDecl(c, "KERNOFFSET")) @intCast(c.KERNOFFSET) else 0;
-    pub const KERNBASE: usize = if (@hasDecl(c, "KERNBASE")) @intCast(c.KERNBASE) else 0;
-    pub const BOOTINFO: usize = @intCast(c.BOOTINFO);
-    pub const BOOTSTK: usize = @intCast(c.BOOTSTK);
-    pub const BOOTSTKTOP: usize = @intCast(c.BOOTSTKTOP);
-    pub const BOOTSTKSZ: usize = @intCast(c.BOOTSTKSZ);
-    pub const SYSPAGE: usize = @intCast(c.SYSPAGE);
-    pub const SYSPAGESZ: usize = if (@hasDecl(c, "SYSPAGESZ")) @intCast(c.SYSPAGESZ) else 0;
-    pub const CONFIG_NS16550_PHY_BASE: usize = if (@hasDecl(c, "CONFIG_NS16550_PHY_BASE")) @intCast(c.CONFIG_NS16550_PHY_BASE) else 0;
-    pub const CONFIG_NS16550_BASE: usize = if (@hasDecl(c, "CONFIG_NS16550_BASE")) @intCast(c.CONFIG_NS16550_BASE) else 0;
+const c_cfg = @cImport({
+    @cInclude("conf/config.h");
+    @cInclude("sys/param.h");
+    @cInclude("machine/syspage.h");
+});
 
-    // Compile-time feature gates exposed to domain code (Zig 0.16 does not
-    // support `c.X` introspection outside of `c.zig`).
-    pub const DEBUG: bool = @hasDecl(c, "DEBUG");
-    pub const DEBUG_BOOTINFO: bool = @hasDecl(c, "DEBUG_BOOTINFO");
-    pub const DEBUG_ELF: bool = @hasDecl(c, "DEBUG_ELF");
-    pub const CONFIG_DIAG_SERIAL: bool = @hasDecl(c, "CONFIG_DIAG_SERIAL");
-    pub const CONFIG_DIAG_BOCHS: bool = @hasDecl(c, "CONFIG_DIAG_BOCHS");
+pub const cfg = struct {
+    pub const config = c_cfg;
+
+    pub const CONFIG_LOADER_TEXT: usize = @intCast(c_cfg.CONFIG_LOADER_TEXT);
+    pub const CONFIG_BOOTIMG_BASE: usize = @intCast(c_cfg.CONFIG_BOOTIMG_BASE);
+    pub const CONFIG_KERNEL_TEXT: usize = @intCast(c_cfg.CONFIG_KERNEL_TEXT);
+    pub const CONFIG_SYSPAGE_BASE: usize = @intCast(c_cfg.CONFIG_SYSPAGE_BASE);
+    pub const CONFIG_SYSPAGE_PHY_BASE: usize = @intCast(c_cfg.CONFIG_SYSPAGE_PHY_BASE);
+    pub const CONFIG_RAM_SIZE: usize = @intCast(c_cfg.CONFIG_RAM_SIZE);
+    pub const CONFIG_PL011_PHY_BASE: usize = if (@hasDecl(c_cfg, "CONFIG_PL011_PHY_BASE")) @intCast(c_cfg.CONFIG_PL011_PHY_BASE) else 0;
+    pub const CONFIG_PL011_CLK: u32 = if (@hasDecl(c_cfg, "CONFIG_PL011_CLK")) @intCast(c_cfg.CONFIG_PL011_CLK) else 0;
+    pub const KERNOFFSET: usize = if (@hasDecl(c_cfg, "KERNOFFSET")) @intCast(c_cfg.KERNOFFSET) else 0;
+    pub const KERNBASE: usize = if (@hasDecl(c_cfg, "KERNBASE")) @intCast(c_cfg.KERNBASE) else 0;
+    pub const BOOTINFO: usize = @intCast(c_cfg.BOOTINFO);
+    pub const BOOTSTK: usize = @intCast(c_cfg.BOOTSTK);
+    pub const BOOTSTKTOP: usize = @intCast(c_cfg.BOOTSTKTOP);
+    pub const BOOTSTKSZ: usize = @intCast(c_cfg.BOOTSTKSZ);
+    pub const SYSPAGE: usize = @intCast(c_cfg.SYSPAGE);
+    pub const SYSPAGESZ: usize = if (@hasDecl(c_cfg, "SYSPAGESZ")) @intCast(c_cfg.SYSPAGESZ) else 0;
+    pub const CONFIG_NS16550_PHY_BASE: usize = if (@hasDecl(c_cfg, "CONFIG_NS16550_PHY_BASE")) @intCast(c_cfg.CONFIG_NS16550_PHY_BASE) else 0;
+    pub const CONFIG_NS16550_BASE: usize = if (@hasDecl(c_cfg, "CONFIG_NS16550_BASE")) @intCast(c_cfg.CONFIG_NS16550_BASE) else 0;
+
+    pub const DEBUG: bool = @hasDecl(c_cfg, "DEBUG");
+    pub const DEBUG_BOOTINFO: bool = @hasDecl(c_cfg, "DEBUG_BOOTINFO");
+    pub const DEBUG_ELF: bool = @hasDecl(c_cfg, "DEBUG_ELF");
+    pub const CONFIG_DIAG_SERIAL: bool = @hasDecl(c_cfg, "CONFIG_DIAG_SERIAL");
+    pub const CONFIG_DIAG_BOCHS: bool = @hasDecl(c_cfg, "CONFIG_DIAG_BOCHS");
 };
 
 // ============================================================================
@@ -449,111 +436,170 @@ pub const addr = struct {
 };
 
 // ============================================================================
-// print — type-safe string formatting utilizing std.fmt.format
+// print — type-safe Zig-style formatter ({d}, {u}, {x}, {s}, {c}).
+//
+// Light-weight formatter. std.fmt's full formatter pulls ~2 KB of general-
+// purpose code that breaches the 8 KB bootloader cap on Flash-constrained
+// targets (arm-raspi0, arm-integrator, arm-gba). This implementation parses
+// the format string at *runtime* in a single shared interpreter, so per-call-
+// site code is just arg type-erasure + a call — no comptime-generated spec
+// arrays, no per-call-site rodata beyond the format string literal itself.
+//
+// Supported specifiers:
+//     {d}  signed decimal
+//     {u}  unsigned decimal
+//     {x}  unsigned hex (lowercase)
+//     {s}  string ([]const u8 or [*:0]const u8)
+//     {c}  single byte
+//     {{   literal '{'
+//     }}   literal '}'
+//
+// `print()` writes through boot.debug_putc, translating '\n' to '\r\n' for
+// terminals that expect CRLF (QEMU -nographic, serial consoles).
 // ============================================================================
-const std = @import("std");
 
-pub noinline fn printStr(ptr: [*]const u8) void {
-    var idx: usize = 0;
-    while (ptr[idx] != 0) : (idx += 1) {
-        c.debug_putc(@intCast(ptr[idx]));
-    }
+const ArgKind = enum { Int, Uint, Ptr, Slice };
+const ErasedArg = union(ArgKind) {
+    Int: i64,
+    Uint: u64,
+    Ptr: [*]const u8,
+    Slice: []const u8,
+};
+
+const DIGITS_LOWER = "0123456789abcdef";
+
+fn emitByte(b: u8) void {
+    if (b == '\n') boot.debug_putc('\r');
+    boot.debug_putc(b);
 }
 
-pub noinline fn printHex(u: u32) void {
-    const digits = "0123456789abcdef";
-    var i: usize = 0;
-    while (i < 8) : (i += 1) {
-        const shift: u5 = @intCast((7 - i) * 4);
-        const digit_val = (u >> shift) & 0xf;
-        c.debug_putc(@intCast(digits[digit_val]));
-    }
+fn emitStr(s: []const u8) void {
+    for (s) |b| emitByte(b);
 }
 
-pub noinline fn printDec(val: u32) void {
-    const digits = "0123456789";
-    var u: u32 = val;
+fn emitUint(val: u64, base: u8) void {
+    var buf: [24]u8 = undefined;
+    var u = val;
+    var i: usize = buf.len;
     if (u == 0) {
-        c.debug_putc('0');
-        return;
-    }
-    var buf: [10]u8 = undefined;
-    var idx: usize = 0;
-    while (u > 0) {
-        buf[idx] = digits[u % 10];
-        idx += 1;
-        u /= 10;
-    }
-    while (idx > 0) {
-        idx -= 1;
-        c.debug_putc(@intCast(buf[idx]));
-    }
-}
-
-noinline fn printVal(val: anytype) void {
-    const T = @TypeOf(val);
-    if (@typeInfo(T) == .pointer) {
-        printStr(@ptrCast(val));
+        i -= 1;
+        buf[i] = '0';
     } else {
-        printDec(@bitCast(@as(i32, @intCast(val))));
+        while (u != 0) {
+            i -= 1;
+            buf[i] = DIGITS_LOWER[@intCast(u % base)];
+            u /= base;
+        }
     }
+    emitStr(buf[i..]);
 }
 
-pub noinline fn print(format: [*c]const u8, args: anytype) void {
-    const ArgsType = @TypeOf(args);
-    const args_type_info = @typeInfo(ArgsType);
-    const fields = args_type_info.@"struct".fields;
-
-    var arg_idx: usize = 0;
+/// Single shared runtime interpreter. Parses the format string at runtime,
+/// dispatching to emit primitives for each spec/arg. NOT generic — one copy
+/// for all call sites. No comptime-generated spec arrays.
+fn printRuntimeRaw(fmt: []const u8, args: []const ErasedArg) void {
     var i: usize = 0;
-    while (format[i] != 0) {
-        if (format[i] == '{') {
-            if (format[i + 1] == '}') {
-                inline for (fields, 0..) |field, f_idx| {
-                    if (f_idx == arg_idx) {
-                        const val = @field(args, field.name);
-                        printVal(val);
-                    }
-                }
-                arg_idx += 1;
-                i += 2;
-                continue;
-            } else if (format[i + 2] == '}') {
-                const spec = format[i + 1];
-                inline for (fields, 0..) |field, f_idx| {
-                    if (f_idx == arg_idx) {
-                        const val = @field(args, field.name);
-                        const T = @TypeOf(val);
-                        if (spec == 'x') {
-                            const u: u32 = if (@typeInfo(T) == .pointer) @intCast(@intFromPtr(val)) else @bitCast(@as(i32, @intCast(val)));
-                            printHex(u);
-                        } else if (spec == 'd') {
-                            if (@typeInfo(T) == .pointer) {
-                                printHex(@intCast(@intFromPtr(val)));
-                            } else {
-                                printDec(@bitCast(@as(i32, @intCast(val))));
-                            }
-                        } else if (spec == 's') {
-                            if (@typeInfo(T) == .pointer) {
-                                printStr(@ptrCast(val));
-                            } else {
-                                printDec(@bitCast(@as(i32, @intCast(val))));
-                            }
-                        }
-                    }
-                }
-                arg_idx += 1;
-                i += 3;
-                continue;
+    var arg_idx: usize = 0;
+    var lit_start: usize = 0;
+    while (i < fmt.len) {
+        // {{ or }}
+        if (i + 1 < fmt.len and fmt[i] == '{' and fmt[i + 1] == '{') {
+            if (lit_start < i) emitStr(fmt[lit_start..i]);
+            emitByte('{');
+            i += 2;
+            lit_start = i;
+            continue;
+        }
+        if (i + 1 < fmt.len and fmt[i] == '}' and fmt[i + 1] == '}') {
+            if (lit_start < i) emitStr(fmt[lit_start..i]);
+            emitByte('}');
+            i += 2;
+            lit_start = i;
+            continue;
+        }
+        // {spec}
+        if (i + 2 < fmt.len and fmt[i] == '{' and fmt[i + 2] == '}') {
+            if (lit_start < i) emitStr(fmt[lit_start..i]);
+            const spec = fmt[i + 1];
+            i += 3;
+            lit_start = i;
+            const arg = args[arg_idx];
+            arg_idx += 1;
+            switch (spec) {
+                'd' => {
+                    const val = arg.Int;
+                    if (val < 0) emitByte('-');
+                    const abs: u64 = if (val < 0) @intCast(-@as(i128, val)) else @intCast(val);
+                    emitUint(abs, 10);
+                },
+                'u' => emitUint(arg.Uint, 10),
+                'x' => emitUint(arg.Uint, 16),
+                's' => switch (arg) {
+                    .Slice => |slice| emitStr(slice),
+                    .Ptr => |ptr| {
+                        var len: usize = 0;
+                        while (ptr[len] != 0) : (len += 1) {}
+                        emitStr(ptr[0..len]);
+                    },
+                    .Int, .Uint => {},
+                },
+                'c' => emitByte(@intCast(arg.Int)),
+                else => {},
             }
+            continue;
         }
-        
-        const byte = format[i];
-        if (byte == '\n') {
-            c.debug_putc('\r');
-        }
-        c.debug_putc(@intCast(byte));
         i += 1;
     }
+    if (lit_start < fmt.len) emitStr(fmt[lit_start..]);
 }
 
+/// Public typed formatter. `{d}` `{u}` `{x}` `{s}` `{c}`; `{{` and `}}` for
+/// literal braces. The format string is parsed at *runtime* by a single
+/// shared interpreter; per-call-site code is only arg type-erasure.
+/// `inline fn` ensures args are monomorphised at compile time, but the
+/// interpreter is non-generic (one copy total).
+pub inline fn print(comptime fmt: []const u8, args: anytype) void {
+    // Comptime: count specifiers and validate against arg count.
+    const fields = @typeInfo(@TypeOf(args)).@"struct".fields;
+    comptime var spec_count: usize = 0;
+    comptime var i: usize = 0;
+    inline while (i < fmt.len) : (i += 1) {
+        if (i + 2 < fmt.len and fmt[i] == '{' and fmt[i + 2] == '}') {
+            switch (fmt[i + 1]) {
+                'd', 'u', 'x', 's', 'c' => spec_count += 1,
+                else => @compileError("print: unknown specifier '{" ++ &[1]u8{fmt[i + 1]} ++ "}'"),
+            }
+            if (spec_count > fields.len) @compileError("print: format uses more specifiers than args");
+            i += 2;
+        } else if (i + 1 < fmt.len and (fmt[i] == '{' or fmt[i] == '}') and fmt[i] == fmt[i + 1]) {
+            i += 1;
+        }
+    }
+    if (spec_count != fields.len) @compileError("print: format specifier count does not match arg count");
+
+    // Runtime: type-erase args into ErasedArg array, call shared interpreter.
+    var erased_args: [8]ErasedArg = undefined;
+    var arg_idx: usize = 0;
+    inline for (fields) |field| {
+        const val = @field(args, field.name);
+        const T = @TypeOf(val);
+        const info = @typeInfo(T);
+        if (info == .int) {
+            if (info.int.signedness == .signed) {
+                erased_args[arg_idx] = ErasedArg{ .Int = @as(i64, @intCast(val)) };
+            } else {
+                erased_args[arg_idx] = ErasedArg{ .Uint = @as(u64, @intCast(val)) };
+            }
+        } else if (info == .pointer) {
+            if (info.pointer.size == .slice) {
+                erased_args[arg_idx] = ErasedArg{ .Slice = val };
+            } else {
+                erased_args[arg_idx] = ErasedArg{ .Ptr = val };
+            }
+        } else {
+            @compileError("print: unsupported argument type " ++ @typeName(T));
+        }
+        arg_idx += 1;
+    }
+    printRuntimeRaw(fmt, erased_args[0..arg_idx]);
+}

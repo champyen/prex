@@ -20,9 +20,10 @@ mmu         CACHE
 #
 memory      RAM_SIZE    0x02000000  # RAM Size
 memory		LOADER_TEXT	0x00010000	# Start of boot loader
+memory		LOADER_SIZE	0x4000		# Boot loader size limit (16KB)
 memory          KERNEL_TEXT     0x00300000      # Start of kernel
 
-memory		BOOTIMG_BASE	0x00012000	# Location of boot image
+memory		BOOTIMG_BASE	0x00014000	# Location of boot image (LOADER_TEXT + LOADER_SIZE)
 
 #
 # Tunable paramters

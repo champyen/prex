@@ -78,19 +78,24 @@ ZIGFLAGS+=	-target $(ZIG_TARGET) $(ZIG_OPT) -fno-stack-check -fno-unwind-tables 
 		$(addprefix -I,$(INCSDIR)) $(DEFINES)
 
 ifeq ($(_BOOT_),1)
-  # Platform-specific paths: check if they exist next to the C versions, otherwise fallback to dummy files.
+  # Platform-specific paths: use the real platform .zig if it exists,
+  # otherwise fall back to a no-op dummy. Every boot target in verify_all.sh
+  # except arm-gba has its own startup.zig / debug.zig; arm-gba still ships
+  # startup.c / debug.c via bsp/boot/arm/gba/Makefile.inc (which has no
+  # CONFIG_ZIG_BOOT branch), so the dummy .zig fallback prevents a missing
+  # module error there. All three arches (arm, x86, riscv) ship a real
+  # elf_reloc.zig, so no relocation fallback is needed.
   ZIG_STARTUP_PATH := $(if $(wildcard $(SRCDIR)/bsp/boot/$(ARCH)/$(PLATFORM)/startup.zig),$(SRCDIR)/bsp/boot/$(ARCH)/$(PLATFORM)/startup.zig,$(SRCDIR)/bsp/boot/zig/dummy_startup.zig)
   ZIG_DEBUG_PATH   := $(if $(wildcard $(SRCDIR)/bsp/boot/$(ARCH)/$(PLATFORM)/debug.zig),$(SRCDIR)/bsp/boot/$(ARCH)/$(PLATFORM)/debug.zig,$(SRCDIR)/bsp/boot/zig/dummy_debug.zig)
-  ZIG_RELOC_PATH   := $(if $(wildcard $(SRCDIR)/bsp/boot/$(ARCH)/arch/elf_reloc.zig),$(SRCDIR)/bsp/boot/$(ARCH)/arch/elf_reloc.zig,$(SRCDIR)/bsp/boot/zig/dummy_reloc.zig)
+  ZIG_RELOC_PATH   := $(SRCDIR)/bsp/boot/$(ARCH)/arch/elf_reloc.zig
 
-  COMMON_BOOT_MODS = -Mc=$(SRCDIR)/bsp/boot/zig/c.zig $(ZIGFLAGS) \
-    --dep c -Mffi=$(SRCDIR)/bsp/boot/zig/ffi.zig $(ZIGFLAGS) \
+  COMMON_BOOT_MODS = -Mffi=$(SRCDIR)/bsp/boot/zig/ffi.zig $(ZIGFLAGS) \
     --dep machine_startup --dep machine_debug --dep machine_reloc \
-    --dep c --dep ffi -Mmachine_startup=$(ZIG_STARTUP_PATH) $(ZIGFLAGS) \
-    --dep c --dep ffi -Mmachine_debug=$(ZIG_DEBUG_PATH) $(ZIGFLAGS) \
-    --dep c --dep ffi -Mmachine_reloc=$(ZIG_RELOC_PATH) $(ZIGFLAGS)
+    --dep ffi -Mmachine_startup=$(ZIG_STARTUP_PATH) $(ZIGFLAGS) \
+    --dep ffi -Mmachine_debug=$(ZIG_DEBUG_PATH) $(ZIGFLAGS) \
+    --dep ffi -Mmachine_reloc=$(ZIG_RELOC_PATH) $(ZIGFLAGS)
 
-  ZIG_MODULES = --dep c --dep ffi \
+  ZIG_MODULES = --dep ffi \
     --dep machine_startup --dep machine_debug --dep machine_reloc \
     -Mroot=$< $(ZIGFLAGS) \
     $(COMMON_BOOT_MODS)

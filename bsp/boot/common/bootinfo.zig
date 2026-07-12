@@ -69,8 +69,8 @@ fn dumpBootinfo() callconv(.c) void {
     const bi: [*]const ffi.mem.BootInfo = bootinfo;
     var i: c_int = 0;
 
-    @call(.auto, ffi.boot.printf, .{"[Boot information]\n"});
-    @call(.auto, ffi.boot.printf, .{"nr_rams=%d\n", bi[0].nr_rams});
+    ffi.print("[Boot information]\n", .{});
+    ffi.print("nr_rams={d}\n", .{bi[0].nr_rams});
 
     while (i < bi[0].nr_rams) : (i += 1) {
         const idx: usize = @intCast(i);
@@ -78,14 +78,14 @@ fn dumpBootinfo() callconv(.c) void {
         if (ram_entry.type != 0) {
             const t = ram_entry.type;
             const type_str: [*c]const u8 = if (t >= 0 and t < 5) memtype[@intCast(t)] else "";
-            @call(.auto, ffi.boot.printf, .{"ram[%d]:  base=%lx size=%x type=%s\n", i, ram_entry.base, ram_entry.size, type_str});
+            ffi.print("ram[{d}]:  base={x} size={x} type={s}\n", .{ i, ram_entry.base, ram_entry.size, type_str });
         }
     }
 
-    @call(.auto, ffi.boot.printf, .{"bootdisk: base=%lx size=%x\n", bi[0].bootdisk.base, bi[0].bootdisk.size});
-    @call(.auto, ffi.boot.printf, .{"entry    phys     size     text     data     textsz   datasz   bsssz    module\n"});
+    ffi.print("bootdisk: base={x} size={x}\n", .{ bi[0].bootdisk.base, bi[0].bootdisk.size });
+    ffi.print("entry    phys     size     text     data     textsz   datasz   bsssz    module\n", .{});
 
-    @call(.auto, ffi.boot.printf, .{"-------- -------- -------- -------- -------- -------- -------- -------- ------\n"});
+    ffi.print("-------- -------- -------- -------- -------- -------- -------- -------- ------\n", .{});
     printModule(&bi[0].kernel);
     printModule(&bi[0].driver);
 
@@ -100,5 +100,5 @@ fn dumpBootinfo() callconv(.c) void {
 fn dumpBootinfoNoop() callconv(.c) void {}
 
 fn printModule(m: *const ffi.mem.Module) void {
-    @call(.auto, ffi.boot.printf, .{"%lx %lx %x %lx %lx %x %x %x %s\n", m.entry, m.phys, m.size, m.text, m.data, m.textsz, m.datasz, m.bsssz, @as([*c]const u8, @ptrCast(&m.name))});
+    ffi.print("{x} {x} {x} {x} {x} {x} {x} {x} {s}\n", .{ m.entry, m.phys, m.size, m.text, m.data, m.textsz, m.datasz, m.bsssz, @as([*c]const u8, @ptrCast(&m.name)) });
 }

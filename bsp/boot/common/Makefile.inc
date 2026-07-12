@@ -13,7 +13,6 @@
 
 ifeq ($(CONFIG_ZIG_BOOT),y)
 SRCS+=		zig_main.zig \
-		common/printf.c \
 		common/jump_entry.c
 else
 SRCS+=		common/main.c \

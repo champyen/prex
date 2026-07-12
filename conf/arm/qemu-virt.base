@@ -23,8 +23,9 @@ memory      RAM_SIZE        0x10000000  # DRAM Size
 # Memory address
 #
 memory      LOADER_TEXT     0x40010000  # Start of boot loader
+memory      LOADER_SIZE     0x4000      # Boot loader size limit (16KB)
 memory      KERNEL_TEXT     0x40200000  # Start of kernel
-memory      BOOTIMG_BASE    0x40012000  # Location of boot image
+memory      BOOTIMG_BASE    0x40014000  # Location of boot image (LOADER_TEXT + LOADER_SIZE)
 # Tunable parameters
 #
 options         HZ=100			# Ticks/second of the clock

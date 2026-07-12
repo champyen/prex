@@ -39,9 +39,9 @@ const elf = ffi.elf;
 const is_riscv: bool = builtin.cpu.arch == .riscv32 or builtin.cpu.arch == .riscv64;
 const is_armv8m: bool = ffi.mem.is_armv8m;
 
-inline fn DPRINTF(comptime format: [*c]const u8, args: anytype) void {
+inline fn DPRINTF(comptime format: []const u8, args: anytype) void {
     if (cfg.DEBUG) {
-        @call(.auto, ffi.boot.printf, .{format} ++ args);
+        ffi.print(format, args);
     }
 }
 
@@ -75,7 +75,7 @@ fn load_module(hdr: *ffi.ar.@"struct", m: *ffi.mem.Module) c_int {
 
     // Check archive header magic
     if (std.mem.eql(u8, &ar_hdr.ar_fmag, ar.constants.ARFMAG) == false) {
-        DPRINTF("Invalid image %s\n", .{@as([*c]const u8, @ptrCast(&ar_hdr.*.ar_name))});
+        DPRINTF("Invalid image {s}\n", .{@as([*c]const u8, @ptrCast(&ar_hdr.*.ar_name))});
         return -1;
     }
 
@@ -92,7 +92,7 @@ fn load_module(hdr: *ffi.ar.@"struct", m: *ffi.mem.Module) c_int {
     // Load ELF image (skip archive header)
     const img_ptr: [*]u8 = @ptrFromInt(@intFromPtr(hdr) + @sizeOf(ffi.ar.@"struct"));
     const img_size = parseArSize(&hdr.*.ar_size);
-    DPRINTF("loading: hdr=%lx module=%lx name=%s\n", .{ @as(c_ulong, @intCast(@intFromPtr(hdr))), @as(c_ulong, @intCast(@intFromPtr(m))), @as([*c]const u8, @ptrCast(&m.*.name)) });
+    DPRINTF("loading: hdr={x} module={x} name={s}\n", .{ @intFromPtr(hdr), @intFromPtr(m), @as([*c]const u8, @ptrCast(&m.*.name)) });
     const r = elf.api.load_elf(img_ptr, img_size, m);
     if (r != 0) {
         boot.panic("Load error");
@@ -161,7 +161,7 @@ fn setup_bootdisk(hdr: *ffi.ar.@"struct") void {
         bi.*.ram[ram_idx].type = ffi.mem.MT_BOOTDISK;
         bi.*.nr_rams += 1;
     }
-    DPRINTF("bootdisk base=%lx size=%lx\n", .{ bi.*.bootdisk.base, bi.*.bootdisk.size });
+    DPRINTF("bootdisk base={x} size={x}\n", .{ bi.*.bootdisk.base, bi.*.bootdisk.size });
 }
 
 // ARMv8-M: _bss_end is provided by linker script

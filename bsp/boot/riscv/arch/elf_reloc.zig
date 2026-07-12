@@ -27,13 +27,14 @@
 // bsp/boot/riscv/arch/elf_reloc.zig — RISC-V ELF relocation engine.
 // Replaces bsp/boot/riscv/arch/elf_reloc.c.
 
-const elf = @import("ffi").elf;
-const cfg = @import("ffi").cfg;
-const boot = @import("ffi").boot;
+const ffi = @import("ffi");
+const elf = ffi.elf;
+const cfg = ffi.cfg;
+const boot = ffi.boot;
 
-inline fn DPRINTF(comptime format: [*c]const u8, args: anytype) void {
+inline fn DPRINTF(comptime format: []const u8, args: anytype) void {
     if (cfg.DEBUG) {
-        @call(.auto, boot.printf, .{format} ++ args);
+        ffi.print(format, args);
     }
 }
 
@@ -310,7 +311,7 @@ pub export fn relocate_rela(
         },
 
         else => {
-            DPRINTF("RISCV-BOOT: Unknown reloc type %d at %lx sym_val=%lx\n", .{ @as(c_int, @intCast(r_type)), @as(c_ulong, @intCast(@intFromPtr(where))), @as(c_ulong, @intCast(sym_val)) });
+            DPRINTF("RISCV-BOOT: Unknown reloc type {d} at {x} sym_val={x}\n", .{ r_type, @intFromPtr(where), sym_val });
             return -1;
         },
     }

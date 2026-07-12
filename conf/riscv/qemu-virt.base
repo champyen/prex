@@ -22,8 +22,9 @@ options         CACHE
 #
 memory      RAM_SIZE        0x10000000  # DRAM Size (256MB)
 memory      LOADER_TEXT     0x80010000  # Start of boot loader (after 64KB syspage)
+memory      LOADER_SIZE     0x4000      # Boot loader size limit (16KB)
 memory      KERNEL_TEXT     0x80200000  # Start of kernel
-memory      BOOTIMG_BASE    0x80018000  # Location of boot image (LOADER_TEXT + 32KB)
+memory      BOOTIMG_BASE    0x80014000  # Location of boot image (LOADER_TEXT + LOADER_SIZE)
 
 #
 # Tunable parameters

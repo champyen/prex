@@ -42,12 +42,13 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const elf = @import("ffi").elf;
-const boot = @import("ffi").boot;
-const cfg = @import("ffi").cfg;
-const mem = @import("ffi").mem;
-const addr = @import("ffi").addr;
-const paddr_t = @import("ffi").paddr_t;
+const ffi = @import("ffi");
+const elf = ffi.elf;
+const boot = ffi.boot;
+const cfg = ffi.cfg;
+const mem = ffi.mem;
+const addr = ffi.addr;
+const paddr_t = ffi.paddr_t;
 
 const is_arm: bool = builtin.cpu.arch == .arm or builtin.cpu.arch == .thumb;
 const is_riscv: bool = builtin.cpu.arch == .riscv32 or builtin.cpu.arch == .riscv64;
@@ -152,61 +153,17 @@ inline fn setLoadBase(v: paddr_t) void {
 //
 // The C side uses DPRINTF/ELFDBG macros that expand to printf() if
 // DEBUG/DEBUG_ELF is set, and to nothing otherwise.
-//
-// ELFDBG(format, args) provides that semantic in Zig. Each call is
-// precomputed at *compile time* via std.fmt when DEBUG_ELF is set:
-// the formatted message becomes a literal in the binary's .rodata
-// and the runtime cost is exactly one variadic-free cstring printf.
-// When DEBUG_ELF is undefined, every ELFDBG call is fully eliminated
-// at compile time — there is no runtime stub.
-//
-// Zig 0.16 cannot forward C-ABI varargs through a generic function
-// wrapper (see the comment on `boot.printf` in ffi.zig). We sidestep
-// that limitation by formatting into a comptime string and then
-// handing it to printf with a fixed `"%s"` format string, which is
-// itself a comptime literal with no varargs.
-//
-// We use Zig's std.fmt format specifiers (`{x}`, `{d}`, `{s}`) so the
-// format string is parsed entirely at compile time. Common conversions
-// from the C version's specifiers:
-//   C `%x`    → Zig `{x}`
-//   C `%lx`   → Zig `{x}`
-//   C `%d`    → Zig `{d}`
-//   C `%u`    → Zig `{d}`
-//   C `%s`    → Zig `{s}`
-//   C `%5x`   → Zig `{x:0>5}` (zero-pad width 5)
-//
-// Usage:
-//     ELFDBG("\nelf_load\n");
-//     ELFDBG("kernel base=%lx\n", .{value});
-//     ELFDBG("page %d pa=%lx\n", .{i, page_pa});
 // ============================================================================
 
-/// `ELFDBG(format, args)` is the Zig analogue of C's ELFDBG(format).
-///
-/// `ELFDBG` is intentionally a no-op stub in this Zig port. The
-/// reasoning: Zig 0.16 cannot forward C-ABI varargs through generic
-/// helpers (see the `boot.printf` comment in ffi.zig), so wrapping
-/// `printf` with varargs in Zig is impossible until variable args
-/// are supported. Earlier attempts to use `std.fmt.comptimePrint`
-/// and `std.fmt.bufPrintSentinel` failed due to Zig 0.16 + std.fmt
-/// ICEs and code-size bloat on 8 KB boot ROMs (arm-raspi0 etc.).
-///
-/// Instead, debug formatting is done at every emit site with an
-/// inline `if (cfg.DEBUG_ELF) boot.printf(...)` block. The
-/// Zig compiler eliminates the entire block when DEBUG_ELF is
-/// undefined, so the disabled path has zero runtime cost, matching
-/// the C semantics of `ELFDBG`. Future Zig 0.16 fixes may let us
-/// replace this stub with a comptime-folded implementation.
-inline fn ELFDBG(comptime format: [*c]const u8, args: anytype) void {
+inline fn ELFDBG(comptime format: []const u8, args: anytype) void {
     if (cfg.DEBUG_ELF) {
-        @call(.auto, boot.printf, .{format} ++ args);
+        ffi.print(format, args);
     }
 }
 
-inline fn DPRINTF(comptime format: [*c]const u8, args: anytype) void {
+inline fn DPRINTF(comptime format: []const u8, args: anytype) void {
     if (cfg.DEBUG) {
-        @call(.auto, boot.printf, .{format} ++ args);
+        ffi.print(format, args);
     }
 }
 
@@ -289,11 +246,11 @@ pub export fn load_elf(img_ptr: [*]u8, img_size: usize, m: *mem.Module) callconv
             return -1;
         }
         load_start = getLoadBase();
-        ELFDBG("kernel base=%lx\n", .{getLoadBase()});
+        ELFDBG("kernel base={x}\n", .{getLoadBase()});
     } else if (nr_img == 1) {
-        ELFDBG("driver base=%lx\n", .{getLoadBase()});
+        ELFDBG("driver base={x}\n", .{getLoadBase()});
     } else {
-        ELFDBG("task base=%lx\n", .{getLoadBase()});
+        ELFDBG("task base={x}\n", .{getLoadBase()});
     }
 
     // ----- Dispatch on ELF type -----
@@ -334,7 +291,7 @@ fn loadExecutable(img: []const u8, m: *mem.Module) c_int {
     if (ph_offset + ph_size > img.len) return -1;
     var phdr = @as([*]const elf.types.Phdr, @ptrCast(@alignCast(&img[ph_offset])));
     m.phys = getLoadBase();
-    DPRINTF("phys addr=%lx\n", .{phys_base});
+    DPRINTF("phys addr={x}\n", .{phys_base});
 
     // ARMv8-M only: pre-scan to find loc_text_vma / loc_data_vma
     var loc_text_vma: elf.types.Addr = 0;
@@ -445,7 +402,7 @@ fn loadExecutable(img: []const u8, m: *mem.Module) c_int {
     setLoadBase(mem.round_page(getLoadBase()));
     m.size = @intCast(getLoadBase() - m.phys);
     m.entry = if (is_armv8m) m.text + (ehdr.e_entry - loc_text_vma) else ehdr.e_entry;
-    ELFDBG("module size=%x entry=%lx\n", .{ m.size, m.entry });
+    ELFDBG("module size={x} entry={x}\n", .{ m.size, m.entry });
 
     if (m.size == 0) {
         boot.panic("Module size is 0!");
@@ -509,7 +466,7 @@ fn loadExecutable(img: []const u8, m: *mem.Module) c_int {
                 shdr[@intCast(r)].sh_type == elf.types.SHT_RELA)
             {
                 if (relocateSection(img, @ptrCast(@constCast(&shdr[@intCast(r)]))) != 0) {
-                    DPRINTF("Relocation error: module=%s\n", .{@as([*c]const u8, @ptrCast(&m.name))});
+                    DPRINTF("Relocation error: module={s}\n", .{@as([*c]const u8, @ptrCast(&m.name))});
                     return -1;
                 }
             }
@@ -742,7 +699,7 @@ fn loadRelocatableArmv8m(img: []const u8, m: *mem.Module) c_int {
                 shdr[@intCast(r)].sh_type == elf.types.SHT_RELA)
             {
             if (relocateSection(img, &shdr[@intCast(r)]) != 0) {
-                DPRINTF("Relocation error: module=%s\n", .{@as([*c]const u8, @ptrCast(&m.name))});
+                DPRINTF("Relocation error: module={s}\n", .{@as([*c]const u8, @ptrCast(&m.*.name))});
                 return -1;
             }
             }
@@ -760,7 +717,7 @@ fn loadRelocatableDefault(img: []const u8, m: *mem.Module) c_int {
     const ehdr = @as(*const elf.types.Ehdr, @ptrCast(@alignCast(&img[0])));
     strshndx = 0;
     m.phys = getLoadBase();
-    DPRINTF("phys addr=%lx\n", .{getLoadBase()});
+    DPRINTF("phys addr={x}\n", .{getLoadBase()});
 
     const sh_offset = ehdr.e_shoff;
     const sh_count = ehdr.e_shnum;
@@ -915,7 +872,7 @@ fn relocateSection(img: []const u8, shdr: *const elf.types.Shdr) c_int {
     }
     const strtab: [*]u8 = sect_addr[@as(usize, @intCast(strshndx))];
     if (@intFromPtr(strtab) == 0) return -1;
-    ELFDBG("strtab=%lx\n", .{@as(c_ulong, @intCast(@intFromPtr(strtab)))});
+    ELFDBG("strtab={x}\n", .{@intFromPtr(strtab)});
 
 
     const nr_reloc: c_int = @intCast(@as(usize, @intCast(shdr.sh_size)) / @as(usize, @intCast(shdr.sh_entsize)));
@@ -961,10 +918,10 @@ fn relocateSectionRel(
         } else if (@as(RelInfo, @bitCast(r.r_info)).sym == elf.types.STN_UNDEF) {
             if (relocate_rel_api(@ptrCast(@constCast(&r)), sym[0].st_value, target_sect) != 0) return -1;
         } else if (@as(SymInfo, @bitCast(sym[0].st_info)).bind != elf.types.STB_WEAK) {
-            DPRINTF("Undefined symbol for rel[%x] sym=%lx\n", .{ i, @as(c_ulong, @intCast(@intFromPtr(sym))) });
+            DPRINTF("Undefined symbol for rel[{d}] sym={x}\n", .{ i, @intFromPtr(sym) });
             return -1;
         } else {
-            DPRINTF("Undefined weak symbol for rel[%x]\n", .{i});
+            DPRINTF("Undefined weak symbol for rel[{d}]\n", .{i});
         }
     }
     return 0;
@@ -986,10 +943,10 @@ fn relocateSectionRela(
         } else if (@as(RelInfo, @bitCast(r.r_info)).sym == elf.types.STN_UNDEF) {
             if (relocate_rela_api(@ptrCast(@constCast(&r)), sym[0].st_value, target_sect) != 0) return -1;
         } else if (@as(SymInfo, @bitCast(sym[0].st_info)).bind != elf.types.STB_WEAK) {
-            DPRINTF("Undefined symbol for rela[%x] sym=%lx\n", .{ i, @as(c_ulong, @intCast(@intFromPtr(sym))) });
+            DPRINTF("Undefined symbol for rela[{d}] sym={x}\n", .{ i, @intFromPtr(sym) });
             return -1;
         } else {
-            DPRINTF("Undefined weak symbol for rela[%x]\n", .{i});
+            DPRINTF("Undefined weak symbol for rela[{d}]\n", .{i});
         }
     }
     return 0;

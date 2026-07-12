@@ -39,5 +39,7 @@ SECTIONS {
 		*(.tail)
 	}
 
+	ASSERT(. - CONFIG_LOADER_TEXT <= CONFIG_LOADER_SIZE,
+	       "Bootloader exceeds LOADER_SIZE")
 	/DISCARD/ : { *(.ARM.exidx) }
 }

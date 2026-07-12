@@ -37,7 +37,7 @@ SECTIONS {
         __end = . ;
     }
 
-    . = CONFIG_LOADER_TEXT + 0x7fff;
+    . = CONFIG_LOADER_TEXT + CONFIG_LOADER_SIZE - 1;
     .tail : {
         BYTE(0xff);
     }

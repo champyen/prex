@@ -24,7 +24,7 @@ SECTIONS {
 		*(.bss)
 		*(COMMON)
 	}
-	. = CONFIG_LOADER_TEXT + 0x1fff;
+	. = CONFIG_LOADER_TEXT + CONFIG_LOADER_SIZE - 1;
 	.tail : {
 		*(.tail)
 	}
