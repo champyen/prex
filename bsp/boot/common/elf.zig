@@ -43,12 +43,17 @@ const std = @import("std");
 const builtin = @import("builtin");
 
 const ffi = @import("ffi");
+const panic_c = @import("panic_mod").panic;
 const elf = ffi.elf;
 const boot = ffi.boot;
 const cfg = ffi.cfg;
 const mem = ffi.mem;
 const addr = ffi.addr;
 const paddr_t = ffi.paddr_t;
+
+// Machine relocation helpers — direct @import from machine_reloc module.
+// No extern fn indirection needed; Zig-native ABI works across modules.
+const machine_reloc = @import("machine_reloc");
 
 const is_arm: bool = builtin.cpu.arch == .arm or builtin.cpu.arch == .thumb;
 const is_riscv: bool = builtin.cpu.arch == .riscv32 or builtin.cpu.arch == .riscv64;
@@ -167,23 +172,20 @@ inline fn DPRINTF(comptime format: []const u8, args: anytype) void {
     }
 }
 
-fn strCmp(s1: [*]const u8, s2: [*]const u8) c_int {
-    var p1: [*]const u8 = s1;
-    var p2: [*]const u8 = s2;
-    while (p1[0] != 0 and p1[0] == p2[0]) {
-        p1 += 1;
-        p2 += 1;
-    }
-    return @intCast(p1[0] -% p2[0]);
+// Compare a runtime name (NUL-terminated) against a comptime-known literal.
+// `literal` length is bounded at comptime, so the function only reads at
+// most `literal.len + 1` bytes from the runtime side — early exit and
+// statically-known bounds make this much safer than a NUL-terminated
+// strcmp-style loop with unbounded length.
+inline fn nameEq(runtime: [*]const u8, comptime literal: []const u8) bool {
+    var i: usize = 0;
+    while (i < literal.len and runtime[i] == literal[i]) : (i += 1) {}
+    // Match iff we consumed exactly `literal.len` bytes AND the next byte
+    // is the terminating NUL.
+    return i == literal.len and runtime[i] == 0;
 }
 
-comptime {
-    if (is_armv8m) {
-        _ = &strCmp;
-    }
-}
-
-pub export fn load_elf(img_ptr: [*]u8, img_size: usize, m: *mem.Module) callconv(.c) c_int {
+pub fn load_elf(img_ptr: [*]u8, img_size: usize, m: *mem.Module) c_int {
     const img = img_ptr[0..img_size];
     if (img.len < @sizeOf(elf.types.Ehdr)) {
         ELFDBG("Invalid ELF size\n", .{});
@@ -405,7 +407,7 @@ fn loadExecutable(img: []const u8, m: *mem.Module) c_int {
     ELFDBG("module size={x} entry={x}\n", .{ m.size, m.entry });
 
     if (m.size == 0) {
-        boot.panic("Module size is 0!");
+        panic_c("Module size is 0!");
     }
 
     // ARMv8-M: walk section headers to populate sect_addr[] and find .got.
@@ -451,7 +453,7 @@ fn loadExecutable(img: []const u8, m: *mem.Module) c_int {
         var g: c_int = 0;
         while (g < @as(c_int, @intCast(sh_count))) : (g += 1) {
             if (shdr[@intCast(g)].sh_type == elf.types.SHT_PROGBITS and
-                strCmp(shstrtab + shdr[@intCast(g)].sh_name, ".got") == 0)
+                nameEq(shstrtab + shdr[@intCast(g)].sh_name, ".got"))
             {
                 sram_got_base = @intCast(@intFromPtr(sect_addr[@intCast(g)]));
                 break;
@@ -681,7 +683,7 @@ fn loadRelocatableArmv8m(img: []const u8, m: *mem.Module) c_int {
         var g: c_int = 0;
         while (g < @as(c_int, @intCast(sh_count))) : (g += 1) {
             if (shdr[@intCast(g)].sh_type == elf.types.SHT_PROGBITS and
-                strCmp(shstrtab + shdr[@intCast(g)].sh_name, ".got") == 0)
+                nameEq(shstrtab + shdr[@intCast(g)].sh_name, ".got"))
             {
                 sram_got_base = @intCast(@intFromPtr(sect_addr[@intCast(g)]));
                 break;
@@ -796,7 +798,7 @@ fn loadRelocatableDefault(img: []const u8, m: *mem.Module) c_int {
             if (sh.sh_offset + sh.sh_size > img.len) return -1;
             sect_addr[@intCast(i)] = @constCast(img[sh.sh_offset..].ptr);
             if (strshndx != 0) {
-                boot.panic("Multiple symtab found!");
+                panic_c("Multiple symtab found!");
             }
             strshndx = @intCast(sh.sh_link);
         } else if (sh.sh_type == elf.types.SHT_STRTAB) {
@@ -823,7 +825,7 @@ fn loadRelocatableDefault(img: []const u8, m: *mem.Module) c_int {
         var g: c_int = 0;
         while (g < @as(c_int, @intCast(sh_count))) : (g += 1) {
             if (shdr[@intCast(g)].sh_type == elf.types.SHT_PROGBITS and
-                strCmp(shstrtab + shdr[@intCast(g)].sh_name, ".got") == 0)
+                nameEq(shstrtab + shdr[@intCast(g)].sh_name, ".got"))
             {
                 sram_got_base = @intCast(@intFromPtr(sect_addr[@intCast(g)]));
                 break;
@@ -910,13 +912,13 @@ fn relocateSectionRel(
         const r: elf.types.Rel = rel[@intCast(i)];
         const sym: [*]const elf.types.Sym = @ptrCast(&sym_table[@as(RelInfo, @bitCast(r.r_info)).sym]);
         if (sym[0].st_shndx != elf.types.STN_UNDEF) {
-            const sym_val = computeSymVal(sym[0], r.r_offset, target_sect);
-            const rc = relocate_rel_api(@ptrCast(@constCast(&r)), sym_val, target_sect);
+            const sym_val = computeSymVal(sym[0]);
+            const rc = machine_reloc.relocate_rel(@ptrCast(@constCast(&r)), sym_val, target_sect);
             if (rc != 0) {
                 return -1;
             }
         } else if (@as(RelInfo, @bitCast(r.r_info)).sym == elf.types.STN_UNDEF) {
-            if (relocate_rel_api(@ptrCast(@constCast(&r)), sym[0].st_value, target_sect) != 0) return -1;
+            if (machine_reloc.relocate_rel(@ptrCast(@constCast(&r)), sym[0].st_value, target_sect) != 0) return -1;
         } else if (@as(SymInfo, @bitCast(sym[0].st_info)).bind != elf.types.STB_WEAK) {
             DPRINTF("Undefined symbol for rel[{d}] sym={x}\n", .{ i, @intFromPtr(sym) });
             return -1;
@@ -938,10 +940,10 @@ fn relocateSectionRela(
         const r: elf.types.Rela = rela[@intCast(i)];
         const sym: [*]const elf.types.Sym = @ptrCast(&sym_table[@as(RelInfo, @bitCast(r.r_info)).sym]);
         if (sym[0].st_shndx != elf.types.STN_UNDEF) {
-            const sym_val = computeSymVal(sym[0], r.r_offset, target_sect);
-            if (relocate_rela_api(@ptrCast(@constCast(&r)), sym_val, target_sect) != 0) return -1;
+            const sym_val = computeSymVal(sym[0]);
+            if (machine_reloc.relocate_rela(@ptrCast(@constCast(&r)), sym_val, target_sect) != 0) return -1;
         } else if (@as(RelInfo, @bitCast(r.r_info)).sym == elf.types.STN_UNDEF) {
-            if (relocate_rela_api(@ptrCast(@constCast(&r)), sym[0].st_value, target_sect) != 0) return -1;
+            if (machine_reloc.relocate_rela(@ptrCast(@constCast(&r)), sym[0].st_value, target_sect) != 0) return -1;
         } else if (@as(SymInfo, @bitCast(sym[0].st_info)).bind != elf.types.STB_WEAK) {
             DPRINTF("Undefined symbol for rela[{d}] sym={x}\n", .{ i, @intFromPtr(sym) });
             return -1;
@@ -952,17 +954,12 @@ fn relocateSectionRela(
     return 0;
 }
 
-// Relocation helper wrappers to dispatch to elf.api.relocate_*
-inline fn relocate_rel_api(rel: *elf.types.Rel, sym_val: elf.types.Addr, target_sect: [*]u8) c_int {
-    return elf.api.relocate_rel(rel, sym_val, target_sect);
-}
-
-inline fn relocate_rela_api(rela: *elf.types.Rela, sym_val: elf.types.Addr, target_sect: [*]u8) c_int {
-    return elf.api.relocate_rela(rela, sym_val, target_sect);
-}
-
 // Compute the symbol value based on arch-specific layout rules.
-inline fn computeSymVal(sym: elf.types.Sym, _: elf.types.Addr, target_sect: [*]u8) elf.types.Addr {
+// Uses only the symbol's ELF metadata (st_value, st_shndx); the relocation
+// offset and target-section pointer are not needed for value resolution —
+// they belong to the relocation *application*, decided by the per-arch
+// relocate_rel/rela helper.
+inline fn computeSymVal(sym: elf.types.Sym) elf.types.Addr {
     var sym_val: elf.types.Addr = sym.st_value;
     if (is_armv8m) {
         if (elf_type == elf.types.ET_EXEC) {
@@ -981,7 +978,6 @@ inline fn computeSymVal(sym: elf.types.Sym, _: elf.types.Addr, target_sect: [*]u
     } else {
         sym_val += @intCast(@intFromPtr(sect_addr[sym.st_shndx]));
     }
-    _ = target_sect;
     return sym_val;
 }
 // end of file

@@ -5,7 +5,7 @@
 
 const ffi = @import("ffi");
 
-pub export fn startup() callconv(.c) void {
+pub fn startup() void {
     const bi = ffi.boot.bootinfo;
 
     // Usable: Entire DRAM (starting from 0x80000000)

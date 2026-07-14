@@ -13,7 +13,8 @@ comptime {
     _ = @import("common/load.zig");
     _ = @import("common/elf.zig");
     _ = @import("common/splash.zig");
-    _ = @import("common/string.zig");
+    _ = @import("string_mod");
+    _ = @import("panic_mod");
     _ = @import("machine_startup");
     _ = @import("machine_debug");
     _ = @import("machine_reloc");

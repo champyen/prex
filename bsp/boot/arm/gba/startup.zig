@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //
-// Copyright (c) 2009, Richard Pandion
 // Copyright (c) 2026, Champ Yen <champ.yen@gmail.com>
 // All rights reserved.
 //
@@ -28,16 +27,26 @@
 // OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 // SUCH DAMAGE.
 
+// bsp/boot/arm/gba/startup.zig — Game Boy Advance startup.
+//
+// Port of common/arm/gba/startup.c. Sets up the bootinfo's video geometry
+// (30x20 text cells) and registers the 256K EWRAM region (0x02000000) as
+// the single usable RAM region.
+//
+// Matched against boot.h's `void startup(void)` declaration via the
+// boot.* namespace in ffi.zig (extern fn, callconv(.c)).
+
 const ffi = @import("ffi");
 
-// Pure Zig — called via @import from common/main.zig (no C ABI needed
-// because the bootloader is a standalone Zig program).
+const EWRAM_BASE: u32 = 0x02000000;
+const EWRAM_SIZE: u32 = 0x40000; // 256 KB
+
 pub fn startup() void {
     const bi = ffi.boot.bootinfo;
-    bi.video.text_x = 80;
-    bi.video.text_y = 25;
-    bi.ram[0].base = ffi.cfg.CONFIG_SYSPAGE_PHY_BASE;
-    bi.ram[0].size = ffi.cfg.CONFIG_RAM_SIZE;
+    bi.video.text_x = 30;
+    bi.video.text_y = 20;
+    bi.ram[0].base = EWRAM_BASE;
+    bi.ram[0].size = EWRAM_SIZE;
     bi.ram[0].type = ffi.mem.MT_USABLE;
     bi.nr_rams = 1;
 }

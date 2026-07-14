@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //
-// Copyright (c) 2009, Richard Pandion
 // Copyright (c) 2026, Champ Yen <champ.yen@gmail.com>
 // All rights reserved.
 //
@@ -12,9 +11,6 @@
 // 2. Redistributions in binary form must reproduce the above copyright
 //    notice, this list of conditions and the following disclaimer in the
 //    documentation and/or other materials provided with the distribution.
-// 3. Neither the name of the author nor the names of any co-contributors
-//    may be used to endorse or promote products derived from this software
-//    without specific prior written permission.
 //
 // THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
 // ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -28,16 +24,25 @@
 // OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 // SUCH DAMAGE.
 
+// bsp/boot/zig/panic.zig — panic helper shared across bootloader modules.
+//
+// Provided as its own tiny Zig module so both the root module (which
+// contains common/main.zig, common/load.zig etc.) and the machine_*
+// modules (machine_startup, machine_debug, machine_reloc) can
+// `@import("panic_mod")` and call `panic()` directly with Zig-native
+// ABI. No extern fn indirection needed for the standalone Zig
+// bootloader program.
+
 const ffi = @import("ffi");
 
-// Pure Zig — called via @import from common/main.zig (no C ABI needed
-// because the bootloader is a standalone Zig program).
-pub fn startup() void {
-    const bi = ffi.boot.bootinfo;
-    bi.video.text_x = 80;
-    bi.video.text_y = 25;
-    bi.ram[0].base = ffi.cfg.CONFIG_SYSPAGE_PHY_BASE;
-    bi.ram[0].size = ffi.cfg.CONFIG_RAM_SIZE;
-    bi.ram[0].type = ffi.mem.MT_USABLE;
-    bi.nr_rams = 1;
+/// Hang the system after printing a panic message. Zig-native ABI —
+/// both root-module callers (via main.bootPanic) and cross-module
+/// callers (machine_reloc's elf_reloc helpers, machine_startup/debug
+/// if they ever need it) reach this function through a small `panic_mod`
+/// module dep declared in mk/zig.mk.
+pub fn panic(comptime msg: []const u8) noreturn {
+    if (ffi.cfg.DEBUG) {
+        @import("ffi").print("Panic: " ++ msg ++ "\n", .{});
+    }
+    while (true) {}
 }

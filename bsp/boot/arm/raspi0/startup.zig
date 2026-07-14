@@ -30,7 +30,7 @@
 
 const ffi = @import("ffi");
 
-pub export fn startup() callconv(.c) void {
+pub fn startup() void {
     const bi = ffi.boot.bootinfo;
     bi.video.text_x = 80;
     bi.video.text_y = 25;

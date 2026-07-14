@@ -54,14 +54,14 @@ const CR_UARTEN = 0x0001; // UART enable
 const CR_TXE = 0x0100;    // Transmit enable
 const CR_RXE = 0x0200;    // Receive enable
 
-pub export fn debug_putc(c: c_int) callconv(.c) void {
+pub fn debug_putc(c: c_int) void {
     if (ffi.cfg.DEBUG and ffi.cfg.CONFIG_DIAG_SERIAL) {
         while ((UART_FR.* & FR_TXFF) != 0) {}
         UART_DR.* = @intCast(@as(u8, @intCast(c)));
     }
 }
 
-pub export fn debug_init() callconv(.c) void {
+pub fn debug_init() void {
     if (ffi.cfg.DEBUG and ffi.cfg.CONFIG_DIAG_SERIAL) {
         UART_CR.* = 0x0;     // Disable everything
         UART_ICR.* = 0x07ff; // Clear all interrupt status

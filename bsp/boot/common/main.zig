@@ -28,10 +28,14 @@
 // Replaces bsp/boot/common/main.c.
 
 const ffi = @import("ffi");
+const splash = @import("splash.zig");
+const bootinfo = @import("bootinfo.zig");
+const load = @import("load.zig");
+const machine_startup = @import("machine_startup");
+const machine_debug = @import("machine_debug");
+const panic_mod = @import("panic_mod");
 
-const std = @import("std");
 const boot = ffi.boot;
-const mem = ffi.mem;
 const cfg = ffi.cfg;
 
 /// Zero the bootinfo struct.
@@ -58,31 +62,36 @@ inline fn DPRINTF(comptime format: []const u8, args: anytype) void {
 }
 
 pub export fn main() callconv(.c) c_int {
-    // 1. Initialize the C-side `bootinfo` global pointer (used by
-    //    startup.c and any C code in the bootloader). This is provided
-    //    by common/bootinfo.zig as `__boot_bootinfo_init()`.
-    boot.boot_bootinfo_init();
+    // 1. Initialize the bootinfo global pointer (handled by
+    //    common/bootinfo.zig).
+    bootinfo.boot_bootinfo_init();
 
     // 2. Zero the bootinfo struct.
     zeroBootinfo();
 
-    // 3. Initialize debug port.
-    boot.debug_init();
+    // 3. Initialize debug port (direct @import call; no extern fn ABI
+    //    boundary needed across Zig modules).
+    machine_debug.debug_init();
 
     // 4. Print banner via DPRINTF (only when DEBUG is set).
     DPRINTF("Prex+ Boot Loader\n", .{});
 
-    // 5. Do platform dependent initialization.
-    boot.startup();
+    // 5. Do platform dependent initialization (direct @import call;
+    //    no extern fn ABI boundary needed across Zig modules).
+    machine_startup.startup();
 
-    // 6. Show splash screen.
-    boot.splash();
+    // 6. Show splash screen (common/splash.zig).
+    splash.splash();
 
-    // 7. Load OS modules to appropriate locations.
-    boot.load_os();
+    // 7. Load OS modules to appropriate locations (common/load.zig).
+    load.load_os();
 
-    // 8. Dump boot information.
-    boot.dump_bootinfo(@ptrCast(boot.bootinfo));
+    // 8. Dump boot information (common/bootinfo.zig).
+    if (cfg.DEBUG) {
+        bootinfo.dumpBootinfo();
+    } else {
+        bootinfo.dumpBootinfoNoop();
+    }
 
     // 9. Launch kernel via C helper (Zig 0.16 has a function-pointer
     //    call codegen bug for all archs; see common/jump_entry.c).
@@ -90,21 +99,4 @@ pub export fn main() callconv(.c) c_int {
     DPRINTF("Entering kernel (at 0x{x}) ...\n\n", .{entry_ptr});
     boot.jump_to_kernel(entry_ptr);
     unreachable;
-}
-
-/// panic - show error message and hang up.
-///
-/// Exported as the C-ABI symbol `panic` (so C code can call panic()).
-/// We do NOT name the Zig function `panic` because Zig reserves that name
-/// for the default panic handler (which has a 3-argument signature
-/// `fn(msg, error_return_trace, return_address)`). Using a different
-/// Zig-side name avoids the type-check conflict, while @export gives it
-/// the correct C-linkage name.
-fn bootPanic(msg: [*c]const u8) callconv(.c) noreturn {
-    DPRINTF("Panic: {s}\n", .{msg});
-    while (true) {}
-}
-
-comptime {
-    @export(&bootPanic, .{ .name = "panic", .linkage = .strong });
 }

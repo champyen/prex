@@ -37,7 +37,7 @@ const UART_FR: *volatile u32 = @ptrFromInt(UART_BASE + 0x18);
 
 const FR_TXFF = 0x20; // Transmit FIFO full
 
-pub export fn debug_putc(c: c_int) callconv(.c) void {
+pub fn debug_putc(c: c_int) void {
     var i: u32 = 0;
     while (i < 1000) : (i += 1) {
         if ((UART_FR.* & FR_TXFF) == 0)
@@ -46,6 +46,6 @@ pub export fn debug_putc(c: c_int) callconv(.c) void {
     UART_DR.* = @intCast(@as(u8, @intCast(c)));
 }
 
-pub export fn debug_init() callconv(.c) void {
+pub fn debug_init() void {
     // QEMU PL011 doesn't really need initialization for basic output
 }

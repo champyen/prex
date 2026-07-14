@@ -141,11 +141,11 @@ const RiscvSTypeOffset = packed struct(i12) {
     imm11_5: u7,
 };
 
-pub export fn relocate_rela(
+pub fn relocate_rela(
     rela: *elf.types.Rela,
     sym_val: elf.types.Addr,
     target_sect: [*]u8,
-) callconv(.c) c_int {
+) c_int {
     const where: [*]align(1) elf.types.Addr = @ptrCast(target_sect + rela.r_offset);
     const val: elf.types.Addr = sym_val + @as(elf.types.Addr, @bitCast(rela.r_addend));
     const r_type = @as(RelInfo, @bitCast(rela.r_info)).type;
@@ -318,11 +318,11 @@ pub export fn relocate_rela(
     return 0;
 }
 
-pub export fn relocate_rel(
+pub fn relocate_rel(
     _: [*]elf.types.Rel,
     _: elf.types.Addr,
     _: [*]u8,
-) callconv(.c) c_int {
+) c_int {
     return -1;
 }
 

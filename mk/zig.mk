@@ -78,25 +78,29 @@ ZIGFLAGS+=	-target $(ZIG_TARGET) $(ZIG_OPT) -fno-stack-check -fno-unwind-tables 
 		$(addprefix -I,$(INCSDIR)) $(DEFINES)
 
 ifeq ($(_BOOT_),1)
-  # Platform-specific paths: use the real platform .zig if it exists,
-  # otherwise fall back to a no-op dummy. Every boot target in verify_all.sh
-  # except arm-gba has its own startup.zig / debug.zig; arm-gba still ships
-  # startup.c / debug.c via bsp/boot/arm/gba/Makefile.inc (which has no
-  # CONFIG_ZIG_BOOT branch), so the dummy .zig fallback prevents a missing
-  # module error there. All three arches (arm, x86, riscv) ship a real
-  # elf_reloc.zig, so no relocation fallback is needed.
-  ZIG_STARTUP_PATH := $(if $(wildcard $(SRCDIR)/bsp/boot/$(ARCH)/$(PLATFORM)/startup.zig),$(SRCDIR)/bsp/boot/$(ARCH)/$(PLATFORM)/startup.zig,$(SRCDIR)/bsp/boot/zig/dummy_startup.zig)
-  ZIG_DEBUG_PATH   := $(if $(wildcard $(SRCDIR)/bsp/boot/$(ARCH)/$(PLATFORM)/debug.zig),$(SRCDIR)/bsp/boot/$(ARCH)/$(PLATFORM)/debug.zig,$(SRCDIR)/bsp/boot/zig/dummy_debug.zig)
+  # Platform-specific paths: every boot target in verify_all.sh has its
+  # own startup.zig / debug.zig. All three arches (arm, x86, riscv) ship
+  # a real elf_reloc.zig, so no relocation fallback is needed.
+  ZIG_STARTUP_PATH := $(SRCDIR)/bsp/boot/$(ARCH)/$(PLATFORM)/startup.zig
+  ZIG_DEBUG_PATH   := $(SRCDIR)/bsp/boot/$(ARCH)/$(PLATFORM)/debug.zig
   ZIG_RELOC_PATH   := $(SRCDIR)/bsp/boot/$(ARCH)/arch/elf_reloc.zig
 
-  COMMON_BOOT_MODS = -Mffi=$(SRCDIR)/bsp/boot/zig/ffi.zig $(ZIGFLAGS) \
+  COMMON_BOOT_MODS = --dep machine_startup --dep machine_debug --dep machine_reloc \
+    --dep panic_mod --dep ffi -Mpanic_mod=$(SRCDIR)/bsp/boot/zig/panic.zig $(ZIGFLAGS) \
+    --dep panic_mod --dep ffi \
+    --dep string_mod -Mstring_mod=$(SRCDIR)/bsp/boot/common/string.zig $(ZIGFLAGS) \
+    --dep panic_mod \
     --dep machine_startup --dep machine_debug --dep machine_reloc \
-    --dep ffi -Mmachine_startup=$(ZIG_STARTUP_PATH) $(ZIGFLAGS) \
-    --dep ffi -Mmachine_debug=$(ZIG_DEBUG_PATH) $(ZIGFLAGS) \
-    --dep ffi -Mmachine_reloc=$(ZIG_RELOC_PATH) $(ZIGFLAGS)
+    --dep string_mod --dep panic_mod --dep machine_startup --dep machine_debug --dep ffi \
+    -Mffi=$(SRCDIR)/bsp/boot/zig/ffi.zig $(ZIGFLAGS) \
+    --dep panic_mod --dep ffi -Mmachine_startup=$(ZIG_STARTUP_PATH) $(ZIGFLAGS) \
+    --dep panic_mod --dep ffi -Mmachine_debug=$(ZIG_DEBUG_PATH) $(ZIGFLAGS) \
+    --dep panic_mod --dep ffi -Mmachine_reloc=$(ZIG_RELOC_PATH) $(ZIGFLAGS)
 
   ZIG_MODULES = --dep ffi \
     --dep machine_startup --dep machine_debug --dep machine_reloc \
+    --dep panic_mod \
+    --dep string_mod \
     -Mroot=$< $(ZIGFLAGS) \
     $(COMMON_BOOT_MODS)
 else ifeq ($(_KRNL_),1)

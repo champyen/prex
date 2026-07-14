@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //
-// Copyright (c) 2009, Richard Pandion
 // Copyright (c) 2026, Champ Yen <champ.yen@gmail.com>
 // All rights reserved.
 //
@@ -28,16 +27,26 @@
 // OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 // SUCH DAMAGE.
 
-const ffi = @import("ffi");
+// bsp/boot/arm/gba/debug.zig — Game Boy Advance debug port.
+//
+// Port of common/arm/gba/debug.c. The GBA has no real serial port for
+// bootloader diagnostics — debug_init is a no-op, debug_putc is guarded
+// by CONFIG_DEBUG + CONFIG_DIAG_VBA and emits characters through an
+// out-of-line `vba_putc(int)` symbol that the VBA emulator hooks.
+//
+// Matched against boot.h's `void debug_init(void)` and
+// `void debug_putc(int)` declarations via the boot.* namespace in
+// ffi.zig (extern fn, callconv(.c)).
 
-// Pure Zig — called via @import from common/main.zig (no C ABI needed
-// because the bootloader is a standalone Zig program).
-pub fn startup() void {
-    const bi = ffi.boot.bootinfo;
-    bi.video.text_x = 80;
-    bi.video.text_y = 25;
-    bi.ram[0].base = ffi.cfg.CONFIG_SYSPAGE_PHY_BASE;
-    bi.ram[0].size = ffi.cfg.CONFIG_RAM_SIZE;
-    bi.ram[0].type = ffi.mem.MT_USABLE;
-    bi.nr_rams = 1;
+const ffi = @import("ffi");
+const vba_putc = @extern(*const fn (c_int) callconv(.c) void, .{ .name = "vba_putc" });
+
+pub fn debug_putc(c: c_int) void {
+    if (ffi.cfg.DEBUG and ffi.cfg.CONFIG_DIAG_VBA) {
+        vba_putc(c);
+    }
+}
+
+pub fn debug_init() void {
+    // DO NOTHING on real hardware (GBA has no debug serial port).
 }

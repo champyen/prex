@@ -22,7 +22,7 @@ const COM_LSR = COM_BASE + 0x05; // line status register
 const COM_DLL = COM_BASE + 0x00; // divisor latch LSB (LCR[7] = 1)
 const COM_DLM = COM_BASE + 0x01; // divisor latch MSB (LCR[7] = 1)
 
-pub export fn debug_putc(c: c_int) callconv(.c) void {
+pub fn debug_putc(c: c_int) void {
     // output to serial port.
     while ((inb(@intCast(COM_LSR)) & 0x20) == 0) {}
     outb(@intCast(COM_THR), @intCast(@as(u8, @intCast(c))));
@@ -35,7 +35,7 @@ pub export fn debug_putc(c: c_int) callconv(.c) void {
     }
 }
 
-pub export fn debug_init() callconv(.c) void {
+pub fn debug_init() void {
     // Initialize serial port.
     if (inb(@intCast(COM_LSR)) == 0xff) {
         return; // Serial port is disabled

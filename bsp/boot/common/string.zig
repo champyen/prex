@@ -47,8 +47,9 @@ const ffi = @import("ffi");
 // ============================================================================
 // atol — convert string to long. Does not support negative values (matches
 // the C version which only handles positive decimal integers).
+// Zig-native ABI (not exposed to C/assembly).
 // ============================================================================
-pub export fn atol(str: [*c]const u8) callconv(.c) c_long {
+pub fn atol(str: [*c]const u8) c_long {
     var p: [*c]const u8 = str;
     // Skip leading spaces.
     while (p[0] == ' ') : (p += 1) {}
@@ -64,8 +65,9 @@ pub export fn atol(str: [*c]const u8) callconv(.c) c_long {
 // ============================================================================
 // strlcpy — bounded string copy. Destination is always NUL-terminated.
 // Returns strlen(src) (caller can detect truncation by comparing to count).
+// Zig-native ABI.
 // ============================================================================
-pub export fn strlcpy(dest: [*c]u8, src: [*c]const u8, count: c_ulong) callconv(.c) c_ulong {
+pub fn strlcpy(dest: [*c]u8, src: [*c]const u8, count: c_ulong) c_ulong {
     // Use opaque many-pointer to defeat Zig's C-string optimization (which
     // would otherwise emit a call to libc's strlen()).
     const d: [*]u8 = @ptrCast(dest);
@@ -98,8 +100,9 @@ pub export fn strlcpy(dest: [*c]u8, src: [*c]const u8, count: c_ulong) callconv(
 
 // ============================================================================
 // strncmp — compare at most count bytes. Returns 0 on equal, non-zero otherwise.
+// Zig-native ABI.
 // ============================================================================
-pub export fn strncmp(src: [*c]const u8, tgt: [*c]const u8, count: c_ulong) callconv(.c) c_int {
+pub fn strncmp(src: [*c]const u8, tgt: [*c]const u8, count: c_ulong) c_int {
     var s: [*]const u8 = src;
     var t: [*]const u8 = tgt;
     var n: c_ulong = count;
@@ -118,8 +121,9 @@ pub export fn strncmp(src: [*c]const u8, tgt: [*c]const u8, count: c_ulong) call
 
 // ============================================================================
 // memcpy — copy n bytes. Caller is responsible for non-overlap guarantee.
+// Zig-native ABI.
 // ============================================================================
-pub export fn memcpy(dest: ?*anyopaque, src: ?*const anyopaque, count: c_ulong) callconv(.c) ?*anyopaque {
+pub fn memcpy(dest: ?*anyopaque, src: ?*const anyopaque, count: c_ulong) ?*anyopaque {
     const d: [*]volatile u8 = @ptrCast(dest);
     const s: [*]volatile const u8 = @ptrCast(src);
     var i: c_ulong = 0;
@@ -131,8 +135,9 @@ pub export fn memcpy(dest: ?*anyopaque, src: ?*const anyopaque, count: c_ulong) 
 
 // ============================================================================
 // memset — fill n bytes with ch (interpreted as unsigned byte).
+// Zig-native ABI.
 // ============================================================================
-pub export fn memset(dest: ?*anyopaque, ch: c_int, count: c_ulong) callconv(.c) ?*anyopaque {
+pub fn memset(dest: ?*anyopaque, ch: c_int, count: c_ulong) ?*anyopaque {
     const d: [*]volatile u8 = @ptrCast(dest);
     const v: u8 = @intCast(ch & 0xFF);
     var i: c_ulong = 0;
@@ -143,11 +148,7 @@ pub export fn memset(dest: ?*anyopaque, ch: c_int, count: c_ulong) callconv(.c) 
 }
 
 // ============================================================================
-// strlen — return length of string (uses volatile to prevent recursion)
+// strlen — MOVED to bsp/boot/zig/ffi.zig (co-located with printRuntimeRaw so
+// Zig's optimizer can resolve the symbol in the same TU when it emits direct
+// calls to `strlen` for [*c]const u8 conversions).
 // ============================================================================
-pub export fn strlen(str: [*c]const u8) callconv(.c) c_ulong {
-    const s: [*]const volatile u8 = @ptrCast(str);
-    var i: usize = 0;
-    while (s[i] != 0) : (i += 1) {}
-    return i;
-}

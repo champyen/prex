@@ -9,7 +9,7 @@ const ffi = @import("ffi");
 extern var lo_mem: ffi.paddr_t;
 extern var hi_mem: ffi.paddr_t;
 
-pub export fn startup() callconv(.c) void {
+pub fn startup() void {
     const bi = ffi.boot.bootinfo;
 
     // Screen size

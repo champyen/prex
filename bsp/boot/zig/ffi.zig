@@ -45,6 +45,45 @@ const builtin = @import("builtin");
 const std = @import("std");
 
 // ============================================================================
+// strlen — return length of C-string. Zig's optimizer emits `bl strlen` for
+// `[*c]const u8` value conversions during print()'s type-erasure path. We
+// export this Zig-native implementation under the standard `strlen` symbol
+// name with C ABI to match the optimizer's emitted `extern fn` reference.
+// Unused after kernel boot.
+// ============================================================================
+fn strlen(str: [*c]const u8) callconv(.c) c_ulong {
+    const s: [*c]const volatile u8 = @ptrCast(str);
+    var i: c_ulong = 0;
+    while (s[i] != 0) : (i += 1) {}
+    return i;
+}
+
+comptime {
+    @export(&strlen, .{ .name = "strlen", .linkage = .strong });
+}
+
+// ============================================================================
+// Per-machine startup/debug helpers (different Zig modules). Imported
+// directly via @import so ffi.zig can call the platform-specific
+// startup() / debug_init() / debug_putc() as plain Zig-native functions,
+// not through the extern fn indirection.
+//
+// The implementations in <arch>/<plat>/{startup,debug}.zig are still
+// `pub export fn` with C ABI for the C-fallback bootloader path
+// (bsp/boot/arm/gba/startup.c et al); we get the Zig-native address by
+// direct @import into these callsites.
+// ============================================================================
+const machine_startup = @import("machine_startup");
+const machine_debug = @import("machine_debug");
+
+// ============================================================================
+// Zig-native string/memory helpers from common/string.zig. Exposed through
+// the `boot` namespace so domain code can call `ffi.boot.memcpy(...)` without
+// going through a C ABI boundary (these are pkg-internal Zig calls).
+// ============================================================================
+const string = @import("string_mod");
+
+// ============================================================================
 // Shared raw @cImport used by several namespaces for C primitive types
 // (size_t, paddr_t, vaddr_t, ...). Scoped to a private name so domain code
 // accesses via ffi.paddr_t / ffi.size_t etc.
@@ -79,28 +118,30 @@ const c_boot = @cImport({
 });
 
 pub const boot = struct {
+    // sole assembly entry — must remain C ABI
     pub extern fn main() callconv(.c) c_int;
-    pub extern fn panic(msg: [*c]const u8) callconv(.c) noreturn;
-    pub extern fn startup() callconv(.c) void;
-    pub extern fn debug_init() callconv(.c) void;
-    pub extern fn debug_putc(c_val: c_int) callconv(.c) void;
-    pub extern fn splash() callconv(.c) void;
-    pub extern fn load_os() callconv(.c) void;
-    pub extern fn dump_bootinfo(bi: ?*mem.BootInfo) callconv(.c) void;
-    pub extern fn __boot_bootinfo_init() callconv(.c) void;
-    pub const boot_bootinfo_init = __boot_bootinfo_init;
-    pub extern fn printf(fmt: [*c]const u8, ...) callconv(.c) void;
 
-    pub var bootinfo: *mem.BootInfo = @ptrCast(@as(*mem.BootInfo, @ptrFromInt(cfg.BOOTINFO -% cfg.KERNOFFSET)));
+    // extern vars shared with arch relocation helpers (load.c symtab state).
     pub extern var load_base: paddr_t;
     pub extern var load_start: paddr_t;
     pub extern var nr_img: c_int;
 
-    pub extern fn memcpy(dest: ?*anyopaque, src: ?*const anyopaque, n: c_ulong) callconv(.c) ?*anyopaque;
-    pub extern fn memset(dest: ?*anyopaque, c_val: c_int, n: c_ulong) callconv(.c) ?*anyopaque;
-    pub extern fn strncmp(s1: [*c]const u8, s2: [*c]const u8, n: c_ulong) callconv(.c) c_int;
-    pub extern fn strlcpy(dst: [*c]u8, src: [*c]const u8, siz: c_ulong) callconv(.c) c_ulong;
-    pub extern fn atol(s: [*c]const u8) callconv(.c) c_long;
+    // Bootinfo pointer — the actual storage lives in common/bootinfo.zig
+    // (module root). The pub var in bootinfo.zig has type [*c]mem.BootInfo;
+    // we expose a non-c pointer here so per-machine startup.zig (which
+    // needs to do field access like `bi.video.text_x`) gets auto-deref.
+    pub extern var bootinfo: *mem.BootInfo;
+
+    // Zig-native string/memory helpers from common/string.zig. These are
+    // pkg-internal Zig calls (no `@import("...string")` needed in callers).
+    pub const memcpy = string.memcpy;
+    pub const memset = string.memset;
+    pub const strncmp = string.strncmp;
+    pub const strlcpy = string.strlcpy;
+    pub const atol = string.atol;
+
+    // implemented in common/jump_entry.c — Zig 0.16 function-pointer bug
+    // forces a C helper for the indirect call to the kernel entry.
     pub extern fn _jump_to_kernel(entry: usize) callconv(.c) void;
     pub const jump_to_kernel = _jump_to_kernel;
 };
@@ -233,9 +274,8 @@ pub const elf = struct {
     };
 
     pub const api = struct {
-        pub extern fn load_elf(img: [*]u8, size: usize, module: *mem.Module) callconv(.c) c_int;
-        pub extern fn relocate_rel(rel: *elf.types.Rel, sym_val: elf.types.Addr, target_sect: [*]u8) callconv(.c) c_int;
-        pub extern fn relocate_rela(rela: *elf.types.Rela, sym_val: elf.types.Addr, target_sect: [*]u8) callconv(.c) c_int;
+        // relocation helpers — called from common/elf.zig via machine_reloc module.
+        // No extern fn needed; called via @import("machine_reloc") with Zig-native ABI.
     };
 };
 
@@ -330,9 +370,6 @@ pub const mem = struct {
     pub const BOOTINFOSZ = c_mem.BOOTINFOSZ;
     pub const NMEMS = c_mem.NMEMS;
 
-    pub const BootInfoDumper = *const fn ([*c]BootInfo) callconv(.c) void;
-    pub const ModuleOp = *const fn ([*c]Module) callconv(.c) c_int;
-
     pub const page_size: usize = switch (builtin.cpu.arch) {
         .arm => if (@hasDecl(c_mem, "CONFIG_MMU")) 0x1000 else 0x400,
         .thumb => if (@hasDecl(c_mem, "CONFIG_MMU")) 0x1000 else 0x400,
@@ -421,6 +458,7 @@ pub const cfg = struct {
     pub const DEBUG_ELF: bool = @hasDecl(c_cfg, "DEBUG_ELF");
     pub const CONFIG_DIAG_SERIAL: bool = @hasDecl(c_cfg, "CONFIG_DIAG_SERIAL");
     pub const CONFIG_DIAG_BOCHS: bool = @hasDecl(c_cfg, "CONFIG_DIAG_BOCHS");
+    pub const CONFIG_DIAG_VBA: bool = @hasDecl(c_cfg, "CONFIG_DIAG_VBA");
 };
 
 // ============================================================================
@@ -469,8 +507,8 @@ const ErasedArg = union(ArgKind) {
 const DIGITS_LOWER = "0123456789abcdef";
 
 fn emitByte(b: u8) void {
-    if (b == '\n') boot.debug_putc('\r');
-    boot.debug_putc(b);
+    if (b == '\n') machine_debug.debug_putc('\r');
+    machine_debug.debug_putc(b);
 }
 
 fn emitStr(s: []const u8) void {

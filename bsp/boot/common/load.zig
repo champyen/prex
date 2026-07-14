@@ -30,6 +30,8 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const ffi = @import("ffi");
+const elf_loader = @import("elf.zig");
+const panic_c = @import("panic_mod").panic;
 const ar = ffi.ar;
 const boot_mem = ffi.mem;
 const boot = ffi.boot;
@@ -93,9 +95,9 @@ fn load_module(hdr: *ffi.ar.@"struct", m: *ffi.mem.Module) c_int {
     const img_ptr: [*]u8 = @ptrFromInt(@intFromPtr(hdr) + @sizeOf(ffi.ar.@"struct"));
     const img_size = parseArSize(&hdr.*.ar_size);
     DPRINTF("loading: hdr={x} module={x} name={s}\n", .{ @intFromPtr(hdr), @intFromPtr(m), @as([*c]const u8, @ptrCast(&m.*.name)) });
-    const r = elf.api.load_elf(img_ptr, img_size, m);
+    const r = elf_loader.load_elf(img_ptr, img_size, m);
     if (r != 0) {
-        boot.panic("Load error");
+        panic_c("Load error");
     }
 
     // Track minimum data address for ARMv8-M reserved region
@@ -156,6 +158,9 @@ fn setup_bootdisk(hdr: *ffi.ar.@"struct") void {
     // Reserve memory for boot disk (non-RISC-V, non-ROMBOOT)
     if (!is_riscv) {
         const ram_idx: usize = @intCast(bi.*.nr_rams);
+        if (ram_idx >= bi.*.ram.len) {
+            panic_c("Too many boot RAM regions");
+        }
         bi.*.ram[ram_idx].base = @as(usize, @intCast(base));
         bi.*.ram[ram_idx].size = size_aligned;
         bi.*.ram[ram_idx].type = ffi.mem.MT_BOOTDISK;
@@ -169,10 +174,11 @@ fn setup_bootdisk(hdr: *ffi.ar.@"struct") void {
 // emitted for ARMv8-M targets (not for Cortex-A which lacks the symbol).
 
 // ============================================================================
-// load_os — public C-ABI entry point
+// load_os — pure Zig entry; called from common/main.zig via @import.
+// No C ABI boundary (the bootloader is a standalone Zig program).
 // ============================================================================
 
-pub export fn load_os() callconv(.c) void {
+pub fn load_os() void {
     const bi: *ffi.mem.BootInfo = @constCast(@ptrCast(@alignCast(boot.bootinfo)));
 
 
@@ -193,24 +199,24 @@ pub export fn load_os() callconv(.c) void {
     // Sanity check of archive image
     const magic: [*]u8 = @ptrFromInt(ffi.addr.kvtop(cfg.CONFIG_BOOTIMG_BASE));
     if (std.mem.eql(u8, magic[0..8], ar.constants.ARMAG) == false) {
-        boot.panic("Invalid OS image");
+        panic_c("Invalid OS image");
     }
 
 // Load kernel module
     var hdr: *ffi.ar.@"struct" = @ptrFromInt(@intFromPtr(magic) + 8);
     if (load_module(hdr, &bi.*.kernel) != 0) {
-        boot.panic("Can not load kernel");
+        panic_c("Can not load kernel");
     }
 
     // Load driver module
     var len: usize = parseArSize(&hdr.*.ar_size);
     len += @mod(len, 2); // even alignment
     if (len == 0) {
-        boot.panic("Invalid driver image");
+        panic_c("Invalid driver image");
     }
     hdr = @ptrFromInt(@intFromPtr(hdr) + @sizeOf(ffi.ar.@"struct") + len);
     if (load_module(hdr, &bi.*.driver) != 0) {
-        boot.panic("Can not load driver");
+        panic_c("Can not load driver");
     }
 
     // Load boot tasks
@@ -244,12 +250,15 @@ pub export fn load_os() callconv(.c) void {
     bi2.*.nr_tasks = @intCast(i);
 
     if (i == 0) {
-        boot.panic("No boot task found!");
+        panic_c("No boot task found!");
     }
 
     if (is_riscv) {
         // RISC-V specific: Reserve memory for OS archive
         const ram_idx: usize = @intCast(bi2.*.nr_rams);
+        if (ram_idx >= bi2.*.ram.len) {
+            panic_c("Too many boot RAM regions");
+        }
         bi2.*.ram[ram_idx].base = @intFromPtr(magic);
         bi2.*.ram[ram_idx].size = ffi.mem.round_page(@as(usize, @intCast(@intFromPtr(hdr) - @intFromPtr(magic))));
         bi2.*.ram[ram_idx].type = ffi.mem.MT_RESERVED;
@@ -258,6 +267,9 @@ pub export fn load_os() callconv(.c) void {
 
 // Reserve single memory block for all boot modules
     const ram_idx: usize = @intCast(bi2.*.nr_rams);
+    if (ram_idx >= bi2.*.ram.len) {
+        panic_c("Too many boot RAM regions");
+    }
 
     if (is_riscv) {
         bi2.*.ram[ram_idx].base = @as(usize, ffi.mem.trunc_page(load_start));

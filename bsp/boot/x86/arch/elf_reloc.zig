@@ -31,11 +31,11 @@ const ffi = @import("ffi");
 const elf_t = ffi.elf.types;
 const x86 = ffi.elf.x86;
 
-pub export fn relocate_rel(
+pub fn relocate_rel(
     rel: *elf_t.Rel,
     sym_val: elf_t.Addr,
     target_sect: [*]u8,
-) callconv(.c) c_int {
+) c_int {
     const where: [*]align(1) elf_t.Addr = @ptrCast(target_sect + rel.r_offset);
     const r_type: u32 = @intCast(rel.r_info & 0xff);
 
@@ -58,11 +58,11 @@ pub export fn relocate_rel(
     return 0;
 }
 
-pub export fn relocate_rela(
+pub fn relocate_rela(
     _: [*]elf_t.Rela,
     _: elf_t.Addr,
     _: [*]u8,
-) callconv(.c) c_int {
+) c_int {
     return -1;
 }
 

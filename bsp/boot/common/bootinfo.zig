@@ -26,29 +26,30 @@
 
 // bsp/boot/common/bootinfo.zig — boot information for the bootloader.
 //
-// Replaces common/bootinfo.c. Provides:
-//   - bootinfo: pointer to the bootinfo structure in the SYSPAGE area
-//     (initialized to kvtop(BOOTINFO) before main()).
-//   - dump_bootinfo: DEBUG-only function that prints the bootinfo contents.
+// Replaces common/bootinfo.c.
+//
+// All functions exposed as plain Zig — callable directly via @import
+// from other files in this module (root). No C ABI boundary needed
+// because the bootloader is a standalone Zig program.
+//
+// The `bootinfo` global BSS pointer is still exported under C name
+// `bootinfo` because the C-fallback bootloader path references it.
 const ffi = @import("ffi");
 
 // bootinfo: pointer to the bootinfo structure in the SYSPAGE BSS.
-// This must live in BSS so it can be initialized at startup. It is exported
-// as a C symbol so the rest of the C-side bootloader (startup.c, main.c,
-// load.c) can reference it.
 pub var bootinfo: [*c]ffi.mem.BootInfo = undefined;
 
 comptime {
     @export(&bootinfo, .{ .name = "bootinfo", .linkage = .strong });
 }
 
-export fn __boot_bootinfo_init() callconv(.c) void {
+pub fn boot_bootinfo_init() void {
     // kvtop(BOOTINFO) — convert virtual BOOTINFO address to physical.
     // KERNOFFSET is the per-arch offset; KERNOFFSET=0 means 1:1 mapping.
     bootinfo = @ptrFromInt(ffi.cfg.BOOTINFO -% ffi.cfg.KERNOFFSET);
 }
 
-// Memory region type strings for dump_bootinfo.
+// Memory region type strings for dumpBootinfo.
 const memtype: [5][*:0]const u8 = .{
     "",                        // index 0 unused
     "USABLE",
@@ -57,15 +58,7 @@ const memtype: [5][*:0]const u8 = .{
     "BOOTDISK",
 };
 
-comptime {
-    if (ffi.cfg.DEBUG) {
-        @export(&dumpBootinfo, .{ .name = "dump_bootinfo", .linkage = .strong });
-    } else {
-        @export(&dumpBootinfoNoop, .{ .name = "dump_bootinfo", .linkage = .strong });
-    }
-}
-
-fn dumpBootinfo() callconv(.c) void {
+pub fn dumpBootinfo() void {
     const bi: [*]const ffi.mem.BootInfo = bootinfo;
     var i: c_int = 0;
 
@@ -97,7 +90,7 @@ fn dumpBootinfo() callconv(.c) void {
     }
 }
 
-fn dumpBootinfoNoop() callconv(.c) void {}
+pub fn dumpBootinfoNoop() void {}
 
 fn printModule(m: *const ffi.mem.Module) void {
     ffi.print("{x} {x} {x} {x} {x} {x} {x} {x} {s}\n", .{ m.entry, m.phys, m.size, m.text, m.data, m.textsz, m.datasz, m.bsssz, @as([*c]const u8, @ptrCast(&m.name)) });

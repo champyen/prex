@@ -28,7 +28,10 @@
 //
 // Currently a no-op (matches common/splash.c). Per-platform shims may
 // override in the future to display a vendor logo.
+//
+// Pure Zig function called from common/main.zig via direct @import —
+// no C ABI boundary needed (the bootloader is a standalone Zig program).
 
-pub export fn splash() callconv(.c) void {
+pub fn splash() void {
     // No-op for now. A future CONFIG_SPLASH may render a logo here.
 }

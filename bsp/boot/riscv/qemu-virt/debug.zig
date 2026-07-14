@@ -16,7 +16,7 @@ const UART_LSR: *volatile u8 = @ptrFromInt(UART_BASE + 5);
 
 const LSR_THRE = 0x20;
 
-pub export fn debug_putc(c: c_int) callconv(.c) void {
+pub fn debug_putc(c: c_int) void {
     if (c == '\n') {
         while ((UART_LSR.* & LSR_THRE) == 0) {}
         UART_THR.* = '\r';
@@ -25,7 +25,7 @@ pub export fn debug_putc(c: c_int) callconv(.c) void {
     UART_THR.* = @intCast(@as(u8, @intCast(c)));
 }
 
-pub export fn debug_init() callconv(.c) void {
+pub fn debug_init() void {
     // Minimal initialization for NS16550
     UART_IER.* = 0x00; // Disable interrupts
     UART_LCR.* = 0x03; // 8N1

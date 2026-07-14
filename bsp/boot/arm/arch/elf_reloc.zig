@@ -32,6 +32,7 @@ const mem = @import("ffi").mem;
 const boot = @import("ffi").boot;
 const cfg = @import("ffi").cfg;
 const print = @import("ffi").print;
+const panic = @import("panic_mod").panic;
 
 // ARMv8-M relocation globals (defined in bsp/boot/common/elf.c under CONFIG_ARMV8M).
 extern var current_symtab: [*]elf.types.Sym;
@@ -141,11 +142,11 @@ const ArmPrel31Offset = packed struct(u32) {
     sign_extension: u1,
 };
 
-pub export fn relocate_rel(
+pub fn relocate_rel(
     rel: *elf.types.Rel,
     sym_val: elf.types.Addr,
     target_sect: [*]u8,
-) callconv(.c) c_int {
+) c_int {
     const r_type: u32 = @intCast(rel.r_info & 0xff);
     const is_v8m: bool = mem.is_armv8m;
 
@@ -321,12 +322,12 @@ pub export fn relocate_rel(
     return 0;
 }
 
-pub export fn relocate_rela(
+pub fn relocate_rela(
     _: [*]elf.types.Rela,
     _: elf.types.Addr,
     _: [*]u8,
-) callconv(.c) c_int {
-    boot.panic("invalid relocation type");
+) c_int {
+            panic("invalid relocation type");
     return -1;
 }
 
