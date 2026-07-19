@@ -256,6 +256,7 @@ pub fn relocate_rel(
                 new_inst.s = new_offset.s;
                 new_inst.j1 = if (new_offset.i1 == new_offset.s) 1 else 0;
                 new_inst.j2 = if (new_offset.i2 == new_offset.s) 1 else 0;
+                new_inst.opcode2 = 1;
                 where[0] = @bitCast(new_inst);
             } else {
                 const tmp: i32 = @bitCast(
@@ -270,6 +271,7 @@ pub fn relocate_rel(
                 new_inst.s = new_offset.s;
                 new_inst.j1 = if (new_offset.i1 == new_offset.s) 1 else 0;
                 new_inst.j2 = if (new_offset.i2 == new_offset.s) 1 else 0;
+                new_inst.opcode2 = 0;
                 where[0] = @bitCast(new_inst);
             }
         },
