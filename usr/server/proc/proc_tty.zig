@@ -1,66 +1,49 @@
-const std = @import("std");
-const c = @cImport({
-    @cInclude("sys/prex.h");
-    @cInclude("ipc/proc.h");
-    @cInclude("sys/list.h");
-    @cInclude("unistd.h");
-    @cInclude("errno.h");
-    @cInclude("stdlib.h");
-    @cInclude("signal.h");
-    @cInclude("termios.h");
-    @cInclude("usr/server/proc/proc.h");
-});
-
-extern fn get_ttydev() c.device_t;
-extern fn set_ttydev(c.device_t) void;
-extern fn setup_tty_exception() void;
-extern fn get_tty_name() [*c]const u8;
-
-const TIOCGPGRP = 0x40047477;
-const TIOCSETSIGT = 0x800474c8;
+const ffi = @import("ffi.zig");
+const prog = @import("prog");
+const task = @import("task");
+const sig_ops = @import("proc_sig.zig");
 
 fn tty_signal(sig: c_int) void {
-    var pgid: c.pid_t = 0;
-    if (c.device_ioctl(get_ttydev(), TIOCGPGRP, &pgid) != 0) {
+    var pgid: task.prex.pid_t = 0;
+    if (task.prex.device_ioctl(ffi.global.get_ttydev(), prog.termios.TIOCGPGRP, &pgid) != 0) {
         return;
     }
-    _ = c.kill_pg(pgid, sig);
+    _ = sig_ops.kill_pg(pgid, sig) catch {};
 }
 
 pub fn exception_handler(sig: c_int) callconv(.c) void {
     switch (sig) {
-        c.SIGINT,
-        c.SIGQUIT,
-        c.SIGTSTP,
-        c.SIGTTIN,
-        c.SIGTTOU,
-        c.SIGINFO,
-        c.SIGWINCH,
-        c.SIGIO,
+        prog.signal.SIGINT,
+        prog.signal.SIGQUIT,
+        prog.signal.SIGTSTP,
+        prog.signal.SIGTTIN,
+        prog.signal.SIGTTOU,
+        prog.signal.SIGINFO,
+        prog.signal.SIGWINCH,
+        prog.signal.SIGIO,
         => {
-            if (get_ttydev() != c.NODEV) {
+            if (ffi.global.get_ttydev() != task.prex.NODEV) {
                 tty_signal(sig);
             }
         },
         else => {},
     }
-    c.exception_return();
+    task.prex.exception_return();
 }
 
-pub fn tty_init() callconv(.c) void {
-    setup_tty_exception();
+pub fn tty_init() void {
+    ffi.global.setup_tty_exception();
 
-    var dev: c.device_t = 0;
-    if (c.device_open(get_tty_name(), 0, &dev) != 0) {
-        set_ttydev(c.NODEV);
+    var dev: task.prex.device_t = 0;
+    if (task.prex.device_open(ffi.global.get_tty_name(), 0, &dev) != 0) {
+        ffi.global.set_ttydev(task.prex.NODEV);
     } else {
-        set_ttydev(dev);
-        var self = c.task_self();
-        _ = c.device_ioctl(dev, TIOCSETSIGT, @ptrCast(&self));
+        ffi.global.set_ttydev(dev);
+        var self = task.prex.task_self();
+        _ = task.prex.device_ioctl(dev, prog.termios.TIOCSETSIGT, @ptrCast(&self));
     }
 }
 
 comptime {
-    @export(&tty_init, .{ .name = "tty_init", .linkage = .strong });
     @export(&exception_handler, .{ .name = "exception_handler", .linkage = .strong });
 }

@@ -1,122 +1,67 @@
-const std = @import("std");
-const c = @cImport({
-    @cInclude("sys/prex.h");
-    @cInclude("sys/capability.h");
-    @cInclude("ipc/proc.h");
-    @cInclude("sys/list.h");
-    @cInclude("unistd.h");
-    @cInclude("errno.h");
-    @cInclude("signal.h");
-    @cInclude("usr/server/proc/proc.h");
-});
-
-extern fn get_curproc() *c.struct_proc;
-extern fn get_allproc() *c.struct_list;
-
-extern fn p_find(c.pid_t) ?*c.struct_proc;
-extern fn pg_find(c.pid_t) ?*c.struct_pgrp;
-
-const list_t = ?*c.struct_list;
-
-inline fn list_first(head: list_t) list_t {
-    return head.?.next;
-}
-
-inline fn list_next(node: list_t) list_t {
-    return node.?.next;
-}
-
-inline fn list_entry(node: list_t, comptime ParentType: type, comptime field_name: []const u8) *ParentType {
-    return @fieldParentPtr(field_name, node.?);
-}
+const ffi = @import("ffi.zig");
+const prog = @import("prog");
+const task = @import("task");
+const hash = @import("proc_hash.zig");
 
 fn kill_capable() bool {
-    const cur = get_curproc();
-    if (c.task_chkcap(cur.p_task, c.CAP_KILL) == 0) {
-        return true;
-    }
-    return false;
+    const cur = ffi.global.get_curproc();
+    return task.prex.task_chkcap(cur.p_task, prog.capsys.CAP_KILL) == 0;
 }
 
-fn sendsig(p: *c.struct_proc, sig: c_int) c_int {
-    if (p.p_pid == 0) {
-        return c.EPERM;
-    }
+fn sendsig(p: *ffi.Proc, sig: c_int) !void {
+    if (p.p_pid == 0) return error.PermissionDenied;
+    if (p.p_pid == 1 and sig != prog.signal.SIGCHLD) return error.PermissionDenied;
 
-    if (p.p_pid == 1 and sig != c.SIGCHLD) {
-        return c.EPERM;
-    }
-
-    return c.exception_raise(p.p_task, sig);
+    const rc = task.prex.exception_raise(p.p_task, sig);
+    if (rc != 0) return error.Unexpected;
 }
 
-fn kill_one(pid: c.pid_t, sig: c_int) c_int {
-    const p = p_find(pid) orelse return c.ESRCH;
-    return sendsig(p, sig);
+fn kill_one(pid: task.prex.pid_t, sig: c_int) !void {
+    const p = hash.p_find(pid) orelse return error.NotFound;
+    try sendsig(p, sig);
 }
 
-pub fn kill_pg(pgid: c.pid_t, sig: c_int) callconv(.c) c_int {
-    const pgrp = pg_find(pgid) orelse return c.ESRCH;
-    var error_code: c_int = 0;
+pub fn kill_pg(pgid: task.prex.pid_t, sig: c_int) !void {
+    const pgrp = hash.pg_find(pgid) orelse return error.NotFound;
 
-    const head = &pgrp.pg_members;
-    var n = list_first(head);
+    const head: *ffi.List = @ptrCast(&pgrp.pg_members);
+    var n = head.first();
     while (n != head) {
-        const p = list_entry(n, c.struct_proc, "p_pgrp_link");
-        n = list_next(n);
-        error_code = sendsig(p, sig);
-        if (error_code != 0) {
-            break;
-        }
+        const p = n.?.entry(ffi.Proc, "p_pgrp_link");
+        n = n.?.nextNode();
+        try sendsig(p, sig);
     }
-    return error_code;
 }
 
-pub fn sys_kill(pid: c.pid_t, sig: c_int) callconv(.c) c_int {
-    const cur = get_curproc();
-    const all = get_allproc();
+pub fn sys_kill(pid: task.prex.pid_t, sig: c_int) !void {
+    const cur = ffi.global.get_curproc();
+    const all = ffi.global.get_allproc();
 
     switch (sig) {
-        c.SIGFPE, c.SIGILL, c.SIGSEGV => return c.EINVAL,
+        prog.signal.SIGFPE, prog.signal.SIGILL, prog.signal.SIGSEGV => return error.InvalidArgument,
         else => {},
     }
 
-    var error_code: c_int = 0;
-
     if (pid > 0) {
-        if (pid != cur.p_pid and !kill_capable()) {
-            return c.EPERM;
-        }
-        error_code = kill_one(pid, sig);
+        if (pid != cur.p_pid and !kill_capable()) return error.PermissionDenied;
+        try kill_one(pid, sig);
     } else if (pid == -1) {
-        if (!kill_capable()) {
-            return c.EPERM;
-        }
+        if (!kill_capable()) return error.PermissionDenied;
 
-        var n = list_first(all);
-        while (n != all) {
-            const p = list_entry(n, c.struct_proc, "p_link");
-            n = list_next(n);
+        const all_list: *ffi.List = @ptrCast(all);
+        var n = all_list.first();
+        while (n != all_list) {
+            const p = n.?.entry(ffi.Proc, "p_link");
+            n = n.?.nextNode();
 
             if (p.p_pid != 0 and p.p_pid != 1 and p.p_pid != cur.p_pid) {
-                error_code = kill_one(p.p_pid, sig);
-                if (error_code != 0) {
-                    break;
-                }
+                try kill_one(p.p_pid, sig);
             }
         }
     } else if (pid == 0) {
-        error_code = kill_pg(cur.p_pgrp.*.pg_pgid, sig);
+        try kill_pg(cur.p_pgrp.*.pg_pgid, sig);
     } else {
-        if (cur.p_pgrp.*.pg_pgid != -pid and !kill_capable()) {
-            return c.EPERM;
-        }
-        error_code = kill_pg(-pid, sig);
+        if (cur.p_pgrp.*.pg_pgid != -pid and !kill_capable()) return error.PermissionDenied;
+        try kill_pg(-pid, sig);
     }
-    return error_code;
-}
-
-comptime {
-    @export(&kill_pg, .{ .name = "kill_pg", .linkage = .strong });
-    @export(&sys_kill, .{ .name = "sys_kill", .linkage = .strong });
 }

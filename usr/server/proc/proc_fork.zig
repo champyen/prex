@@ -1,154 +1,94 @@
-const std = @import("std");
-const c = @cImport({
-    @cInclude("sys/prex.h");
-    @cInclude("ipc/proc.h");
-    @cInclude("sys/list.h");
-    @cInclude("unistd.h");
-    @cInclude("errno.h");
-    @cInclude("stdlib.h");
-    @cInclude("string.h");
-    @cInclude("usr/server/proc/proc.h");
-});
+const ffi = @import("ffi.zig");
+const prog = @import("prog");
+const task = @import("task");
+const hash = @import("proc_hash.zig");
 
-extern fn get_curproc() *c.struct_proc;
-extern fn get_allproc() *c.struct_list;
-extern fn get_last_pid() c.pid_t;
-extern fn set_last_pid(c.pid_t) void;
-
-extern fn p_find(c.pid_t) ?*c.struct_proc;
-extern fn task_to_proc(c.task_t) ?*c.struct_proc;
-extern fn p_add(*c.struct_proc) void;
-
-const list_t = ?*c.struct_list;
-
-inline fn list_init(head: list_t) void {
-    head.?.next = head;
-    head.?.prev = head;
-}
-
-inline fn list_insert(prev: list_t, node: list_t) void {
-    const n = node.?;
-    const p = prev.?;
-    n.next = p.next;
-    n.prev = p;
-    p.next.*.prev = node.?;
-    p.next = node.?;
-}
-
-inline fn list_remove(node: list_t) void {
-    const n = node.?;
-    n.prev.*.next = n.next;
-    n.next.*.prev = n.prev;
-}
-
-fn pid_alloc() c.pid_t {
-    var pid = get_last_pid() +% 1;
-    if (pid >= c.PID_MAX) {
-        pid = 1;
-    }
-    const orig_last = get_last_pid();
+fn pid_alloc() !task.prex.pid_t {
+    var pid = ffi.global.get_last_pid() +% 1;
+    if (pid >= ffi.raw.PID_MAX) pid = 1;
+    const orig_last = ffi.global.get_last_pid();
     while (pid != orig_last) {
-        if (p_find(pid) == null) {
-            break;
-        }
+        if (hash.p_find(pid) == null) break;
         pid = pid +% 1;
-        if (pid >= c.PID_MAX) {
-            pid = 1;
-        }
+        if (pid >= ffi.raw.PID_MAX) pid = 1;
     }
-    if (pid == orig_last) {
-        return 0;
-    }
-    set_last_pid(pid);
+    if (pid == orig_last) return error.ResourceLimit;
+    ffi.global.set_last_pid(pid);
     return pid;
 }
 
-pub fn newproc(p: *c.struct_proc, pid_in: c.pid_t, task: c.task_t) callconv(.c) c_int {
+pub fn newproc(p: *ffi.Proc, pid_in: task.prex.pid_t, t: task.prex.task_t) !void {
     var pid = pid_in;
-    const pg = get_curproc().p_pgrp.?;
+    const pg = ffi.global.get_curproc().p_pgrp.?;
 
     if (pid == 0) {
-        pid = pid_alloc();
-        if (pid == 0) {
-            return c.EAGAIN;
-        }
+        pid = try pid_alloc();
     }
 
-    p.p_parent = get_curproc();
+    p.p_parent = ffi.global.get_curproc();
     p.p_pgrp = pg;
-    p.p_stat = c.SRUN;
+    p.p_stat = ffi.raw.SRUN;
     p.p_exitcode = 0;
     p.p_pid = pid;
-    p.p_task = task;
+    p.p_task = t;
     p.p_vforked = 0;
     p.p_invfork = 0;
 
-    list_init(&p.p_children);
-    p_add(p);
-    list_insert(&get_curproc().p_children, &p.p_sibling);
-    list_insert(&pg.*.pg_members, &p.p_pgrp_link);
-    list_insert(get_allproc(), &p.p_link);
-
-    return 0;
+    const children: *ffi.List = @ptrCast(&p.p_children);
+    children.init();
+    hash.p_add(p);
+    const parent_children: *ffi.List = @ptrCast(&ffi.global.get_curproc().p_children);
+    const sibling: *ffi.List = @ptrCast(&p.p_sibling);
+    parent_children.insert(sibling);
+    const pg_members: *ffi.List = @ptrCast(&pg.*.pg_members);
+    const pgrp_link: *ffi.List = @ptrCast(&p.p_pgrp_link);
+    pg_members.insert(pgrp_link);
+    const allproc: *ffi.List = @ptrCast(ffi.global.get_allproc());
+    const p_link: *ffi.List = @ptrCast(&p.p_link);
+    allproc.insert(p_link);
 }
 
-pub fn sys_fork(child: c.task_t, vfork: c_int, retval: *c.pid_t) callconv(.c) c_int {
-    if (vfork != 0 and get_curproc().p_invfork != 0) {
-        return c.EINVAL;
-    }
+pub fn sys_fork(child: task.prex.task_t, vfork: c_int) !task.prex.pid_t {
+    if (vfork != 0 and ffi.global.get_curproc().p_invfork != 0) return error.InvalidArgument;
+    if (hash.task_to_proc(child) != null) return error.InvalidArgument;
 
-    if (task_to_proc(child) != null) {
-        return c.EINVAL;
-    }
+    const p = ffi.allocZeroed(ffi.Proc) orelse return error.OutOfMemory;
+    errdefer prog.stdlib.free(p);
 
-    const mem = c.malloc(@sizeOf(c.struct_proc)) orelse return c.ENOMEM;
-    const p: *c.struct_proc = @ptrCast(@alignCast(mem));
-    @memset(@as([*]u8, @ptrCast(p))[0..@sizeOf(c.struct_proc)], 0);
-
-    const err = newproc(p, 0, child);
-    if (err != 0) {
-        c.free(p);
-        return err;
-    }
+    try newproc(p, 0, child);
 
     if (vfork != 0) {
-        _ = vfork_start(get_curproc());
+        vfork_start(ffi.global.get_curproc());
         p.p_invfork = 1;
     }
 
-    retval.* = p.p_pid;
-    return 0;
+    return p.p_pid;
 }
 
-pub fn cleanup(p: *c.struct_proc) callconv(.c) void {
-    list_remove(&p.p_sibling);
-    list_remove(&p.p_pgrp_link);
-    list_remove(&p.p_link);
-    c.free(p);
+pub fn cleanup(p: *ffi.Proc) void {
+    const sibling: *ffi.List = @ptrCast(&p.p_sibling);
+    const pgrp_link: *ffi.List = @ptrCast(&p.p_pgrp_link);
+    const p_link: *ffi.List = @ptrCast(&p.p_link);
+    sibling.remove();
+    pgrp_link.remove();
+    p_link.remove();
+    prog.stdlib.free(p);
 }
 
-fn vfork_start(p: *c.struct_proc) c_int {
-    if (!@hasDecl(c, "CONFIG_MMU")) {
+fn vfork_start(p: *ffi.Proc) void {
+    if (!@hasDecl(task.prex, "CONFIG_MMU")) {
         p.p_stacksaved = null;
     }
     p.p_vforked = 1;
-    return 0;
 }
 
-pub fn vfork_end(p: *c.struct_proc) callconv(.c) void {
-    if (!@hasDecl(c, "CONFIG_MMU")) {
+pub fn vfork_end(p: *ffi.Proc) void {
+    if (!@hasDecl(task.prex, "CONFIG_MMU")) {
         if (p.p_stacksaved != null) {
-            _ = c.memcpy(p.p_stackbase, p.p_stacksaved, c.DFLSTKSZ);
-            _ = c.vm_free(p.p_task, p.p_stacksaved);
+            _ = prog.string.memcpy(p.p_stackbase, p.p_stacksaved, ffi.raw.DFLSTKSZ);
+            _ = task.prex.vm_free(p.p_task, p.p_stacksaved);
         }
     }
     p.p_vforked = 0;
-    _ = c.task_resume(p.p_task);
-}
-
-comptime {
-    @export(&newproc, .{ .name = "newproc", .linkage = .strong });
-    @export(&sys_fork, .{ .name = "sys_fork", .linkage = .strong });
-    @export(&cleanup, .{ .name = "cleanup", .linkage = .strong });
-    @export(&vfork_end, .{ .name = "vfork_end", .linkage = .strong });
+    _ = task.prex.task_resume(p.p_task);
 }

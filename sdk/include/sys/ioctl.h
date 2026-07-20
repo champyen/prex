@@ -56,7 +56,7 @@
 #define IOC_IVAL 0x10000000 /* input argument is immediate value */
 #define IOC_OVAL 0x08000000 /* return value as output */
 
-#define _IOC(inout, group, num, len) (u_long)(inout | ((len & IOCPARM_MASK) << 16) | ((group) << 8) | (num))
+#define _IOC(inout, group, num, len) ((u_long)(inout) | ((u_long)((len) & IOCPARM_MASK) << 16) | ((u_long)(group) << 8) | (u_long)(num))
 #define _IO(g, n) _IOC(IOC_VOID, (g), (n), 0)
 #define _IOR(g, n, t) _IOC(IOC_OUT, (g), (n), sizeof(t))
 #define _IOW(g, n, t) _IOC(IOC_IN, (g), (n), sizeof(t))

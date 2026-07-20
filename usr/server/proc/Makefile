@@ -2,8 +2,7 @@ include $(SRCDIR)/conf/config.mk
 
 PROG=		proc
 ifeq ($(CONFIG_ZIG_USR),y)
-SRCS=		proc.zig proc_hash.zig proc_hash_tables.c proc_pid.zig proc_fork.zig proc_exit.zig \
-		proc_sig.zig proc_tty.zig
+SRCS=		proc.zig proc_hash_tables.c
 else
 SRCS=		main.c proc_hash.c proc_hash_tables.c proc_pid.c proc_fork.c proc_exit.c \
 		proc_sig.c proc_tty.c

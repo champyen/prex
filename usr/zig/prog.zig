@@ -78,7 +78,14 @@ pub const dirent = @cImport({
 
 pub const capsys = @cImport({
     @cInclude("conf/config.h");
+    @cInclude("sys/types.h");
     @cInclude("sys/capability.h");
+});
+
+pub const termios = @cImport({
+    @cInclude("conf/config.h");
+    @cInclude("sys/types.h");
+    @cInclude("sys/termios.h");
 });
 
 pub const sys = struct {
