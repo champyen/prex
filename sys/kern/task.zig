@@ -175,6 +175,10 @@ pub fn create(parent: kern.TaskRef, vm_option: c_int, childp: ?*kern.TaskRef) ca
     task.?.*.capability = parent.?.*.capability;
     task.?.*.parent = parent;
     task.?.*.flags = kern.TF_DEFAULT;
+    if (comptime @hasDecl(ffi.raw, "CONFIG_ARMV8M")) {
+        task.?.*.got_base = parent.?.*.got_base;
+    }
+
     _ = lib.strlcpy(@ptrCast(&task.?.*.name), "*noname", hal.MAXTASKNAME);
     list_init_fn(&task.?.*.threads);
     list_init_fn(&task.?.*.objects);
@@ -389,7 +393,14 @@ pub fn bootstrap() callconv(.c) void {
             lib.panic("unable to load boot task");
         }
 
+        if (comptime @hasDecl(ffi.raw, "CONFIG_ARMV8M")) {
+            task.?.*.got_base = mod.*.got_base;
+        }
+
         _ = setname(task, @ptrCast(&mod.*.name));
+        _ = lib.printf("Loading task:'%s'\n", @as([*c]const u8, @ptrCast(&mod.*.name)));
+
+
 
         task.?.*.capability = kern.CAPSET_BOOT;
         if (lib.strncmp(@ptrCast(&task.?.*.name), "exec", hal.MAXTASKNAME) == 0) {

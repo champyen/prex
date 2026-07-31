@@ -4,6 +4,7 @@
  */
 
 #include <sys/types.h>
+#include <cpu.h>
 #include <cpufunc.h>
 
 void cpu_idle(void)
@@ -75,10 +76,23 @@ uint32_t get_cntp_ctl_reg(void)
 
 uint32_t hal_cpu_id(void)
 {
+#ifdef CONFIG_SMP
+    struct cpu_control *cpu = hal_get_cpu_control();
+    if (cpu != NULL) {
+        return cpu->cpu_id;
+    }
+#endif
     return 0;
 }
 
-int hal_cpu_start(uint32_t cpuid, paddr_t entry)
+void hal_cpu_send_ipi(uint32_t cpumask, uint32_t vector)
 {
-    return -1;
+    (void)cpumask;
+    volatile uint32_t *nvic_ispr = (volatile uint32_t *)(0xE000E200 + (vector / 32) * 4);
+    *nvic_ispr = (1 << (vector % 32));
+    __asm__ volatile("dsb\nisb" : : : "memory");
 }
+
+
+
+

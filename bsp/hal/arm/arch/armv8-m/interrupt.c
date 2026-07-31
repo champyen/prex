@@ -177,3 +177,9 @@ void interrupt_init(void)
 
     update_mask();
 }
+
+void interrupt_cpu_init(void)
+{
+    update_mask();
+}
+

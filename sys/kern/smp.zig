@@ -32,6 +32,8 @@ const hal = ffi.hal;
 const irq = ffi.irq;
 const kern = ffi.kern;
 const thread = ffi.thread;
+const lib = ffi.lib;
+
 
 const NCPUS = if (@hasDecl(ffi.raw, "CONFIG_SMP_NCPUS")) ffi.raw.CONFIG_SMP_NCPUS else 1;
 
@@ -76,6 +78,7 @@ pub fn initEarly() callconv(.c) void {
 }
 
 pub fn startAps() callconv(.c) void {
+    _ = lib.printf("[SMP] Starting APs...\n");
     _ = irq.attach(ipi_irq, hal.IPL_HIGH, 0, ipi_isr, IST_NONE, null);
 
     _ = @atomicRmw(c_int, &ready_count, .Add, 1, .seq_cst);
@@ -95,19 +98,34 @@ pub fn startAps() callconv(.c) void {
 
         zig_memory_barrier();
 
-        const ret = hal.hal_cpu_start(@intCast(i), kvtop(&ap_reset_entry));
+        const entry_vaddr: usize = if (comptime @hasDecl(ffi.raw, "CONFIG_ARMV8M"))
+            (@intFromPtr(&ap_vector_table) & ~@as(usize, 1))
+        else
+            @intFromPtr(&ap_reset_entry);
+        _ = lib.printf("[SMP] Starting CPU%d at 0x%x...\n", i, entry_vaddr);
+        const ret = hal.hal_cpu_start(@intCast(i), entry_vaddr - hal.KERNOFFSET);
+
         if (ret == 0) {
             started_count += 1;
         }
     }
 
-    while (@atomicLoad(c_int, &ready_count, .seq_cst) < started_count) {
+    _ = lib.printf("[SMP] Waiting for %d CPUs to be ready...\n", started_count);
+    var timeout: c_int = 1000000;
+    while (@atomicLoad(c_int, &ready_count, .seq_cst) < started_count and timeout > 0) : (timeout -= 1) {
         zig_memory_barrier();
     }
+    if (@atomicLoad(c_int, &ready_count, .seq_cst) < started_count) {
+        _ = lib.printf("[SMP] AP startup timeout: %d/%d cores active\n", @atomicLoad(c_int, &ready_count, .seq_cst), started_count);
+    } else {
+        _ = lib.printf("[SMP] All CPUs ready.\n");
+    }
     zig_memory_barrier();
+
 }
 
 pub fn activate() callconv(.c) void {
+    _ = lib.printf("[SMP] Activating secondary CPUs...\n");
     zig_memory_barrier();
     @atomicStore(c_int, &smp_active, 1, .seq_cst);
     zig_memory_barrier();
@@ -116,6 +134,7 @@ pub fn activate() callconv(.c) void {
 pub fn apBoot() callconv(.c) void {
     zig_memory_barrier();
     const cpuid = hal.hal_cpu_id();
+    _ = lib.printf("[SMP] AP CPU%d booted!\n", cpuid);
     const cpu: *hal.CpuControl = &cpu_table[@intCast(cpuid)];
 
     hal_set_cpu_control(cpu);
@@ -130,9 +149,12 @@ pub fn apBoot() callconv(.c) void {
     zig_memory_barrier();
 
     thread.idle();
+
 }
 
 extern fn ap_reset_entry() callconv(.c) void;
+extern fn ap_vector_table() callconv(.c) void;
+
 
 extern var riscv_cpus: [ffi.raw.CONFIG_SMP_NCPUS]hal.RiscVCpu;
 

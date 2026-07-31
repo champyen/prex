@@ -129,18 +129,30 @@ void smp_start_aps(void)
 
         memory_barrier();
 
-        /* Wake up the AP using platform mechanism (SBI HSM / SIO) */
+#ifdef CONFIG_ARMV8M
+        extern void ap_vector_table(void);
+        int ret = hal_cpu_start(i, kvtop((void*)((paddr_t)&ap_vector_table & ~1)));
+#else
         int ret = hal_cpu_start(i, kvtop(&ap_reset_entry));
+#endif
+
+
         if (ret == 0) {
             started_count++;
         }
     }
 
-    while (atomic_read(&ready_count) < started_count) {
+    int timeout = 1000000;
+    while (atomic_read(&ready_count) < started_count && --timeout > 0) {
         memory_barrier();
+    }
+    if (atomic_read(&ready_count) < started_count) {
+        DPRINTF(("AP startup timeout: %d/%d cores active\n",
+                 atomic_read(&ready_count), started_count));
     }
     memory_barrier();
 }
+
 
 /*
  * Signal that SMP is active and APs can start scheduling.

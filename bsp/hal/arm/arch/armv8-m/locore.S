@@ -304,8 +304,12 @@ ENTRY(cpu_switch)
  * Entry point for kernel thread
  */
 ENTRY(kernel_thread_entry)
+#ifdef CONFIG_SMP
+    bl      sched_bkl_unlock
+#endif
     mov     r0, r5                  /* Set argument */
     bx      r4                      /* Jump to kernel thread */
+
 
 ENTRY(vector_copy)
     /* Cortex-M uses VTOR, copying may be needed if in RAM */
@@ -358,4 +362,47 @@ ENTRY(copy_fault)
     movs    r0, #(EFAULT)
     pop     {r4, pc}
 
+#ifdef CONFIG_SMP
+    .align 10
+ENTRY(ap_vector_table)
+    .word   BOOTSTKTOP
+    .word   ap_reset_entry + 1
+
+ENTRY(ap_reset_entry)
+    cpsid   i               /* Disable interrupts */
+
+
+    /* Point VTOR to kernel vector table */
+    ldr     r0, =0xE000ED08
+    ldr     r1, =kernel_start
+    str     r1, [r0]
+
+    /* Enforce 8-byte stack alignment on exceptions (SCB->CCR) */
+    ldr     r0, =0xE000ED14
+    ldr     r1, [r0]
+    orr     r1, r1, #8
+    str     r1, [r0]
+
+    /* Load pointer to cpu_table[1] */
+    ldr     r1, =cpu_table
+    add     r1, r1, #64             /* cpu_table[1] */
+
+    /* Load Core 1 kernel stack pointer */
+    ldr     sp, [r1, #16]           /* int_stack offset */
+
+    /* Store cpu_control pointer into PSPLIM for Core 1 */
+    msr     psplim, r1
+
+    /* Jump to C smp_ap_boot() */
+    ldr     r0, =smp_ap_boot
+    orr     r0, r0, #1
+    bx      r0
+
+#else
+    bx      lr
+#endif
+
     .end
+
+
+

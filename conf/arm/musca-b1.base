@@ -41,7 +41,8 @@ options     MAXMEM=0x40000           # Max core per task (256KB)
 # Platform settings
 #
 options		ARMV8M		# Processor core
-#options		SMP_NCPUS=2	# Dual-core SMP (Phase 2)
+options		SMP_NCPUS=2	# Dual-core SMP (Phase 2)
+options     IPI_IRQ=0   # Inter-processor interrupt IRQ
 options 	BOOTDISK	# Disk for /boot directory
 options     SIZE_OPT    # Optimize for size
 

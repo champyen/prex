@@ -22,12 +22,34 @@ SRCS+=		$(call select_kernel_src,kern/main) \
 ifeq ($(CONFIG_ZIG_KRNL),y)
 SRCS+=		lib/zig_runtime.zig \
 		kern/system_helper.c
+else
+SRCS+=		kern/sched.c \
+		kern/task.c \
+		kern/thread.c \
+		kern/timer.c \
+		kern/irq.c \
+		kern/exception.c \
+		kern/system.c \
+		kern/sysent.c \
+		kern/device.c \
+		mem/page.c \
+		mem/kmem.c \
+		ipc/msg.c \
+		ipc/object.c \
+		sync/mutex.c \
+		sync/cond.c \
+		sync/sem.c
+
+ifeq ($(CONFIG_MMU),y)
+SRCS+=		mem/vm.c
+else
+SRCS+=		mem/vm_nommu.c
 endif
 
-# Note: all kernel .zig modules (kern/{sched,task,thread,...}, ipc/*, sync/*,
-# mem/{kmem,page,vm*}) are now imported by sys/kern/main.zig and compiled
-# as a single translation unit. They no longer appear individually in
-# SRCS - main.zig is the only root for the kernel core.
+SRCS+=		kern/smp.c
+endif
+
+
 
 ifeq ($(DEBUG),1)
 SRCS+=		kern/debug.c

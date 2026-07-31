@@ -104,3 +104,31 @@ void machine_startup(void)
     __asm__ volatile("dsb" : : : "memory");
     __asm__ volatile("isb" : : : "memory");
 }
+
+int hal_cpu_start(uint32_t cpuid, paddr_t entry)
+{
+#ifdef CONFIG_SMP
+    if (cpuid != 1)
+        return -1;
+
+    volatile uint32_t *scc_cpu1_vtor = (volatile uint32_t *)0x50080140;
+    volatile uint32_t *scc_reset_ctrl = (volatile uint32_t *)0x50080100;
+
+    /* Set CPU1 vector table entry point */
+    *scc_cpu1_vtor = (uint32_t)entry;
+
+    /* Release CPU1 reset */
+    *scc_reset_ctrl &= ~1;
+
+    __asm__ volatile("dsb\nisb" : : : "memory");
+    __asm__ volatile("sev");
+
+    return 0;
+#else
+    (void)cpuid;
+    (void)entry;
+    return -1;
+#endif
+}
+
+
