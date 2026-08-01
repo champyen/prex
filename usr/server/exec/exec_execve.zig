@@ -1,30 +1,34 @@
 const ffi = @import("exec_ffi.zig");
-const c = ffi.raw;
+const elf = @import("exec_elf.zig");
+const cap = @import("exec_cap.zig");
 const builtin = @import("builtin");
 
 const is_riscv = builtin.cpu.arch == .riscv32 or builtin.cpu.arch == .riscv64;
 const is_arm = builtin.cpu.arch == .arm;
 
-const HEADER_SIZE: c_int = 512;
-const MAX_PATH: comptime_int = @intCast(c.PATH_MAX);
+const MAX_PATH: comptime_int = @intCast(ffi.task.prex.PATH_MAX);
 
-extern fn bind_cap(path: [*c]const u8, task: c.task_t) callconv(.c) void;
+/// Wrap a kernel syscall failure (nonzero errno) as a Zig error, so the
+/// exported entry point can convert it back via toCError().
+fn checkErrno(val: c_int) !void {
+    if (val != 0) return ffi.fromCError(val);
+}
 
 inline fn spAlign(p: usize) usize {
     if (is_riscv) {
         return p & ~@as(usize, 15);
     } else {
-        return p & ~@as(usize, @intCast(c._ALIGNBYTES));
+        return p & ~@as(usize, @intCast(ffi.task.prex._ALIGNBYTES));
     }
 }
 
-fn convPath(cwd: [*c]const u8, path: [*c]u8, full: [*c]u8) c_int {
+fn convPath(cwd: [*c]const u8, path: [*c]u8, full: [*c]u8) elf.ExecError!void {
     // NUL-terminate for safety
     path[MAX_PATH - 1] = 0;
 
-    const len: usize = c.strlen(path);
-    if (len >= MAX_PATH) return c.ENAMETOOLONG;
-    if (c.strlen(cwd) + len >= MAX_PATH) return c.ENAMETOOLONG;
+    const len: usize = ffi.prog.string.strlen(path);
+    if (len >= MAX_PATH) return error.NameTooLong;
+    if (ffi.prog.string.strlen(cwd) + len >= MAX_PATH) return error.NameTooLong;
 
     var src: [*]u8 = path;
     var tgt: [*]u8 = full;
@@ -35,8 +39,8 @@ fn convPath(cwd: [*c]const u8, path: [*c]u8, full: [*c]u8) c_int {
         tgt += 1;
         src += 1;
     } else {
-        _ = c.strlcpy(full, cwd, MAX_PATH);
-        const cwd_len = c.strlen(cwd);
+        _ = ffi.prog.string.strlcpy(full, cwd, MAX_PATH);
+        const cwd_len = ffi.prog.string.strlen(cwd);
         tgt += cwd_len;
         if (cwd_len > 1 and path[0] != '.') {
             tgt[0] = '/';
@@ -50,14 +54,14 @@ fn convPath(cwd: [*c]const u8, path: [*c]u8, full: [*c]u8) c_int {
         const saved = p[0];
         p[0] = 0;
 
-        if (c.strcmp(@ptrCast(src), "..") == 0) {
+        if (ffi.prog.string.strcmp(@ptrCast(src), "..") == 0) {
             if (@intFromPtr(tgt) > @intFromPtr(full) + 1) {
                 tgt -= 1;
                 while (@intFromPtr(tgt) > @intFromPtr(full) and (tgt - 1)[0] != '/') {
                     tgt -= 1;
                 }
             }
-        } else if (c.strcmp(@ptrCast(src), ".") == 0) {
+        } else if (ffi.prog.string.strcmp(@ptrCast(src), ".") == 0) {
             // Ignore "."
         } else {
             while (src[0] != 0) {
@@ -77,7 +81,6 @@ fn convPath(cwd: [*c]const u8, path: [*c]u8, full: [*c]u8) c_int {
         src = p + 1;
     }
     tgt[0] = 0;
-    return 0;
 }
 
 /// FFI wrapper for the C build_args implementation in exec_globals.c.
@@ -86,7 +89,7 @@ fn convPath(cwd: [*c]const u8, path: [*c]u8, full: [*c]u8) c_int {
 /// C-ABI trick shared with envp[0]). To preserve binary compatibility with
 /// the existing C-compiled executables, we call the C implementation directly.
 fn buildArgs(
-    task: c.task_t,
+    task: ffi.task.prex.task_t,
     stack: ?*anyopaque,
     path: [*c]const u8,
     msg: *ffi.ExecMsg,
@@ -107,183 +110,105 @@ fn buildArgs(
     );
 }
 
-fn notifyServer(org_task: c.task_t, new_task: c.task_t, stack: ?*anyopaque) void {
+fn notifyServer(org_task: ffi.task.prex.task_t, new_task: ffi.task.prex.task_t, stack: ?*anyopaque) void {
     var m: ffi.Msg = undefined;
-    var fsobj: c.object_t = undefined;
-    var procobj: c.object_t = undefined;
+    var fsobj: ffi.task.prex.object_t = undefined;
+    var procobj: ffi.task.prex.object_t = undefined;
 
-    if (c.object_lookup(ffi.global.get_fs_obj_name(), &fsobj) != 0) return;
-    if (c.object_lookup(ffi.global.get_proc_obj_name(), &procobj) != 0) return;
+    if (ffi.task.prex.object_lookup(ffi.global.get_fs_obj_name(), &fsobj) != 0) return;
+    if (ffi.task.prex.object_lookup(ffi.global.get_proc_obj_name(), &procobj) != 0) return;
 
     // Notify to file system server
     while (true) {
-        m.hdr.code = c.FS_EXEC;
+        m.hdr.code = ffi.prog.ipc.fs.FS_EXEC;
         m.data[0] = @bitCast(@as(u32, @truncate(org_task)));
         m.data[1] = @bitCast(@as(u32, @truncate(new_task)));
-        const err = c.msg_send(fsobj, @ptrCast(&m), @sizeOf(ffi.Msg));
-        if (err != c.EINTR) break;
+        const err = ffi.task.prex.msg_send(fsobj, @ptrCast(&m), @sizeOf(ffi.Msg));
+        if (err != ffi.prog.errno.EINTR) break;
     }
 
     // Notify to process server
     while (true) {
-        m.hdr.code = c.PS_EXEC;
+        m.hdr.code = ffi.prog.ipc.proc.PS_EXEC;
         m.data[0] = @bitCast(@as(u32, @truncate(org_task)));
         m.data[1] = @bitCast(@as(u32, @truncate(new_task)));
         m.data[2] = @bitCast(@as(u32, @truncate(@intFromPtr(stack))));
-        const err = c.msg_send(procobj, @ptrCast(&m), @sizeOf(ffi.Msg));
-        if (err != c.EINTR) break;
+        const err = ffi.task.prex.msg_send(procobj, @ptrCast(&m), @sizeOf(ffi.Msg));
+        if (err != ffi.prog.errno.EINTR) break;
     }
 }
 
-noinline fn readHeader(path: [*c]const u8) c_int {
-    const fd = c.open(path, c.O_RDONLY);
-    if (fd == -1) return c.ENOENT;
-
-    var st: c.struct_stat = undefined;
-    if (c.fstat(fd, &st) == -1) {
-        _ = c.close(fd);
-        return c.EIO;
-    }
-    if ((st.st_mode & 0xF000) != 0x8000) {
-        _ = c.close(fd);
-        return c.EACCES; // must be regular file
-    }
-
-    ffi.global.hdrbuf_zero();
-    const buf = ffi.global.hdrbuf_get();
-    if (c.read(fd, buf, HEADER_SIZE) == -1) {
-        _ = c.close(fd);
-        return c.EIO;
-    }
-    _ = c.close(fd);
-    return 0;
-}
-
-pub export fn exec_execve(msg: *ffi.ExecMsg) callconv(.c) c_int {
-    var ldr: ?*ffi.ExecLoader = null;
-    var error_code: c_int = 0;
-    const old_task: c.task_t = msg.hdr.task;
-    var new_task: c.task_t = undefined;
-    var t: c.thread_t = undefined;
+fn doExecve(msg: *ffi.ExecMsg) !void {
+    const old_task: ffi.task.prex.task_t = msg.hdr.task;
+    var new_task: ffi.task.prex.task_t = undefined;
+    var t: ffi.task.prex.thread_t = undefined;
     var stack: ?*anyopaque = undefined;
     var sp: ?*anyopaque = undefined;
     var path: [MAX_PATH]u8 = undefined;
     var exec: ffi.Exec = undefined;
-    var rc: c_int = 0;
 
     // Make it full path
-    error_code = convPath(@ptrCast(&msg.cwd), @ptrCast(&msg.path), @ptrCast(&path));
-    if (error_code != 0) return error_code;
+    try convPath(@ptrCast(&msg.cwd), @ptrCast(&msg.path), @ptrCast(&path));
 
     // Check permission
-    if (c.access(@ptrCast(&path), c.X_OK) == -1) {
-        return c.errno;
+    if (ffi.prog.unistd.access(@ptrCast(&path), ffi.prog.unistd.X_OK) == -1) {
+        return ffi.fromCError(ffi.prog.errno.errno);
     }
 
-    exec.path = @ptrCast(&path);
-    exec.header = ffi.global.hdrbuf_get();
-    exec.xarg1 = null;
-    exec.xarg2 = null;
+    exec.init(@ptrCast(&path), null);
 
-    // Indirect exec loop (handles #! script interpreters)
-    var attempts: u32 = 0;
-    while (true) : (attempts += 1) {
-        if (attempts > 10) return c.ENOEXEC;
+    // Read file header and find the matching loader (follows #! interpreters)
+    const ldr = try exec.findLoader();
 
-        // Read file header
-        error_code = readHeader(exec.path);
-        if (error_code != 0) return error_code;
-
-        // Find file loader
-        rc = c.PROBE_ERROR;
-        const loader_table = ffi.global.loader_table_get();
-        const nloader = ffi.global.nloader_get();
-        var i: c_int = 0;
-        while (i < nloader) : (i += 1) {
-            ldr = &loader_table[@intCast(i)];
-            rc = ldr.?.el_probe.?(&exec);
-            if (rc != c.PROBE_ERROR) break;
-        }
-        if (rc == c.PROBE_ERROR) return c.ENOEXEC;
-
-        // Check file header again if indirect case
-        if (rc == c.PROBE_INDIRECT) continue;
-        break;
-    }
-
-    // Check file permission
-    if (c.access(exec.path, c.X_OK) == -1) {
-        return c.errno;
+    // Check file permission again (the loader may have rewritten the path)
+    if (ffi.prog.unistd.access(exec.path, ffi.prog.unistd.X_OK) == -1) {
+        return ffi.fromCError(ffi.prog.errno.errno);
     }
 
     // Suspend old task
-    error_code = c.task_suspend(old_task);
-    if (error_code != 0) return error_code;
+    try checkErrno(ffi.task.prex.task_suspend(old_task));
 
     // Create new task
-    error_code = c.task_create(old_task, c.VM_NEW, &new_task);
-    if (error_code != 0) return error_code;
+    try checkErrno(ffi.task.prex.task_create(old_task, ffi.task.prex.VM_NEW, &new_task));
+    errdefer _ = ffi.task.prex.task_terminate(new_task);
 
     if (exec.path[0] != 0) {
-        _ = c.task_setname(new_task, c.basename(exec.path));
+        _ = ffi.task.prex.task_setname(new_task, ffi.libgen.basename(exec.path));
     }
 
     // Bind capabilities
-    bind_cap(exec.path, new_task);
+    cap.bind_cap(exec.path, new_task);
 
-    error_code = c.thread_create(new_task, &t);
-    if (error_code != 0) {
-        _ = c.task_terminate(new_task);
-        return error_code;
-    }
+    try checkErrno(ffi.task.prex.thread_create(new_task, &t));
+    errdefer _ = ffi.task.prex.thread_terminate(t);
 
     // Allocate stack and build arguments on it
-    error_code = c.vm_allocate(new_task, &stack, c.DFLSTKSZ, 1);
-    if (error_code != 0) {
-        _ = c.thread_terminate(t);
-        _ = c.task_terminate(new_task);
-        return error_code;
-    }
-    error_code = buildArgs(new_task, stack, exec.path, msg, exec.xarg1, exec.xarg2, &sp);
-    if (error_code != 0) {
-        _ = c.vm_free(new_task, stack);
-        _ = c.thread_terminate(t);
-        _ = c.task_terminate(new_task);
-        return error_code;
-    }
+    try checkErrno(ffi.task.prex.vm_allocate(new_task, &stack, ffi.task.prex.DFLSTKSZ, 1));
+    errdefer _ = ffi.task.prex.vm_free(new_task, stack);
+
+    try checkErrno(buildArgs(new_task, stack, exec.path, msg, exec.xarg1, exec.xarg2, &sp));
 
     // Load file image
     exec.task = new_task;
-    error_code = ldr.?.el_load.?(&exec);
-    if (error_code != 0) {
-        _ = c.vm_free(new_task, stack);
-        _ = c.thread_terminate(t);
-        _ = c.task_terminate(new_task);
-        return error_code;
-    }
+    try exec.load(ldr);
 
-    if (is_arm) {
-        const gp: ?*anyopaque = if (comptime @hasField(ffi.Exec, "gp")) exec.gp else null;
-        error_code = c.thread_setup(t, @ptrFromInt(@as(usize, exec.entry)), sp, gp);
+    if (comptime is_arm) {
+        try checkErrno(ffi.task.prex.thread_setup(t, @ptrFromInt(@as(usize, exec.entry)), sp, exec.gp));
     } else {
-        error_code = c.thread_load(t, @ptrFromInt(@as(usize, exec.entry)), sp);
-    }
-    if (error_code != 0) {
-        _ = c.vm_free(new_task, stack);
-        _ = c.thread_terminate(t);
-        _ = c.task_terminate(new_task);
-        return error_code;
+        try checkErrno(ffi.task.prex.thread_load(t, @ptrFromInt(@as(usize, exec.entry)), sp));
     }
 
     // Notify to servers
     notifyServer(old_task, new_task, stack);
 
     // Terminate old task
-    _ = c.task_terminate(old_task);
+    _ = ffi.task.prex.task_terminate(old_task);
 
     // Set him running
-    _ = c.thread_setpri(t, c.PRI_DEFAULT);
-    _ = c.thread_resume(t);
+    _ = ffi.task.prex.thread_setpri(t, ffi.task.prex.PRI_DEFAULT);
+    _ = ffi.task.prex.thread_resume(t);
+}
 
-    return 0;
+pub export fn exec_execve(msg: *ffi.ExecMsg) callconv(.c) c_int {
+    return ffi.catchToCError(doExecve(msg));
 }

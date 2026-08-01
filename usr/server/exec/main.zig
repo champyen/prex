@@ -1,4 +1,8 @@
 const ffi = @import("exec_ffi.zig");
+const execve = @import("exec_execve.zig");
+const elf = @import("exec_elf.zig");
+const script = @import("exec_script.zig");
+const cap = @import("exec_cap.zig");
 
 pub export fn exec_null(msg: *ffi.Msg) callconv(.c) c_int {
     _ = msg;
@@ -6,11 +10,11 @@ pub export fn exec_null(msg: *ffi.Msg) callconv(.c) c_int {
 }
 
 pub export fn exec_boot(msg: *ffi.Msg) callconv(.c) c_int {
-    if (ffi.raw.task_chkcap(msg.hdr.task, ffi.raw.CAP_PROTSERV) != 0) {
-        return ffi.Errno.EPERM;
+    if (ffi.task.prex.task_chkcap(msg.hdr.task, ffi.task.prex.CAP_PROTSERV) != 0) {
+        return ffi.prog.errno.EPERM;
     }
     register_process();
-    _ = ffi.raw.fslib_init();
+    _ = ffi.prog.unistd.fslib_init();
     return 0;
 }
 
@@ -26,42 +30,42 @@ pub export fn exec_shutdown(msg: *ffi.Msg) callconv(.c) c_int {
 
 fn register_process() void {
     var m: ffi.Msg = undefined;
-    var obj: ffi.raw.object_t = undefined;
+    var obj: ffi.task.prex.object_t = undefined;
 
-    if (ffi.raw.object_lookup(ffi.global.get_proc_obj_name(), &obj) != 0) {
-        ffi.raw.sys_panic(ffi.global.get_no_proc_msg());
+    if (ffi.task.prex.object_lookup(ffi.global.get_proc_obj_name(), &obj) != 0) {
+        ffi.task.prex.sys_panic(ffi.global.get_no_proc_msg());
     }
 
-    m.hdr.code = ffi.raw.PS_REGISTER;
-    _ = ffi.raw.msg_send(obj, @ptrCast(&m), @sizeOf(ffi.Msg));
+    m.hdr.code = ffi.prog.ipc.proc.PS_REGISTER;
+    _ = ffi.task.prex.msg_send(obj, @ptrCast(&m), @sizeOf(ffi.Msg));
 }
 
 pub export fn main(argc: c_int, argv: ?[*]?[*:0]u8) callconv(.c) c_int {
     _ = argc;
     _ = argv;
 
-    _ = ffi.raw.thread_setpri(ffi.raw.thread_self(), ffi.raw.PRI_EXEC);
+    _ = ffi.task.prex.thread_setpri(ffi.task.prex.thread_self(), ffi.task.prex.PRI_EXEC);
 
-    ffi.raw.bind_cap(@constCast(ffi.global.get_exec_path()), ffi.raw.task_self());
+    cap.bind_cap(ffi.global.get_exec_path(), ffi.task.prex.task_self());
 
     ffi.global.setup_exec_exception();
 
     exec_init();
 
-    var obj: ffi.raw.object_t = undefined;
-    if (ffi.raw.object_create(ffi.global.get_exec_obj_name(), &obj) != 0) {
-        ffi.raw.sys_panic(ffi.global.get_create_obj_fail_msg());
+    var obj: ffi.task.prex.object_t = undefined;
+    if (ffi.task.prex.object_create(ffi.global.get_exec_obj_name(), &obj) != 0) {
+        ffi.task.prex.sys_panic(ffi.global.get_create_obj_fail_msg());
     }
 
-    const msg_ptr = ffi.raw.malloc(ffi.raw.MAX_EXECMSG) orelse return 1;
+    const msg_ptr = ffi.prog.stdlib.malloc(ffi.prog.ipc.exec.MAX_EXECMSG) orelse return 1;
     const msg: *ffi.Msg = @ptrCast(@alignCast(msg_ptr));
 
     while (true) {
-        if (ffi.raw.msg_receive(obj, @ptrCast(msg), ffi.raw.MAX_EXECMSG) != 0) continue;
+        if (ffi.task.prex.msg_receive(obj, @ptrCast(msg), ffi.prog.ipc.exec.MAX_EXECMSG) != 0) continue;
 
         const err = ffi.global.dispatch_msg(msg.hdr.code, msg);
         msg.hdr.status = err;
-        _ = ffi.raw.msg_reply(obj, @ptrCast(msg), ffi.raw.MAX_EXECMSG);
+        _ = ffi.task.prex.msg_reply(obj, @ptrCast(msg), ffi.prog.ipc.exec.MAX_EXECMSG);
     }
 }
 
@@ -72,4 +76,11 @@ fn exec_init() void {
     while (i < n) : (i += 1) {
         table[@intCast(i)].el_init.?();
     }
+}
+
+comptime {
+    _ = execve;
+    _ = elf;
+    _ = script;
+    _ = cap;
 }

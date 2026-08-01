@@ -6,18 +6,18 @@ pub export fn script_load(exec: *ffi.Exec) callconv(.c) c_int {
 }
 
 pub export fn script_probe(exec: *ffi.Exec) callconv(.c) c_int {
-    const hdrstr: [*]u8 = @ptrCast(exec.header orelse return ffi.raw.PROBE_ERROR);
+    const hdrstr: [*]u8 = @ptrCast(exec.header orelse return ffi.PROBE_ERROR);
 
     // Check magic header
     if ((hdrstr[0] != '#') or (hdrstr[1] != '!')) {
-        return ffi.raw.PROBE_ERROR;
+        return ffi.PROBE_ERROR;
     }
 
     // Strip spaces before the interpreter name
     var i: usize = 2;
     while (hdrstr[i] == ' ' or hdrstr[i] == '\t') : (i += 1) {}
     if (hdrstr[i] == 0) {
-        return ffi.raw.PROBE_ERROR;
+        return ffi.PROBE_ERROR;
     }
 
     // Pick up interpreter name
@@ -33,20 +33,20 @@ pub export fn script_probe(exec: *ffi.Exec) callconv(.c) c_int {
     const intarg = ffi.global.get_script_intarg();
     const script = ffi.global.get_script_name();
 
-    if (ffi.raw.strncmp(name, "/bin/sh", ffi.raw.PATH_MAX) == 0) {
-        _ = ffi.raw.strlcpy(interp, "/boot/cmdbox", ffi.raw.PATH_MAX);
-        _ = ffi.raw.strlcpy(intarg, "sh", ffi.raw.LINE_MAX);
+    if (ffi.prog.string.strncmp(name, "/bin/sh", ffi.task.prex.PATH_MAX) == 0) {
+        _ = ffi.prog.string.strlcpy(interp, "/boot/cmdbox", ffi.task.prex.PATH_MAX);
+        _ = ffi.prog.string.strlcpy(intarg, "sh", ffi.task.prex.LINE_MAX);
         exec.xarg1 = @ptrCast(intarg);
         exec.xarg2 = @ptrCast(script);
     } else {
-        _ = ffi.raw.strlcpy(interp, name, ffi.raw.PATH_MAX);
+        _ = ffi.prog.string.strlcpy(interp, name, ffi.task.prex.PATH_MAX);
         exec.xarg1 = @ptrCast(intarg);
         exec.xarg2 = null;
     }
-    _ = ffi.raw.strlcpy(script, exec.path, ffi.raw.LINE_MAX);
+    _ = ffi.prog.string.strlcpy(script, exec.path, ffi.task.prex.LINE_MAX);
     exec.path = @ptrCast(interp);
 
-    return ffi.raw.PROBE_INDIRECT;
+    return ffi.PROBE_INDIRECT;
 }
 
 pub export fn script_init() callconv(.c) void {}
