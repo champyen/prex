@@ -107,6 +107,14 @@ void context_set(context_t ctx, int type, register_t val)
         }
         u->pc = (uint32_t)val;
         u->lr = 0x12345678;
+#ifndef CONFIG_MMU
+        {
+            struct thread *thr = list_entry(ctx, struct thread, ctx);
+            if (thr && thr->task) {
+                u->r9 = (uint32_t)thr->task->got_base;
+            }
+        }
+#endif
         break;
 
     case CTX_UARG:

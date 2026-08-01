@@ -194,7 +194,7 @@ int thread_setup(thread_t t, void (*entry)(void), void* stack, void* gp)
     }
     s = splhigh();
     if (entry != NULL) {
-#ifdef CONFIG_ARMV8M
+#ifndef CONFIG_MMU
         t->task->got_base = (vaddr_t)gp;
 #endif
         context_set(&t->ctx, CTX_UENTRY, (register_t)entry);

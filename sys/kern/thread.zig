@@ -201,7 +201,7 @@ pub fn setup(t: kern.ThreadRef, entry: ?*anyopaque, stack: ?*anyopaque, gp: ?*an
 
     const s = hal.splhigh();
     if (entry != null) {
-        if (comptime @hasDecl(ffi.raw, "CONFIG_ARMV8M")) {
+        if (comptime !@hasDecl(ffi.raw, "CONFIG_MMU")) {
             t.*.task.*.got_base = if (gp) |p| @intFromPtr(p) else 0;
         }
         hal.context_set(&t.*.ctx, hal.CTX_UENTRY, kutil.toReg(entry));

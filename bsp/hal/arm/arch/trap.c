@@ -87,6 +87,12 @@ void trap_handler(struct cpu_regs* regs)
         if (regs->cpsr & PSR_THUMB) {
             uint16_t* p = (uint16_t*)(regs->pc & ~1UL);
             printf(" Instruction at %x: %04x\n", regs->pc, *p);
+            printf(" Bytes at PC: %02x %02x %02x %02x %02x %02x %02x %02x\n",
+                   ((uint8_t*)p)[0], ((uint8_t*)p)[1], ((uint8_t*)p)[2], ((uint8_t*)p)[3],
+                   ((uint8_t*)p)[4], ((uint8_t*)p)[5], ((uint8_t*)p)[6], ((uint8_t*)p)[7]);
+            printf(" Bytes at 0x400d6000: %02x %02x %02x %02x %02x %02x %02x %02x\n",
+                   ((uint8_t*)0x400d6000)[0], ((uint8_t*)0x400d6000)[1], ((uint8_t*)0x400d6000)[2], ((uint8_t*)0x400d6000)[3],
+                   ((uint8_t*)0x400d6000)[4], ((uint8_t*)0x400d6000)[5], ((uint8_t*)0x400d6000)[6], ((uint8_t*)0x400d6000)[7]);
         } else {
             uint32_t* p = (uint32_t*)regs->pc;
             printf(" Instruction at %x: %08x\n", regs->pc, *p);
