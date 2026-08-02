@@ -18,6 +18,14 @@ echo "=================================================="
 # Results collection
 declare -a RESULTS
 
+# Ensure rc.bak is restored on script exit even if interrupted
+trap_cleanup_rc() {
+    if [[ -f conf/etc/rc.bak ]]; then
+        mv -f conf/etc/rc.bak conf/etc/rc 2>/dev/null || true
+    fi
+}
+trap trap_cleanup_rc EXIT INT TERM
+
 for TARGET in "${TARGETS[@]}"; do
     # Determine variants to test
     if [ -n "$2" ]; then
@@ -74,7 +82,7 @@ for TARGET in "${TARGETS[@]}"; do
             elif [[ "$TARGET" == "arm-integrator" ]]; then
                 QEMU="qemu-system-arm -M integratorcp -kernel prexos_full.bin -nographic"
             elif [[ "$TARGET" == "arm-musca-b1" ]]; then
-                QEMU="qemu-system-arm -M musca-b1 -kernel prexos.elf -nographic"
+                QEMU="qemu-system-arm -M musca-b1 -kernel prexos_full.elf -nographic"
             fi
         fi
 
@@ -83,6 +91,17 @@ for TARGET in "${TARGETS[@]}"; do
         [[ -n "$OPTS" ]] && CFG_CMD="$CFG_CMD $OPTS"
 
         LC_ALL=C $CFG_CMD > /dev/null 2>&1
+
+        # 1b. For arm-qemu-virt, swap in the verbose fs-test rc that exercises
+        #     the Zig-ported fs_* handlers. Restore the simplified rc after.
+        RC_BACKUP=""
+        if [[ "$TARGET" == "arm-qemu-virt" && -f conf/etc/rc.fs-test ]]; then
+            # Clean up any leftover from previous interrupted run
+            [[ -f conf/etc/rc.bak ]] && mv -f conf/etc/rc.bak conf/etc/rc
+            cp conf/etc/rc conf/etc/rc.bak
+            cp conf/etc/rc.fs-test conf/etc/rc
+            RC_BACKUP="set"
+        fi
 
         # 2. Build
         echo "    Building..."
@@ -137,6 +156,11 @@ for TARGET in "${TARGETS[@]}"; do
         else
             echo "    BUILD SUCCESS (GBA is build-only)."
             RESULTS+=("$TARGET|$VARIANT|PASS")
+        fi
+
+        # Restore original rc after this variant
+        if [[ -n "$RC_BACKUP" ]]; then
+            mv conf/etc/rc.bak conf/etc/rc
         fi
     done
 done

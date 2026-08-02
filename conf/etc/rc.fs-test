@@ -1,0 +1,63 @@
+PATH=/boot:/bin:/usr/bin
+HOME=/
+export HOME PATH
+mkdir /tmp
+uname -msr
+date
+#ifconfig
+
+# ---------------------------------------------------------------------------
+# Filesystem smoke tests (exercises zig-ported fs_* handlers in vfs/main.zig)
+# Test targets:
+#   Step 2.4: fs_read/fs_write (via echo > / cat / dd)
+#   Step 2.5: fs_chdir/fs_rename (via cd / mv)
+#   Step 2.6: fs_dup/fs_dup2 (via shell > redirect)
+#   Step 2.7: fs_pipe (via |)
+#
+# Only used on arm-qemu-virt where FATFS mounts succeed and shell
+# syscalls (mkdir, pipe) work correctly. See arm-musca-b1_fs_issue.md
+# for the musca-b1 NOMMU limitations.
+# ---------------------------------------------------------------------------
+
+# Step 2.4: fs_open(O_WRONLY|O_CREAT) + fs_write + fs_close
+echo "prex-fs-test-payload" > /usr/fs_test.txt
+echo -n "[fs-test] readback: "
+cat /usr/fs_test.txt
+
+# Step 2.4: fs_lseek under the hood
+echo "[fs-test] dd verify:"
+dd if=/usr/fs_test.txt bs=1 count=10
+sync
+
+# Step 2.5: fs_mkdir + fs_chdir + fs_readdir/fs_closedir
+mkdir -p /usr/fsdir
+echo "dir-entry-1" > /usr/fsdir/a.txt
+echo "dir-entry-2" > /usr/fsdir/b.txt
+echo "[fs-test] chdir + readdir:"
+cd /usr/fsdir
+ls
+
+# Step 2.5: fs_rename
+mv /usr/fsdir/a.txt /usr/fsdir/a-renamed.txt
+echo "[fs-test] rename result:"
+ls /usr/fsdir
+
+# Step 2.6: fs_dup2 (via shell > redirect) + fs_close twice
+echo "dup2-test" > /usr/fsdir/dup.txt
+echo -n "[fs-test] dup2 readback: "
+cat /usr/fsdir/dup.txt
+
+# Step 2.7: fs_pipe (echo -> wc exercises pipe + fs_read/fs_write)
+echo -n "[fs-test] pipe bytes: "
+echo "pipe-payload" | wc -c
+
+# Cleanup (cd back to / first to free fsdir)
+cd /
+rm /usr/fsdir/a-renamed.txt
+rm /usr/fsdir/b.txt
+rm /usr/fsdir/dup.txt
+rmdir /usr/fsdir
+rm /usr/fs_test.txt
+
+echo "[fs-test] filesystem smoke tests completed"
+exec sh

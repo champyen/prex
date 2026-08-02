@@ -172,6 +172,7 @@ int sec_vnode_permission(char* path);
 int namei(char* path, vnode_t* vpp);
 int lookup(char* path, vnode_t* vpp, char** name);
 void vnode_init(void);
+void bio_init(void);
 
 void vnode_poll_register(vnode_t vp, struct poll_listener* pl);
 void vnode_poll_deregister(vnode_t vp, struct poll_listener* pl);
@@ -188,6 +189,7 @@ void task_dump(void);
 void vnode_dump(void);
 void mount_dump(void);
 #endif
+const struct vfssw* get_vfssw(void);
 __END_DECLS
 
 #endif /* !_VFS_H */

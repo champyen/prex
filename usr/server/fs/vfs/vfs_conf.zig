@@ -78,4 +78,4 @@ fn buildVfsSwTable(comptime len: usize) [len]c.struct_vfssw {
 }
 
 const table_len = countEntries();
-pub export var vfssw: [table_len]c.struct_vfssw = buildVfsSwTable(table_len);
+export var vfssw: [table_len]c.struct_vfssw = buildVfsSwTable(table_len);

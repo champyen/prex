@@ -2,7 +2,7 @@ include $(SRCDIR)/conf/config.mk
 
 TARGET=		vfscore.o
 ifeq ($(CONFIG_ZIG_USR),y)
-SRCS=		main.c vfs_conf.zig vfs_task.zig vfs_globals.c vfs_syscalls.zig \
+SRCS=		main.zig vfs_dispatcher.c vfs_conf.zig vfs_task.zig vfs_globals.c vfs_syscalls.zig \
 		vfs_mount.zig vfs_bio.zig vfs_vnode.zig vfs_lookup.zig \
 		vfs_security.zig vfs_poll.zig
 else
